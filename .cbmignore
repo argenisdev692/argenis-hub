@@ -10,4 +10,3 @@ resources/js/wayfinder/
 # AI tooling mirrors
 .opencode/
 .claude/
-.agents/

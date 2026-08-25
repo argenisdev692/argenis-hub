@@ -29,6 +29,29 @@ description: [ABSOLUTE] Non-negotiable constraints — ALWAYS apply
   php artisan scramble:export            # generates api.json at the project root (export_path)
   php artisan scramble:cache             # warm the cached spec
   ```
+  **Then, as the LAST step, re-index the code graph** — an MCP tool call, not a
+  shell command:
+  ```
+  index_repository(repo_path: "C:/Users/Lenovo/Herd/argenis-hub", mode: "full")
+  ```
+  This is MANDATORY for a new module and for any rename/move/delete. There is NO
+  background auto-refresh on this project: until it runs, the new module's
+  classes, handlers, ports and routes DO NOT EXIST in the graph, and every
+  negative answer the next session gives ("nothing calls this", "there is no such
+  class") will be confidently wrong. `mode: "full"` is required — it is what
+  builds the similarity/semantic edges `semantic_query` depends on; `mode: "fast"`
+  is the cheap in-flight refresh while you iterate, never the closing gate.
+
+  Editing a method BODY without changing what it calls does not need a re-index;
+  changing the SET of symbols or edges (new/renamed/deleted class, file, method,
+  constructor dependency, `implements`, or route) always does.
+
+  Verify with `index_status`: `nodes`/`edges` must have moved and `indexed_at`
+  must be newer than your last source edit. Do NOT trust the `freshness` /
+  `recommended_action` fields from `check_index_coverage` — on this Windows setup
+  they report `metadata_changed` even for files indexed seconds ago (verified
+  2026-08-25). Trust `status`, `parse_partial` ranges and `indexed_at` instead.
+
   `vendor/bin/pint --dirty` (modified files only) stays the fast in-flight formatter while you work; the full `vendor/bin/pint` + `vendor/bin/pint --test` pair is the closing gate. Never declare a module complete without this pipeline actually executed.
 - **PHP 8.5:** Follow `.claude/BACKEND-PHP/SKILL.md` §0–§3 — SINGLE SOURCE OF TRUTH for PHP 8.5 syntax.
 - **TypeScript:** Strict mode enforced on ALL `.vue` / `.ts` files.
@@ -66,6 +89,29 @@ description: [ABSOLUTE] Non-negotiable constraints — ALWAYS apply
 > **`src/Shared/` is a catalogue, not a scaffold** — only the Day-1 CORE table in `ARCHITECTURE-PHP/SKILL.md` (`Shared/` Optionality Rule) is created up front. Every other adapter (RabbitMQ, SQS, Pusher, S3, AI, Mail, Export, Observability, Resilience, UnitOfWork) waits for its trigger. An adapter with no consumer is dead code.
 >
 > **Total skill files:** 6 (OWASP + BACKEND-PHP + FRONTEND + 2× ARCHITECTURE-PHP + ARCHITECTURE-VUE) + this router. No redundancy.
+
+## No vendor skills — deliberate
+
+The 8 Laravel-official skills Boost generated (`ai-sdk-development`,
+`fortify-development`, `inertia-vue-development`, `infer-conventions`,
+`laravel-best-practices`, `pest-testing`, `tailwindcss-development`,
+`wayfinder-development`) were REMOVED on 2026-08-25. Do not reinstate them, and
+do not let `boost:install` regenerate them.
+
+Why: skill frontmatter loads into the system prompt on EVERY turn — those 8 cost
+~1,565 tokens per request, permanently. They bought nothing this project did not
+already have:
+
+- **Framework docs come from Context7**, version-pinned and live. A frozen
+  vendor snapshot is strictly worse (see the ABSOLUTE Context7 rule above).
+- **The 6 project skills are more specific** on every overlapping topic.
+- **One actively contradicted this project:** `tailwindcss-development`
+  self-triggers on any mention of "tailwind" and teaches raw utilities like
+  `bg-red-600`, which the CSS rules below BAN in favour of `var(--token)`.
+- `infer-conventions` was already dead — it wrote through the Boost
+  `record-rule` MCP tool into `.ai/rules`, both of which this project removed.
+
+Recoverable from git history if ever needed: `git log --all -- .agents/skills`.
 
 # [MUST] CSS / Styles
 
