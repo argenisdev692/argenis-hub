@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
 import { ArrowRight } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
-import { register } from '@/routes';
 
 const emit = defineEmits<{
     signIn: [];
@@ -23,33 +21,27 @@ const emit = defineEmits<{
                 id="cta-title"
                 class="text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
             >
-                Bring the whole operation into one place
+                One hub, five modules, one login
             </h2>
 
             <p
                 class="mx-auto mt-4 max-w-xl text-pretty text-muted-foreground sm:text-lg"
             >
-                Free to start. No card, no sales call — create an account and
-                import your first client in a few minutes.
+                Content, campaigns, ATS, appointments and invoicing already
+                share the same records, permissions and activity trail. Sign in
+                and pick up where you left off.
             </p>
 
             <div
                 class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
             >
-                <Button as-child size="lg" class="w-full sm:w-auto">
-                    <Link :href="register()">
-                        Create your account
-                        <ArrowRight />
-                    </Link>
-                </Button>
-
                 <Button
-                    variant="ghost"
                     size="lg"
                     class="w-full sm:w-auto"
                     @click="emit('signIn')"
                 >
-                    I already have one
+                    Sign in
+                    <ArrowRight />
                 </Button>
             </div>
         </div>

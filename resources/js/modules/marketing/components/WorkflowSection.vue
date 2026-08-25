@@ -7,8 +7,8 @@ import LandingSection from './LandingSection.vue';
     <LandingSection
         id="workflow"
         eyebrow="How it runs"
-        title="Set it up once, then stop administering it"
-        lede="The hub is opinionated on purpose: fewer decisions to make, fewer places for the truth to drift apart."
+        title="Create, convert, collect"
+        lede="The modules are wired in that order on purpose: a post feeds a campaign, a campaign feeds a booking, a booking feeds an invoice — no re-typing between them."
     >
         <ol class="grid gap-4 md:grid-cols-3">
             <li

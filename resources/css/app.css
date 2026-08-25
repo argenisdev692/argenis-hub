@@ -114,6 +114,45 @@
     background-image: var(--gradient-tech);
 }
 
+/* The animated variant — the landing hero wordmark only, not a replacement for
+   `bg-brand-gradient`.
+
+   A palindromic purple→cyan→purple ramp at 2× width, swept back and forth. It
+   alternates rather than looping linearly because the two ends of the ramp are
+   different slices, so an infinite loop would visibly jump on repeat; a
+   6s alternate is one direction change every 6s, far under the WCAG 2.3.1
+   three-per-second threshold. At rest (0%) the visible window is exactly
+   --gradient-tech, so the animation only ever adds to the static treatment. */
+@utility bg-brand-gradient-animated {
+    background-image: linear-gradient(
+        100deg,
+        var(--brand-purple) 0%,
+        var(--brand-cyan) 50%,
+        var(--brand-purple) 100%
+    );
+    background-size: 200% 100%;
+    background-position: 0% 50%;
+    animation: brand-gradient-sweep 6s var(--motion-ease) infinite alternate;
+}
+
+@keyframes brand-gradient-sweep {
+    to {
+        background-position: 100% 50%;
+    }
+}
+
+/*
+  The global reduced-motion rule clamps animation-duration, which would leave
+  this parked on the far end of the ramp. Kill the animation outright instead
+  so it rests on the same slice it starts from.
+*/
+@media (prefers-reduced-motion: reduce) {
+    .bg-brand-gradient-animated {
+        animation: none;
+        background-position: 0% 50%;
+    }
+}
+
 @utility hero-glow-cyan {
     background-image: var(--hero-glow-cyan);
 }
@@ -285,6 +324,125 @@
         font-variant-numeric: tabular-nums;
     }
 
+    /*
+      Scrollbars.
+
+      Firefox gets the two-property standard form; Chromium/WebKit get the
+      `::-webkit-` pseudo-elements. The thumb is the interactive hue at low
+      alpha over a transparent track, so the ambient glow keeps reading behind
+      it instead of being boxed in by a grey gutter. `background-clip:
+      padding-box` under a transparent border is what gives the thumb its
+      inset — a real margin is not available on these pseudo-elements.
+    */
+    html {
+        scrollbar-color: var(--scrollbar-thumb) transparent;
+        scrollbar-width: thin;
+    }
+
+    ::-webkit-scrollbar {
+        width: var(--scrollbar-size);
+        height: var(--scrollbar-size);
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar-thumb);
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        border-radius: 999px;
+        transition: background-color var(--motion-base) var(--motion-ease);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: var(--scrollbar-thumb-hover);
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    /*
+      Tailwind v4's preflight sets `button { cursor: default }`, which loses the
+      affordance on every button in the app. Put it back for everything that
+      actually activates something, and mark the things that do not.
+
+      `:where()` keeps specificity at 0, so any component can still override.
+    */
+    :where(
+        a[href],
+        button,
+        summary,
+        label[for],
+        select,
+        [role='button'],
+        [role='option'],
+        [role='tab'],
+        [role='menuitem']
+    ) {
+        cursor: pointer;
+    }
+
+    :where(button, [role='button'], input, select, textarea):disabled,
+    :where([aria-disabled='true'], [data-disabled]) {
+        cursor: not-allowed;
+    }
+}
+
+/*
+  Cursor orb — a soft accent glow trailing the pointer.
+
+  `CursorOrb.vue` writes --cursor-x / --cursor-y on pointermove and adds
+  `--active` after the first move, so it never flashes at the 0,0 corner on
+  load. It sits at z-index -1, above the ambient veil but BELOW content: the
+  app's surfaces are translucent, so the orb reads through the glass instead of
+  washing over table text and costing contrast.
+
+  The follow is animated with `translate` rather than `left`/`top` so it runs on
+  the compositor — no layout or repaint per frame.
+*/
+.cursor-orb {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    width: var(--cursor-orb-size);
+    height: var(--cursor-orb-size);
+    border-radius: 50%;
+    background-image: radial-gradient(
+        circle,
+        var(--cursor-orb-tint) 0%,
+        transparent 70%
+    );
+    pointer-events: none;
+    filter: blur(2px);
+    opacity: 0;
+    translate: calc(var(--cursor-x, 0px) - 50%) calc(var(--cursor-y, 0px) - 50%);
+    transition:
+        translate 120ms ease-out,
+        opacity var(--motion-slow) var(--motion-ease);
+    will-change: translate;
+}
+
+.cursor-orb--active {
+    opacity: 1;
+}
+
+/*
+  A glow that chases a finger is meaningless on touch, and it is exactly the
+  kind of incidental motion WCAG 2.2 SC 2.3.3 asks us to drop. The component
+  also refuses to attach its listener in both cases — this is the belt to that
+  pair of braces.
+*/
+@media (pointer: coarse), (prefers-reduced-motion: reduce), print {
+    .cursor-orb {
+        display: none;
+    }
+}
+
+@layer base {
     /*
       Active navigation accent.
 

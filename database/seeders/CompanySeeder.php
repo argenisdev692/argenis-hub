@@ -34,9 +34,10 @@ class CompanySeeder extends Seeder
         $company->fill([
             'name' => 'Argenis Carrillo Gonzalez',
             'company_name' => 'Argenis Hub',
-            'description' => 'Argenis Hub is an AI-powered workspace for creators and educators: classroom '
-                .'management, AI-assisted content generation, social media management and social media '
-                .'campaign scheduling, all in one platform.',
+            'description' => 'Argenis Hub is an AI-powered CRM for a single operator, covering five modules on '
+                .'one record set: AI-assisted content generation for social media posts, lead campaign '
+                .'creation and scheduling, appointment booking and management, invoicing with branded PDF '
+                .'exports, and an ATS module for CV optimisation and job-match search.',
             'signature_path' => null,
             'email' => 'info@argenis.dev',
             'phone' => '+351 963 490 414',
@@ -57,6 +58,7 @@ class CompanySeeder extends Seeder
             'website' => null,
             'user_id' => $userId,
             'facebook_link' => 'https://www.facebook.com/argenisdev692/',
+            'github_link' => 'https://github.com/argenisdev692',
             'instagram_link' => 'https://www.instagram.com/argenis.dev/',
             'linkedin_link' => 'https://www.linkedin.com/in/argenisdev692/',
             'twitter_link' => null,

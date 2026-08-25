@@ -17,7 +17,6 @@ import { FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import {
@@ -158,16 +157,6 @@ async function onSubmit(event: Event): Promise<void> {
                     <Spinner v-if="isSubmitting" />
                     Sign in
                 </Button>
-
-                <p class="text-center text-sm text-muted-foreground">
-                    Don't have an account?
-                    <Link
-                        :href="register()"
-                        class="font-medium text-foreground underline-offset-4 hover:underline"
-                    >
-                        Start free
-                    </Link>
-                </p>
             </form>
         </DialogContent>
     </Dialog>

@@ -1,20 +1,20 @@
 import {
-    Banknote,
-    Blocks,
     BotMessageSquare,
-    CalendarDays,
-    ChartLine,
-    Handshake,
+    CalendarCheck,
+    Megaphone,
+    Receipt,
     ScanSearch,
     ShieldCheck,
-    UserPlus,
+    Sparkles,
     Workflow,
+    Wallet,
 } from '@lucide/vue';
 import type {
     MarketingFeature,
     MarketingLink,
     MarketingMetric,
     MarketingStep,
+    SocialKey,
 } from './types';
 
 /**
@@ -23,107 +23,102 @@ import type {
  * Sections render whatever is in these arrays, so adding a capability is a
  * one-object edit rather than a markup change — and the shape is type-checked
  * against `./types`.
+ *
+ * Scope discipline: this page describes the five modules the hub actually
+ * ships — AI content, lead campaigns, ATS, appointments and invoicing. A
+ * capability that does not exist in the product does not get a card here.
  */
 
 export const NAV_LINKS: readonly MarketingLink[] = [
-    { label: 'Platform', href: '#platform' },
+    { label: 'Modules', href: '#platform' },
     { label: 'Workflow', href: '#workflow' },
     { label: 'Results', href: '#results' },
 ] as const;
 
 export const FEATURES: readonly MarketingFeature[] = [
     {
-        id: 'ats',
-        title: 'ATS matching that reads the CV, not the keywords',
+        id: 'ai-content',
+        title: 'AI content studio for posts and social media',
         description:
-            'Parse every applicant, score them against the live vacancy and surface the shortlist with the reasoning attached — so a hiring decision can be explained, not just made.',
-        icon: ScanSearch,
-        tone: 'cyan',
+            'Brief it once with your company profile and voice, then generate post copy, hooks and variants per channel — drafted, reviewed and scheduled without leaving the hub.',
+        icon: BotMessageSquare,
+        tone: 'magenta',
         span: 'wide',
         highlights: [
-            'CV parsing and refinement',
-            'Explainable match scores',
-            'Shortlists that export clean',
+            'Post and caption generation in your own voice',
+            'One idea, reformatted per social channel',
+            'Draft → review → schedule in one place',
         ],
     },
     {
-        id: 'finance',
-        title: 'Invoicing and cash flow',
+        id: 'campaigns',
+        title: 'Lead campaigns',
         description:
-            'Quotes, invoices and payment states in one ledger, with PDF exports that already carry your brand.',
-        icon: Banknote,
-        tone: 'gold',
-        span: 'default',
-    },
-    {
-        id: 'clients',
-        title: 'Clients and pipeline',
-        description:
-            'Every contact, deal and touchpoint on one timeline. No tab-hopping to answer "where did we leave this?".',
-        icon: Handshake,
+            'Plan a campaign, let AI write the sequence, and watch the leads it brings in land on a pipeline you can actually work.',
+        icon: Megaphone,
         tone: 'purple',
         span: 'default',
     },
     {
-        id: 'ai-content',
-        title: 'AI content studio',
+        id: 'ats',
+        title: 'ATS: CV optimisation and job matching',
         description:
-            'Draft posts, campaigns and outreach in your own voice, then schedule them without leaving the hub.',
-        icon: BotMessageSquare,
-        tone: 'magenta',
+            'Rewrite a CV against a real posting, score the match and surface the jobs worth applying to — with the reasoning attached.',
+        icon: ScanSearch,
+        tone: 'cyan',
         span: 'default',
-        highlights: ['Campaign and post drafting', 'Multi-channel scheduling'],
+        highlights: ['CV parsing and rewrite', 'Explainable match scores'],
     },
     {
-        id: 'scheduling',
-        title: 'Meetings and availability',
+        id: 'appointments',
+        title: 'Appointments',
         description:
-            'Booking rules, exceptions and reminders that respect the calendar you already keep.',
-        icon: CalendarDays,
+            'Availability rules, bookings, exceptions and reminders that respect the calendar you already keep.',
+        icon: CalendarCheck,
         tone: 'indigo',
         span: 'default',
     },
     {
-        id: 'analytics',
-        title: 'Reporting worth opening',
+        id: 'invoices',
+        title: 'Invoicing',
         description:
-            'Revenue, pipeline and hiring throughput in one view, exportable to Excel or PDF in a click.',
-        icon: ChartLine,
-        tone: 'cyan',
+            'Issue invoices, track what is paid and export a branded PDF that already carries your fiscal and bank details.',
+        icon: Receipt,
+        tone: 'gold',
         span: 'default',
     },
 ] as const;
 
 export const STEPS: readonly MarketingStep[] = [
     {
-        id: 'connect',
-        title: 'Bring your work in',
+        id: 'create',
+        title: 'Create',
         description:
-            'Import clients, vacancies and invoices, or start clean. Roles and permissions are set from day one.',
-        icon: Blocks,
+            'AI drafts the posts, the campaign sequence and the CV rewrite from your own profile — you edit, you approve.',
+        icon: Sparkles,
     },
     {
-        id: 'automate',
-        title: 'Let the routine run itself',
+        id: 'convert',
+        title: 'Convert',
         description:
-            'Matching, reminders, follow-ups and recurring invoices move without anyone chasing them.',
+            'Campaigns bring in leads, leads book appointments, and the booking lands on the calendar with the reminder already set.',
         icon: Workflow,
     },
     {
-        id: 'grow',
-        title: 'Decide on evidence',
+        id: 'collect',
+        title: 'Collect',
         description:
-            'Every action is logged and every number is traceable, so the report and the reality agree.',
-        icon: UserPlus,
+            'The work done becomes an invoice and a branded PDF, with every step logged so the report and the reality agree.',
+        icon: Wallet,
     },
 ] as const;
 
 export const METRICS: readonly MarketingMetric[] = [
     {
         id: 'modules',
-        value: '12+',
+        value: '5',
         label: 'Modules in one hub',
-        caption: 'ATS, finance, content, scheduling and more',
+        caption: 'Content, campaigns, ATS, appointments, invoicing',
     },
     {
         id: 'audit',
@@ -153,3 +148,28 @@ export const TRUST_POINTS: readonly { id: string; label: string }[] = [
 
 /** Icon for the security strip under the hero. Single source, single import. */
 export const TRUST_ICON = ShieldCheck;
+
+/**
+ * Display order and labels for the footer's social row.
+ *
+ * The URLs come from `company_data` via `CompanyProfile::data()`, so this only
+ * decides which channels are rendered and in what order — a channel with no
+ * URL in the database is simply skipped.
+ */
+export const SOCIAL_LABELS: Readonly<Record<SocialKey, string>> = {
+    linkedin: 'LinkedIn',
+    github: 'GitHub',
+    instagram: 'Instagram',
+    facebook: 'Facebook',
+    tiktok: 'TikTok',
+    twitter: 'X',
+} as const;
+
+export const SOCIAL_ORDER: readonly SocialKey[] = [
+    'linkedin',
+    'github',
+    'instagram',
+    'facebook',
+    'tiktok',
+    'twitter',
+] as const;

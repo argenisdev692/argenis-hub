@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\CompanyDataFactory;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -35,6 +37,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property string|null $address_2
  * @property string|null $website
  * @property string|null $facebook_link
+ * @property string|null $github_link
  * @property string|null $instagram_link
  * @property string|null $linkedin_link
  * @property string|null $twitter_link
@@ -100,12 +103,15 @@ use Spatie\Activitylog\Support\LogOptions;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData whereZipCode($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData withTrashed(bool $withTrashed = true)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData withoutTrashed()
+ * @method static \Database\Factories\CompanyDataFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData whereGithubLink($value)
  *
  * @mixin \Eloquent
  */
 class CompanyData extends Model
 {
-    use LogsActivity, SoftDeletes;
+    /** @use HasFactory<CompanyDataFactory> */
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'company_data';
 
@@ -141,6 +147,7 @@ class CompanyData extends Model
         'country_code',
         'website',
         'facebook_link',
+        'github_link',
         'instagram_link',
         'linkedin_link',
         'twitter_link',
@@ -217,6 +224,7 @@ class CompanyData extends Model
                 'country_code',
                 'website',
                 'facebook_link',
+                'github_link',
                 'instagram_link',
                 'linkedin_link',
                 'twitter_link',

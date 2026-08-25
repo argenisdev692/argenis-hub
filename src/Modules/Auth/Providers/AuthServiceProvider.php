@@ -266,10 +266,19 @@ final class AuthServiceProvider extends ServiceProvider
      * the package. Appending the middleware to the already-registered named
      * route is the only way to cover it without republishing Fortify's routes —
      * and it keeps working across package upgrades.
+     *
+     * No-op when `Features::registration()` is disabled (the default for this
+     * hub): there is no route to throttle. The RuntimeException below stays a
+     * hard failure whenever registration IS enabled, so FR-04 can never be
+     * silently skipped.
      */
     private function throttleFortifyRegistration(): void
     {
         $this->app->booted(static function (): void {
+            if (! Features::enabled(Features::registration())) {
+                return;
+            }
+
             $routes = Route::getRoutes();
 
             // Fortify names its routes after they are added, so the collection's

@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
 import { ArrowRight, Sparkles } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
-import { register } from '@/routes';
 import { TRUST_ICON, TRUST_POINTS } from '../content';
 import HeroPreview from './HeroPreview.vue';
 
@@ -40,44 +38,47 @@ const emit = defineEmits<{
                 class="inline-flex items-center gap-2 rounded-full border border-glass-border bg-surface-glass px-3.5 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm"
             >
                 <Sparkles class="size-3.5 text-brand-cyan" aria-hidden="true" />
-                AI-assisted CRM, ATS and invoicing in one hub
+                AI content, campaigns, ATS, appointments and invoicing
             </p>
 
             <h1
                 id="hero-title"
                 class="mt-7 text-4xl font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl"
             >
-                Run the whole business from
-                <span class="bg-brand-gradient bg-clip-text text-transparent">{{
-                    appName
-                }}</span>
+                Run the whole operation from
+                <span
+                    class="bg-brand-gradient-animated bg-clip-text text-transparent"
+                    >{{ appName }}</span
+                >
             </h1>
 
             <p
                 class="mt-6 max-w-2xl text-lg text-pretty text-muted-foreground sm:text-xl"
             >
-                Vacancies, candidates, clients, invoices and content — one
-                system that keeps them in step, with an audit trail behind every
-                number.
+                Generate the posts, run the lead campaigns, optimise the CV,
+                take the bookings and send the invoice — five modules on one
+                record set, with an audit trail behind every number.
             </p>
 
             <div
                 class="mt-9 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row"
             >
-                <Button as-child size="lg" class="w-full sm:w-auto">
-                    <Link :href="register()">
-                        Start free
-                        <ArrowRight />
-                    </Link>
-                </Button>
-
                 <Button
-                    variant="outline"
                     size="lg"
                     class="w-full sm:w-auto"
                     @click="emit('signIn')"
                 >
                     Sign in
+                    <ArrowRight />
+                </Button>
+
+                <Button
+                    as-child
+                    variant="outline"
+                    size="lg"
+                    class="w-full sm:w-auto"
+                >
+                    <a href="#platform">See the modules</a>
                 </Button>
             </div>
 

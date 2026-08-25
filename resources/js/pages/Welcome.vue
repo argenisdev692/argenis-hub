@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import CursorOrb from '@/common/feedback/CursorOrb.vue';
 import CtaSection from '@/modules/marketing/components/CtaSection.vue';
 import FeatureBento from '@/modules/marketing/components/FeatureBento.vue';
 import HeroSection from '@/modules/marketing/components/HeroSection.vue';
@@ -9,6 +10,7 @@ import LandingNav from '@/modules/marketing/components/LandingNav.vue';
 import LoginDialog from '@/modules/marketing/components/LoginDialog.vue';
 import MetricsStrip from '@/modules/marketing/components/MetricsStrip.vue';
 import WorkflowSection from '@/modules/marketing/components/WorkflowSection.vue';
+import type { CompanyContact } from '@/modules/marketing/types';
 
 /**
  * Public landing page.
@@ -17,6 +19,10 @@ import WorkflowSection from '@/modules/marketing/components/WorkflowSection.vue'
  * this page adds section-scale glows only and never sets a background of its
  * own.
  */
+const { company } = defineProps<{
+    company: CompanyContact;
+}>();
+
 const page = usePage();
 
 const appName = computed(() => page.props.name);
@@ -30,10 +36,10 @@ function openLogin(): void {
 </script>
 
 <template>
-    <Head :title="`${appName} — CRM, ATS and invoicing in one hub`">
+    <Head :title="`${appName} — AI content, campaigns, ATS and invoicing`">
         <meta
             name="description"
-            content="Run vacancies, candidates, clients, invoices and content from a single hub, with an audit trail behind every number."
+            content="One hub for AI-generated social posts, lead campaigns, ATS CV optimisation and job matching, appointments and invoicing — with an audit trail behind every number."
         />
     </Head>
 
@@ -59,8 +65,10 @@ function openLogin(): void {
             <CtaSection @sign-in="openLogin" />
         </main>
 
-        <LandingFooter :app-name="appName" />
+        <LandingFooter :app-name="appName" :company="company" />
 
         <LoginDialog v-model:open="loginOpen" />
+
+        <CursorOrb />
     </div>
 </template>

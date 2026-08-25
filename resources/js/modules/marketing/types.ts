@@ -44,3 +44,19 @@ export type MarketingStep = {
     description: string;
     icon: LucideIcon;
 };
+
+/**
+ * Social channels the footer can render.
+ *
+ * Mirrors the keys emitted by `CompanyProfile::data()['socials']`, which are
+ * derived from the `*_link` columns on `company_data`. Keys with no URL in the
+ * database are filtered out server-side and never reach the page.
+ */
+export type SocialKey =
+    'linkedin' | 'github' | 'instagram' | 'facebook' | 'tiktok' | 'twitter';
+
+/** Company contact block shared with the landing page by `HomeController`. */
+export type CompanyContact = {
+    socials: Partial<Record<SocialKey, string>>;
+    support_email: string | null;
+};

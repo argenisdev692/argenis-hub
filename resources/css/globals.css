@@ -284,6 +284,22 @@
     --motion-base: 240ms;
     --motion-slow: 400ms;
     --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* ---- pointer chrome ----
+       Scrollbar thumb and the cursor orb, both drawn from the interactive hue
+       so a theme change needs no second edit. Light mode runs them weaker for
+       the same reason the ambient image is damped there: the glow that reads
+       as depth on #050714 eats body contrast on a light ground. */
+    --scrollbar-size: 10px;
+    --scrollbar-thumb: color-mix(in oklab, var(--primary) 40%, transparent);
+    --scrollbar-thumb-hover: color-mix(
+        in oklab,
+        var(--brand-cyan) 70%,
+        var(--primary)
+    );
+
+    --cursor-orb-size: 300px;
+    --cursor-orb-tint: color-mix(in oklab, var(--primary) 10%, transparent);
 }
 
 .dark {
@@ -328,4 +344,7 @@
     --shadow-glow:
         0 0 0 1px var(--glass-border),
         0 12px 40px color-mix(in oklab, var(--brand-purple) 22%, transparent);
+
+    --scrollbar-thumb: color-mix(in oklab, var(--primary) 55%, transparent);
+    --cursor-orb-tint: color-mix(in oklab, var(--primary) 18%, transparent);
 }

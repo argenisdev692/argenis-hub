@@ -7,9 +7,9 @@ import LandingSection from './LandingSection.vue';
 <template>
     <LandingSection
         id="platform"
-        eyebrow="The platform"
-        title="Six departments, one source of truth"
-        lede="Each module is a first-class part of the hub — not an add-on bolted to a contacts list. They share the same records, the same permissions and the same audit trail."
+        eyebrow="The modules"
+        title="Five modules, one source of truth"
+        lede="AI content, lead campaigns, ATS, appointments and invoicing — each a first-class part of the hub, not an add-on bolted to a contacts list. They share the same records, the same permissions and the same audit trail."
     >
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
             <FeatureCard

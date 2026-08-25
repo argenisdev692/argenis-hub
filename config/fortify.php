@@ -163,8 +163,14 @@ return [
     |
     */
 
+    // Registration is deliberately OFF: this hub is a private workspace with a
+    // single operator, so accounts are provisioned by seeder, never self-served.
+    // Re-enabling it means restoring `Fortify::registerView()` in
+    // FortifyServiceProvider and a `pages/auth/Register.vue` page — Wayfinder
+    // deletes `@/routes/register` while the route does not exist, so the page
+    // cannot be kept on disk in the meantime. `app/Actions/Fortify/
+    // CreateNewUser.php` and the FR-04 throttle are still wired and waiting.
     'features' => [
-        Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

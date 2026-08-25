@@ -78,6 +78,7 @@ final class CompanyProfile
                     'instagram' => $company?->instagram_link,
                     'facebook' => $company?->facebook_link,
                     'tiktok' => $company?->tiktok_link,
+                    'github' => $company?->github_link,
                 ]),
             ];
         });
@@ -145,6 +146,7 @@ final class CompanyProfile
                     'instagram' => $company?->instagram_link,
                     'facebook' => $company?->facebook_link,
                     'tiktok' => $company?->tiktok_link,
+                    'github' => $company?->github_link,
                 ]),
             ];
         });

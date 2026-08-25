@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Fortify\Features;
 use Modules\Auth\Domain\Ports\PasswordHistoryPort;
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\PasswordHistoryEloquentModel;
 use Modules\Auth\Infrastructure\Persistence\Repositories\EloquentPasswordHistoryRepository;
@@ -12,6 +13,8 @@ use Modules\Auth\Infrastructure\Persistence\Repositories\EloquentPasswordHistory
  * Spec 001 US-06 / FR-12 — the last five passwords may not be reused.
  */
 test('registration seeds the first credential into the history', function (): void {
+    $this->skipUnlessFortifyHas(Features::registration());
+
     $this->post(route('register.store'), [
         'first_name' => 'Test',
         'last_name' => 'User',

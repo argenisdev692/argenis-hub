@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Laravel\Fortify\Features;
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\AuthSessionEloquentModel;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
@@ -60,6 +61,8 @@ test('a logout is recorded', function (): void {
 });
 
 test('registration is recorded', function (): void {
+    $this->skipUnlessFortifyHas(Features::registration());
+
     $this->post(route('register.store'), [
         'first_name' => 'Test',
         'last_name' => 'User',

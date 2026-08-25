@@ -13,7 +13,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
-import { dashboard, register } from '@/routes';
+import { dashboard } from '@/routes';
 import { NAV_LINKS } from '../content';
 
 const { appName, isAuthenticated } = defineProps<{
@@ -84,15 +84,11 @@ const isDetached = computed(() => y.value > 12);
 
                 <template v-else>
                     <Button
-                        variant="ghost"
                         size="sm"
                         class="hidden sm:inline-flex"
                         @click="emit('signIn')"
                     >
                         Sign in
-                    </Button>
-                    <Button as-child size="sm" class="hidden sm:inline-flex">
-                        <Link :href="register()">Start free</Link>
                     </Button>
                 </template>
 
@@ -128,12 +124,7 @@ const isDetached = computed(() => y.value > 12);
                             v-if="!isAuthenticated"
                             class="mt-auto grid gap-2 p-4"
                         >
-                            <Button variant="outline" @click="emit('signIn')">
-                                Sign in
-                            </Button>
-                            <Button as-child>
-                                <Link :href="register()">Start free</Link>
-                            </Button>
+                            <Button @click="emit('signIn')">Sign in</Button>
                         </div>
                     </SheetContent>
                 </Sheet>
