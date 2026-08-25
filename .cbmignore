@@ -1,0 +1,13 @@
+# Compiled Blade views (generated cache — not source code)
+storage/framework/views/
+
+# Build artifacts
+public/build/
+resources/js/actions/
+resources/js/routes/
+resources/js/wayfinder/
+
+# AI tooling mirrors
+.opencode/
+.claude/
+.agents/

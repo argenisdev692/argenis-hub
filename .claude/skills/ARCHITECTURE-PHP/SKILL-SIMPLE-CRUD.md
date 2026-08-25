@@ -1,0 +1,492 @@
+---
+name: architecture-simple-crud-php
+description: Minimal directory tree and file placement rules for standard Laravel CRUD modules with low business complexity and without enterprise overengineering.
+---
+
+# ARCHITECTURE-PHP / SKILL-SIMPLE-CRUD — Standard CRUD Baseline
+
+Use this guide when the module is a normal CRUD:
+
+- One aggregate / one main entity.
+- Around 3 to 8 persisted fields.
+- Standard flows: list, show, create, update, delete, restore.
+- Standard flows may also include `bulk delete` AND `bulk restore` when the table UI supports row selection. They are always paired — never ship bulk delete without bulk restore.
+- No files/media, exports, queues, WebSockets, external integrations, projections, or complex orchestration unless explicitly requested.
+- Business rules are real but shallow: uniqueness, active/inactive, ordering, visibility, simple validation.
+
+Do NOT use this guide when the module has any of these characteristics:
+
+- More than one aggregate root or several coordinated subdomains.
+- Heavy business workflows, approvals, multi-step state machines, or cross-module orchestration.
+- Files, signatures, image processing, cloud storage, exports, notifications, or external APIs.
+- Domain events, listeners, projections, read repositories, or async processing are clearly justified.
+- Rich Value Objects and advanced invariants dominate the model.
+
+In those cases, use `.claude/skills/ARCHITECTURE-PHP/SKILL.md` (the intermediate baseline).
+
+---
+
+## Composer Autoload (PSR-4)
+
+Simple CRUD modules live under the same PSR-4 root as the intermediate tree:
+
+```json
+{
+  "autoload": {
+    "psr-4": {
+      "App\\":      "app/",
+      "Modules\\":  "src/Modules/",
+      "Shared\\":   "src/Shared/",
+      "Database\\Factories\\": "database/factories/",
+      "Database\\Seeders\\":   "database/seeders/"
+    }
+  }
+}
+```
+
+After scaffolding a new module, ALWAYS run:
+
+```bash
+composer dump-autoload
+```
+
+Example namespace mapping for a simple CRUD module:
+
+| Path | Namespace |
+|---|---|
+| `src/Modules/Tags/Domain/ValueObjects/TagId.php` | `Modules\Tags\Domain\ValueObjects\TagId` |
+| `src/Modules/Tags/Application/Commands/CreateTagHandler.php` | `Modules\Tags\Application\Commands\CreateTagHandler` |
+| `src/Modules/Tags/Application/Queries/ListTagsHandler.php` | `Modules\Tags\Application\Queries\ListTagsHandler` |
+| `src/Modules/Tags/Infrastructure/Http/Controllers/TagController.php` | `Modules\Tags\Infrastructure\Http\Controllers\TagController` |
+| `src/Modules/Tags/Infrastructure/Persistence/Eloquent/Models/TagEloquentModel.php` | `Modules\Tags\Infrastructure\Persistence\Eloquent\Models\TagEloquentModel` |
+| `src/Modules/Tags/Providers/TagsServiceProvider.php` | `Modules\Tags\Providers\TagsServiceProvider` |
+
+> **Hard rule:** Simple CRUD modules use the same flat namespaces (`Modules\`, `Shared\`) as the full hexagonal tree. No `Src\` prefix, no per-module top-level namespace. This keeps both architectures interoperable when a module grows from simple → full.
+
+Register the module provider in `bootstrap/providers.php`:
+
+```php
+return [
+    App\Providers\AppServiceProvider::class,
+    Shared\Providers\SharedServiceProvider::class,
+    Modules\Tags\Providers\TagsServiceProvider::class,
+    // …one per module
+];
+```
+
+---
+
+## Directory Tree
+
+```text
+src/
+└── Modules/
+    └── {YourModule}/
+        ├── Providers/
+        │   └── {YourModule}ServiceProvider.php
+        ├── Tests/
+        │   ├── Feature/
+        │   └── Unit/
+        ├── Domain/
+        │   ├── Entities/                                ← OPTIONAL — see Entity Optionality Rule
+        │   │   └── {YourEntity}.php                     ← skip when Eloquent model is 1:1 with the aggregate and no invariants live in Domain
+        │   ├── ValueObjects/                            ← OPTIONAL — see Value Objects Rule
+        │   │   └── {YourEntity}Id.php                   ← skip when the model uses HasUuids + ->whereUuid('uuid'); Shared\Domain\ValueObjects\Uuid covers it
+        │   └── Ports/                                   ← OPTIONAL — see Repository Optionality Rule
+        │       └── {YourEntity}RepositoryPort.php       ← skip when there is exactly ONE Eloquent implementation and no decorator
+        ├── Application/
+        │   ├── DTOs/
+        │   │   ├── {YourEntity}Data.php                ← may be split into Store and Update when ≥90% identical
+        │   │   ├── {YourEntity}FilterData.php
+        │   │   ├── BulkDelete{YourEntity}Data.php      ← required when UI exposes row selection
+        │   │   └── BulkRestore{YourEntity}Data.php     ← required when UI exposes row selection (paired with BulkDelete)
+        │   ├── Commands/
+        │   │   ├── Create{YourEntity}Handler.php
+        │   │   ├── Update{YourEntity}Handler.php
+        │   │   ├── Delete{YourEntity}Handler.php
+        │   │   ├── BulkDelete{YourEntity}Handler.php   ← required when UI exposes row selection
+        │   │   ├── Restore{YourEntity}Handler.php
+        │   │   └── BulkRestore{YourEntity}Handler.php  ← required when UI exposes row selection (paired with BulkDelete)
+        │   └── Queries/
+        │       ├── List{YourEntities}Handler.php
+        │       └── Get{YourEntity}Handler.php
+        └── Infrastructure/
+            ├── Http/
+            │   ├── Controllers/
+            │   │   ├── Api/
+            │   │   │   ├── {YourEntity}Controller.php        ← return type-hints MANDATORY (Scramble auto-docs)
+            │   │   │   └── {YourEntity}ExportController.php  ← return type-hint MANDATORY (Scramble auto-docs)
+            │   │   └── Web/
+            │   │       └── {YourEntity}PageController.php    ← may be fused into the resourceful controller when response logic is identical (see Controller Fusion Rule)
+            │   ├── Export/                                  ← MANDATORY when exports are in scope
+            │   │   ├── {YourEntity}ExcelExport.php
+            │   │   ├── {YourEntity}PdfExport.php
+            │   │   └── {YourEntity}ExportTransformer.php
+            │   ├── Requests/
+            │   │   ├── Store{YourEntity}Request.php
+            │   │   ├── Update{YourEntity}Request.php
+            │   │   ├── BulkDelete{YourEntity}Request.php     ← MANDATORY when UI exposes row selection
+            │   │   ├── BulkRestore{YourEntity}Request.php    ← MANDATORY when UI exposes row selection (paired with BulkDelete)
+            │   │   └── Export{YourEntity}Request.php         ← MANDATORY when exports are in scope
+            │   #
+            │   # NO `Resources/` folder — response shapes are Spatie Data objects from
+            │   # `Application/DTOs/` (`{YourEntity}Data::from($model)`). See Response Shape Rule.
+            ├── Persistence/
+            │   ├── Eloquent/
+            │   │   └── Models/
+            │   │       └── {YourEntity}EloquentModel.php
+            │   ├── Mappers/                                  ← OPTIONAL — only when the table diverges from the aggregate
+            │   │   └── {YourEntity}Mapper.php                ← skip when Eloquent casts + accessors are enough
+            │   └── Repositories/                             ← OPTIONAL — paired with Domain/Ports (Repository Optionality Rule)
+            │       └── Eloquent{YourEntity}Repository.php    ← skip when handlers query the Eloquent model directly
+            └── Routes/
+                ├── web.php   ← Inertia pages + /data/admin JSON endpoints (session auth)
+                └── api.php   ← Sanctum API endpoints (MANDATORY when module exposes API)
+
+resources/
+└── views/
+    └── exports/
+        └── pdf/
+            └── {your_module_snake}.blade.php   ← MANDATORY when PDF export is in scope
+```
+
+---
+
+## Mandatory Baseline
+
+- Keep `Domain / Application / Infrastructure` separation.
+- Keep `Application/Commands` and `Application/Queries` flat. Do not create one extra folder per handler unless the module grows.
+- The domain stays free of Laravel, HTTP, Eloquent, queues, storage, and framework imports.
+- WHEN a repository exists, the port lives in `Domain/Ports` and the concrete Eloquent repository lives in `Infrastructure/Persistence/Repositories`. Both are OPTIONAL in simple CRUD — see Repository Optionality Rule.
+- The mapper is the only bridge between Domain entities and Eloquent models WHEN it exists. Mapper is optional in simple CRUD — see Mapper Optionality Rule.
+- Controllers stay thin: validate, authorize, map request to DTO, invoke handler, return response.
+- DTOs extend `Spatie\LaravelData\Data` and are **not** `readonly` (parent class `Spatie\LaravelData\Data` is not readonly → PHP forbids a readonly child of a non-readonly parent). See `BACKEND-PHP/SKILL.md` §5 Readonly Classes table.
+- Public routes use `uuid`, not numeric `id`.
+- Web routes are primary. API routes are optional and secondary.
+- The module `ServiceProvider` is responsible for binding `{YourEntity}RepositoryPort::class` to `Eloquent{YourEntity}Repository::class`, loading routes, and loading views when export templates exist.
+- If `bulk delete` is part of the UI scope, implement it as one dedicated command handler plus one request/DTO carrying the selected UUIDs.
+
+---
+
+## What Stays Small on Purpose
+
+- Zero repositories is the default. When one IS justified, one port + one Eloquent repository for the aggregate is enough.
+- One `{YourEntity}Data` is enough unless list/detail representations truly diverge — never a parallel `JsonResource` class.
+- One resourceful controller is enough for most modules. Splitting into Web/Api controllers is allowed only when the two flows truly diverge — see Controller Fusion Rule.
+- One service provider that binds the repository and loads routes is enough.
+- One export controller plus one Excel export and one PDF export are enough when the module explicitly requires exports.
+- One dedicated `Export{YourEntity}Request` is enough to validate export query params when the module exposes export endpoints.
+- One `bulk delete` handler + one `bulk restore` handler are enough when mass selection exists in the UI — they are paired, never one without the other.
+- Keep the folder depth low so the create/list/update flow is traceable in under a minute.
+
+---
+
+## Entity Optionality Rule
+
+- `Domain/Entities/{YourEntity}.php` is OPTIONAL in simple CRUD.
+- SKIP the Domain Entity when ALL of the following are true:
+  - The Eloquent model is 1:1 with the aggregate (same fields, no transformation).
+  - No domain invariants live outside Value Objects.
+  - No method exists on the entity beyond getters / passive data access.
+- CREATE the Domain Entity when ANY is true:
+  - Domain methods enforce invariants (`activate()`, `markAsPaid()`, `transitionTo($state)`).
+  - The aggregate composes multiple sub-entities or VOs with cross-field rules.
+  - Persistence and domain shapes diverge (Mapper required → Entity required).
+- When skipped, controllers/handlers operate on the Eloquent model + VOs + DTOs (`{YourEntity}Data::from($model)`).
+- Auditors must NOT flag the absence of `Domain/Entities/` as FAIL when the criteria above are not met.
+
+> Mirrors the same rule in `ARCHITECTURE-PHP/SKILL.md` (Lean Mode) so a module promoted from simple → full does not gain a mandatory Entity it never had.
+
+---
+
+## Mapper Optionality Rule
+
+- The Mapper is OPTIONAL in simple CRUD.
+- Default path: use Eloquent casts (`casts` array, custom `CastsAttributes`, accessors, mutators) and let the Eloquent model carry persistence ↔ field translation.
+- Create a Mapper class ONLY when one of these is true:
+  - The persisted table shape diverges from the domain aggregate (different column names, denormalization, splitting fields).
+  - A Value Object has a non-trivial mapping that does not fit a simple cast.
+  - The repository must produce a domain entity distinct from the Eloquent model.
+- When the Mapper is omitted, the Eloquent model itself is the persistence boundary; controllers/handlers receive the Eloquent model OR DTOs hydrated from it via `{YourEntity}Data::from($model)`.
+- Auditors must NOT flag the absence of a Mapper as FAIL when the criteria above are not met.
+
+---
+
+## Repository Optionality Rule
+
+- `Domain/Ports/{YourEntity}RepositoryPort.php` AND `Infrastructure/Persistence/Repositories/Eloquent{YourEntity}Repository.php` are OPTIONAL in simple CRUD. They are a **pair** — never a port without an implementation, never an implementation without the port.
+- SKIP both when ALL of the following are true:
+  - There is exactly ONE implementation and no plausible second one (no cache decorator, no alternate data source).
+  - Handlers are covered by Feature tests that hit the real database — no DB-free unit tests of handlers are required.
+  - Query logic is plain Eloquent (`where`, `with`, `paginate`, scopes) with no persistence strategy worth naming.
+- CREATE the port + repository when ANY is true:
+  - A second implementation exists or is imminent — a caching decorator, an in-memory fake, a read replica, a search index.
+  - The data source is not Eloquent (external API, file store, another bounded context).
+  - Handlers must be unit-tested without touching the database.
+  - The aggregate spans multiple tables and the query composition deserves one owner.
+- When SKIPPED, Command/Query handlers query the `{YourEntity}EloquentModel` directly and return `{YourEntity}Data::from($model)`. Handlers keep their single-use-case shape — skipping the port removes an indirection, it does NOT move business logic into the controller.
+- When SKIPPED, the ServiceProvider has no repository binding to declare; routes and views remain its only job.
+- **Rationale:** an interface with exactly one implementation, wrapping an ORM that is already an abstraction over SQL, is boilerplate — not Dependency Inversion. DIP buys nothing when there is nothing to invert to. This mirrors the Entity and Mapper Optionality Rules: pay for the layer when a second case for it exists.
+- **Promotion:** when a module is promoted to `ARCHITECTURE-PHP/SKILL.md` (intermediate), the port becomes MANDATORY again — it is the DIP mechanism cited in that skill's Principles Compliance table. Introducing it at promotion time is a mechanical refactor: extract the interface from the queries the handlers already run.
+- Auditors must NOT flag the absence of `Domain/Ports/` or `Persistence/Repositories/` as FAIL when the SKIP criteria hold. Equally, they MUST flag a port that has exactly one implementation, no decorator, and no DB-free unit tests as **overengineering**.
+
+---
+
+## Response Shape Rule — Spatie Data, never JsonResource
+
+- Response shapes are **Spatie Data objects** living in `Application/DTOs/` (`{YourEntity}Data`, `{YourEntity}ListItemData`). There is NO `Infrastructure/Http/Resources/` folder in this project.
+- Reasons this project standardizes on Data over `JsonResource`:
+  - **One serialization path.** Shipping both means two places that decide what a `{YourEntity}` looks like on the wire, and they drift.
+  - **Scramble reads Data property types** for request bodies AND responses (`BACKEND-PHP/SKILL.md` §9) — an `array` returned from a `JsonResource` documents as nothing useful.
+  - The same Data class already carries `#[MapOutputName(SnakeCaseMapper::class)]`, validation attributes, and the Inertia prop shape.
+- Controllers return `{YourEntity}Data::from($model)` or `{YourEntity}Data::collect($paginator)` — for Inertia props and for JSON alike.
+- Auditors: a `JsonResource` / `ResourceCollection` subclass in a new module is a **FAIL**. Converting it is mechanical — move `toArray()` fields to typed Data properties.
+
+---
+
+## Controller Fusion Rule
+
+- Default: ONE resourceful controller `Infrastructure/Http/Controllers/{YourEntity}Controller.php` serves both Inertia (web) and JSON (api), branching on `$request->expectsJson()` or middleware group.
+- Split into `Api/{YourEntity}Controller.php` + `Web/{YourEntity}PageController.php` ONLY when:
+  - The Inertia page needs additional props (selects, related entities) that the API never sends.
+  - The API response shape differs significantly from the Inertia props.
+  - The two flows have different authorization or rate-limiting needs.
+- When fused, API methods MUST carry explicit return type-hints — Scramble auto-documents them.
+- Auditors must NOT flag controller fusion as FAIL when these criteria are met.
+
+---
+
+## DTO Fusion Rule
+
+- Default: separate `Store{YourEntity}Data` and `Update{YourEntity}Data`.
+- Allowed: a single `{YourEntity}Data` with optional fields when Store and Update share ≥90% of fields and validation rules. Use `Optional` from `Spatie\LaravelData` for fields that only apply to one operation.
+- Always keep `{YourEntity}FilterData` and `BulkDelete{YourEntity}Data` separate — they have a different purpose.
+- Auditors must NOT flag DTO fusion as FAIL when the ≥90% criterion is met.
+
+---
+
+## Value Objects Rule
+
+- A UUID identity is mandatory, but a per-entity `{YourEntity}Id` class is NOT. When the model uses `HasUuids` (UUIDv7) and routes bind with `->whereUuid('uuid')`, the shared `Shared\Domain\ValueObjects\Uuid` covers the concept — a `{YourEntity}Id` wrapper adds a type with no extra invariant. Create it only when the identifier carries a rule of its own (composite key, prefixed/typed ID, external system format).
+- Add more Value Objects only when a field has a real invariant worth protecting for the whole lifetime of the object.
+- Good candidates: email, slug, money, percentage, status, normalized phone, URL.
+- Do not wrap every string or every primitive only to satisfy architecture aesthetics.
+
+---
+
+## CQRS Rule for Simple CRUD
+
+- Keep write handlers in `Application/Commands/`.
+- Keep read handlers in `Application/Queries/`.
+- This is still CQRS, but **basic CQRS** — controllers invoke handlers directly via container resolution:
+
+  ```php
+  public function store(StoreTagData $data, CreateTagHandler $handler): RedirectResponse
+  {
+      $handler->handle($data);
+      return back();
+  }
+  ```
+
+- `bulk delete` belongs to Commands, never Queries.
+- Do NOT introduce `CommandBus` / `QueryBus`, projections, read repositories, listeners, or denormalized views unless a real second use-case requires them.
+- **Upgrade trigger:** when the module accumulates ≥3 commands AND you need cross-cutting middleware (transaction, audit, logging), promote the module to the full hexagonal tree (`ARCHITECTURE-PHP/SKILL.md`) and adopt the bus there.
+
+---
+
+## Events & Listeners in Simple CRUD
+
+- **Default:** none. A simple CRUD does NOT emit domain events.
+- **Allowed:** add ONE event per module **only** when a side-effect crosses bounded contexts AND cannot be inlined in the handler. Examples that justify it:
+  - `TagCreated` → another module needs to react (e.g., search index re-build).
+  - `TagRestored` → audit module logs a cross-cutting trail.
+- **Not justified:**
+  - "Send welcome email after create" → call the mailer directly from the handler.
+  - "Update related counter" → use a model observer or update in the handler.
+- When added:
+  - Event lives at `Domain/Events/{EntityVerb}.php` (immutable readonly).
+  - Listener lives in the **consuming** module under `Application/Listeners/`, never in the emitting module.
+  - Wire it with `Event::listen(Event::class, [Listener::class, 'handle'])` inside the module ServiceProvider. **Laravel v13.26 has NO `#[AsEventListener]` attribute** (`Illuminate\Events\Attributes\` does not exist) and framework auto-discovery only scans `app/Listeners`, so modules under `src/Modules/` must declare their own wiring.
+  - Long-running listeners implement `ShouldQueue`.
+
+> Full Event/Listener mechanics, queue handling, and cross-module ACL examples → see `ARCHITECTURE-PHP/SKILL.md` (the intermediate baseline).
+
+---
+
+## Optional Folders — Add Only If Needed
+
+Add these only when the module genuinely requires them:
+
+- `Infrastructure/Storage/`
+- `Infrastructure/Queue/`
+- `Infrastructure/WebSocket/`
+- `Infrastructure/ExternalServices/`
+- `Infrastructure/Http/Middleware/` — module-owned middleware, namespace `Modules\{X}\Infrastructure\Http\Middleware\`. Never `Infrastructure/Middleware/`; cross-cutting middleware goes to `src/Shared/Infrastructure/Http/Middleware/` instead. The module `ServiceProvider` registers the alias.
+- `Application/Policies/`
+- `Application/Listeners/`
+- `Domain/Events/`
+- extra `Tests/Integration/`
+
+If you add one of these folders, be able to explain the concrete use-case in one sentence.
+
+> `Infrastructure/Http/Export/` and `resources/views/exports/pdf/` are NOT optional when exports are in scope — see **Export Rule** below.
+
+---
+
+## ServiceProvider Rule
+
+- `{YourModule}ServiceProvider` is mandatory even in a simple CRUD.
+- It must bind the repository port to the concrete repository **when a repository exists** (Repository Optionality Rule). With no repository there is no binding — that is expected, not a missing piece.
+- It must register module routes.
+- It must declare the module's event listeners with `Event::listen()` / `Event::subscribe()` when the module emits or consumes events — framework auto-discovery only scans `app/Listeners`.
+- If the module includes PDF export views, it should also register the module view namespace.
+- Keep the provider small: bindings, route loading, and optional view loading only.
+
+Canonical responsibility set:
+
+- load `Infrastructure/Routes/web.php` (and `api.php` when the module exposes an API)
+- `Event::listen(...)` for the module's listeners, when it has any
+- `bind({YourEntity}RepositoryPort::class, Eloquent{YourEntity}Repository::class)` — ONLY when the Repository Optionality Rule triggered
+- load export Blade views only if the module ships PDF exports
+
+---
+
+## Export Rule — Mandatory When Exports Are in Scope
+
+> **Single source of truth: `.claude/BACKEND-PHP/SKILL.md` §8.** Excel (`spatie/simple-excel`) + DomPDF + Transformer + Controller + Request + Blade template rules + status `Active`/`Suspended` derivation from `deleted_at` all live there. This file does NOT duplicate them — it only restates the file placement so the simple-CRUD tree stays self-contained.
+
+### File placement (simple CRUD)
+
+- `Infrastructure/Http/Export/{YourEntity}ExcelExport.php`
+- `Infrastructure/Http/Export/{YourEntity}PdfExport.php`
+- `Infrastructure/Http/Export/{YourEntity}ExportTransformer.php`
+- `Infrastructure/Http/Controllers/Api/{YourEntity}ExportController.php`
+- `Infrastructure/Http/Requests/Export{YourEntity}Request.php`
+- `resources/views/exports/pdf/{your_module_snake}.blade.php` (global views, not per-module)
+
+### Tests
+
+- Feature test for Excel export: 200 + `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`.
+- Feature test for PDF export: 200 + `application/pdf`.
+
+---
+
+## Bulk Delete + Bulk Restore Rule for Simple CRUD
+
+> **Pair rule (mandatory)**: `bulk delete` and `bulk restore` are always shipped TOGETHER. Shipping bulk delete without bulk restore creates a UX dead-end — users can soft-delete dozens of rows in one click but must restore them one by one. Auditors must flag any module that ships only one of the two.
+
+- Both are optional in simple CRUD, but become mandatory **as a pair** when the table supports row selection.
+- Reuse the same aggregate repository; do not create a second repository for mass operations.
+- **Bulk delete**:
+  - Request/DTO: `BulkDelete{YourEntity}Request` + `BulkDelete{YourEntity}Data` (single field `uuids: array<string>`).
+  - Handler: `BulkDelete{YourEntity}Handler` — performs soft delete (`whereIn('uuid', $uuids)->delete()`).
+  - Route: `POST /bulk-delete` under the admin data group, guarded by `permission:DELETE_{X}`.
+- **Bulk restore**:
+  - Request/DTO: `BulkRestore{YourEntity}Request` + `BulkRestore{YourEntity}Data` (single field `uuids: array<string>`).
+  - Handler: `BulkRestore{YourEntity}Handler` — performs soft restore (`withTrashed()->whereIn('uuid', $uuids)->restore()`).
+  - Route: `POST /bulk-restore` under the admin data group, guarded by `permission:RESTORE_{X}`.
+- Validate that the UUID array is non-empty, capped (e.g. `max:500` per request), and that every item is a valid UUID.
+- Apply the same authorization rules as the single-row counterpart (`DELETE_{X}` / `RESTORE_{X}`).
+- Frontend must disable bulk-restore when the selection mixes `active + deleted` rows (only deleted rows are restorable).
+- If the UI has no row selection or no batch action, skip both completely.
+
+---
+
+## Identifiers & Relations — Project Conventions
+
+### UUIDv7 (time-ordered) — MANDATORY for every `uuid`
+
+- Every public identifier uses **UUID version 7**, never v4 — v7 is time-ordered, so sequential inserts stay index-local on the `uuid` column (much less B-tree fragmentation than random v4).
+- Generate with `Str::uuid7()` (Laravel) or `Ramsey\Uuid\Uuid::uuid7()->toString()`. NEVER `Str::uuid()`, `Str::orderedUuid()`, or `Uuid::uuid4()`. Keep seeded, factory, and app-created rows uniform:
+  - Model `creating` hook: `$model->uuid = (string) Str::uuid7();`
+  - Factory: `'uuid' => (string) Str::uuid7()`
+  - Seeder: `'uuid' => Uuid::uuid7()->toString()`
+- **Trait-based models:** the framework `HasUuids` trait already returns `Str::uuid7()` in Laravel 13, so plain `use HasUuids;` is correct. NEVER use `HasVersion4Uuids` (legacy v4). Use a manual `creating` hook only when the `uuid` is a plain string column, not the model key.
+- Routes still bind with `->whereUuid('uuid')` — it accepts any RFC-4122 UUID, v7 included.
+
+### Bidirectional Eloquent relations — MANDATORY when an FK exists
+
+When a model carries a foreign key (e.g. `user_id`), declare BOTH sides — never only the `belongsTo`:
+
+- Child (owns the FK) → `belongsTo`, generic PHPDoc:
+  ```php
+  /** @return BelongsTo<\App\Models\User, $this> */
+  public function user(): BelongsTo
+  {
+      return $this->belongsTo(User::class);
+  }
+  ```
+- Parent (`App\Models\User` / owning aggregate) → inverse `hasMany` / `hasOne`, generic PHPDoc:
+  ```php
+  /** @return HasMany<{YourEntity}EloquentModel, $this> */
+  public function {yourEntities}(): HasMany
+  {
+      return $this->hasMany({YourEntity}EloquentModel::class);
+  }
+  ```
+- **`user_id` hard rule:** same PR must also update `App\Models\User` (inverse relation + import + `@property-read` PHPDoc). Child method = `user()`; parent class = `App\Models\User` (never `UserEloquentModel`, never `createdBy()`).
+- Each model documents itself with the standard generated block ending in `@mixin \Eloquent` (regenerate via `php artisan ide-helper:models`), otherwise linters report **"undefined type 'Eloquent'"** (`\Eloquent` lives in the git-ignored `_ide_helper.php`).
+- **Auditors:** a one-directional FK relation (child `belongsTo` present, parent inverse missing) is a **FAIL**.
+
+---
+
+## Audit, Security, and Tests
+
+- Use `LogsActivity` on the Eloquent model with explicit `logOnly([...])`, `logOnlyDirty()`, and `dontLogEmptyChanges()`.
+- Use `AuditPort` only when there is a meaningful business action beyond passive model lifecycle logging.
+- Define permissions with `VIEW_*`, `CREATE_*`, `UPDATE_*`, `DELETE_*`, `RESTORE_*`.
+- Call `forgetCachedPermissions()` before seeding permissions.
+- Mandatory tests for simple CRUD:
+  - Feature tests for HTTP CRUD flow — these alone are sufficient for plain CRUDs.
+  - Add feature coverage for `bulk delete` when the module exposes that endpoint.
+  - Unit tests are OPTIONAL — create them only when there are custom Value Objects with invariants or non-trivial domain rules.
+  - Integration tests are OPTIONAL — create them only when mapper logic, casts, scopes, or persistence rules are non-trivial.
+  - If exports exist, add feature coverage for Excel/PDF export flow, validate the `Export{YourEntity}Request` contract, and keep the same `FilterDTO` contract.
+- Auditors must NOT flag the absence of `Tests/Unit/` as FAIL when no VOs or domain invariants exist.
+
+---
+
+## KISS Guardrails
+
+Avoid these by default in a 5-field CRUD:
+
+- Generic `BaseRepository` inside the module.
+- A repository port whose only implementation is one Eloquent class, with no decorator and no DB-free unit tests (Repository Optionality Rule).
+- A `{YourEntity}Id` Value Object that only wraps a `HasUuids` UUID with no added invariant.
+- A `JsonResource` sitting next to a `{YourEntity}Data` that serializes the same entity (Response Shape Rule).
+- `Manager`, `Orchestrator`, `Coordinator`, or `Facade` classes with no second use-case.
+- Domain events for direct one-step CRUD flows.
+- Separate read/write repositories when the same aggregate query logic remains simple.
+- WebSocket, queue, export, or storage abstractions without an actual requirement.
+- Splitting Excel and PDF into multiple extra services when one export controller and one shared filter contract are enough.
+- Creating a separate “mass operations” sub-architecture when a single `BulkDelete` command is enough.
+- Deep folder nesting that makes maintenance slower than the business problem itself.
+
+---
+
+## Review Heuristic
+
+If a reviewer cannot identify all of these quickly, the module is too complex for a normal CRUD:
+
+- where the request enters,
+- where validation happens,
+- where the use-case handler lives,
+- where persistence happens — the repository if one exists, otherwise the Eloquent model the handler queries directly,
+- where the mapper converts domain ↔ persistence (when one exists),
+- where the `ServiceProvider` registers routes, listeners, and the repository binding (when there is one),
+- and, if applicable, where export entry points, `Export{YourEntity}Request`, and Blade PDF views are registered,
+- and where the routes are registered.
+
+For language, PHP 8.5 syntax, route conventions, security rules, exports, and observability rules, always defer to `.claude/BACKEND-PHP/SKILL.md` and the security baseline in `.claude/OWASP/SKILL.md`.
+
+---
+
+## OpenAPI / Scramble + API Routes
+
+Cross-cutting rules — defined ONCE in `BACKEND-PHP/SKILL.md`, NOT duplicated here (DRY):
+
+- **Scramble auto-generation** (return type-hints, FormRequest injection, Spatie Data responses, zero `@OA\*` annotations) → `.claude/BACKEND-PHP/SKILL.md` §9.
+- **API routes convention** (file location, ServiceProvider `registerWebRoutes()` / `registerApiRoutes()`, route order, permission middleware) → `.claude/BACKEND-PHP/SKILL.md` §6.
+- **Excel + PDF exports** (`spatie/simple-excel` writer + DomPDF) → `.claude/BACKEND-PHP/SKILL.md` §8.
+
+Simple CRUDs follow the same conventions as the full hexagonal tree — no special-cases.

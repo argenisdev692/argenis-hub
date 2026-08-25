@@ -1,0 +1,361 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "ArgenisHub",
+        "version": "0.0.1"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/api"
+        }
+    ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
+    "paths": {
+        "/user": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "`User`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "operationId": "auth.login",
+                "description": "Every rejection below answers with the SAME message and status, so the\nendpoint never becomes an account-enumeration oracle (OWASP \u00a72).",
+                "summary": "Exchange credentials for a bearer token",
+                "tags": [
+                    "AuthApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ApiLoginRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "$ref": "#/components/schemas/ApiTokenData"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/AuthenticatedUserData"
+                                        }
+                                    },
+                                    "required": [
+                                        "token",
+                                        "user"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "operationId": "auth.refresh",
+                "description": "The presented token is destroyed and replaced, so a leaked bearer stops\nworking as soon as the legitimate client refreshes. The device name is\ncarried over, which is what makes the rotation idempotent per device.",
+                "summary": "Rotate the caller's own token",
+                "tags": [
+                    "AuthApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "$ref": "#/components/schemas/ApiTokenData"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/AuthenticatedUserData"
+                                        }
+                                    },
+                                    "required": [
+                                        "token",
+                                        "user"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "operationId": "auth.logout",
+                "summary": "Revoke the presented token (sign out this device only)",
+                "tags": [
+                    "AuthApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Signed out."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "operationId": "auth.me",
+                "summary": "The authenticated identity behind the presented token",
+                "tags": [
+                    "AuthApi"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "user": {
+                                            "$ref": "#/components/schemas/AuthenticatedUserData"
+                                        }
+                                    },
+                                    "required": [
+                                        "user"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "ApiLoginRequest": {
+                "type": "object",
+                "description": "Credentials for `POST /api/auth/login`.\n\n`device_name` names the token so it can be rotated and revoked per device\n(\"Pixel 8\", \"iPad\"). It is attacker-controlled text that ends up in a token\nlabel, so it is length-capped and never interpolated anywhere but the label.\n\n`code` carries the TOTP or recovery code and is required only when the\naccount has confirmed two-factor authentication \u2014 enforced in the controller,\nbecause demanding it up front would leak which accounts have 2FA enabled.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "device_name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "email",
+                    "password",
+                    "device_name"
+                ],
+                "title": "ApiLoginRequest"
+            },
+            "ApiTokenData": {
+                "type": "object",
+                "properties": {
+                    "access_token": {
+                        "type": "string"
+                    },
+                    "token_type": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string"
+                    },
+                    "abilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "access_token",
+                    "token_type",
+                    "expires_at",
+                    "abilities"
+                ],
+                "title": "ApiTokenData"
+            },
+            "AuthenticatedUserData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "email_verified_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "two_factor_enabled": {
+                        "type": "boolean"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "permissions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "name",
+                    "email",
+                    "two_factor_enabled",
+                    "roles",
+                    "permissions"
+                ],
+                "title": "AuthenticatedUserData"
+            },
+            "User": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 0,
+                "maxItems": 0,
+                "additionalItems": false,
+                "title": "User"
+            }
+        },
+        "responses": {
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            },
+            "AuthenticationException": {
+                "description": "Unauthenticated",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,231 @@
+---
+name: ssd-artifact
+description: Applies Spec-Driven Development (SDD) to build backend modules, services, or APIs. ALWAYS use when the user describes a new backend module, asks to create an API, design a service, or invokes /ssd-artifact. Runs 7 phases in order — Specify, Clarify, Research (real-time via Tavily), Plan, Break Down Tasks, Analyze, Implement, Consolidate — without skipping any.
+---
+
+# SDD Backend: Specify → Clarify → Research (+Tavily) → Plan → Tasks → Analyze → Implement → Consolidate
+
+This skill turns a backend module description into working software, following
+Spec-Driven Development (SDD): the specification is the source of truth, the code is its
+consequence. It follows the current (2026) GitHub Spec Kit flow
+(`constitution → specify → clarify → plan → tasks → analyze → implement`), with one addition:
+**before writing the technical plan, real-time research is done with Tavily** to verify
+versions, architecture patterns, and current practices, instead of relying only on trained
+knowledge that may be outdated.
+
+Golden rule (confirmed against current SDD practice): never skip from spec straight to code.
+Review the plan before breaking down tasks; review the tasks before implementing. Don't merge
+phases. Each phase produces a Markdown file that the next phase consumes. If the user only asks
+for "one part" (e.g. "just make me the plan"), still follow this same format for that phase, but
+tell them which previous phases you assumed or which are missing.
+
+**When SDD is the wrong tool:** small bug fixes, rapid prototyping, throwaway experiments, or
+simple CRUD features are better served by direct prompting or this project's SIMPLE-CRUD skill —
+running the full SDD workflow on those is disproportionate ceremony. Use this skill for
+genuinely new modules/services/APIs with real design decisions to trace.
+
+## When to activate
+- The user describes a backend feature, module, service, or API they want to build.
+- The user writes `/ssd-artifact {description}`.
+- The user explicitly asks for "spec driven development", "SDD", "specify and plan this".
+
+## Setup (once per feature)
+
+1. Determine a short kebab-case slug from the description (e.g. "payment system with
+   retries" → `payment-retry-service`).
+2. Look for a `specs/` folder at the project root (create it if it doesn't exist). Number the
+   feature by scanning existing folders: `specs/001-{slug}/`, `specs/002-{slug}/`, etc.
+3. If `.specify/memory/constitution.md` or `CONSTITUTION.md` exists in the project, read it first:
+   it contains non-negotiable principles (code style, mandatory testing, allowed stack) that
+   must be respected across all phases. If it doesn't exist, don't require it — it's optional,
+   not blocking.
+4. Copy the templates from `.claude/skills/SSD/` (`spec_template.md`, `plan_template.md`,
+   `tasks_template.md`) as the base for the files you'll generate in `specs/NNN-{slug}/`.
+
+## Phase 1 — SPECIFY
+
+**Goal:** capture WHAT is being built and WHY. No mentions of technical stack, libraries, or
+database schemas here — that belongs in the Plan phase.
+
+1. From the user's description, write `specs/NNN-{slug}/spec.md` using
+   `.claude/skills/SSD/spec_template.md`: summary, motivation, actors, user stories with
+   verifiable acceptance criteria (Given/When/Then format), functional and non-functional
+   requirements, conceptual data entities, out of scope, and success criteria.
+2. If something is ambiguous, don't resolve it here — mark it as `[NEEDS CLARIFICATION]` or
+   `Assumption:` in section 9 and move on. Ambiguity resolution is Phase 2's job, not Phase 1's.
+3. Show the spec to the user and wait for confirmation (or "continue") before moving to Phase 2,
+   unless the user already explicitly asked to "do it all at once".
+
+## Phase 2 — CLARIFY
+
+**Goal:** surface every ambiguity in the spec as an explicit, reviewable artifact before any
+planning starts. Ambiguities that silently carry into the plan are the single biggest cause of
+an AI agent building the wrong thing.
+
+1. Re-read `spec.md` looking specifically for: underspecified requirements, conflicting user
+   stories, missing edge cases, and every unresolved `[NEEDS CLARIFICATION]` / `Assumption:`
+   marker left from Phase 1.
+2. Write `specs/NNN-{slug}/clarify.md`: a numbered list of open questions, each stating the
+   impact if left unresolved (e.g. "Q3: What happens on a duplicate submission? Impact: changes
+   the idempotency design in Plan §4").
+3. Ask the user the highest-impact 2-3 questions directly. For lower-impact ones, propose a
+   reasonable default and record it as `Resolved by default:` in `clarify.md` instead of
+   blocking on it.
+4. Update `spec.md` in place with the resolved answers — replace `[NEEDS CLARIFICATION]` markers
+   with the actual decision. `clarify.md` stays as the audit trail of what was asked, and why.
+5. Don't move to Phase 3 while a high-impact question remains unresolved in `clarify.md`.
+
+## Phase 3 — REAL-TIME RESEARCH (Tavily)
+
+**Goal:** don't plan on stale assumptions. Before locking in stack, versions, architecture
+patterns, auth schemes, or libraries, validate them against current, live sources.
+
+1. From `spec.md`/`clarify.md` and any stack preference the user mentioned, build 3-6 specific
+   research queries. Examples of what to research:
+   - Current stable version and maturity of the proposed framework/library (e.g. "FastAPI vs
+     Django REST framework 2026", "current Node.js LTS").
+   - Recommended architecture patterns for this type of module (e.g. "event-driven order
+     processing best practices", "idempotency key patterns REST API").
+   - Security: current guidance (e.g. "OWASP API security top 10 2026", "JWT refresh token
+     rotation best practices").
+   - Recent breaking changes / deprecations in the chosen stack.
+   - Infrastructure alternatives (queues, cache, DB) if the spec requires them.
+2. Run the queries directly with the Tavily MCP tools available in this session — batch related
+   queries in as few calls as possible instead of one call per query:
+   - `mcp__tavily__tavily_search` for targeted lookups. Pass `time_range: "week"` or `"month"`
+     to bias toward current results, and avoid historical years unless the task explicitly asks
+     for them.
+   - `mcp__tavily__tavily_research` for deeper, multi-step investigation on ambiguous or
+     high-stakes decisions (e.g. choosing between two competing architecture patterns).
+   - `mcp__tavily__tavily_extract` / `mcp__tavily__tavily_crawl` if you need the full content of
+     a specific doc page returned by search rather than just the snippet.
+3. Write the findings to `specs/NNN-{slug}/research.md`: one section per query, each finding
+   cited with its source URL. Every relevant finding must translate into a row in the plan's
+   "Technology stack" table (Phase 4).
+4. If the Tavily MCP tools are unavailable in this session for any reason, fall back to the
+   general web search tool and mark explicitly in `research.md` which findings were NOT
+   verified via Tavily.
+5. If research contradicts a spec assumption or a user preference (e.g. the user asked for an
+   already-deprecated library), don't silently change it — report it as an open decision when
+   moving to Phase 4.
+
+## Phase 4 — PLAN
+
+**Goal:** the HOW, with every technical decision traceable to `spec.md` (which requirement it
+covers) or to `research.md` (why it was chosen).
+
+1. Write `specs/NNN-{slug}/plan.md` using `.claude/skills/SSD/plan_template.md`: verified stack,
+   architecture, physical data model, API contracts endpoint by endpoint (derived from the user
+   stories), folder structure, testing strategy, security, risks, and the final traceability
+   table.
+2. Any technical choice NOT validated by `research.md` must be explicitly marked as
+   `[UNVERIFIED]` in the stack table — never present it as if it were confirmed.
+3. Show the plan and wait for confirmation before breaking down tasks, unless told otherwise.
+
+## Phase 5 — BREAK DOWN TASKS
+
+**Goal:** turn the plan into a list of small tasks, ordered by dependency, each independently
+verifiable.
+
+1. Write `specs/NNN-{slug}/tasks.md` using `.claude/skills/SSD/tasks_template.md`, grouping tasks
+   by: foundations → data model → one phase per user story (in spec priority order) →
+   cross-cutting concerns (auth, validation, logging, security) → closeout (full test suite,
+   traceability, documentation).
+2. Mark parallelizable tasks with `[P]` (tasks that don't touch the same files and don't depend
+   on each other).
+3. Each task must leave the system in a compiling/testable state, never half-broken.
+
+## Phase 6 — ANALYZE
+
+**Goal:** cross-check spec ↔ plan ↔ tasks for consistency before writing any implementation
+code — catch drift while it's still cheap to fix, not after the code is already written.
+
+1. Verify every functional requirement and user story in `spec.md` maps to at least one section
+   in `plan.md` (via its traceability table) and at least one task in `tasks.md`.
+2. Verify every task in `tasks.md` traces back to a plan section and, transitively, to a spec
+   requirement. Flag orphan tasks (no spec justification) and orphan requirements (no task
+   covers them).
+3. Verify no decision in `plan.md` contradicts an answer already resolved in `clarify.md`.
+4. Write the findings to `specs/NNN-{slug}/analyze.md`: a short table of gaps/contradictions
+   found, or "No gaps found" if the cross-check is clean.
+5. If gaps are found, fix `tasks.md` (add or adjust tasks) before moving to Phase 7 — never
+   implement against a plan known to have unresolved gaps.
+
+## Phase 7 — IMPLEMENT
+
+**Goal:** execute `tasks.md` in order, producing real code and real tests.
+
+1. Take the tasks in order (respecting dependencies; `[P]` tasks can be grouped).
+2. For each task: implement the change, run the relevant tests/linters, check the box in
+   `tasks.md` as `[x]`, and if the project uses git, suggest or create a commit following the
+   `feat(module): T0XX short description` convention.
+3. Once all tasks are done, do a final pass comparing the implementation against `spec.md`:
+   confirm every functional requirement and user story has code and a test covering it (use the
+   traceability table from `plan.md` as a checklist). Report any gap as a new task in `tasks.md`
+   instead of assuming it's covered.
+4. Backend tests are **Pest 5** (`php artisan make:test --pest {Name}`). Runtime is Laravel Herd
+   (native Windows) — no Docker, no Sail, no WSL. Before closing the module, run yourself in this
+   shell and read the real output: `vendor/bin/pint --dirty --format agent`, then
+   `php artisan test --compact --filter={Module}`, then `php artisan test --compact`. A module is
+   not done until that suite is green — quote the real pass/fail counts, never assume them.
+5. **Finalize (MANDATORY, only once the suite is green).** Run these yourself, in this order, and
+   read the real output:
+
+   ```bash
+   php artisan optimize:clear             # flush config / route / view / event caches
+   php artisan ide-helper:generate        # IDE helpers for facades
+   php artisan ide-helper:models --write  # IDE helpers for models (writes docblocks in place)
+   vendor/bin/pint                        # format everything
+   vendor/bin/pint --test                 # check only (CI gate — must exit 0)
+   php artisan scramble:clear             # invalidate the cached spec (controllers changed)
+   php artisan scramble:export            # generates api.json at the project root (export_path)
+   php artisan scramble:cache             # warm the cached spec
+   ```
+
+   `vendor/bin/pint --dirty` stays the fast in-flight formatter during implementation; the full
+   `vendor/bin/pint` + `vendor/bin/pint --test` pair is the closing gate. `scramble:clear` MUST
+   precede `scramble:export`/`scramble:cache` or the exported `api.json` is stale. If
+   `ide-helper:models --write` touched model docblocks, re-run the module filter and confirm green.
+   The module is not closed until every command above has actually run.
+
+## Phase 8 — CONSOLIDATE
+
+**Goal:** once every phase is complete, produce a single standalone document covering the full
+SDD journey for this module — the deliverable to hand off or archive.
+
+1. Write `specs/NNN-{slug}/SSD-SUMMARY.md` combining, phase by phase:
+   - **Specify** — the final spec: summary, actors, user stories, requirements.
+   - **Clarify** — the key open questions raised and how each was resolved.
+   - **Research** — key findings and their sources from `research.md`.
+   - **Plan** — the final architecture, stack table, and API contracts from `plan.md`.
+   - **Tasks** — the completed task list from `tasks.md`, with checkboxes reflecting real status.
+   - **Analyze** — the consistency check result from `analyze.md`.
+   - **Implement** — an implementation report: what was built, which tests cover which
+     requirement, and any gaps flagged during the final traceability pass.
+2. Each section must link back to its source file (`spec.md`, `clarify.md`, `research.md`,
+   `plan.md`, `tasks.md`, `analyze.md`) so the reader can go deeper, but the summary itself must
+   stand alone without requiring the reader to open the other files.
+3. Show the path to `SSD-SUMMARY.md` to the user as the closing deliverable of the workflow.
+
+## Resources of this skill
+- `.claude/skills/SSD/spec_template.md` — Phase 1 template.
+- `.claude/skills/SSD/plan_template.md` — Phase 4 template.
+- `.claude/skills/SSD/tasks_template.md` — Phase 5 template.
+- Tavily MCP tools (`mcp__tavily__tavily_search`, `tavily_research`, `tavily_extract`,
+  `tavily_map`, `tavily_crawl`) — real-time research for Phase 3, used directly, no external
+  script or API key setup needed.
+
+## Hard rules
+- Don't write `plan.md` before resolving high-impact questions in `clarify.md` and running
+  Tavily research in Phase 3 (or, failing that, without explicitly stating why research wasn't
+  possible and what's left unverified).
+- Don't mix the "what" (spec) with the "how" (plan): if you find yourself writing library names
+  in `spec.md`, move it to `plan.md`.
+- Don't move from Phase 6 (Analyze) to Phase 7 (Implement) while `analyze.md` lists unresolved
+  gaps or contradictions.
+- Don't mark a task as complete in `tasks.md` without having run its corresponding test.
+- Don't produce `SSD-SUMMARY.md` (Phase 8) until every task in `tasks.md` is checked off or its
+  gaps are explicitly logged.
+- If the user requests changes mid-implementation, update `spec.md` (or `plan.md`, as
+  appropriate) first, then propagate the change to `tasks.md` — never edit only the code while
+  leaving the documentation stale.

@@ -1,0 +1,28 @@
+:root {
+  /* Surface & Base Backgrounds */
+  --hub-bg-dark: #050714;
+  --hub-bg-surface: #08081f; /* */
+  --hub-bg-card: #131b3a; /* */
+  --hub-border: #1e2a4a; /*[cite: 1] */
+
+  /* Tech & Glow Brand Colors (Logo + Hero Glow) */
+  --brand-cyan: #06b6d4;
+  --brand-purple: #7c3aed;
+  --brand-magenta: #d946ef;
+
+  /* Executive / Financial Accent (Gold) */
+  --accent-gold: #d4af37; /*[cite: 1] */
+  --accent-gold-hover: #b8962e; /*[cite: 1] */
+  --accent-gold-light: #f0d78c; /*[cite: 1] */
+
+  /* Typography & Status */
+  --text-main: #f4f4f2; /*[cite: 1] */
+  --text-muted: #94a3b8; /*[cite: 1] */
+  --status-danger: #f43f5e;
+  --status-success: #10b981;
+
+  /* Radial & Linear Glow Effects */
+  --hero-glow-cyan: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(5, 7, 20, 0) 70%);
+  --hero-glow-purple: radial-gradient(circle, rgba(124, 58, 237, 0.35) 0%, rgba(5, 7, 20, 0) 70%);
+  --gradient-tech: linear-gradient(135deg, var(--brand-purple) 0%, var(--brand-cyan) 100%);
+}

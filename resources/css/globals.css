@@ -1,0 +1,331 @@
+/*
+|--------------------------------------------------------------------------
+| Design tokens — single source of truth
+|--------------------------------------------------------------------------
+|
+| Ported from BRAND/root.css (see BRAND/DESIGN_SYSTEM.md for the hierarchy).
+| Components consume ONLY var(--token) — never a raw hex, never bg-[#hex].
+|
+| Two layers live here:
+|   1. Brand tokens  — the palette itself (cyan / violet / magenta / gold).
+|   2. Semantic tokens — the shadcn-compatible roles the components already
+|      bind to (--background, --primary, --border, …). Their VALUES are drawn
+|      from layer 1; their NAMES stay stable so no component has to change.
+|
+| Palette hierarchy (DESIGN_SYSTEM.md):
+|   · Cyan + violet — primary energy, hero glow, interactive actions.
+|   · Magenta       — secondary AI accent, used sparingly.
+|   · Gold          — reserved for financial / conversion actions only.
+|   · Night bases   — the ground the glows and hairline borders sit on.
+|   · Status colors — success / danger, never mixed with the brand hues.
+|
+*/
+
+:root {
+    /* ---- brand palette (mode-independent) ---- */
+
+    /* night bases — the ground the glows and hairline borders sit on */
+    --hub-bg-dark: #050714;
+    --hub-bg-surface: #08081f;
+    --hub-bg-elevated: #0c0c3a;
+    --hub-bg-card: #131b3a;
+    --hub-border: #1e2a4a;
+
+    /* cyber tech — hero glow, AI modules, interactive actions */
+    --brand-cyan: #06b6d4;
+    --brand-purple: #7c3aed;
+    --brand-magenta: #d946ef;
+    --brand-indigo: #6366f1;
+
+    /* executive / financial — invoices paid, primary CTA, VIP status. Sparingly. */
+    --accent-gold: #d4af37;
+    --accent-gold-hover: #b8962e;
+    --accent-gold-light: #f0d78c;
+    --accent-gold-shadow: 0 4px 14px rgba(212, 175, 55, 0.25);
+
+    /* brand typography colours (aliases of the night-mode text roles) */
+    --text-main: #f4f4f2;
+    --text-muted: #94a3b8;
+
+    /* system status — never mixed with gold or cyan/violet */
+    --status-success: #10b981;
+    --status-danger: #f43f5e;
+
+    /* soft status chips (badge bg + readable fg), taken from the brand mockup */
+    --status-danger-soft-bg: rgba(244, 63, 94, 0.15);
+    --status-danger-soft-fg: #fda4af;
+    --status-info-soft-bg: rgba(99, 102, 241, 0.15);
+    --status-info-soft-fg: #a5b4fc;
+    --status-success-soft-bg: rgba(16, 185, 129, 0.15);
+    --status-success-soft-fg: #6ee7b7;
+
+    --gradient-tech: linear-gradient(
+        135deg,
+        var(--brand-purple) 0%,
+        var(--brand-cyan) 100%
+    );
+    --hero-glow-cyan: radial-gradient(
+        circle,
+        rgba(6, 182, 212, 0.35) 0%,
+        rgba(5, 7, 20, 0) 70%
+    );
+    --hero-glow-purple: radial-gradient(
+        circle,
+        rgba(124, 58, 237, 0.35) 0%,
+        rgba(5, 7, 20, 0) 70%
+    );
+
+    /* typography — Inter for UI, JetBrains Mono for code and tabular figures */
+    --font-sans:
+        'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+    --font-mono:
+        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+        monospace;
+
+    /* ---- semantic roles — LIGHT ----
+       Violet and cyan are darkened here so text and icons keep WCAG AA
+       contrast against a white ground; the dark block below restores the
+       brand values, which are tuned for the night bases. */
+    --background: #ffffff;
+    --foreground: #0b1020;
+    --card: #ffffff;
+    --card-foreground: #0b1020;
+    --popover: #ffffff;
+    --popover-foreground: #0b1020;
+    --primary: #6d28d9;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f2f8;
+    --secondary-foreground: #0b1020;
+    --muted: #f1f2f8;
+    --muted-foreground: #5b6478;
+    --accent: #eef0f7;
+    --accent-foreground: #0b1020;
+    --destructive: #e11d48;
+    --destructive-foreground: #ffffff;
+    --border: #e2e5ee;
+    /* --input is the BOUNDARY of an interactive control, so WCAG 2.2 SC 1.4.11
+       holds it to 3:1 — the old #d8dce8 was 1.37:1 against white and effectively
+       invisible to low-vision users. #848da5 measures 3.32:1. --border stays
+       subtle on purpose: dividers and card edges are decorative and exempt. */
+    --input: #848da5;
+    --ring: #6d28d9;
+
+    /* ---- form status roles ----
+       --status-success / --status-danger above are tuned for the night bases
+       and fail as text on white (#10b981 = 2.54:1). These are the light-mode
+       equivalents, and the only ones a form may use for text or icons. */
+    --success: #047857;
+    --success-foreground: #ffffff;
+    --warning: #b45309;
+    --warning-foreground: #ffffff;
+
+    /* Gold is fill-only — as text on white it is 2.10:1. Carried with a dark
+       foreground (9.00:1) it works identically in both modes. */
+    --gold: #d4af37;
+    --gold-foreground: #0b1020;
+
+    --chart-1: #6d28d9;
+    --chart-2: #0891b2;
+    --chart-3: #c026d3;
+    --chart-4: #b8962e;
+    --chart-5: #0f766e;
+
+    --radius: 0.5rem;
+
+    --sidebar: #f8f9fc;
+    --sidebar-background: #f8f9fc;
+    --sidebar-foreground: #3a4258;
+    --sidebar-primary: #6d28d9;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #eef0f7;
+    --sidebar-accent-foreground: #0b1020;
+    --sidebar-border: #e2e5ee;
+    --sidebar-ring: #6d28d9;
+
+    color-scheme: light;
+}
+
+/* ---- semantic roles — DARK (the brand's native mode) ---- */
+.dark {
+    --background: #050714;
+    --foreground: #f4f4f2;
+    --card: #08081f;
+    --card-foreground: #f4f4f2;
+    --popover: #131b3a;
+    --popover-foreground: #f4f4f2;
+    --primary: #7c3aed;
+    --primary-foreground: #ffffff;
+    --secondary: #131b3a;
+    --secondary-foreground: #f4f4f2;
+    --muted: #131b3a;
+    --muted-foreground: #94a3b8;
+    --accent: #131b3a;
+    --accent-foreground: #f4f4f2;
+    --destructive: #f43f5e;
+    --destructive-foreground: #ffffff;
+    --border: #1e2a4a;
+    /* Same SC 1.4.11 fix as light: #1e2a4a was 1.42:1 on the night base.
+       #55689b measures 3.67:1 on --background, 3.61:1 on --card and 3.08:1
+       on --popover, so the control boundary holds up on every surface. */
+    --input: #55689b;
+    /* #7c3aed was 3.52:1 — over the line but thin for a focus indicator.
+       #8b5cf6 lifts it to 4.74:1 while staying inside the brand violet. */
+    --ring: #8b5cf6;
+
+    /* ---- form status roles (night bases) ---- */
+    --success: #34d399;
+    --success-foreground: #050714;
+    --warning: #fbbf24;
+    --warning-foreground: #050714;
+
+    --gold: #d4af37;
+    --gold-foreground: #0b1020;
+
+    --chart-1: #7c3aed;
+    --chart-2: #06b6d4;
+    --chart-3: #d946ef;
+    --chart-4: #d4af37;
+    --chart-5: #10b981;
+
+    --sidebar: #08081f;
+    --sidebar-background: #08081f;
+    --sidebar-foreground: #f4f4f2;
+    --sidebar-primary: #7c3aed;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #131b3a;
+    --sidebar-accent-foreground: #f4f4f2;
+    --sidebar-border: #1e2a4a;
+    --sidebar-ring: #7c3aed;
+
+    color-scheme: dark;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Ambient layer — the hero glow as the ground of the whole product
+|--------------------------------------------------------------------------
+|
+| BRAND/hero-glow.webp is painted once, fixed, behind every page (landing,
+| auth, dashboard, settings) by the `body::before` rule in app.css. Nothing
+| per-page is needed: a page only has to avoid painting an opaque background
+| over it, which is why the app-shell surfaces below are translucent.
+|
+| The image is decorative, so these tokens control how far it is allowed to
+| intrude: strong in dark (its native ground is #050714), heavily damped in
+| light, where the same glow would eat text contrast.
+|
+*/
+
+:root {
+    --ambient-image: url('/img/hero-glow.webp');
+    /* Anchored top-centre: the bright arc reads as a horizon behind the
+       header, and the content below lands on calm ground. */
+    --ambient-position: 50% 0%;
+    --ambient-size: cover;
+    --ambient-opacity: 0.14;
+
+    /* Readability scrim over the image. Transparent where the glow should be
+       felt, opaque toward the fold so long pages keep AA body contrast. */
+    --ambient-veil: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklab, var(--background) 55%, transparent) 45%,
+        var(--background) 100%
+    );
+
+    /* Section-level glows for the landing — the same hues as the image, drawn
+       in CSS so they scale with the viewport instead of stretching a bitmap. */
+    --ambient-blob-cyan: color-mix(
+        in oklab,
+        var(--brand-cyan) 22%,
+        transparent
+    );
+    --ambient-blob-purple: color-mix(
+        in oklab,
+        var(--brand-purple) 20%,
+        transparent
+    );
+    --ambient-blob-magenta: color-mix(
+        in oklab,
+        var(--brand-magenta) 16%,
+        transparent
+    );
+
+    /* ---- translucent surfaces ----
+       The app shell (sidebar, inset, sticky headers) sits ON the ambient layer
+       rather than over it. Derived from the opaque roles so a theme change
+       needs no second edit. */
+    --surface-app: color-mix(in oklab, var(--background) 82%, transparent);
+    --surface-sidebar: color-mix(
+        in oklab,
+        var(--sidebar-background) 72%,
+        transparent
+    );
+    --surface-glass: color-mix(in oklab, var(--card) 70%, transparent);
+    --surface-glass-strong: color-mix(in oklab, var(--card) 88%, transparent);
+    --glass-border: color-mix(in oklab, var(--border) 85%, transparent);
+    --glass-blur: 14px;
+
+    /* ---- elevation ----
+       Light mode leans on shadow for depth; dark mode leans on a lighter
+       surface plus a hairline, because a black shadow is invisible on #050714. */
+    --shadow-soft:
+        0 1px 2px rgb(11 16 32 / 0.06), 0 8px 24px rgb(11 16 32 / 0.08);
+    --shadow-lifted:
+        0 2px 4px rgb(11 16 32 / 0.06), 0 18px 48px rgb(11 16 32 / 0.12);
+    --shadow-glow:
+        0 0 0 1px var(--glass-border),
+        0 12px 40px color-mix(in oklab, var(--brand-purple) 12%, transparent);
+
+    /* Motion — capped at 0.4s so nothing can flash above the WCAG 2.3.1
+       three-per-second threshold. */
+    --motion-fast: 140ms;
+    --motion-base: 240ms;
+    --motion-slow: 400ms;
+    --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.dark {
+    /* The night bases ARE the image's own ground, so it can run near full
+       strength without costing any contrast. */
+    --ambient-opacity: 0.55;
+
+    --ambient-veil: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in oklab, var(--background) 45%, transparent) 50%,
+        var(--background) 100%
+    );
+
+    --ambient-blob-cyan: color-mix(
+        in oklab,
+        var(--brand-cyan) 30%,
+        transparent
+    );
+    --ambient-blob-purple: color-mix(
+        in oklab,
+        var(--brand-purple) 28%,
+        transparent
+    );
+    --ambient-blob-magenta: color-mix(
+        in oklab,
+        var(--brand-magenta) 22%,
+        transparent
+    );
+
+    --surface-app: color-mix(in oklab, var(--background) 72%, transparent);
+    --surface-sidebar: color-mix(
+        in oklab,
+        var(--sidebar-background) 62%,
+        transparent
+    );
+    --surface-glass: color-mix(in oklab, var(--card) 62%, transparent);
+    --surface-glass-strong: color-mix(in oklab, var(--card) 85%, transparent);
+
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+    --shadow-lifted: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 48px rgb(0 0 0 / 0.5);
+    --shadow-glow:
+        0 0 0 1px var(--glass-border),
+        0 12px 40px color-mix(in oklab, var(--brand-purple) 22%, transparent);
+}

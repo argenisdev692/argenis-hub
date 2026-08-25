@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(php -v)",
+      "Bash(php -m)",
+      "Bash(composer *)",
+      "Bash(./vendor/bin/pest*)",
+      "Bash(vendor/bin/pest*)",
+      "Bash(./vendor/bin/pint*)",
+      "Bash(vendor/bin/pint*)",
+      "Bash(./vendor/bin/phpunit*)",
+      "Bash(vendor/bin/phpunit*)",
+      "Bash(./vendor/bin/phpstan*)",
+      "Bash(vendor/bin/phpstan*)",
+      "Bash(npm install)",
+      "Bash(npm ci)",
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run build-ssr)",
+      "Bash(npm run lint*)",
+      "Bash(npm run type-check*)",
+      "Bash(npm run format*)",
+      "Bash(npm audit*)",
+      "Bash(npx volt-vue *)",
+      "Bash(npx tsc*)",
+      "Bash(npx eslint*)",
+      "Bash(npx prettier*)",
+      "Bash(npx vue-tsc*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Read",
+      "Edit",
+      "Write",
+      "Grep",
+      "Glob"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git reset*)",
+      "Bash(git rebase*)",
+      "Bash(rm *)",
+      "Bash(php artisan migrate:fresh*)",
+      "Bash(php artisan db:wipe*)",
+      "Bash(php artisan migrate --force*)",
+      "Bash(composer remove*)",
+      "Bash(composer update*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(rm -rf /*)",
+      "Bash(./vendor/bin/sail*)",
+      "Bash(sail *)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/storage/oauth-*.key)",
+      "Read(**/storage/oauth-*.pub)"
+    ]
+  },
+  "env": {
+    "NODE_ENV": "development",
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1"
+  },
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "c:\\Users\\Lenovo\\Herd\\argenis-hub"
+      ]
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "tavily": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "tavily-mcp"],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      }
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      }
+    },
+    "laravel-boost": {
+      "type": "stdio",
+      "command": "php",
+      "args": ["artisan", "boost:mcp"]
+    }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/claude-sync-hook.mjs",
+            "timeout": 30,
+            "statusMessage": "Syncing .claude/ → .cursor/"
+          }
+        ]
+      }
+    ]
+  }
+}

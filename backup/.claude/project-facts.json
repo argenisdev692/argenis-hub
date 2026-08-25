@@ -1,0 +1,14 @@
+{
+  "php": "^8.3",
+  "laravel": "^13.17",
+  "inertiaLaravel": "3.0",
+  "vue": "^3.5.13",
+  "primevue": "absent",
+  "inertiaVue": "^3.0.0",
+  "tailwind": true,
+  "testRunner": "pest",
+  "unstyled": false,
+  "hasZod": true,
+  "hasPiniaColada": true,
+  "inertiaSsr": false
+}

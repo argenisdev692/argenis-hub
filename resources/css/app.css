@@ -1,0 +1,354 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+/* Design tokens (brand palette + semantic roles) — single source of truth. */
+@import './globals.css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    /* Form status roles → bg-success, text-warning, bg-gold, …
+       Mode-aware (see globals.css), unlike the raw --status-* brand tokens. */
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-gold: var(--gold);
+    --color-gold-foreground: var(--gold-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar-background);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Brand palette → bg-brand-cyan, text-brand-purple, border-accent-gold, … */
+    --color-brand-cyan: var(--brand-cyan);
+    --color-brand-purple: var(--brand-purple);
+    --color-brand-magenta: var(--brand-magenta);
+    --color-brand-indigo: var(--brand-indigo);
+    --color-accent-gold: var(--accent-gold);
+    --color-accent-gold-hover: var(--accent-gold-hover);
+    --color-accent-gold-light: var(--accent-gold-light);
+    --color-status-success: var(--status-success);
+    --color-status-danger: var(--status-danger);
+
+    /* Night bases → bg-hub-bg, bg-hub-card, border-hub-border, …
+       (the names BRAND/DESIGN_SYSTEM.md writes its markup against) */
+    --color-hub-bg: var(--hub-bg-dark);
+    --color-hub-surface: var(--hub-bg-surface);
+    --color-hub-elevated: var(--hub-bg-elevated);
+    --color-hub-card: var(--hub-bg-card);
+    --color-hub-border: var(--hub-border);
+    --color-txt-main: var(--text-main);
+    --color-txt-muted: var(--text-muted);
+
+    /* Translucent shell surfaces → bg-surface-app, bg-surface-sidebar, …
+       These let the fixed ambient glow read THROUGH the app chrome instead of
+       being covered by it. See the ambient block in globals.css. */
+    --color-surface-app: var(--surface-app);
+    --color-surface-sidebar: var(--surface-sidebar);
+    --color-surface-glass: var(--surface-glass);
+    --color-surface-glass-strong: var(--surface-glass-strong);
+    --color-glass-border: var(--glass-border);
+
+    --shadow-soft: var(--shadow-soft);
+    --shadow-lifted: var(--shadow-lifted);
+    --shadow-glow: var(--shadow-glow);
+
+    --ease-brand: var(--motion-ease);
+
+    --font-sans: var(--font-sans);
+    --font-mono: var(--font-mono);
+}
+
+/* The brand gradient is a gradient, not a colour, so it cannot ride the color
+   scale — it ships as its own utility instead. `bg-brand-gradient` on a block,
+   or paired with bg-clip-text + text-transparent for the logotype treatment. */
+@utility bg-brand-gradient {
+    background-image: var(--gradient-tech);
+}
+
+@utility hero-glow-cyan {
+    background-image: var(--hero-glow-cyan);
+}
+
+@utility hero-glow-purple {
+    background-image: var(--hero-glow-purple);
+}
+
+/* Frosted panel — the 2026 "glass" surface, but token-backed so it inverts
+   correctly instead of being a fixed white wash. Use on anything that must
+   float over the ambient glow: sticky headers, hero cards, KPI tiles. */
+@utility glass-panel {
+    background-color: var(--surface-glass);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    border: 1px solid var(--glass-border);
+}
+
+@utility glass-panel-strong {
+    background-color: var(--surface-glass-strong);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    border: 1px solid var(--glass-border);
+}
+
+/* A soft radial light source. Size and place it with the usual utilities;
+   the hue comes from --ambient-blob-*, so it tracks the theme. */
+@utility ambient-blob-cyan {
+    background-image: radial-gradient(
+        circle at center,
+        var(--ambient-blob-cyan) 0%,
+        transparent 70%
+    );
+}
+
+@utility ambient-blob-purple {
+    background-image: radial-gradient(
+        circle at center,
+        var(--ambient-blob-purple) 0%,
+        transparent 70%
+    );
+}
+
+@utility ambient-blob-magenta {
+    background-image: radial-gradient(
+        circle at center,
+        var(--ambient-blob-magenta) 0%,
+        transparent 70%
+    );
+}
+
+/* Gradient hairline used to separate the landing's stacked sections without a
+   hard 1px rule cutting across the glow. */
+@utility rule-fade {
+    background-image: linear-gradient(
+        to right,
+        transparent,
+        var(--glass-border),
+        transparent
+    );
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--border, currentColor);
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: var(--font-sans);
+        /* The ambient layers below are `position: fixed`, so body must not
+           establish a containing block for them (no transform/filter here). */
+        position: relative;
+    }
+
+    /*
+      The site-wide hero glow.
+
+      Two fixed, non-interactive layers behind every page, painted once here so
+      no page, layout or component has to opt in:
+
+        ::before → BRAND/hero-glow.webp, damped by --ambient-opacity
+        ::after  → the readability veil that fades the glow into --background
+
+      Negative z-index puts them above body's own background but below all
+      content, and `pointer-events: none` keeps them out of hit-testing.
+    */
+    body::before,
+    body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+    }
+
+    body::before {
+        z-index: -2;
+        background-image: var(--ambient-image);
+        background-position: var(--ambient-position);
+        background-size: var(--ambient-size);
+        background-repeat: no-repeat;
+        opacity: var(--ambient-opacity);
+        transition: opacity var(--motion-slow) var(--motion-ease);
+    }
+
+    body::after {
+        z-index: -1;
+        background-image: var(--ambient-veil);
+    }
+
+    /*
+      A 1200px bitmap stretched across a phone is all cost and no payoff, and a
+      printed page has no use for it either. Fall back to the CSS glow, which
+      costs nothing.
+    */
+    @media (max-width: 640px), print {
+        body::before {
+            background-image: var(--hero-glow-purple);
+            background-size: 180% auto;
+        }
+    }
+
+    /*
+      WCAG 2.2 SC 2.4.7 / 1.4.11 — a visible focus indicator that clears 3:1 on
+      every surface (--ring is tuned for that in globals.css). Mouse clicks
+      stay quiet; keyboard navigation never does.
+    */
+    :focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+        border-radius: var(--radius-sm);
+    }
+
+    /*
+      WCAG 2.2 SC 2.3.3 — honour a reduced-motion preference globally, so no
+      component has to remember to.
+    */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+
+    /* Figures in KPI tiles and tables must not jitter column to column. */
+    :where(table, [data-numeric]) {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /*
+      Active navigation accent.
+
+      The shadcn sidebar marks the current page with a background tint alone,
+      which is a weak signal against a translucent surface. A brand-gradient
+      rail on the leading edge makes "you are here" unmistakable, and it is a
+      second, non-colour cue on top of the tint.
+    */
+    [data-sidebar='menu-button'][data-active='true'] {
+        position: relative;
+    }
+
+    [data-sidebar='menu-button'][data-active='true']::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: calc(var(--spacing) * -1.5);
+        height: 1.25rem;
+        width: 3px;
+        translate: 0 -50%;
+        border-radius: 9999px;
+        background-image: var(--gradient-tech);
+    }
+
+    /* The rail would be clipped by the icon rail's narrow gutter. */
+    [data-collapsible='icon']
+        [data-sidebar='menu-button'][data-active='true']::before {
+        display: none;
+    }
+
+    /*
+      Mobile drawer: rows arrive in sequence rather than all at once, which
+      reads as the menu unfolding instead of appearing. Capped at eight items
+      and ~0.32s total, well inside the WCAG 2.3.1 budget — and the global
+      reduced-motion rule above switches it off entirely.
+    */
+    [data-mobile='true'] [data-sidebar='menu'] > * {
+        animation: nav-item-in var(--motion-base) var(--motion-ease) backwards;
+    }
+
+    [data-mobile='true'] [data-sidebar='menu'] > *:nth-child(1) {
+        animation-delay: 40ms;
+    }
+    [data-mobile='true'] [data-sidebar='menu'] > *:nth-child(2) {
+        animation-delay: 80ms;
+    }
+    [data-mobile='true'] [data-sidebar='menu'] > *:nth-child(3) {
+        animation-delay: 120ms;
+    }
+    [data-mobile='true'] [data-sidebar='menu'] > *:nth-child(4) {
+        animation-delay: 160ms;
+    }
+    [data-mobile='true'] [data-sidebar='menu'] > *:nth-child(n + 5) {
+        animation-delay: 200ms;
+    }
+
+    @keyframes nav-item-in {
+        from {
+            opacity: 0;
+            translate: -0.5rem 0;
+        }
+        to {
+            opacity: 1;
+            translate: 0 0;
+        }
+    }
+}

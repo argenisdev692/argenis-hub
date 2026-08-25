@@ -1,0 +1,767 @@
+---
+name: architecture-intermediate-php
+description: Directory tree, PSR-4 autoload, CQRS and Event/Listener placement rules for the modular hexagonal PHP / Laravel 13 backend.
+---
+
+## Composer Autoload (PSR-4) — MANDATORY for this tree
+
+Two flat root namespaces under `src/`:
+
+```json
+{
+  "autoload": {
+    "psr-4": {
+      "App\\":             "app/",
+      "Modules\\":         "src/Modules/",
+      "Shared\\":          "src/Shared/",
+      "Database\\Factories\\": "database/factories/",
+      "Database\\Seeders\\":   "database/seeders/"
+    }
+  }
+}
+```
+
+After changing this block, ALWAYS run:
+
+```bash
+composer dump-autoload
+```
+
+Resulting namespaces:
+
+| Path | Namespace |
+|---|---|
+| `src/Modules/Users/Domain/Entities/User.php`        | `Modules\Users\Domain\Entities\User` |
+| `src/Modules/Users/Application/Commands/CreateUserHandler.php` | `Modules\Users\Application\Commands\CreateUserHandler` |
+| `src/Modules/Users/Infrastructure/Http/Controllers/UserController.php` | `Modules\Users\Infrastructure\Http\Controllers\UserController` |
+| `src/Shared/Domain/ValueObjects/Uuid.php`           | `Shared\Domain\ValueObjects\Uuid` |
+| `src/Shared/Infrastructure/Audit/SpatieActivityLogAdapter.php` | `Shared\Infrastructure\Audit\SpatieActivityLogAdapter` |
+| `src/Shared/Infrastructure/Http/Middleware/SecurityHeaders.php` | `Shared\Infrastructure\Http\Middleware\SecurityHeaders` |
+| `src/Shared/Providers/SharedServiceProvider.php`    | `Shared\Providers\SharedServiceProvider` |
+
+> **Hard rule — exact placement of the two cross-cutting folders** (this is what the codebase does; the tree below matches it):
+>
+> | What | Path | Namespace |
+> |---|---|---|
+> | Cross-cutting **middleware** | `src/Shared/Infrastructure/Http/Middleware/` | `Shared\Infrastructure\Http\Middleware\` |
+> | Module **middleware** | `src/Modules/{X}/Infrastructure/Http/Middleware/` | `Modules\{X}\Infrastructure\Http\Middleware\` |
+> | Cross-cutting **providers** | `src/Shared/Providers/` | `Shared\Providers\` |
+> | Module **providers** | `src/Modules/{X}/Providers/` | `Modules\{X}\Providers\` |
+>
+> Middleware is an HTTP adapter, so it lives under `Infrastructure/Http/` — never at `Shared/Middleware/`, never at `Shared/Infrastructure/Middleware/`. Providers are the composition root, so they sit at the **Shared root as a sibling** of `Domain/`, `Application/` and `Infrastructure/` — never nested inside `Infrastructure/`. Neither ever lives at `src/` root: that keeps PSR-4 to two clean entries and avoids namespace pollution.
+
+---
+
+## Layer Imports (enforced — summary)
+
+> Full canonical rule lives in `.claude/BACKEND-PHP/SKILL.md` §5. Replicated here so this skill is self-contained when loaded in isolation.
+
+| Layer          | CAN import                                                                       | CANNOT import                                       |
+| -------------- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **Domain**         | own VOs/Entities/Events, `Shared\Domain\*`, native PHP, native exceptions    | Eloquent, Laravel facades, HTTP, queues, file I/O   |
+| **Application**    | Domain, `Shared\Application\*`, DTOs, **`Illuminate\Contracts\*`** (interfaces only — Dispatcher, Cache, Log) | Eloquent models (`@internal`-enforced), HTTP, concrete Laravel implementations |
+| **Infrastructure** | Domain (Ports), Application, Eloquent, ANY Laravel/3rd-party SDK             | — (adapter layer has no restrictions)               |
+
+**Mapper exception:** `Infrastructure/Persistence/Mappers/{Entity}Mapper.php` is the ONLY class allowed to import both a Domain Entity AND an EloquentModel.
+
+**Application/Contracts clarification:** importing `Illuminate\Contracts\Events\Dispatcher`, `Illuminate\Contracts\Cache\Repository`, `Illuminate\Contracts\Logging\Log`, etc. inside `Application/Commands` or `Application/Listeners` is ALLOWED. They are **contracts (interfaces)**, not implementations — the container resolves the concrete adapter. Importing `Illuminate\Support\Facades\*` or `Illuminate\Database\Eloquent\*` inside Application is FORBIDDEN.
+
+Register cross-cutting `Shared\Providers\*` in `bootstrap/providers.php`:
+
+```php
+return [
+    App\Providers\AppServiceProvider::class,
+    Shared\Providers\SharedServiceProvider::class,
+    Shared\Providers\BusServiceProvider::class,
+    Shared\Providers\EventServiceProvider::class,
+    Modules\Auth\Providers\AuthServiceProvider::class,
+    Modules\Users\Providers\UsersServiceProvider::class,
+    // …one entry per Module ServiceProvider
+];
+```
+
+---
+
+## Directory Tree
+
+> **Read the `Shared/` Optionality Rule below BEFORE creating any file under `src/Shared/Infrastructure/`.** The tree that follows is a **catalogue of where things go when they exist** — it is NOT a scaffolding checklist. Roughly 60 of its entries are opt-in adapters. Creating them all on day 1 is the exact YAGNI violation this skill's Principles Compliance table promises to prevent.
+
+```
+src/
+│
+├── Shared/
+│   ├── Domain/
+│   │   ├── Exceptions/                                ← CORE: ship these from day 1
+│   │   │   ├── DomainException.php                    ← base class — MANDATORY
+│   │   │   ├── EntityNotFoundException.php            ← MANDATORY (every repository raises it)
+│   │   │   ├── UnauthorizedException.php              ← MANDATORY (Policies / Gates)
+│   │   │   ├── BusinessRuleViolationException.php     ← MANDATORY (DDD invariants)
+│   │   │   │                                          ← OPT-IN: create only when first thrown
+│   │   │   ├── ValidationException.php                ← OPT-IN — only when Domain validates beyond FormRequest / Spatie Data
+│   │   │   ├── ConcurrencyException.php               ← OPT-IN — only when optimistic locking / version columns exist
+│   │   │   ├── InvariantViolationException.php        ← OPT-IN — only when rich VOs / aggregates enforce invariants explicitly
+│   │   │   └── IntegrationException.php               ← OPT-IN — only when external API adapters exist (LLM, payments, mailer)
+│   │   ├── ValueObjects/
+│   │   │   ├── Uuid.php
+│   │   │   ├── Email.php
+│   │   │   ├── PhoneNumber.php
+│   │   │   ├── Money.php
+│   │   │   ├── DateRange.php
+│   │   │   ├── Timestamp.php
+│   │   │   └── Url.php
+│   │   ├── Entities/
+│   │   │   └── AggregateRoot.php
+│   │   └── Ports/
+│   │       ├── CachePort.php
+│   │       ├── QueuePort.php
+│   │       ├── LoggerPort.php
+│   │       ├── StoragePort.php
+│   │       ├── NotificationPort.php
+│   │       └── ExportPort.php
+│   │
+│   ├── Application/
+│   │   ├── DTOs/
+│   │   │   ├── BaseDTO.php
+│   │   │   ├── PaginationDTO.php
+│   │   │   └── FilterDTO.php
+│   │   └── Transactions/
+│   │       ├── TransactionInterface.php
+│   │       └── TransactionalHandler.php
+│   │
+│   ├── Infrastructure/
+│   │   ├── Cache/                                 ← CORE
+│   │   │   ├── CacheInterface.php
+│   │   │   ├── RedisAdapter.php
+│   │   │   └── InMemoryCacheAdapter.php           ← OPT-IN — only when a test double beyond Cache::fake() is needed
+│   │   ├── Queue/                                 ← CORE (LaravelQueueAdapter only)
+│   │   │   ├── QueueInterface.php
+│   │   │   ├── LaravelQueueAdapter.php
+│   │   │   ├── RabbitMQAdapter.php                ← OPT-IN — only when RabbitMQ is actually provisioned
+│   │   │   └── SqsAdapter.php                     ← OPT-IN — only when SQS is actually provisioned
+│   │   ├── Broadcasting/                          ← OPT-IN — only when the app broadcasts (Reverb in scope)
+│   │   │   ├── BroadcastingInterface.php
+│   │   │   ├── ReverbAdapter.php                  ← PRIMARY when broadcasting exists
+│   │   │   └── PusherAdapter.php                  ← OPT-IN — only when Pusher replaces/backs up Reverb
+│   │   ├── Storage/                               ← CORE when the app stores files at all
+│   │   │   ├── StorageInterface.php
+│   │   │   ├── R2StorageAdapter.php           ← PRIMARY — Cloudflare R2 via S3-compatible driver (BACKEND-PHP §5)
+│   │   │   ├── S3StorageAdapter.php           ← alternative cloud provider when R2 not available
+│   │   │   ├── LocalStorageAdapter.php        ← TESTS-ONLY (Pest fixtures); never the final production destination
+│   │   │   └── SpatieMediaLibraryAdapter.php  ← OPTIONAL — only when Spatie Media Library is in scope; underlying disk MUST still be `r2`
+│   │   ├── AI/                              ← OPTIONAL — LLM/embedding integrations
+│   │   │   ├── AIClientInterface.php          ← enforces PII redaction, rate limit, timeout, circuit breaker, audit (OWASP §16)
+│   │   │   └── LaravelAIAdapter.php           ← PRIMARY — official `laravel/ai` ^0.11 SDK (this project's only LLM bridge). Provider switch (OpenAI / Anthropic / Gemini / local) happens INSIDE this adapter via `config/ai.php`. Do NOT add per-provider adapters here.
+│   │   │   #
+│   │   │   # When this folder exists, OWASP/SKILL.md §16 (LLM Top 10:2025) becomes mandatory:
+│   │   │   #   LLM01 Prompt Injection · LLM02 Sensitive Info Disclosure · LLM05 Improper Output
+│   │   │   #   Handling · LLM07 System Prompt Leakage · LLM10 Unbounded Consumption.
+│   │   │   # `prism-php/prism` and other third-party LLM bridges are BANNED — use `laravel/ai` only.
+│   │   ├── Mail/                                  ← OPT-IN — Laravel's Mail facade covers transactional mail until a provider SDK is required
+│   │   │   ├── MailInterface.php
+│   │   │   ├── ResendAdapter.php
+│   │   │   ├── MailgunAdapter.php
+│   │   │   └── ReactEmailTemplateRenderer.php
+│   │   ├── Export/                                 ← OPT-IN — create when the FIRST module ships exports (BACKEND-PHP §8)
+│   │   │   ├── ExportInterface.php
+│   │   │   ├── ExcelAdapter.php
+│   │   │   ├── PdfAdapter.php
+│   │   │   └── PdfTemplateRenderer.php
+│   │   ├── Logging/                                ← CORE: ApplicationLogger + StructuredJsonHandler + CorrelationIdProcessor
+│   │   │   ├── ApplicationLogger.php
+│   │   │   ├── Handlers/
+│   │   │   │   ├── OpenTelemetryMonologHandler.php ← OPT-IN — pairs with Observability/Tracing
+│   │   │   │   └── StructuredJsonHandler.php
+│   │   │   └── Processors/
+│   │   │       ├── TraceContextProcessor.php       ← OPT-IN — pairs with Observability/Tracing
+│   │   │       ├── CorrelationIdProcessor.php
+│   │   │       └── RequestContextProcessor.php
+│   │   ├── Observability/                          ← OPT-IN ENTIRELY — see Shared/ Optionality Rule thresholds
+│   │   │   ├── Tracing/
+│   │   │   │   ├── OpenTelemetryAdapter.php
+│   │   │   │   ├── InstrumentationProvider.php
+│   │   │   │   └── SpanEnricher.php
+│   │   │   ├── Metrics/
+│   │   │   │   ├── PrometheusAdapter.php
+│   │   │   │   └── PrometheusController.php
+│   │   │   └── HealthCheck/
+│   │   │       ├── HealthCheckController.php
+│   │   │       ├── HealthCheckAggregator.php
+│   │   │       ├── DatabaseHealthCheck.php
+│   │   │       ├── RedisHealthCheck.php
+│   │   │       ├── QueueHealthCheck.php
+│   │   │       ├── ReverbHealthCheck.php
+│   │   │       ├── StorageHealthCheck.php
+│   │   │       └── ExternalServiceHealthCheck.php
+│   │   ├── Resilience/                             ← OPT-IN ENTIRELY — thresholds in BACKEND-PHP §9.1; until met use Http::timeout()->retry()
+│   │   │   ├── CircuitBreaker/
+│   │   │   │   ├── CircuitBreaker.php
+│   │   │   │   ├── CircuitBreakerInterface.php
+│   │   │   │   ├── CircuitBreakerState.php
+│   │   │   │   └── CircuitBreakerMetricsExporter.php
+│   │   │   ├── RateLimiter/
+│   │   │   │   ├── RateLimiter.php
+│   │   │   │   └── RateLimiterInterface.php
+│   │   │   └── Retry/
+│   │   │       ├── RetryPolicy.php
+│   │   │       └── ExponentialBackoff.php
+│   │   ├── Persistence/                            ← OPTIONAL — Laravel's `DB::transaction(fn () => …)` covers 95% of cases
+│   │   │   └── Transactions/                       ← create ONLY when multiple repositories share a complex cross-aggregate transaction
+│   │   │       ├── DatabaseTransaction.php         ← thin wrapper around `DB::transaction()`
+│   │   │       └── UnitOfWork.php                  ← only when coordinating ≥2 aggregates that must commit/rollback as one
+│   │   ├── Audit/                                  ← CORE
+│   │   │   ├── AuditInterface.php
+│   │   │   ├── SpatieActivityLogAdapter.php
+│   │   │   └── AuditableInterface.php
+│   │   ├── Utils/                                   ← OPT-IN — add a helper only at its second call-site
+│   │   │   ├── EmailHelper.php
+│   │   │   └── ImageHelper.php
+│   │   └── Http/                                   ← CORE — HTTP is an adapter, so its middleware belongs here
+│   │       └── Middleware/                         ← namespace `Shared\Infrastructure\Http\Middleware\…`
+│   │           ├── SecurityHeaders.php
+│   │           ├── CorrelationIdMiddleware.php
+│   │           ├── TraceContextMiddleware.php      ← OPT-IN — pairs with Observability/Tracing
+│   │           ├── RateLimitMiddleware.php
+│   │           └── HandleInertiaRequests.php
+│   │
+│   └── Providers/                                  ← SIBLING of Domain/Application/Infrastructure, NOT nested inside them
+│       ├── SharedServiceProvider.php               ← namespace `Shared\Providers\…`
+│       ├── BusServiceProvider.php                  ← OPT-IN — binds CommandBus / QueryBus / EventBus
+│       └── EventServiceProvider.php                ← OPT-IN — registers cross-cutting listeners
+│
+└── Modules/
+    │
+    ├── Auth/
+    │   ├── Providers/
+    │   │   └── AuthServiceProvider.php
+    │   ├── Tests/
+    │   ├── Domain/
+    │   ├── Application/
+    │   └── Infrastructure/
+    │       ├── Http/
+    │       │   ├── Controllers/
+    │       │   │   ├── Api/
+    │       │   │   └── Web/
+    │       │   ├── Requests/           ← NO Resources/ — response shapes are Spatie Data (Response Shape Rule)
+    │       │   └── Middleware/         ← OPT-IN — module-owned middleware, `Modules\Auth\Infrastructure\Http\Middleware\`
+    │       ├── WebSocket/
+    │       ├── Persistence/
+    │       ├── Queue/
+    │       ├── ExternalServices/
+    │       └── Routes/
+    │
+    ├── Users/
+    │   ├── Providers/
+    │   │   └── UsersServiceProvider.php
+    │   ├── Tests/
+    │   ├── Domain/
+    │   ├── Application/
+    │   └── Infrastructure/
+    │       ├── Http/
+    │       ├── WebSocket/
+    │       ├── Persistence/
+    │       ├── Queue/
+    │       ├── Storage/
+    │       ├── Utils/
+    │       └── Routes/
+    │
+    ├── Notifications/
+    │   ├── Providers/
+    │   ├── Tests/
+    │   ├── Domain/
+    │   ├── Application/
+    │   └── Infrastructure/
+    │       ├── Http/
+    │       ├── WebSocket/
+    │       ├── Persistence/
+    │       ├── Queue/
+    │       ├── ExternalServices/
+    │       ├── Notifications/
+    │       └── Routes/
+    │
+    ├── Blog/
+    │   ├── Providers/
+    │   │   └── BlogServiceProvider.php
+    │   ├── Domain/
+    │   ├── Application/
+    │   └── Infrastructure/
+    │       ├── Http/
+    │       ├── Persistence/
+    │       └── Routes/
+    │
+    └── {YourModule}/
+        ├── Providers/
+        │   └── {YourModule}ServiceProvider.php          ← registerWebRoutes() + registerApiRoutes() MANDATORY
+        ├── Tests/
+        │   ├── Feature/
+        │   └── Unit/                                    ← OPTIONAL — only when VOs / domain invariants exist
+        ├── Domain/
+        │   ├── Entities/                                ← OPTIONAL — see Entity Optionality Rule
+        │   │   └── {YourEntity}.php                     ← skip when Eloquent model is 1:1 with the aggregate and no invariants live in Domain
+        │   ├── ValueObjects/
+        │   └── Ports/
+        ├── Application/
+        │   ├── DTOs/
+        │   ├── Commands/                                ← FLAT: one Handler per file, no subfolder per use-case
+        │   │   ├── Create{YourEntity}Handler.php
+        │   │   ├── Update{YourEntity}Handler.php
+        │   │   ├── Delete{YourEntity}Handler.php
+        │   │   ├── BulkDelete{YourEntity}Handler.php    ← MANDATORY when UI has row selection (paired with BulkRestore)
+        │   │   ├── Restore{YourEntity}Handler.php
+        │   │   └── BulkRestore{YourEntity}Handler.php   ← MANDATORY when UI has row selection (paired with BulkDelete)
+        │   └── Queries/                                 ← FLAT: one Handler per file
+        │       ├── List{YourEntities}Handler.php
+        │       └── Get{YourEntity}Handler.php
+        └── Infrastructure/
+            ├── Http/
+            │   ├── Controllers/
+            │   │   ├── {YourEntity}Controller.php            ← DEFAULT: one resourceful controller serves Inertia + JSON (see Controller Fusion Rule)
+            │   │   ├── Api/                                  ← OPTIONAL — only when API/Web flows truly diverge
+            │   │   │   ├── {YourEntity}Controller.php        ← return type-hints MANDATORY (Scramble auto-docs)
+            │   │   │   └── {YourEntity}ExportController.php  ← return type-hint MANDATORY (Scramble auto-docs)
+            │   │   └── Web/                                  ← OPTIONAL — only when Inertia page needs extra props the API does not send
+            │   │       └── {YourEntity}PageController.php
+            │   ├── Export/                                  ← MANDATORY when exports are in scope
+            │   │   ├── {YourEntity}ExcelExport.php
+            │   │   ├── {YourEntity}PdfExport.php
+            │   │   └── {YourEntity}ExportTransformer.php
+            │   └── Requests/
+            │       ├── Store{YourEntity}Request.php
+            │       ├── Update{YourEntity}Request.php
+            │       ├── BulkDelete{YourEntity}Request.php     ← MANDATORY when UI has row selection
+            │       ├── BulkRestore{YourEntity}Request.php    ← MANDATORY when UI has row selection (paired with BulkDelete)
+            │       └── Export{YourEntity}Request.php         ← MANDATORY when exports are in scope
+            ├── Persistence/
+            │   ├── Eloquent/
+            │   │   └── Models/
+            │   │       └── {YourEntity}EloquentModel.php
+            │   ├── Mappers/                                  ← OPTIONAL — only when the table diverges from the aggregate
+            │   │   └── {YourEntity}Mapper.php
+            │   ├── Repositories/
+            │   │   └── Eloquent{YourEntity}Repository.php
+            │   └── ReadRepositories/                         ← OPTIONAL — only when read models / projections genuinely diverge from write
+            │       └── Eloquent{YourEntity}ReadRepository.php
+            └── Routes/
+                ├── web.php   ← Inertia pages + /data/admin JSON endpoints (session auth)
+                └── api.php   ← Sanctum API endpoints (MANDATORY when module exposes API)
+
+# Optional folders — add ONLY when justified by a concrete use-case:
+#   Infrastructure/Http/Middleware/   (module-owned middleware — NEVER Infrastructure/Middleware/)
+#   Infrastructure/WebSocket/         (Reverb / broadcasting channels)
+#   Infrastructure/Queue/             (module-specific Jobs)
+#   Infrastructure/Storage/           (module-specific storage adapters beyond Shared)
+#   Infrastructure/ExternalServices/  (third-party SDK integrations)
+#   Application/Listeners/            (event listeners owned by this module)
+#   Domain/Events/                    (domain events emitted by this aggregate)
+#   Domain/Services/                  (pure domain services without infrastructure)
+
+resources/
+└── views/
+    └── exports/
+        └── pdf/
+            └── {your_module_snake}.blade.php   ← MANDATORY when PDF export is in scope
+```
+
+> **For architecture rules** (date handling, property naming, cache management, readonly classes) → see `.claude/BACKEND-PHP/SKILL.md` §5.
+> This file is the detailed directory tree ONLY.
+
+---
+
+## `Shared/` Optionality Rule — the tree is a catalogue, not a scaffold
+
+The `Modules/` section already ends with `# Optional folders — add ONLY when justified`. The same discipline applies to `Shared/`, and it matters more there: `Shared/Infrastructure/` is where speculative adapters accumulate, because each one looks harmless on its own.
+
+### Day-1 CORE — create these when the project starts
+
+| Path | Why it is core |
+|---|---|
+| `Domain/Exceptions/` (the 4 MANDATORY ones) | every repository and policy raises them |
+| `Domain/ValueObjects/Uuid.php` | UUIDv7 identity is project-wide |
+| `Domain/Ports/` — only the ports with a live adapter | a port with no adapter is dead code |
+| `Application/DTOs/` (`PaginationDTO`, `FilterDTO`) | shared by every list endpoint and export |
+| `Infrastructure/Cache/` (`RedisAdapter`) | Redis is pinned for cache/session/queue |
+| `Infrastructure/Queue/` (`LaravelQueueAdapter`) | the only queue actually provisioned |
+| `Infrastructure/Storage/` (`R2StorageAdapter`, `LocalStorageAdapter`) | R2 is the pinned file destination; Local is for Pest |
+| `Infrastructure/Audit/` (`SpatieActivityLogAdapter`) | the audit trail is always-on per `rules.md` |
+| `Infrastructure/Logging/` (`ApplicationLogger`, `StructuredJsonHandler`, `CorrelationIdProcessor`) | structured logs are required from the first request |
+| `Infrastructure/Http/Middleware/` | cross-cutting HTTP wiring (`Shared\Infrastructure\Http\Middleware\`) |
+| `Providers/` (Shared root, sibling of Infrastructure) | the composition root (`Shared\Providers\`) |
+
+### OPT-IN — create at the moment of first real need, never before
+
+| Path | Create it when |
+|---|---|
+| `Queue/RabbitMQAdapter.php`, `SqsAdapter.php` | that broker is actually provisioned and running |
+| `Broadcasting/` | the app broadcasts — Reverb in scope with a real channel |
+| `Broadcasting/PusherAdapter.php` | Pusher replaces or backs up Reverb in production |
+| `Storage/S3StorageAdapter.php` | a second cloud provider is live alongside R2 |
+| `Storage/SpatieMediaLibraryAdapter.php` | Spatie Media Library is installed (disk still `r2`) |
+| `AI/` | the first LLM/embedding call ships — then OWASP §16 becomes mandatory |
+| `Mail/` | a provider SDK is needed beyond Laravel's Mail facade |
+| `Export/` | the first module ships Excel/PDF exports (`BACKEND-PHP` §8) |
+| `Observability/Tracing/` + OTEL log handler/processors | traces are actually collected and read by someone |
+| `Observability/Metrics/` (Prometheus) | a Prometheus scraper exists and someone watches the dashboard |
+| `Observability/HealthCheck/` | create ONE aggregator + only the checks for services actually in use — never all 7 |
+| `Resilience/` (CircuitBreaker, RateLimiter, Retry) | `BACKEND-PHP` §9.1 thresholds are met; until then `Http::timeout(5)->retry(2, 200, throw: true)` |
+| `Persistence/Transactions/UnitOfWork.php` | ≥2 aggregates must commit/rollback as one — `DB::transaction()` covers 95% |
+| `Utils/*Helper.php` | the helper has a SECOND call-site |
+| `Domain/ValueObjects/` beyond `Uuid` | a field has a real invariant worth protecting for the object's lifetime |
+
+### Hard rules
+
+- An adapter with **no** consumer is dead code. Delete it, don't keep it "for later" — the tree above is the record of where it goes when the need arrives.
+- A port with exactly **one** adapter and no second candidate is an indirection, not Dependency Inversion. Same test as the Repository Optionality Rule in `SKILL-SIMPLE-CRUD.md`.
+- Never create a folder's full file list because the tree shows it. Create the ONE file the current use-case needs.
+- **Auditors:** an opt-in path that exists without its trigger being met is **overengineering — FAIL**, symmetrical to how a missing core path is a FAIL. Point at the trigger row that is not satisfied.
+
+---
+
+## CQRS — File Placement & Wiring
+
+CQRS in this project is **basic by default**: write paths → `Application/Commands/`, read paths → `Application/Queries/`. The `@nestjs/cqrs`-style `CommandBus`/`QueryBus`/`EventBus` is OPTIONAL — adopt it only when you have ≥3 commands per module OR you need pipeline middleware (logging, transaction, audit).
+
+**Default (no bus — direct handler invocation):**
+
+```php
+// Modules/Users/Infrastructure/Http/Controllers/UserController.php
+namespace Modules\Users\Infrastructure\Http\Controllers;
+
+use Modules\Users\Application\Commands\CreateUserHandler;
+use Modules\Users\Application\DTOs\CreateUserData;
+
+final readonly class UserController                 // ✅ stateless + DI → readonly safe
+{
+    public function __construct(
+        private CreateUserHandler $createUser,      // ✅ container-resolved, promotion
+    ) {}
+
+    public function store(CreateUserData $data): RedirectResponse
+    {
+        $this->createUser->handle($data);
+        return back();
+    }
+}
+```
+
+**Upgrade (when a bus is justified) — `Shared\Providers\BusServiceProvider`:**
+
+```php
+namespace Shared\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Shared\Application\Bus\{CommandBus, QueryBus, EventBus};
+
+final class BusServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(CommandBus::class);
+        $this->app->singleton(QueryBus::class);
+        $this->app->singleton(EventBus::class);
+    }
+}
+```
+
+```php
+// Controller with bus
+$this->commandBus->dispatch(new CreateUserCommand($data));
+$result = $this->queryBus->ask(new ListUsersQuery($filters));
+```
+
+**Hard rule:** within a single module, ALL handlers go through the bus OR none of them do — never mix patterns inside the same bounded context.
+
+---
+
+## Domain Events & Listeners — File Placement
+
+Events fire **after** persistence succeeds. They live in `Domain/Events/` (immutable payload — no Laravel imports). Listeners live in `Application/Listeners/` (may use infrastructure ports).
+
+### File layout
+
+```
+src/Modules/Users/
+├── Domain/
+│   └── Events/
+│       ├── UserCreated.php          ← pure DTO event (readonly final class)
+│       └── UserEmailChanged.php
+├── Application/
+│   ├── Commands/
+│   │   └── CreateUserHandler.php    ← emits the event after save
+│   └── Listeners/
+│       ├── SendWelcomeEmailListener.php       ← in-module reaction
+│       └── RegisterUserInAnalyticsListener.php
+└── Providers/
+    └── UsersServiceProvider.php     ← maps Event → Listener(s)
+```
+
+### Domain event (pure)
+
+```php
+namespace Modules\Users\Domain\Events;
+
+use Shared\Domain\ValueObjects\Uuid;
+
+final readonly class UserCreated
+{
+    public function __construct(
+        public Uuid $userId,
+        public string $email,
+        public \DateTimeImmutable $occurredAt = new \DateTimeImmutable(),
+    ) {}
+}
+```
+
+### Command handler emits the event
+
+```php
+namespace Modules\Users\Application\Commands;
+
+use Illuminate\Contracts\Events\Dispatcher;
+use Modules\Users\Domain\Events\UserCreated;
+use Modules\Users\Domain\Ports\UserRepositoryPort;
+
+final readonly class CreateUserHandler
+{
+    public function __construct(
+        private UserRepositoryPort $users,
+        private Dispatcher $events,                  // ✅ Laravel event dispatcher
+    ) {}
+
+    public function handle(CreateUserData $data): void
+    {
+        $user = $this->users->create($data);
+        $this->events->dispatch(new UserCreated($user->id, $user->email));
+    }
+}
+```
+
+### Listener (declared in the module ServiceProvider)
+
+```php
+namespace Modules\Users\Application\Listeners;
+
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Modules\Users\Domain\Events\UserCreated;
+use Shared\Domain\Ports\NotificationPort;
+
+final readonly class SendWelcomeEmailListener implements ShouldQueue
+{
+    public string $queue = 'emails';
+
+    public function __construct(private NotificationPort $notifications) {}
+
+    public function handle(UserCreated $event): void
+    {
+        $this->notifications->sendWelcome($event->userId, $event->email);
+    }
+}
+```
+
+Wired in `Modules/{Module}/Providers/{Module}ServiceProvider::boot()`:
+
+```php
+use Illuminate\Support\Facades\Event;
+
+private function registerListeners(): void
+{
+    Event::listen(UserCreated::class, [SendWelcomeEmailListener::class, 'handle']);
+}
+```
+
+> **Verified against Laravel v13.26 (2026-08):** there is **NO `#[AsEventListener]` attribute** in the framework — `Illuminate\Events\Attributes\` does not exist. Framework listener auto-discovery only scans `app/Listeners`, so a module living under `src/Modules/` MUST declare its own wiring. Two supported options:
+> 1. **Preferred here** — explicit `Event::listen()` / `Event::subscribe()` inside the module ServiceProvider (see `Modules\Auth\Providers\AuthServiceProvider::registerListeners()`). The module's full event surface stays readable in one place.
+> 2. Extend discovery globally in `bootstrap/app.php` via `->withEvents(discover: [__DIR__.'/../src/Modules/*/Application/Listeners'])`. Note this project's `bootstrap/app.php` does NOT call `withEvents()` today, so nothing is auto-discovered at all.
+
+### Cross-module reactions (explicit ACL)
+
+A listener that REACTS to another module's event lives in the **consuming** module under `Application/Listeners/`, never in the emitting module:
+
+```
+src/Modules/Billing/Application/Listeners/CreateStripeCustomerOnUserCreated.php
+                                            ↑ subscribes to Modules\Users\Domain\Events\UserCreated
+```
+
+The emitting module knows nothing about its consumers. The consuming module imports the event class and registers the listener in ITS OWN ServiceProvider via `Event::listen()`.
+
+### Hard rules
+
+- Domain events are **immutable readonly** classes with primitives + VOs only — never Eloquent models.
+- Events fire **after** the DB transaction commits (use `Modules\Users\Domain\Events` + `DB::afterCommit()` if inside a transaction).
+- Long-running listeners implement `ShouldQueue`.
+- Never call event dispatch from inside a Domain entity — only from Command Handlers (Application layer).
+- One listener = one reaction. If a reaction has 3+ steps, extract a Handler and call it from the listener.
+
+---
+
+## Lean Mode for Solo Dev — Default Optionality Rules
+
+Intermediate modules can become file-heavy fast. The following pieces are NOT mandatory by default. Add them ONLY when the listed criteria are met. Auditors must NOT flag their absence as FAIL when criteria are not met.
+
+### Entity Optionality Rule (`Domain/Entities/`)
+
+- SKIP `Domain/Entities/{YourEntity}.php` when:
+  - The Eloquent model is 1:1 with the aggregate (same fields, no transformation), AND
+  - No domain invariants live outside Value Objects, AND
+  - No method exists on the entity beyond getters.
+- CREATE the Domain Entity when:
+  - There are domain methods that enforce invariants (`activate()`, `markAsPaid()`, `transitionTo($state)`).
+  - The aggregate composes multiple sub-entities or VOs with cross-field rules.
+  - Persistence and domain shapes diverge (Mapper required → Entity required).
+- When skipped, controllers/handlers operate on the Eloquent model + VOs + DTOs.
+
+#### AggregateRoot inheritance rule
+
+`Shared\Domain\Entities\AggregateRoot` is an OPTIONAL base class that provides domain-event recording (`recordEvent()`, `releaseEvents()`). Inheritance rules:
+
+- **Only the aggregate root extends it** — never child entities inside the same aggregate. Example: `Order extends AggregateRoot`; `OrderLine` does NOT extend it even though it's part of the Order aggregate.
+- **Skip `AggregateRoot` entirely** when the entity emits no domain events. Plain `final class {Entity}` is sufficient.
+- **Use it** when the aggregate accumulates events during a use-case (e.g., `Order::place()` records `OrderPlaced` + `InventoryReserved` + `PaymentRequested` and the handler releases them all atomically after `DB::afterCommit()`).
+- One aggregate = one root = one boundary. Cross-aggregate consistency is achieved via events + eventual consistency, NEVER via a shared transaction across two roots.
+- `AggregateRoot` is NOT `readonly` — it holds a mutable internal event array. This is the only domain class with mutable state (see `BACKEND-PHP/SKILL.md` §5 Readonly Classes table).
+
+### Mapper Optionality Rule (`Persistence/Mappers/`)
+
+- SKIP the Mapper when Eloquent casts + accessors + mutators cover the persistence ↔ domain translation.
+- CREATE the Mapper when:
+  - The persisted table shape diverges from the aggregate (denormalization, split fields, foreign tables).
+  - A Domain Entity is in use AND its construction is non-trivial.
+  - A Value Object cannot be expressed via a simple `CastsAttributes`.
+- When skipped, the Eloquent Repository hydrates DTOs (`{YourEntity}Data::from($model)`) or returns Eloquent models directly to handlers.
+
+### ReadRepository Optionality Rule (`Persistence/ReadRepositories/`)
+
+- SKIP `ReadRepositories/` when query handlers can reuse the same Eloquent Repository.
+- CREATE a `ReadRepository` only when at least one is true:
+  - There is a denormalized read model / projection table.
+  - Read paths use a different storage (search index, materialized view, cache-first).
+  - The read shape diverges so much from the write aggregate that mixing them in one repository would violate SRP.
+- The default Eloquent Repository is allowed to expose query methods (`paginateActive`, `findByUuid`, `searchByX`) for query handlers.
+
+### Controller Fusion Rule (`Http/Controllers/`)
+
+- DEFAULT: one resourceful controller `Infrastructure/Http/Controllers/{YourEntity}Controller.php` serves both Inertia (web) and JSON (api), branching on `$request->expectsJson()` or via the route group middleware.
+- SPLIT into `Api/{YourEntity}Controller.php` + `Web/{YourEntity}PageController.php` ONLY when:
+  - The Inertia page needs additional props (selects, related lookups) that the API does not return.
+  - The API response shape differs significantly from Inertia props.
+  - Authorization, rate-limiting, or middleware stack differs between flows.
+- When fused, API methods MUST carry explicit return type-hints — Scramble auto-documents them.
+- The dedicated `{YourEntity}ExportController.php` always stays in `Api/` (or fused class) regardless of fusion.
+
+> **SRP trade-off (documented):** branching on `$request->expectsJson()` inside one controller is a **conscious, bounded SRP relaxation**. The controller still has ONE responsibility — "expose the {Entity} resource over HTTP" — and only the *serialization format* differs by branch. This is acceptable AS LONG AS:
+> 1. The branch is a one-liner (`return $request->expectsJson() ? $data : Inertia::render(...)`), NOT business logic.
+> 2. Authorization, validation, and the handler call are IDENTICAL across both branches.
+> 3. If any of (1) or (2) breaks, immediately apply the SPLIT rule above — no exceptions.
+
+### Response Shape Rule — Spatie Data, never JsonResource
+
+- Response shapes are **Spatie Data objects** in `Application/DTOs/`. This project has NO `Infrastructure/Http/Resources/` folder — one serialization path per entity, and Scramble reads Data property types for both requests and responses (`BACKEND-PHP/SKILL.md` §9).
+- Controllers return `{Entity}Data::from($model)` / `{Entity}Data::collect($paginator)` for Inertia props and JSON alike.
+- A `JsonResource` / `ResourceCollection` subclass in a new module is a **FAIL**. Full rationale in `SKILL-SIMPLE-CRUD.md` → Response Shape Rule.
+
+### Repository Port Rule (differs from simple CRUD)
+
+- In THIS baseline the repository port in `Domain/Ports/` is **MANDATORY** — it is the concrete DIP mechanism cited in the Principles Compliance table below, and intermediate modules have the second implementations (decorators, read stores, DB-free handler unit tests) that justify it.
+- In `SKILL-SIMPLE-CRUD.md` the port is OPTIONAL (Repository Optionality Rule). **Promoting a module from simple → intermediate therefore includes extracting the port** from the queries its handlers already run, plus the `{Module}ServiceProvider` binding. Treat it as a required step of the promotion checklist, not as a pre-existing FAIL in the simple module.
+
+### Commands/Queries Flatness Rule
+
+- KEEP `Application/Commands/` and `Application/Queries/` FLAT — one Handler file per use-case.
+- DO NOT create a subfolder per use-case (`Commands/CreateUser/CreateUserCommand.php` + `Handler.php`). The DTO from `Application/DTOs/` already plays the Command role.
+- Move to subfolder per use-case ONLY when one use-case truly needs multiple supporting classes (e.g., a Saga, a Strategy, multiple sub-handlers).
+
+### Tests/Unit Optionality Rule
+
+- `Tests/Feature/` is MANDATORY.
+- `Tests/Unit/` is OPTIONAL — create it only when VOs, domain invariants, mappers, or pure domain services exist.
+- Auditors must NOT flag the absence of `Tests/Unit/` as FAIL when no domain logic is present beyond CRUD orchestration.
+
+---
+
+## Export Rule — Mandatory When Exports Are in Scope
+
+> **Single source of truth: `BACKEND-PHP/SKILL.md` §8.** Excel (`spatie/simple-excel`) + DomPDF + Transformer + Controller + Request + Blade template rules + status `Active`/`Suspended` derivation from `deleted_at` all live there. This file does NOT duplicate them — only summarizes the directory placement.
+
+### File placement (only — full rules in `BACKEND-PHP/SKILL.md` §8)
+
+- `Infrastructure/Http/Export/{YourEntity}ExcelExport.php`
+- `Infrastructure/Http/Export/{YourEntity}PdfExport.php`
+- `Infrastructure/Http/Export/{YourEntity}ExportTransformer.php`
+- `Infrastructure/Http/Controllers/Api/{YourEntity}ExportController.php`
+- `Infrastructure/Http/Requests/Export{YourEntity}Request.php`
+- `resources/views/exports/pdf/{your_module_snake}.blade.php` (global, not per-module)
+- Route: `/export` BEFORE `/{uuid}` in both `web.php` and `api.php`.
+
+---
+
+## OpenAPI / Scramble + API Routes
+
+These cross-cutting rules are defined ONCE in `BACKEND-PHP/SKILL.md` to avoid duplication:
+
+- **Scramble auto-generation rules** (return type-hints, FormRequest injection, Spatie Data responses) → `.claude/BACKEND-PHP/SKILL.md` §9.
+- **API routes convention** (file location, ServiceProvider registration, route order, permission middleware) → `.claude/BACKEND-PHP/SKILL.md` §6 (Routes Convention).
+
+**Module-specific addition only:**
+
+- Inside `Modules/{YourModule}/Providers/{YourModule}ServiceProvider.php`, expose `registerWebRoutes()` and `registerApiRoutes()` as private methods. Both are MANDATORY when the module exposes web AND api endpoints. Pattern is fixed — see `BACKEND-PHP/SKILL.md` §6.
+
+---
+
+## Identifiers & Relations — Project Conventions
+
+### UUIDv7 (time-ordered) — MANDATORY for every `uuid`
+
+- Every public identifier uses **UUID version 7**, never v4. v7 is time-ordered, so sequential inserts stay index-local on the `uuid` column (far less B-tree fragmentation than random v4) — better read/write locality at scale.
+- Generate with `Str::uuid7()` (Laravel) or `Ramsey\Uuid\Uuid::uuid7()->toString()` (when the module already uses the ramsey facade). NEVER `Str::uuid()`, `Str::orderedUuid()`, or `Uuid::uuid4()`.
+- Applies EVERYWHERE a uuid is minted — keep seeded, factory, and app-created rows uniform:
+  - Eloquent model `creating` hook: `$model->uuid = (string) Str::uuid7();`
+  - Factories: `'uuid' => (string) Str::uuid7()`
+  - Seeders: `'uuid' => Uuid::uuid7()->toString()`
+- **Trait-based models:** the framework `HasUuids` trait already returns `Str::uuid7()` in Laravel 13 (`newUniqueId()`), so plain `use HasUuids;` is correct and needs no override. NEVER use `HasVersion4Uuids` — it is the legacy v4 opt-in. A manual `creating` hook (as above) is only for models that do NOT use `HasUuids` (e.g. the `uuid` column is a plain string, not the model key).
+- Routes still bind with `->whereUuid('uuid')` — the constraint accepts any RFC-4122 UUID, v7 included.
+- Requires `ramsey/uuid ^4.7` (project ships 4.9+) and Laravel 11+ (`Str::uuid7()`). Both present in this stack.
+
+### Bidirectional Eloquent relations — MANDATORY when an FK exists
+
+When a model carries a foreign key (e.g. `user_id`), BOTH sides of the relationship MUST be declared — never only the `belongsTo`:
+
+- Child (owns the FK) → `belongsTo`, with generic PHPDoc:
+  ```php
+  /** @return BelongsTo<\App\Models\User, $this> */
+  public function user(): BelongsTo
+  {
+      return $this->belongsTo(User::class);
+  }
+  ```
+- Parent (`App\Models\User` / owning aggregate) → inverse `hasMany` (or `hasOne`), with generic PHPDoc + the FK import placed in alphabetical order (Pint):
+  ```php
+  /** @return HasMany<CvEloquentModel, $this> */
+  public function cvs(): HasMany
+  {
+      return $this->hasMany(CvEloquentModel::class);
+  }
+  ```
+- **`user_id` hard rule:** if the migration / `$fillable` includes `user_id`, the same PR MUST update `App\Models\User` with the inverse `hasMany`/`hasOne`, the Eloquent model import, and `@property-read` PHPDoc (`$cvs`, `$cvs_count`, etc.). Child method name is `user()` — not `createdBy()`. Parent is `App\Models\User` — never `UserEloquentModel`.
+- Every Eloquent model documents itself with the standard generated block ending in `@mixin \Eloquent` (regenerate via `php artisan ide-helper:models`) so `\Eloquent` and the dynamic query methods resolve — otherwise linters report **"undefined type 'Eloquent'"**. `\Eloquent` itself is declared in the git-ignored `_ide_helper.php` (`ide-helper:generate`).
+- **Auditors:** a one-directional FK relation (child `belongsTo` present, parent inverse missing — or vice-versa) is a **FAIL**.
+
+---
+
+## Principles Compliance — Audit Reference
+
+This skill is designed to satisfy the following principles by construction. Auditors verifying a new module must be able to point to the concrete mechanism for each row.
+
+| Principle | How this architecture enforces it |
+|---|---|
+| **SRP** (Single Responsibility) | One handler per use-case (`Create…Handler`, `Update…Handler`). One repository per aggregate. Controller delegates and returns — no business logic. Mapper does ONLY persistence↔domain translation. |
+| **OCP** (Open/Closed) | New use-cases = new handler files, never modify existing. New transports (R2 → GCS, Reverb → Pusher) = new adapter, port unchanged. Optional `CommandBus` adds pipeline middleware without touching handlers. |
+| **LSP** (Liskov Substitution) | Ports define complete contracts (`UserRepositoryPort::create()` always returns `User`). Adapters never throw narrower exceptions or accept wider parameters than the port declares. |
+| **ISP** (Interface Segregation) | Ports are small and dedicated (`CachePort`, `QueuePort`, `LoggerPort`, `StoragePort`, `NotificationPort`, `ExportPort`) — never a `GodInfrastructurePort`. |
+| **DIP** (Dependency Inversion) | Domain depends on its own Ports (interfaces). Infrastructure depends on Domain (implements ports). Application depends on Domain abstractions, never Eloquent. Container wiring in `{Module}ServiceProvider`. **In this intermediate baseline the port is MANDATORY** — simple CRUD skips it (Repository Optionality Rule) because a port with one implementation inverts nothing. |
+| **DRY** | `Shared/` owns cross-cutting once. `OpenAPI/Scramble` + `API Routes` + `Excel/PDF` rules defined ONCE in `BACKEND-PHP/SKILL.md`, never duplicated. Filter DTO reused between Excel + PDF. DTO doubles as Command (no separate Command class). |
+| **KISS** | **Lean Mode** explicit optionality for Entity, Mapper, ReadRepository, Listeners, Domain Events, Tests/Unit, UnitOfWork. **`Shared/` Optionality Rule**: Day-1 CORE table vs opt-in adapters. One serialization path per entity (Response Shape Rule). CQRS basic by default (no bus). Controller-Fusion default (one class). Flat Commands/Queries (no subfolder per use-case). |
+| **YAGNI** | Bus, projections, read repositories, event listeners, UnitOfWork, AggregateRoot — ALL opt-in with explicit upgrade triggers. Every `Shared/Infrastructure/` adapter outside the Day-1 CORE table waits for its trigger; an adapter with no consumer is dead code, and its unjustified presence is a FAIL symmetrical to a missing core path. |
+| **Clean Code** | Explicit naming (`{Entity}Repository`, `Create{Entity}Handler`, `{Entity}ExportController`). Layer-Imports table enforces direction. `final readonly` everywhere stateless. No comments where names suffice. |
+| **Hexagonal / Ports & Adapters** | `Domain/Ports/` → port interfaces. `Infrastructure/Persistence|Storage|Mail|…` → adapters. Application never imports a concrete adapter — only the port. |
+| **DDD tactical** | Value Objects in `Domain/ValueObjects/`. Aggregate roots extend optional `AggregateRoot`. Domain events in `Domain/Events/`. One aggregate = one transactional boundary. Cross-aggregate consistency via events + `DB::afterCommit()`. |
+| **CQRS** | Writes → `Application/Commands/`. Reads → `Application/Queries/`. Read can use a dedicated `ReadRepository` only when read shape diverges. Bus optional. |
+
+> **For auditors:** if a module fails any row above, point to the concrete file/line that violates it. "Feels wrong" is not a finding — every deviation must reference a row in this table or in OWASP/BACKEND-PHP checklists.
