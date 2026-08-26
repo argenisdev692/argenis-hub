@@ -38,21 +38,13 @@ const trustCascade = staggerContainer(MOTION_STAGGER * 0.5);
         class="relative isolate overflow-hidden px-4 pt-32 pb-20 sm:px-6 lg:pt-44 lg:pb-28"
         aria-labelledby="hero-title"
     >
-        <!-- Atmospheric glows. Decorative only: the fixed hero-glow image is
-             already behind the whole page, these add depth at section scale.
-             Deliberately outside the cascade — they are background, and fading
-             them in on the same rhythm as the copy draws the eye to the
-             wrong thing. -->
+        <!-- The badge/headline accent. Kept local (unlike the mesh's other
+             three hues, dropped from here — see the ambient layer comment in
+             globals.css) because it sits high in the section, well clear of
+             the boundary with FeatureBento below, so it can never repeat the
+             hard-edge clip that removing the others fixed. -->
         <div
-            class="pointer-events-none absolute -top-32 left-1/2 -z-10 h-[42rem] w-[42rem] -translate-x-1/2 ambient-blob-purple"
-            aria-hidden="true"
-        />
-        <div
-            class="pointer-events-none absolute -bottom-40 -left-32 -z-10 h-[32rem] w-[32rem] ambient-blob-cyan"
-            aria-hidden="true"
-        />
-        <div
-            class="pointer-events-none absolute -right-32 -bottom-40 -z-10 h-[32rem] w-[32rem] ambient-blob-magenta"
+            class="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 ambient-blob-cyan"
             aria-hidden="true"
         />
 

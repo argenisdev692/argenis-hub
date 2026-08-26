@@ -188,6 +188,40 @@ declare namespace Modules {
             }
         }
     }
+    namespace Services {
+        namespace Application {
+            namespace DTOs {
+                export type PublicServiceData = {
+                    readonly uuid: string;
+                    readonly name: string;
+                    readonly slug: string;
+                    readonly description: string | null;
+                    readonly sort_order: number;
+                };
+                export type ServiceData = {
+                    readonly uuid: string;
+                    readonly name: string;
+                    readonly slug: string;
+                    readonly description: string | null;
+                    readonly is_active: boolean;
+                    readonly sort_order: number;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type ServiceFilterData = {
+                    readonly search: string | null;
+                    readonly status: string | null;
+                    readonly dateFrom: string | null;
+                    readonly dateTo: string | null;
+                    readonly sortField: string;
+                    readonly sortOrder: number;
+                    readonly page: number;
+                    readonly perPage: number;
+                };
+            }
+        }
+    }
 }
 declare namespace Shared {
     namespace Application {

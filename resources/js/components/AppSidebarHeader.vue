@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import ThemeToggle from '@/common/feedback/ThemeToggle.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import UserMenu from '@/components/UserMenu.vue';
 import type { BreadcrumbItem } from '@/types';
 
 const { breadcrumbs = [] } = defineProps<{
@@ -21,6 +23,20 @@ const { breadcrumbs = [] } = defineProps<{
             />
         </div>
 
-        <ThemeToggle />
+        <!--
+          Account controls live here, right of the theme toggle: the two
+          together are the shell's "who am I / how does it look" cluster, and
+          the sidebar footer no longer competes with them.
+        -->
+        <div class="flex items-center gap-1.5">
+            <ThemeToggle />
+
+            <Separator
+                orientation="vertical"
+                class="mx-0.5 h-5! bg-glass-border"
+            />
+
+            <UserMenu />
+        </div>
     </header>
 </template>

@@ -206,6 +206,31 @@
                 },
                 "security": []
             }
+        },
+        "/public/services": {
+            "get": {
+                "operationId": "public.services",
+                "summary": "List the active services, in display order",
+                "tags": [
+                    "PublicService"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
         }
     },
     "components": {

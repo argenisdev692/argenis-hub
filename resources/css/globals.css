@@ -64,16 +64,6 @@
         var(--brand-purple) 0%,
         var(--brand-cyan) 100%
     );
-    --hero-glow-cyan: radial-gradient(
-        circle,
-        rgba(6, 182, 212, 0.35) 0%,
-        rgba(5, 7, 20, 0) 70%
-    );
-    --hero-glow-purple: radial-gradient(
-        circle,
-        rgba(124, 58, 237, 0.35) 0%,
-        rgba(5, 7, 20, 0) 70%
-    );
 
     /* typography — Inter for UI, JetBrains Mono for code and tabular figures */
     --font-sans:
@@ -160,7 +150,13 @@
     --secondary-foreground: #f4f4f2;
     --muted: #131b3a;
     --muted-foreground: #94a3b8;
-    --accent: #131b3a;
+    /* One step ABOVE --popover, never equal to it. --accent is the hover /
+       highlight surface for menu, select, combobox and command items, and
+       those items sit on --popover (#131b3a) — painting the highlight in the
+       same value made it invisible in dark mode. #1e2a4a measures 1.19:1 on
+       --popover and 1.42:1 on --background, matching the sidebar's own hover
+       step (--sidebar #08081f → --sidebar-accent #131b3a, 1.17:1). */
+    --accent: #1e2a4a;
     --accent-foreground: #f4f4f2;
     --destructive: #f43f5e;
     --destructive-foreground: #ffffff;
@@ -203,27 +199,47 @@
 
 /*
 |--------------------------------------------------------------------------
-| Ambient layer — the hero glow as the ground of the whole product
+| Ambient layer — a living mesh gradient as the ground of the whole product
 |--------------------------------------------------------------------------
 |
-| BRAND/hero-glow.webp is painted once, fixed, behind every page (landing,
-| auth, dashboard, settings) by the `body::before` rule in app.css. Nothing
-| per-page is needed: a page only has to avoid painting an opaque background
-| over it, which is why the app-shell surfaces below are translucent.
+| A drifting mesh of the brand hues is painted once, fixed, behind every page
+| (landing, auth, dashboard, settings) by the `body::before` rule in app.css.
+| Nothing per-page is needed: a page only has to avoid painting an opaque
+| background over it, which is why the app-shell surfaces below are
+| translucent — and no per-section decorative blob is needed either, since
+| this layer is fixed to the viewport and never clips at a section boundary
+| the way an element-scoped glow does.
 |
-| The image is decorative, so these tokens control how far it is allowed to
-| intrude: strong in dark (its native ground is #050714), heavily damped in
-| light, where the same glow would eat text contrast.
+| `--ambient-mesh` is built entirely from `--ambient-blob-*` below, so it
+| inherits their light/dark values for free — one source of truth, no
+| separate light/dark mesh to keep in sync.
+|
+| Decorative, so these tokens control how far it is allowed to intrude:
+| strong in dark (its native ground is #050714), heavily damped in light,
+| where the same glow would eat text contrast.
 |
 */
 
 :root {
-    --ambient-image: url('/img/hero-glow.webp');
-    /* Anchored top-centre: the bright arc reads as a horizon behind the
-       header, and the content below lands on calm ground. */
-    --ambient-position: 50% 0%;
-    --ambient-size: cover;
-    --ambient-opacity: 0.14;
+    --ambient-image: var(--ambient-mesh);
+    /*
+      One position PER blob, in the same order as the four layers of
+      --ambient-mesh below, with room to drift without ever revealing a bare
+      edge (see --ambient-size).
+
+      A single position value would be repeated across all four layers, which
+      is what the mesh used to do: the whole field then slid as one rigid unit
+      in a straight diagonal — the exact "single blob sliding" read the four
+      layers exist to avoid. Giving each blob its own start and end decouples
+      them, so they converge and separate as they travel and the field reads as
+      alive rather than panned.
+    */
+    --ambient-position: 18% 12%, 78% 8%, 12% 88%, 90% 78%;
+    --ambient-position-end: 31% 27%, 63% 21%, 27% 71%, 73% 92%;
+    --ambient-size: 220% 220%;
+    /* Damped hard against the light ground, but not to the point of being a
+       grey wash — below roughly 0.2 the brand hues stop registering at all. */
+    --ambient-opacity: 0.22;
 
     /* Readability scrim over the image. Transparent where the glow should be
        felt, opaque toward the fold so long pages keep AA body contrast. */
@@ -234,8 +250,10 @@
         var(--background) 100%
     );
 
-    /* Section-level glows for the landing — the same hues as the image, drawn
-       in CSS so they scale with the viewport instead of stretching a bitmap. */
+    /* Section-level glows for auth/CTA asides, drawn in CSS so they scale
+       with the viewport instead of stretching a bitmap. Also the source
+       hues for --ambient-mesh below, so the page-wide layer and any
+       remaining local accent always agree. */
     --ambient-blob-cyan: color-mix(
         in oklab,
         var(--brand-cyan) 22%,
@@ -251,6 +269,32 @@
         var(--brand-magenta) 16%,
         transparent
     );
+
+    /* The page-wide mesh: four soft radial pools at different anchors,
+       panned together by the `ambient-mesh-drift` keyframes in app.css.
+       Four rather than two or three so the drift never reads as a single
+       blob sliding in a straight line. */
+    --ambient-mesh:
+        radial-gradient(
+            circle at 18% 20%,
+            var(--ambient-blob-cyan) 0%,
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 82% 12%,
+            var(--ambient-blob-purple) 0%,
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 22% 85%,
+            var(--ambient-blob-magenta) 0%,
+            transparent 40%
+        ),
+        radial-gradient(
+            circle at 88% 80%,
+            var(--ambient-blob-cyan) 0%,
+            transparent 40%
+        );
 
     /* ---- translucent surfaces ----
        The app shell (sidebar, inset, sticky headers) sits ON the ambient layer
@@ -311,8 +355,11 @@
         var(--primary)
     );
 
-    --cursor-orb-size: 300px;
-    --cursor-orb-tint: color-mix(in oklab, var(--primary) 10%, transparent);
+    --cursor-orb-size: 340px;
+    /* Reads through the veil and the app's glass surfaces, so the tint has to
+       survive being multiplied by both. At the old 10% it did not: the orb was
+       painting, just below the threshold anything could be seen at. */
+    --cursor-orb-tint: color-mix(in oklab, var(--primary) 20%, transparent);
 }
 
 .dark {
@@ -359,5 +406,5 @@
         0 12px 40px color-mix(in oklab, var(--brand-purple) 22%, transparent);
 
     --scrollbar-thumb: color-mix(in oklab, var(--primary) 55%, transparent);
-    --cursor-orb-tint: color-mix(in oklab, var(--primary) 18%, transparent);
+    --cursor-orb-tint: color-mix(in oklab, var(--primary) 32%, transparent);
 }

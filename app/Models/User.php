@@ -27,6 +27,7 @@ use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\AuthSessionEloquentM
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\PasswordHistoryEloquentModel;
 use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Permission;
 use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Role;
+use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
 use Spatie\Permission\Traits\HasRoles;
@@ -71,6 +72,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $auth_sessions_count
  * @property-read Collection<int, PasswordHistoryEloquentModel> $passwordHistories
  * @property-read int|null $password_histories_count
+ * @property-read Collection<int, ServiceEloquentModel> $services
+ * @property-read int|null $services_count
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read Collection<int, OneTimePassword> $oneTimePasswords
@@ -218,6 +221,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function passwordHistories(): HasMany
     {
         return $this->hasMany(PasswordHistoryEloquentModel::class);
+    }
+
+    /** @return HasMany<ServiceEloquentModel, $this> */
+    public function services(): HasMany
+    {
+        return $this->hasMany(ServiceEloquentModel::class);
     }
 
     /**

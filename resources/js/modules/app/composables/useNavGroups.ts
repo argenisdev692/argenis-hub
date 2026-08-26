@@ -6,6 +6,7 @@ import {
     ChartLine,
     FileText,
     Handshake,
+    Layers,
     LayoutGrid,
     Megaphone,
     ShieldCheck,
@@ -15,6 +16,7 @@ import type { LucideIcon } from '@lucide/vue';
 import { dashboard } from '@/routes';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
+import { index as servicesIndex } from '@/routes/services';
 import type { NavItem } from '@/types';
 
 export type NavGroup = {
@@ -107,6 +109,11 @@ export function useNavGroups(): readonly NavGroup[] {
             id: 'content',
             label: 'Content',
             items: [
+                {
+                    title: 'Services',
+                    href: servicesIndex(),
+                    icon: Layers,
+                },
                 {
                     title: 'Posts',
                     href: dashboard(),

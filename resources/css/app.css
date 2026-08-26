@@ -163,14 +163,6 @@
     }
 }
 
-@utility hero-glow-cyan {
-    background-image: var(--hero-glow-cyan);
-}
-
-@utility hero-glow-purple {
-    background-image: var(--hero-glow-purple);
-}
-
 /* Frosted panel — the 2026 "glass" surface, but token-backed so it inverts
    correctly instead of being a fixed white wash. Use on anything that must
    float over the ambient glow: sticky headers, hero cards, KPI tiles. */
@@ -225,6 +217,17 @@
     );
 }
 
+/* The sidebar's current destination. A brand-tinted wash laid over the flat
+   sidebar accent, so "you are here" reads as lit rather than merely hovered —
+   the hover state stays the plain accent and the two never look alike. */
+@utility nav-active-surface {
+    background-image: linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--brand-purple) 24%, transparent) 0%,
+        color-mix(in oklab, var(--brand-cyan) 10%, transparent) 100%
+    );
+}
+
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -262,11 +265,19 @@
       Two fixed, non-interactive layers behind every page, painted once here so
       no page, layout or component has to opt in:
 
-        ::before → BRAND/hero-glow.webp, damped by --ambient-opacity
+        ::before → the --ambient-mesh gradient, drifting, damped by --ambient-opacity
         ::after  → the readability veil that fades the glow into --background
 
       Negative z-index puts them above body's own background but below all
       content, and `pointer-events: none` keeps them out of hit-testing.
+
+      The three background layers are stacked -3 → -2 → -1 (mesh, veil, cursor
+      orb) rather than sharing values. Within one stacking context, equal
+      z-index falls back to tree order, and `::after` is generated as body's
+      LAST child — so a veil sharing the orb's -1 wins the tie and paints over
+      it. That is not a tuning problem; it is the orb being covered by an
+      opaque-toward-the-fold scrim. Explicit, distinct depths make the order a
+      stated fact instead of a consequence of where a node happens to sit.
     */
     body::before,
     body::after {
@@ -277,29 +288,71 @@
     }
 
     body::before {
-        z-index: -2;
+        z-index: -3;
         background-image: var(--ambient-image);
         background-position: var(--ambient-position);
         background-size: var(--ambient-size);
         background-repeat: no-repeat;
         opacity: var(--ambient-opacity);
+        animation:
+            ambient-mesh-drift 36s var(--motion-ease) infinite alternate,
+            ambient-mesh-breathe 19s var(--motion-ease) infinite alternate;
         transition: opacity var(--motion-slow) var(--motion-ease);
     }
 
     body::after {
-        z-index: -1;
+        z-index: -2;
         background-image: var(--ambient-veil);
     }
 
+    @keyframes ambient-mesh-drift {
+        from {
+            background-position: var(--ambient-position);
+        }
+        to {
+            background-position: var(--ambient-position-end);
+        }
+    }
+
     /*
-      A 1200px bitmap stretched across a phone is all cost and no payoff, and a
-      printed page has no use for it either. Fall back to the CSS glow, which
-      costs nothing.
+      A slow swell on top of the drift, on a duration deliberately coprime with
+      it so the two never resynchronise into one visible loop.
+
+      Opacity rather than `scale`: it is composited (no repaint, unlike the
+      drift it rides on) and, on a `position: fixed` layer, it cannot push
+      overflow the way growing the box past `inset: 0` would. Ending on the
+      undamped value matters — both the reduced-motion clamp and the mobile
+      freeze below park this at its `to` state, which must be the resting look.
+    */
+    @keyframes ambient-mesh-breathe {
+        from {
+            opacity: calc(var(--ambient-opacity) * 0.78);
+        }
+        to {
+            opacity: var(--ambient-opacity);
+        }
+    }
+
+    /*
+      Same reasoning as `.bg-brand-gradient-animated`: the global clamp above
+      would still let one full (near-instant) pass play out and park the mesh
+      on its end position instead of the one it was designed to rest on.
+    */
+    @media (prefers-reduced-motion: reduce) {
+        body::before {
+            animation: none;
+            background-position: var(--ambient-position);
+        }
+    }
+
+    /*
+      Panning a 220%-sized background repaints on every frame — cheap on a
+      desktop GPU, not worth the battery on a phone, and meaningless on a
+      static printed page. Freeze it there; the mesh itself still shows.
     */
     @media (max-width: 640px), print {
         body::before {
-            background-image: var(--hero-glow-purple);
-            background-size: 180% auto;
+            animation: none;
         }
     }
 
@@ -406,9 +459,10 @@
 
   `CursorOrb.vue` writes --cursor-x / --cursor-y on pointermove and adds
   `--active` after the first move, so it never flashes at the 0,0 corner on
-  load. It sits at z-index -1, above the ambient veil but BELOW content: the
-  app's surfaces are translucent, so the orb reads through the glass instead of
-  washing over table text and costing contrast.
+  load. It sits at z-index -1 — the top of the three ambient layers, above the
+  veil at -2 (see the stacking note there) but BELOW content: the app's surfaces
+  are translucent, so the orb reads through the glass instead of washing over
+  table text and costing contrast.
 
   The follow is animated with `translate` rather than `left`/`top` so it runs on
   the compositor — no layout or repaint per frame.
@@ -421,13 +475,21 @@
     width: var(--cursor-orb-size);
     height: var(--cursor-orb-size);
     border-radius: 50%;
+    /*
+      Three stops, not two. A single linear ramp to `transparent` falls off at a
+      constant rate and reads as a flat disc with a visible rim; holding most of
+      the tint through the core and then decaying late is what makes it read as
+      a light source. It also replaces the old `filter: blur(2px)`, which bought
+      almost nothing over an already-soft gradient and cost a filter repaint on
+      every frame of a layer that moves with the pointer.
+    */
     background-image: radial-gradient(
         circle,
         var(--cursor-orb-tint) 0%,
-        transparent 70%
+        color-mix(in oklab, var(--cursor-orb-tint) 55%, transparent) 40%,
+        transparent 72%
     );
     pointer-events: none;
-    filter: blur(2px);
     opacity: 0;
     translate: calc(var(--cursor-x, 0px) - 50%) calc(var(--cursor-y, 0px) - 50%);
     transition:

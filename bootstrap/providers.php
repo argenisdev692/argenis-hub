@@ -5,6 +5,7 @@ use App\Providers\FortifyServiceProvider;
 use App\Providers\TypeScriptTransformerServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
+use Modules\Services\Providers\ServicesServiceProvider;
 use Shared\Providers\SharedServiceProvider;
 
 return [
@@ -17,4 +18,5 @@ return [
     SharedServiceProvider::class,
     AuthServiceProvider::class,
     CompanyServiceProvider::class,
+    ServicesServiceProvider::class,
 ];

@@ -13,7 +13,7 @@ const { variant = 'default' } = defineProps<Props>();
         <h2
             :class="
                 variant === 'small'
-                    ? 'mb-0.5 text-base font-medium'
+                    ? 'mb-0.5 text-lg font-semibold tracking-tight'
                     : 'text-xl font-semibold tracking-tight'
             "
         >

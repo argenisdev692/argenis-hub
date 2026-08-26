@@ -5,11 +5,9 @@ import { computed, ref } from 'vue';
 import AppCommandMenu from '@/components/AppCommandMenu.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NavMain from '@/components/NavMain.vue';
-import NavUser from '@/components/NavUser.vue';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -74,10 +72,6 @@ const commandOpen = ref(false);
         <SidebarContent class="gap-4">
             <NavMain :groups="navGroups" />
         </SidebarContent>
-
-        <SidebarFooter>
-            <NavUser />
-        </SidebarFooter>
     </Sidebar>
 
     <AppCommandMenu v-model:open="commandOpen" />
