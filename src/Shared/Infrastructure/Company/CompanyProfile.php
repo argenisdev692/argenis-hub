@@ -7,7 +7,6 @@ namespace Shared\Infrastructure\Company;
 use App\Models\CompanyData;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use Modules\Invoices\Infrastructure\Pdf\DomPdfInvoiceRenderer;
 use Shared\Domain\Ports\StoragePort;
 use Throwable;
 
@@ -31,11 +30,21 @@ final class CompanyProfile
 {
     private const string CACHE_KEY = 'company.profile';
 
-    private const string FALLBACK_LOGO = 'img/Logo.png';
+    /**
+     * Cache key for the public API payload served to the external landing sites.
+     *
+     * Declared here rather than inside the Company module so that the one place
+     * that flushes company caches — {@see forget()}, called by the model's
+     * `saved` / `deleted` hooks — is also the one place that names the keys.
+     * `CompanyServiceProvider` injects this into the query handler that fills it.
+     */
+    public const string PUBLIC_CACHE_KEY = self::CACHE_KEY.'.public';
 
-    private const string FALLBACK_LOGO_WHITE = 'img/Logo-white.png';
+    public const string FALLBACK_LOGO = 'img/Logo.png';
 
-    private const string FALLBACK_MARK = 'img/Mark.png';
+    public const string FALLBACK_LOGO_WHITE = 'img/Logo-white.png';
+
+    public const string FALLBACK_MARK = 'img/Mark.png';
 
     /** Invoice PDF header (dompdf) — not the CRM-uploaded company logo. */
     private const string INVOICE_PDF_LOGO = 'img/img-invoice/logo.webp';
@@ -88,6 +97,7 @@ final class CompanyProfile
     {
         Cache::forget(self::CACHE_KEY);
         Cache::forget(self::CACHE_KEY.'.pdf');
+        Cache::forget(self::PUBLIC_CACHE_KEY);
     }
 
     /**
@@ -164,8 +174,12 @@ final class CompanyProfile
     /**
      * Resolve a stored logo reference to an absolute URL: an R2 object key →
      * permanent public URL; otherwise the bundled asset served from APP_URL.
+     *
+     * Public so the Company module's storage adapter resolves logo URLs through
+     * the same rule this class applies to emails and PDF exports, instead of
+     * reimplementing the fallback and ending up one asset out of step.
      */
-    private static function logoUrl(?string $key, string $fallback): string
+    public static function logoUrl(?string $key, string $fallback): string
     {
         if ($key === null || $key === '') {
             return self::bundledUrl($fallback);

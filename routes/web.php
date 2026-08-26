@@ -13,10 +13,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
 });
 
-// Form-kit playground. Local only — it is a development reference for the
-// shared field components, not part of the application surface.
+// Design playgrounds. Local only — these are development references for the
+// shared component kits, not part of the application surface.
 if (app()->environment('local')) {
     Route::inertia('design/form-kit', 'design/FormKit')->name('design.form-kit');
+    Route::inertia('design/data-table', 'design/DataTable')->name('design.data-table');
 }
 
 require __DIR__.'/settings.php';

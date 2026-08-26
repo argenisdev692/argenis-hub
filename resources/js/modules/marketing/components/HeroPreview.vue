@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { useMediaQuery } from '@vueuse/core';
+import { m, motionValue, useSpring } from 'motion-v';
+import { computed, onBeforeUnmount, useTemplateRef } from 'vue';
 import Sparkline from '@/common/charts/Sparkline.vue';
+import { REVEAL_ITEM } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 /**
@@ -25,15 +29,132 @@ const TILES = [
 ] as const;
 
 const TREND = [12, 18, 15, 24, 21, 32, 28, 41, 38, 52, 48, 61] as const;
+
+/**
+ * Pointer-tracked tilt.
+ *
+ * Kept deliberately shallow. This frame is a full dashboard mock, not a
+ * product shot — past about six degrees the text blocks inside it start to
+ * shear and the whole thing reads as broken rather than dimensional.
+ */
+const MAX_TILT_DEGREES = 6;
+
+/**
+ * Loose and slightly over-damped so the frame drifts after the pointer instead
+ * of tracking it exactly. Snapping to the cursor is what makes a tilt feel
+ * cheap; the lag is the effect.
+ */
+const TILT_SPRING = { stiffness: 150, damping: 20 } as const;
+
+const frame = useTemplateRef<HTMLDivElement>('frame');
+
+const pointerRotateX = motionValue(0);
+const pointerRotateY = motionValue(0);
+
+const rotateX = useSpring(pointerRotateX, TILT_SPRING);
+const rotateY = useSpring(pointerRotateY, TILT_SPRING);
+
+/**
+ * The same two exclusions `CursorOrb` makes, for the same reasons: a tilt
+ * chasing a finger is meaningless on touch, and incidental motion is exactly
+ * what WCAG 2.2 SC 2.3.3 asks us to drop.
+ *
+ * `MotionConfig`'s `reduced-motion` setting does not cover this on its own —
+ * it governs animations, and this is a style binding driven by pointer input,
+ * which the library has no reason to treat as one. The guard has to be here.
+ */
+const isCoarsePointer = useMediaQuery('(pointer: coarse)');
+const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+
+const isTiltEnabled = computed(
+    () => !isCoarsePointer.value && !prefersReducedMotion.value,
+);
+
+/**
+ * Listeners are bound only while the tilt is enabled, rather than attached and
+ * early-returning — on a touch device this component ends up with no pointer
+ * handlers at all.
+ */
+const tiltListeners = computed(() =>
+    isTiltEnabled.value
+        ? { pointermove: handlePointerMove, pointerleave: resetTilt }
+        : {},
+);
+
+let animationFrame = 0;
+let pointerX = 0;
+let pointerY = 0;
+
+/**
+ * Writes are coalesced to one per animation frame, and the element's rect is
+ * read inside that frame rather than per event.
+ *
+ * `pointermove` fires far more often than the display refreshes, and
+ * `getBoundingClientRect()` forces a layout — doing that per event is what
+ * turns a decorative tilt into jank on the one screen the visitor sees first.
+ */
+function paintTilt(): void {
+    animationFrame = 0;
+
+    const element = frame.value;
+
+    if (element === null) {
+        return;
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    if (rect.width === 0 || rect.height === 0) {
+        return;
+    }
+
+    const offsetX = (pointerX - rect.left) / rect.width - 0.5;
+    const offsetY = (pointerY - rect.top) / rect.height - 0.5;
+
+    /**
+     * Y drives rotateX and X drives rotateY — a pointer moving right tips the
+     * frame around its vertical axis, not its horizontal one. The X rotation is
+     * negated so the edge nearest the pointer comes toward the viewer.
+     */
+    pointerRotateX.set(-offsetY * MAX_TILT_DEGREES * 2);
+    pointerRotateY.set(offsetX * MAX_TILT_DEGREES * 2);
+}
+
+function handlePointerMove(event: PointerEvent): void {
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+
+    if (animationFrame === 0) {
+        animationFrame = requestAnimationFrame(paintTilt);
+    }
+}
+
+function resetTilt(): void {
+    pointerRotateX.set(0);
+    pointerRotateY.set(0);
+}
+
+onBeforeUnmount(() => {
+    if (animationFrame !== 0) {
+        cancelAnimationFrame(animationFrame);
+    }
+});
 </script>
 
 <template>
-    <div
+    <m.div
+        ref="frame"
         :class="cn('relative mx-auto w-full max-w-5xl', className)"
         aria-hidden="true"
+        :variants="REVEAL_ITEM"
+        initial="hidden"
+        while-in-view="visible"
+        :style="{ perspective: '1200px' }"
+        v-on="tiltListeners"
     >
-        <div
+        <m.div
             class="overflow-hidden rounded-2xl border border-glass-border bg-surface-glass-strong shadow-lifted backdrop-blur-md"
+            :style="{ rotateX, rotateY }"
         >
             <!-- Window chrome -->
             <div
@@ -117,11 +238,14 @@ const TREND = [12, 18, 15, 24, 21, 32, 28, 41, 38, 52, 48, 61] as const;
                     </div>
                 </div>
             </div>
-        </div>
+        </m.div>
 
-        <!-- Fades the frame into the page instead of ending on a hard edge. -->
+        <!-- Fades the frame into the page instead of ending on a hard edge.
+             Outside the tilted element on purpose: the gradient masks the join
+             with the page background, so it has to stay flat against the page
+             rather than rotating away from it. -->
         <div
             class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-background"
         />
-    </div>
+    </m.div>
 </template>

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Mail } from '@lucide/vue';
+import { m } from 'motion-v';
 import { computed } from 'vue';
+import SocialIcon from '@/common/brand/SocialIcon.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import { MOTION_STAGGER, REVEAL_ITEM, staggerContainer } from '@/lib/motion';
 import { login } from '@/routes';
 import { NAV_LINKS, SOCIAL_LABELS, SOCIAL_ORDER } from '../content';
 import type { CompanyContact, SocialKey } from '../types';
-import SocialIcon from './SocialIcon.vue';
 
 const { appName, company } = defineProps<{
     appName: string;
@@ -27,17 +29,32 @@ const socials = computed<readonly { key: SocialKey; url: string }[]>(() =>
         return url ? [{ key, url }] : [];
     }),
 );
+
+/**
+ * Faster than the page default. The footer is the last thing a visitor reaches
+ * and nothing in it is a claim worth pacing — a leisurely cascade here reads as
+ * the page still loading rather than as polish.
+ */
+const footerCascade = staggerContainer(MOTION_STAGGER * 0.75);
 </script>
 
 <template>
     <footer class="px-4 pb-12 sm:px-6">
-        <div class="mx-auto max-w-6xl">
+        <m.div
+            class="mx-auto max-w-6xl"
+            :variants="footerCascade"
+            initial="hidden"
+            while-in-view="visible"
+        >
             <div class="h-px w-full rule-fade" />
 
             <div
                 class="flex flex-col items-center justify-between gap-6 pt-10 sm:flex-row"
             >
-                <div class="flex items-center gap-2.5">
+                <m.div
+                    class="flex items-center gap-2.5"
+                    :variants="REVEAL_ITEM"
+                >
                     <span
                         class="flex size-7 items-center justify-center rounded-lg bg-brand-gradient"
                     >
@@ -46,9 +63,9 @@ const socials = computed<readonly { key: SocialKey; url: string }[]>(() =>
                     <span class="text-sm font-semibold tracking-tight">
                         {{ appName }}
                     </span>
-                </div>
+                </m.div>
 
-                <nav aria-label="Footer">
+                <m.nav aria-label="Footer" :variants="REVEAL_ITEM">
                     <ul
                         class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground"
                     >
@@ -69,11 +86,12 @@ const socials = computed<readonly { key: SocialKey; url: string }[]>(() =>
                             </Link>
                         </li>
                     </ul>
-                </nav>
+                </m.nav>
 
-                <ul
+                <m.ul
                     v-if="socials.length || company.support_email"
                     class="flex items-center gap-1"
+                    :variants="REVEAL_ITEM"
                 >
                     <li v-for="social in socials" :key="social.key">
                         <a
@@ -96,14 +114,15 @@ const socials = computed<readonly { key: SocialKey; url: string }[]>(() =>
                             <Mail class="size-4" aria-hidden="true" />
                         </a>
                     </li>
-                </ul>
+                </m.ul>
             </div>
 
-            <p
+            <m.p
                 class="pt-8 text-center text-sm text-muted-foreground tabular-nums sm:text-left"
+                :variants="REVEAL_ITEM"
             >
                 © {{ year }} {{ appName }}
-            </p>
-        </div>
+            </m.p>
+        </m.div>
     </footer>
 </template>

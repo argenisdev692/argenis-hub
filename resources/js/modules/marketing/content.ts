@@ -14,7 +14,6 @@ import type {
     MarketingLink,
     MarketingMetric,
     MarketingStep,
-    SocialKey,
 } from './types';
 
 /**
@@ -152,24 +151,10 @@ export const TRUST_ICON = ShieldCheck;
 /**
  * Display order and labels for the footer's social row.
  *
- * The URLs come from `company_data` via `CompanyProfile::data()`, so this only
- * decides which channels are rendered and in what order — a channel with no
- * URL in the database is simply skipped.
+ * Re-exported from `common/brand` rather than declared here: the company
+ * settings screen edits the same six channels, and two lists meant the footer
+ * could label a channel "X" while the form still called it "Twitter". The URLs
+ * come from `company_data`, so this only decides order and wording — a channel
+ * with no URL in the database is simply skipped.
  */
-export const SOCIAL_LABELS: Readonly<Record<SocialKey, string>> = {
-    linkedin: 'LinkedIn',
-    github: 'GitHub',
-    instagram: 'Instagram',
-    facebook: 'Facebook',
-    tiktok: 'TikTok',
-    twitter: 'X',
-} as const;
-
-export const SOCIAL_ORDER: readonly SocialKey[] = [
-    'linkedin',
-    'github',
-    'instagram',
-    'facebook',
-    'tiktok',
-    'twitter',
-] as const;
+export { SOCIAL_LABELS, SOCIAL_ORDER } from '@/common/brand/socialChannels';

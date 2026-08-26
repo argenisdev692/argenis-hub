@@ -67,6 +67,16 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
+    /* Fixed brand surfaces → bg-hub-dark, bg-hub-card, …
+       Mode-INVARIANT on purpose, unlike --color-background: these stay dark in
+       both themes. Needed wherever an asset assumes its own backdrop — the
+       white brand mark is invisible on a light --card and has to be previewed
+       against the ink it was drawn for. */
+    --color-hub-dark: var(--hub-bg-dark);
+    --color-hub-surface: var(--hub-bg-surface);
+    --color-hub-elevated: var(--hub-bg-elevated);
+    --color-hub-card: var(--hub-bg-card);
+
     /* Brand palette → bg-brand-cyan, text-brand-purple, border-accent-gold, … */
     --color-brand-cyan: var(--brand-cyan);
     --color-brand-purple: var(--brand-purple);

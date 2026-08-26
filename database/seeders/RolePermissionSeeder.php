@@ -23,7 +23,24 @@ class RolePermissionSeeder extends Seeder
      *
      * @var list<string>
      */
-    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'COMPANY_DATA', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS'];
+    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS'];
+
+    /**
+     * Singleton records: one row, provisioned by a seeder, edited in place and
+     * never listed, created, deleted or exported. Only VIEW and UPDATE mean
+     * anything — the other seven standard actions would be dead permissions,
+     * the same reason EXPORT is omitted from {@see self::NO_EXPORT_MODULES} and
+     * FORCE_DELETE from {@see self::MODULES_ACTIONS}.
+     *
+     * COMPANY_DATA moved here when the Company module shipped: the module has no
+     * index, no store and no destroy route to guard.
+     *
+     * @var list<string>
+     */
+    private const array SINGLETON_MODULES = ['COMPANY_DATA'];
+
+    /** @var list<string> */
+    private const array SINGLETON_ACTIONS = ['VIEW', 'UPDATE'];
 
     /**
      * Modules with the same CRUD shape as {@see self::MODULES} but no export
@@ -264,6 +281,7 @@ class RolePermissionSeeder extends Seeder
         $names = [
             ...$this->matrix(self::MODULES, self::MODULES_ACTIONS),
             ...$this->matrix(self::NO_EXPORT_MODULES, self::NO_EXPORT_ACTIONS),
+            ...$this->matrix(self::SINGLETON_MODULES, self::SINGLETON_ACTIONS),
             ...$this->matrix(['USERS'], self::USER_ACCESS_ACTIONS),
             ...$this->matrix(['SOCIAL_MEDIA'], self::SOCIAL_MEDIA_PUBLISH_ACTIONS),
             ...$this->matrix(['CAMPAIGNS'], self::CAMPAIGNS_PUBLISH_ACTIONS),

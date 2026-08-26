@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { m } from 'motion-v';
 import { computed, useId } from 'vue';
+import { MOTION_STAGGER, REVEAL_ITEM, staggerContainer } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 /**
@@ -38,6 +40,16 @@ const hasHeader = computed(() => Boolean(eyebrow || title || lede));
  * point at; otherwise `aria-labelledby` would reference nothing.
  */
 const labelledBy = computed(() => (title ? headingId : undefined));
+
+/**
+ * Every section header reveals on the same rhythm because it reveals from the
+ * same place. Putting the cascade on the primitive rather than in each section
+ * is what stops the page drifting into four slightly different entrances.
+ *
+ * Viewport thresholds are not set here — `MotionRoot` supplies them, so a
+ * section that needs different ones has to say so out loud.
+ */
+const headerCascade = staggerContainer(MOTION_STAGGER);
 </script>
 
 <template>
@@ -47,7 +59,7 @@ const labelledBy = computed(() => (title ? headingId : undefined));
         :class="cn('relative px-4 py-20 sm:px-6 lg:py-28', className)"
     >
         <div class="mx-auto w-full max-w-6xl">
-            <header
+            <m.header
                 v-if="hasHeader"
                 :class="
                     cn(
@@ -55,29 +67,35 @@ const labelledBy = computed(() => (title ? headingId : undefined));
                         align === 'center' && 'mx-auto text-center',
                     )
                 "
+                :variants="headerCascade"
+                initial="hidden"
+                while-in-view="visible"
             >
-                <p
+                <m.p
                     v-if="eyebrow"
                     class="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase"
+                    :variants="REVEAL_ITEM"
                 >
                     {{ eyebrow }}
-                </p>
+                </m.p>
 
-                <h2
+                <m.h2
                     v-if="title"
                     :id="headingId"
                     class="text-3xl font-semibold tracking-tight text-balance sm:text-4xl"
+                    :variants="REVEAL_ITEM"
                 >
                     {{ title }}
-                </h2>
+                </m.h2>
 
-                <p
+                <m.p
                     v-if="lede"
                     class="text-base text-pretty text-muted-foreground sm:text-lg"
+                    :variants="REVEAL_ITEM"
                 >
                     {{ lede }}
-                </p>
-            </header>
+                </m.p>
+            </m.header>
 
             <slot />
         </div>

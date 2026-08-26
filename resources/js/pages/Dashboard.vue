@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { Head, usePage } from '@inertiajs/vue3';
 import { Download, Plus } from '@lucide/vue';
+import { m } from 'motion-v';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
+import {
+    MOTION_STAGGER_TIGHT,
+    REVEAL_FADE,
+    staggerContainer,
+} from '@/lib/motion';
 import ActivityPanel from '@/modules/dashboard/components/ActivityPanel.vue';
 import KpiCard from '@/modules/dashboard/components/KpiCard.vue';
 import PipelinePanel from '@/modules/dashboard/components/PipelinePanel.vue';
@@ -39,14 +45,31 @@ const today = computed(() =>
         month: 'long',
     }).format(new Date()),
 );
+
+/**
+ * Three short cascades that all start on mount, rather than one cascade down
+ * the page.
+ *
+ * Two deliberate departures from the landing page. Nothing here waits for
+ * scroll: `while-in-view` would mean a panel already on screen animates on a
+ * revisit only if the viewport happens to trip the observer, and a returning
+ * user should never be watching content arrive that was in front of them a
+ * second ago. And the groups run in parallel instead of in sequence, so the
+ * last panel is settled in roughly a fifth of a second no matter how many
+ * tiles the row holds.
+ */
+const groupCascade = staggerContainer(MOTION_STAGGER_TIGHT);
 </script>
 
 <template>
     <Head title="Dashboard" />
 
     <div class="flex flex-1 flex-col gap-6 p-4 md:p-6">
-        <header
+        <m.header
             class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+            :variants="REVEAL_FADE"
+            initial="hidden"
+            animate="visible"
         >
             <div class="space-y-1">
                 <h1 class="text-2xl font-semibold tracking-tight">
@@ -65,29 +88,42 @@ const today = computed(() =>
                     New invoice
                 </Button>
             </div>
-        </header>
+        </m.header>
 
         <!-- Four tiles, deliberately: the metrics people check daily stay one
              glance away instead of competing with a wall of widgets. -->
-        <section
+        <m.section
             aria-label="Key metrics"
             class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            :variants="groupCascade"
+            initial="hidden"
+            animate="visible"
         >
             <KpiCard
                 v-for="metric in data.kpis"
                 :key="metric.id"
                 :metric="metric"
             />
-        </section>
+        </m.section>
 
-        <div class="grid gap-4 lg:grid-cols-3">
+        <m.div
+            class="grid gap-4 lg:grid-cols-3"
+            :variants="groupCascade"
+            initial="hidden"
+            animate="visible"
+        >
             <RevenuePanel :points="data.revenue" class="lg:col-span-2" />
             <PipelinePanel :stages="data.pipeline" />
-        </div>
+        </m.div>
 
-        <div class="grid gap-4 lg:grid-cols-2">
+        <m.div
+            class="grid gap-4 lg:grid-cols-2"
+            :variants="groupCascade"
+            initial="hidden"
+            animate="visible"
+        >
             <ActivityPanel :entries="data.activity" />
             <UpcomingPanel :items="data.upcoming" />
-        </div>
+        </m.div>
     </div>
 </template>

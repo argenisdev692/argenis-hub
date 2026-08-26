@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { ArrowRight, Menu } from '@lucide/vue';
 import { useWindowScroll } from '@vueuse/core';
+import { m } from 'motion-v';
 import { computed } from 'vue';
 import ThemeToggle from '@/common/feedback/ThemeToggle.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
@@ -13,6 +14,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { BRAND_TRANSITION } from '@/lib/motion';
 import { dashboard } from '@/routes';
 import { NAV_LINKS } from '../content';
 
@@ -32,20 +34,53 @@ const { y } = useWindowScroll();
  * frosts once content is scrolling underneath it.
  */
 const isDetached = computed(() => y.value > 12);
+
+/**
+ * Explicit heights, because motion animates the value and `h-16` cannot be
+ * tweened. In `rem`, not pixels, and that matters: `h-16` resolves to `4rem`,
+ * so a hardcoded `64` would only agree with it at a 16px root font size. Any
+ * visitor who has raised their browser's default text size would watch the bar
+ * snap shorter the moment motion took over — a regression aimed squarely at
+ * the people least able to absorb it.
+ */
+const NAV_HEIGHT_BASE = '4rem';
+const NAV_HEIGHT_COMPACT = '3.5rem';
+
+const navHeight = computed(() =>
+    isDetached.value ? NAV_HEIGHT_COMPACT : NAV_HEIGHT_BASE,
+);
+
+/**
+ * A settle, not a slide-down.
+ *
+ * The obvious treatment is to drop the whole bar in from `y: -100%`, and it is
+ * the wrong call here: the bar holds the only sign-in affordance above the
+ * fold, so a bundle that loads slowly would leave the page's primary action
+ * off-screen. 16px and a fade read as deliberate without ever hiding it.
+ */
+const NAV_ENTRANCE = {
+    initial: { opacity: 0, y: -16 },
+    animate: { opacity: 1, y: 0 },
+} as const;
 </script>
 
 <template>
-    <header
+    <m.header
         :class="[
             'fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,box-shadow] duration-300 ease-brand',
             isDetached
                 ? 'border-b border-glass-border bg-surface-glass backdrop-blur-md'
                 : 'border-b border-transparent',
         ]"
+        :initial="NAV_ENTRANCE.initial"
+        :animate="NAV_ENTRANCE.animate"
+        :transition="BRAND_TRANSITION"
     >
-        <nav
+        <m.nav
             class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
             aria-label="Main"
+            :animate="{ height: navHeight }"
+            :transition="BRAND_TRANSITION"
         >
             <Link
                 href="/"
@@ -129,6 +164,6 @@ const isDetached = computed(() => y.value > 12);
                     </SheetContent>
                 </Sheet>
             </div>
-        </nav>
-    </header>
+        </m.nav>
+    </m.header>
 </template>

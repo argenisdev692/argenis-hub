@@ -62,6 +62,7 @@
         "clsx": "^2.1.1",
         "laravel-vite-plugin": "^3.0.0",
         "libphonenumber-js": "^1.13.11",
+        "motion-v": "^2.4.0",
         "pinia": "^4.0.3",
         "reka-ui": "^2.10.4",
         "signature_pad": "^5.1.4",

@@ -71,6 +71,123 @@ declare namespace Modules {
             }
         }
     }
+    namespace Company {
+        namespace Application {
+            namespace DTOs {
+                export type CompanyAddressData = {
+                    readonly line_1: string | null;
+                    readonly line_2: string | null;
+                    readonly zip_code: string | null;
+                    readonly city: string | null;
+                    readonly state: string | null;
+                    readonly country: string | null;
+                    readonly country_code: string | null;
+                    readonly latitude: number | null;
+                    readonly longitude: number | null;
+                    readonly formatted: string | null;
+                };
+                export type CompanyLogosData = {
+                    readonly logo: string;
+                    readonly logo_white: string;
+                    readonly mark: string;
+                };
+                export type CompanyProfileData = {
+                    readonly uuid: string;
+                    readonly company_name: string;
+                    readonly legal_name: string | null;
+                    readonly description: string | null;
+                    readonly website: string | null;
+                    readonly email: string | null;
+                    readonly phone: string | null;
+                    readonly address: string | null;
+                    readonly address_2: string | null;
+                    readonly zip_code: string | null;
+                    readonly city: string | null;
+                    readonly state: string | null;
+                    readonly country: string | null;
+                    readonly country_code: string | null;
+                    readonly latitude: number | null;
+                    readonly longitude: number | null;
+                    readonly nif_nipc: string | null;
+                    readonly nie: string | null;
+                    readonly bank_beneficiary: string | null;
+                    readonly bank_iban: string | null;
+                    readonly bank_bic: string | null;
+                    readonly bank_name: string | null;
+                    readonly invoice_notes: string | null;
+                    readonly facebook_link: string | null;
+                    readonly github_link: string | null;
+                    readonly instagram_link: string | null;
+                    readonly linkedin_link: string | null;
+                    readonly tiktok_link: string | null;
+                    readonly twitter_link: string | null;
+                    readonly logos: Modules.Company.Application.DTOs.CompanyLogosData;
+                    readonly updated_at: string | null;
+                };
+                export type CompanySocialsData = {
+                    readonly facebook: string | null;
+                    readonly github: string | null;
+                    readonly instagram: string | null;
+                    readonly linkedin: string | null;
+                    readonly tiktok: string | null;
+                    readonly twitter: string | null;
+                };
+                export type PublicCompanyData = {
+                    readonly name: string;
+                    readonly legal_name: string | null;
+                    readonly description: string | null;
+                    readonly website: string | null;
+                    readonly email: string | null;
+                    readonly phone: string | null;
+                    readonly logos: Modules.Company.Application.DTOs.CompanyLogosData;
+                    readonly socials: Modules.Company.Application.DTOs.CompanySocialsData;
+                    readonly address: Modules.Company.Application.DTOs.CompanyAddressData;
+                };
+                export type UpdateCompanyData = {
+                    readonly company_name: string;
+                    readonly legal_name: string | null;
+                    readonly description: string | null;
+                    readonly website: string | null;
+                    readonly email: string | null;
+                    readonly phone: string | null;
+                    readonly address: string | null;
+                    readonly address_2: string | null;
+                    readonly zip_code: string | null;
+                    readonly city: string | null;
+                    readonly state: string | null;
+                    readonly country: string | null;
+                    readonly country_code: string | null;
+                    readonly latitude: number | null;
+                    readonly longitude: number | null;
+                    readonly nif_nipc: string | null;
+                    readonly nie: string | null;
+                    readonly bank_beneficiary: string | null;
+                    readonly bank_iban: string | null;
+                    readonly bank_bic: string | null;
+                    readonly bank_name: string | null;
+                    readonly invoice_notes: string | null;
+                    readonly facebook_link: string | null;
+                    readonly github_link: string | null;
+                    readonly instagram_link: string | null;
+                    readonly linkedin_link: string | null;
+                    readonly tiktok_link: string | null;
+                    readonly twitter_link: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type LogoVariant = 'logo' | 'logo_white' | 'mark';
+                export type SocialChannel =
+                    | 'facebook'
+                    | 'github'
+                    | 'instagram'
+                    | 'linkedin'
+                    | 'tiktok'
+                    | 'twitter';
+            }
+        }
+    }
 }
 declare namespace Shared {
     namespace Application {

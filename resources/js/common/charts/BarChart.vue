@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { m } from 'motion-v';
 import { computed } from 'vue';
+import {
+    MOTION_DURATION,
+    MOTION_EASE,
+    MOTION_STAGGER_TIGHT,
+} from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
 export type BarChartPoint = {
@@ -59,14 +65,44 @@ const accessibleName = computed(() =>
         ? `${caption}. Peak ${formatValue(peak.value.value)} in ${peak.value.label}.`
         : caption,
 );
+
+/**
+ * Bars grow on `scaleY` from a bottom origin rather than on `height`.
+ *
+ * Height would be the literal translation, and it would relayout the whole row
+ * on every frame of every bar; `scaleY` runs on the compositor. The cost is
+ * that `rounded-t-md` is squashed while a bar is mid-growth — six pixels of
+ * radius, for a fraction of a second, on a shape that is arriving. Not a
+ * trade worth a dozen layout passes.
+ */
+const barCascade = {
+    hidden: {},
+    visible: {
+        transition: { staggerChildren: MOTION_STAGGER_TIGHT },
+    },
+};
+
+const barGrow = {
+    hidden: { scaleY: 0 },
+    visible: {
+        scaleY: 1,
+        transition: {
+            duration: MOTION_DURATION.slow,
+            ease: MOTION_EASE,
+        },
+    },
+};
 </script>
 
 <template>
     <figure :class="cn('flex flex-col gap-3', className)">
-        <div
+        <m.div
             class="flex h-48 items-end gap-1.5 sm:gap-2"
             role="img"
             :aria-label="accessibleName"
+            :variants="barCascade"
+            initial="hidden"
+            animate="visible"
         >
             <div
                 v-for="point in points"
@@ -81,12 +117,13 @@ const accessibleName = computed(() =>
                     {{ formatValue(point.value) }}
                 </span>
 
-                <div
-                    class="w-full rounded-t-md bg-brand-gradient opacity-80 transition-opacity duration-200 ease-brand group-hover:opacity-100"
+                <m.div
+                    class="w-full origin-bottom rounded-t-md bg-brand-gradient opacity-80 transition-opacity duration-200 ease-brand group-hover:opacity-100"
                     :style="{ height: heightPercent(point.value) }"
+                    :variants="barGrow"
                 />
             </div>
-        </div>
+        </m.div>
 
         <div
             class="flex gap-1.5 text-center text-xs text-muted-foreground sm:gap-2"

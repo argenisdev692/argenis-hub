@@ -183,6 +183,29 @@
                     }
                 }
             }
+        },
+        "/public/company": {
+            "get": {
+                "operationId": "public.company",
+                "description": "Returns the trading name, brand-mark URLs, every social profile and the\nstreet address. Responds 404 until the installation has been seeded.",
+                "summary": "Get the public company profile",
+                "tags": [
+                    "PublicCompany"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PublicCompanyData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicCompanyData"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
         }
     },
     "components": {
@@ -294,6 +317,60 @@
                     "permissions"
                 ],
                 "title": "AuthenticatedUserData"
+            },
+            "PublicCompanyData": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "legal_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "website": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "phone": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "logos": {
+                        "$ref": "#/components/schemas/CompanyLogosData"
+                    },
+                    "socials": {
+                        "$ref": "#/components/schemas/CompanySocialsData"
+                    },
+                    "address": {
+                        "$ref": "#/components/schemas/CompanyAddressData"
+                    }
+                },
+                "required": [
+                    "name",
+                    "logos",
+                    "socials",
+                    "address"
+                ],
+                "title": "PublicCompanyData"
             },
             "User": {
                 "type": "object",

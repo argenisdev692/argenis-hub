@@ -16,6 +16,7 @@ export { default as FormDialog } from './FormDialog.vue';
 export { default as PhoneInput } from './PhoneInput.vue';
 export { default as SignaturePadInput } from './SignaturePadInput.vue';
 export { default as SortableList } from './SortableList.vue';
+export { default as TextField } from './TextField.vue';
 
 export type { DialogForm } from './FormDialog.vue';
 export type { FilterSelectOption, FilterSelectValue } from './FilterSelect.vue';

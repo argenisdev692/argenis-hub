@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
@@ -65,6 +66,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
+ * @property-read CompanyData|null $companyData
  * @property-read Collection<int, AuthSessionEloquentModel> $authSessions
  * @property-read int|null $auth_sessions_count
  * @property-read Collection<int, PasswordHistoryEloquentModel> $passwordHistories
@@ -216,6 +218,21 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function passwordHistories(): HasMany
     {
         return $this->hasMany(PasswordHistoryEloquentModel::class);
+    }
+
+    /**
+     * The company record this user owns.
+     *
+     * `hasOne`, not `hasMany`: `company_data` is a singleton and the Company
+     * module exposes no way to create a second row. Declared because
+     * `company_data.user_id` is a foreign key, and every FK in this project
+     * carries both sides of the relation.
+     *
+     * @return HasOne<CompanyData, $this>
+     */
+    public function companyData(): HasOne
+    {
+        return $this->hasOne(CompanyData::class);
     }
 
     /**

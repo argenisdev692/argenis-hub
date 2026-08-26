@@ -116,6 +116,15 @@ class CompanyData extends Model
     protected $table = 'company_data';
 
     /**
+     * The `uuid` is the public identifier; the auto-increment key is internal
+     * and must not reach Inertia props or JSON (OWASP §12). The response DTOs in
+     * the Company module are the primary allowlist — this is defence in depth.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['id'];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

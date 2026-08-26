@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { Activity } from '@lucide/vue';
+import { m } from 'motion-v';
 import { computed } from 'vue';
 import EmptyState from '@/common/feedback/EmptyState.vue';
+import {
+    MOTION_STAGGER_TIGHT,
+    REVEAL_ITEM,
+    staggerContainer,
+} from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { toneClasses } from '@/modules/marketing/helpers/toneClasses';
 import { activityPresentation } from '../helpers/activityIcon';
@@ -30,15 +36,35 @@ const rows = computed(() =>
         };
     }),
 );
+
+/**
+ * `delayChildren` holds the rows until the panel around them has arrived.
+ * Without it the list is sliding upward inside a surface that is itself still
+ * sliding upward, which reads as two things moving rather than one.
+ *
+ * The list drives itself (`initial` / `animate`) rather than inheriting from
+ * the panel, so it behaves the same wherever the panel is placed.
+ */
+const rowCascade = staggerContainer(
+    MOTION_STAGGER_TIGHT,
+    MOTION_STAGGER_TIGHT * 3,
+);
 </script>
 
 <template>
     <DashboardPanel title="Recent activity" description="Across every module">
-        <ol v-if="rows.length" class="space-y-4">
-            <li
+        <m.ol
+            v-if="rows.length"
+            class="space-y-4"
+            :variants="rowCascade"
+            initial="hidden"
+            animate="visible"
+        >
+            <m.li
                 v-for="row in rows"
                 :key="row.entry.id"
                 class="flex items-start gap-3"
+                :variants="REVEAL_ITEM"
             >
                 <span
                     :class="
@@ -73,8 +99,8 @@ const rows = computed(() =>
                 >
                     {{ formatRelativeTime(row.entry.occurredAt) }}
                 </time>
-            </li>
-        </ol>
+            </m.li>
+        </m.ol>
 
         <EmptyState
             v-else

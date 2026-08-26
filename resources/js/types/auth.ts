@@ -14,6 +14,16 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /**
+     * Permission names granted to the current user, shared by
+     * `HandleInertiaRequests::share()`.
+     *
+     * Permissions, never roles: a role is a backend grouping whose membership
+     * can change without the UI knowing, so a screen that hides itself behind
+     * `roles.includes('admin')` drifts the moment a permission is reassigned.
+     * Hiding UI is defence in depth — the route middleware stays authoritative.
+     */
+    permissions: string[];
 };
 
 export type Passkey = {

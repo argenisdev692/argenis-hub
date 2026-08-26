@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { m } from 'motion-v';
 import { computed } from 'vue';
 import Sparkline from '@/common/charts/Sparkline.vue';
+import { INTERACTIVE_SPRING, REVEAL_ITEM } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { toneClasses } from '@/modules/marketing/helpers/toneClasses';
 import { formatSignedPercent } from '../helpers/format';
@@ -30,11 +32,21 @@ const sparkStroke = computed(() => {
         ? 'var(--success)'
         : 'var(--destructive)';
 });
+
+/**
+ * Shallower than the marketing cards' lift. These sit four across in a tight
+ * grid and a visitor sweeps the whole row while reading; the landing page's
+ * travel would set the entire row bobbing.
+ */
+const HOVER_LIFT = -2;
 </script>
 
 <template>
-    <article
+    <m.article
         class="group flex flex-col gap-4 rounded-xl border border-glass-border bg-surface-glass p-5 backdrop-blur-sm transition-shadow duration-200 ease-brand hover:shadow-soft"
+        :variants="REVEAL_ITEM"
+        :while-hover="{ y: HOVER_LIFT }"
+        :transition="INTERACTIVE_SPRING"
     >
         <header class="flex items-start justify-between gap-3">
             <h3 class="text-sm font-medium text-muted-foreground">
@@ -80,5 +92,5 @@ const sparkStroke = computed(() => {
                 class="h-8 w-20 shrink-0"
             />
         </footer>
-    </article>
+    </m.article>
 </template>

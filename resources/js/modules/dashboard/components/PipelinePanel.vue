@@ -1,12 +1,28 @@
 <script setup lang="ts">
 import { Handshake } from '@lucide/vue';
+import { m } from 'motion-v';
 import EmptyState from '@/common/feedback/EmptyState.vue';
+import { MOTION_DURATION, MOTION_EASE } from '@/lib/motion';
 import type { PipelineStage } from '../types';
 import DashboardPanel from './DashboardPanel.vue';
 
 const { stages } = defineProps<{
     stages: readonly PipelineStage[];
 }>();
+
+/**
+ * The bars previously carried `transition-[width]`, which never fired: a CSS
+ * transition needs a value to change, and the width is already correct on the
+ * first paint. They snapped to their final length and the class was decoration.
+ *
+ * Driving it from motion gives them a real starting value. Slower than the
+ * page's other motion on purpose — this one is showing a quantity, so the
+ * growth is the information, not the flourish.
+ */
+const BAR_TRANSITION = {
+    duration: MOTION_DURATION.slow,
+    ease: MOTION_EASE,
+};
 </script>
 
 <template>
@@ -31,9 +47,11 @@ const { stages } = defineProps<{
                     aria-valuemax="100"
                     :aria-label="`${stage.label}: ${stage.share}% of pipeline`"
                 >
-                    <div
-                        class="h-full rounded-full bg-brand-gradient transition-[width] duration-500 ease-brand"
-                        :style="{ width: `${stage.share}%` }"
+                    <m.div
+                        class="h-full rounded-full bg-brand-gradient"
+                        :initial="{ width: '0%' }"
+                        :animate="{ width: `${stage.share}%` }"
+                        :transition="BAR_TRANSITION"
                     />
                 </div>
             </li>

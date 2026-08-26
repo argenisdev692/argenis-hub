@@ -285,6 +285,19 @@
     --motion-slow: 400ms;
     --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
 
+    /* Choreography — the two numbers that turn a set of transitions into a
+       sequence. `--motion-stagger` is the gap between siblings revealed as a
+       group; `--motion-reveal-distance` is how far each one travels on its way
+       in. Kept small on purpose: a reveal that moves further than ~24px reads
+       as a page jump on a laptop viewport, and one that staggers wider than
+       ~60ms makes the last card in a row feel broken rather than choreographed.
+
+       These are mirrored in `resources/js/lib/motion.ts`. motion-v animates off
+       the main CSS pipeline and cannot read custom properties, so the JS half
+       of the system carries its own copy — change one, change the other. */
+    --motion-stagger: 60ms;
+    --motion-reveal-distance: 24px;
+
     /* ---- pointer chrome ----
        Scrollbar thumb and the cursor orb, both drawn from the interactive hue
        so a theme change needs no second edit. Light mode runs them weaker for

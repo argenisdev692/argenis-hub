@@ -111,7 +111,8 @@
       "Bash(sed -E 's/.*data-pc-section\":\\\\s*\"\\([a-zA-Z]+\\)\".*/\\\\1/')",
       "Bash(grep *)",
       "Bash(xargs -I{} cat {})",
-      "Bash(sed -i 's|<env name=\"SESSION_DRIVER\" value=\"file\"/>|<env name=\"SESSION_DRIVER\" value=\"array\"/>|' phpunit.xml)"
+      "Bash(sed -i 's|<env name=\"SESSION_DRIVER\" value=\"file\"/>|<env name=\"SESSION_DRIVER\" value=\"array\"/>|' phpunit.xml)",
+      "Bash(npm run *)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,6 +1,15 @@
 <script setup lang="ts">
+import { m } from 'motion-v';
+import { MOTION_STAGGER, REVEAL_ITEM, staggerContainer } from '@/lib/motion';
 import { STEPS } from '../content';
 import LandingSection from './LandingSection.vue';
+
+/**
+ * Three steps that describe an order, so they arrive in that order and slower
+ * than the default — the stagger is carrying the meaning here, not just
+ * softening the entrance.
+ */
+const stepCascade = staggerContainer(MOTION_STAGGER * 2);
 </script>
 
 <template>
@@ -10,11 +19,17 @@ import LandingSection from './LandingSection.vue';
         title="Create, convert, collect"
         lede="The modules are wired in that order on purpose: a post feeds a campaign, a campaign feeds a booking, a booking feeds an invoice — no re-typing between them."
     >
-        <ol class="grid gap-4 md:grid-cols-3">
-            <li
+        <m.ol
+            class="grid gap-4 md:grid-cols-3"
+            :variants="stepCascade"
+            initial="hidden"
+            while-in-view="visible"
+        >
+            <m.li
                 v-for="(step, index) in STEPS"
                 :key="step.id"
                 class="relative flex flex-col gap-4 rounded-2xl border border-glass-border bg-surface-glass p-6 backdrop-blur-sm"
+                :variants="REVEAL_ITEM"
             >
                 <div class="flex items-center gap-3">
                     <span
@@ -41,7 +56,7 @@ import LandingSection from './LandingSection.vue';
                         {{ step.description }}
                     </p>
                 </div>
-            </li>
-        </ol>
+            </m.li>
+        </m.ol>
     </LandingSection>
 </template>

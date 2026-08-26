@@ -11,4 +11,9 @@ export type NavItem = {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon;
     isActive?: boolean;
+    /**
+     * Hides the item unless the user holds this permission. Presentational
+     * only — the route behind it carries its own `permission:*` middleware.
+     */
+    permission?: string;
 };

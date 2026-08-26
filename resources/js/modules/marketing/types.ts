@@ -1,4 +1,5 @@
 import type { LucideIcon } from '@lucide/vue';
+import type { SocialChannel } from '@/common/brand/socialChannels';
 
 /**
  * The brand hue a marketing surface is tinted with.
@@ -48,12 +49,11 @@ export type MarketingStep = {
 /**
  * Social channels the footer can render.
  *
- * Mirrors the keys emitted by `CompanyProfile::data()['socials']`, which are
- * derived from the `*_link` columns on `company_data`. Keys with no URL in the
- * database are filtered out server-side and never reach the page.
+ * An alias, not a second definition. The canonical list is the backend's
+ * `SocialChannel` enum, surfaced through `common/brand` — this name is kept so
+ * the marketing module's existing public API does not churn.
  */
-export type SocialKey =
-    'linkedin' | 'github' | 'instagram' | 'facebook' | 'tiktok' | 'twitter';
+export type SocialKey = SocialChannel;
 
 /** Company contact block shared with the landing page by `HomeController`. */
 export type CompanyContact = {

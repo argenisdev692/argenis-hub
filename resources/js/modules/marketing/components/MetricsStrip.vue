@@ -1,17 +1,39 @@
 <script setup lang="ts">
+import { m } from 'motion-v';
+import { MOTION_STAGGER, REVEAL_FADE, staggerContainer } from '@/lib/motion';
 import { METRICS } from '../content';
 import LandingSection from './LandingSection.vue';
+
+/**
+ * Deliberately a plain reveal, not a count-up.
+ *
+ * A rolling number only earns its keep when the number is large enough that
+ * watching it climb tells you something. These are `5`, `100%`, `2` and `AA` —
+ * two of them are single digits, and the last one has no numeric value at all.
+ * Counting to five is a gimmick; animating "AA" is impossible. If these ever
+ * become live figures (`MarketingMetric.value` is typed `string` precisely
+ * because they are positioning claims, not data), a count-up becomes worth
+ * revisiting.
+ *
+ * The cells are separated by a 1px grid gap showing the border colour beneath,
+ * so they reveal in place — travel would open gaps in that hairline mid-flight.
+ */
+const metricCascade = staggerContainer(MOTION_STAGGER);
 </script>
 
 <template>
     <LandingSection id="results" class="py-14 lg:py-20">
-        <dl
+        <m.dl
             class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-glass-border bg-glass-border lg:grid-cols-4"
+            :variants="metricCascade"
+            initial="hidden"
+            while-in-view="visible"
         >
-            <div
+            <m.div
                 v-for="metric in METRICS"
                 :key="metric.id"
                 class="flex flex-col gap-1 bg-surface-glass p-6 backdrop-blur-sm sm:p-8"
+                :variants="REVEAL_FADE"
             >
                 <dt class="order-2 text-sm font-medium">
                     {{ metric.label }}
@@ -24,7 +46,7 @@ import LandingSection from './LandingSection.vue';
                 <dd class="order-3 text-xs text-muted-foreground">
                     {{ metric.caption }}
                 </dd>
-            </div>
-        </dl>
+            </m.div>
+        </m.dl>
     </LandingSection>
 </template>
