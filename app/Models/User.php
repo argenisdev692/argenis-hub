@@ -27,6 +27,8 @@ use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\AuthSessionEloquentM
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\PasswordHistoryEloquentModel;
 use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Permission;
 use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Role;
+use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
+use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSupportEloquentModel;
 use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
@@ -74,6 +76,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $password_histories_count
  * @property-read Collection<int, ServiceEloquentModel> $services
  * @property-read int|null $services_count
+ * @property-read Collection<int, ClientEloquentModel> $clients
+ * @property-read int|null $clients_count
+ * @property-read Collection<int, ContactSupportEloquentModel> $contactSupports
+ * @property-read int|null $contact_supports_count
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read Collection<int, OneTimePassword> $oneTimePasswords
@@ -227,6 +233,34 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function services(): HasMany
     {
         return $this->hasMany(ServiceEloquentModel::class);
+    }
+
+    /**
+     * The CRM clients this user owns.
+     *
+     * Inverse of `ClientEloquentModel::user()` — declared here because
+     * `clients.user_id` is a foreign key and every FK in this project carries
+     * both sides of the relation.
+     *
+     * @return HasMany<ClientEloquentModel, $this>
+     */
+    public function clients(): HasMany
+    {
+        return $this->hasMany(ClientEloquentModel::class);
+    }
+
+    /**
+     * The contact-support requests attributed to this user — set when a
+     * signed-in visitor submits the public form or an operator logs a request
+     * from the admin UI. Inverse of `ContactSupportEloquentModel::user()`;
+     * declared here because `contact_supports.user_id` is a nullable foreign key
+     * and every FK in this project carries both sides of the relation.
+     *
+     * @return HasMany<ContactSupportEloquentModel, $this>
+     */
+    public function contactSupports(): HasMany
+    {
+        return $this->hasMany(ContactSupportEloquentModel::class);
     }
 
     /**

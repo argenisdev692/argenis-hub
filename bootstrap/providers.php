@@ -6,7 +6,9 @@ use App\Providers\TypeScriptTransformerServiceProvider;
 use Modules\ActivityLog\Providers\ActivityLogServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Backups\Providers\BackupsServiceProvider;
+use Modules\Clients\Providers\ClientsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
+use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
 use Modules\Services\Providers\ServicesServiceProvider;
 use Shared\Providers\SharedServiceProvider;
 
@@ -21,6 +23,8 @@ return [
     AuthServiceProvider::class,
     CompanyServiceProvider::class,
     ServicesServiceProvider::class,
+    ClientsServiceProvider::class,
+    ContactSupportServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
 ];

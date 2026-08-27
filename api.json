@@ -414,6 +414,41 @@
                 "security": []
             }
         },
+        "/public/contact-supports": {
+            "post": {
+                "operationId": "public.contact-supports",
+                "summary": "Record a contact-support request submitted from the public site",
+                "tags": [
+                    "PublicContactSupport"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StorePublicContactSupportRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`PublicContactSupportData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PublicContactSupportData"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
         "/public/services": {
             "get": {
                 "operationId": "public.services",
@@ -808,6 +843,67 @@
                     "address"
                 ],
                 "title": "PublicCompanyData"
+            },
+            "PublicContactSupportData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "subject": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "subject"
+                ],
+                "title": "PublicContactSupportData"
+            },
+            "StorePublicContactSupportRequest": {
+                "type": "object",
+                "description": "The public landing-page contact form. Unauthenticated: the route is throttled\nand honeypot-protected ({@see ProtectAgainstSpam}), and this\nrequest is the authoritative validation gate \u2014 the client-side Zod schema is\nUX only (OWASP \u00a73 / \u00a715.5). Triage columns (`readed`, `is_spam`, `spam_*`)\nare NOT accepted here; the submission pipeline owns them.",
+                "properties": {
+                    "first_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "phone": {
+                        "type": "string",
+                        "pattern": "^\\+?[0-9]{7,15}$",
+                        "maxLength": 20
+                    },
+                    "subject": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "message": {
+                        "type": "string",
+                        "minLength": 10,
+                        "maxLength": 5000
+                    },
+                    "sms_consent": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "first_name",
+                    "last_name",
+                    "email",
+                    "phone",
+                    "subject",
+                    "message"
+                ],
+                "title": "StorePublicContactSupportRequest"
             },
             "User": {
                 "type": "object",

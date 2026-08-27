@@ -113,6 +113,84 @@ declare namespace Modules {
             }
         }
     }
+    namespace Backups {
+        namespace Application {
+            namespace DTOs {
+                export type BackupData = {
+                    readonly uuid: string;
+                    readonly disk: string;
+                    readonly path: string | null;
+                    readonly filename: string;
+                    readonly size_bytes: number | null;
+                    readonly human_size: string;
+                    readonly status: string;
+                    readonly connection: string | null;
+                    readonly error: string | null;
+                    readonly started_at: string | null;
+                    readonly finished_at: string | null;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                };
+                export type BackupFilterData = {
+                    readonly search: string | null;
+                    readonly status: string | null;
+                    readonly dateFrom: string | null;
+                    readonly dateTo: string | null;
+                    readonly sortField: string;
+                    readonly sortOrder: number;
+                    readonly page: number;
+                    readonly perPage: number;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type BackupStatus = 'running' | 'completed' | 'failed';
+            }
+        }
+    }
+    namespace Clients {
+        namespace Application {
+            namespace DTOs {
+                export type ClientData = {
+                    readonly uuid: string;
+                    readonly client_name: string;
+                    readonly email: string | null;
+                    readonly status: Modules.Clients.Domain.Enums.ClientStatus;
+                    readonly phone: string;
+                    readonly address: string | null;
+                    readonly country: string | null;
+                    readonly country_code: string | null;
+                    readonly tax_id: string | null;
+                    readonly nif: string | null;
+                    readonly website: string | null;
+                    readonly facebook_link: string | null;
+                    readonly instagram_link: string | null;
+                    readonly linkedin_link: string | null;
+                    readonly twitter_link: string | null;
+                    readonly notes: string | null;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type ClientFilterData = {
+                    readonly search: string | null;
+                    readonly status: string | null;
+                    readonly dateFrom: string | null;
+                    readonly dateTo: string | null;
+                    readonly sortField: string;
+                    readonly sortOrder: number;
+                    readonly page: number;
+                    readonly perPage: number;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type ClientStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+            }
+        }
+    }
     namespace Company {
         namespace Application {
             namespace DTOs {
@@ -227,6 +305,45 @@ declare namespace Modules {
                     | 'linkedin'
                     | 'tiktok'
                     | 'twitter';
+            }
+        }
+    }
+    namespace ContactSupport {
+        namespace Application {
+            namespace DTOs {
+                export type ContactSupportData = {
+                    readonly uuid: string;
+                    readonly first_name: string;
+                    readonly last_name: string;
+                    readonly email: string;
+                    readonly phone: string;
+                    readonly subject: string;
+                    readonly message: string;
+                    readonly sms_consent: boolean;
+                    readonly readed: boolean;
+                    readonly is_spam: boolean;
+                    readonly spam_score: number;
+                    readonly spam_reasons: string[] | null;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type ContactSupportFilterData = {
+                    readonly search: string | null;
+                    readonly status: string | null;
+                    readonly readed: boolean | null;
+                    readonly isSpam: boolean | null;
+                    readonly dateFrom: string | null;
+                    readonly dateTo: string | null;
+                    readonly sortField: string;
+                    readonly sortOrder: number;
+                    readonly page: number;
+                    readonly perPage: number;
+                };
+                export type PublicContactSupportData = {
+                    readonly uuid: string;
+                    readonly subject: string;
+                };
             }
         }
     }

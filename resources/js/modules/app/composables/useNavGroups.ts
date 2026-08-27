@@ -4,6 +4,7 @@ import {
     Briefcase,
     CalendarDays,
     ChartLine,
+    DatabaseBackup,
     FileText,
     Handshake,
     Layers,
@@ -17,6 +18,7 @@ import type { LucideIcon } from '@lucide/vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
 import { index as activityLogIndex } from '@/routes/activity-logs';
+import { index as backupsIndex } from '@/routes/backups';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
@@ -68,6 +70,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: activityLogIndex(),
                     icon: ScrollText,
                     permission: 'VIEW_ANY_ACTIVITY_LOGS',
+                },
+                {
+                    title: 'Backups',
+                    href: backupsIndex(),
+                    icon: DatabaseBackup,
+                    permission: 'VIEW_ANY_BACKUPS',
                 },
             ],
         },
