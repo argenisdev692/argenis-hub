@@ -9,6 +9,7 @@ import {
     Handshake,
     Layers,
     LayoutGrid,
+    LifeBuoy,
     Megaphone,
     ScrollText,
     ShieldCheck,
@@ -19,6 +20,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
 import { index as activityLogIndex } from '@/routes/activity-logs';
 import { index as backupsIndex } from '@/routes/backups';
+import { index as contactSupportsIndex } from '@/routes/contact-supports';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
@@ -76,6 +78,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: backupsIndex(),
                     icon: DatabaseBackup,
                     permission: 'VIEW_ANY_BACKUPS',
+                },
+                {
+                    title: 'Support inbox',
+                    href: contactSupportsIndex(),
+                    icon: LifeBuoy,
+                    permission: 'VIEW_ANY_CONTACT_SUPPORTS',
                 },
             ],
         },
