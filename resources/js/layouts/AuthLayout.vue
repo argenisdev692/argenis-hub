@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CursorOrb from '@/common/feedback/CursorOrb.vue';
+import NoiseGrain from '@/common/feedback/NoiseGrain.vue';
 import MotionRoot from '@/common/motion/MotionRoot.vue';
 import AuthLayout from '@/layouts/auth/AuthSimpleLayout.vue';
 
@@ -24,6 +25,7 @@ const { title = '', description = '' } = defineProps<{
     <MotionRoot>
         <AuthLayout :title="title" :description="description">
             <slot />
+            <NoiseGrain />
             <CursorOrb />
         </AuthLayout>
     </MotionRoot>

@@ -14,18 +14,19 @@ Artisan::command('inspire', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Authentication retention (spec 001 FR-17, clarify Q5)
+| Authentication & audit retention (spec 001 FR-17, clarify Q5)
 |--------------------------------------------------------------------------
 |
-| The audit trail is kept for 12 months (config/activitylog.php →
-| clean_after_days), then trimmed. Session tracking rows and expired one-time
-| codes are pruned on the same nightly pass: neither is evidence, and holding
+| Activity-log rows past the 90-day hot window are streamed to R2 cold storage
+| as gzipped NDJSON and then purged from the table by `activity-log:archive`
+| (Modules\ActivityLog). Session tracking rows and expired one-time codes are
+| pruned on the same nightly pass: neither is evidence, and holding
 | IP/user-agent pairs longer than the feature needs is data collection without
 | a purpose.
 |
 */
 
-Schedule::command('activitylog:clean')->dailyAt('03:00');
+Schedule::command('activity-log:archive')->dailyAt('03:00');
 
 Schedule::command('model:prune', [
     '--model' => [

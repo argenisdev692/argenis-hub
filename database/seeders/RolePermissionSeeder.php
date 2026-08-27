@@ -23,7 +23,7 @@ class RolePermissionSeeder extends Seeder
      *
      * @var list<string>
      */
-    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS'];
+    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS', 'SERVICES'];
 
     /**
      * Singleton records: one row, provisioned by a seeder, edited in place and
@@ -47,9 +47,12 @@ class RolePermissionSeeder extends Seeder
      * endpoint yet, so EXPORT is omitted here (seeding it would only create a
      * dead permission, same reasoning as the FORCE_DELETE omission below).
      *
+     * Empty since SERVICES shipped its `/data/admin/services/export` route and
+     * moved into {@see self::MODULES} to pick up EXPORT_SERVICES.
+     *
      * @var list<string>
      */
-    private const array NO_EXPORT_MODULES = ['SERVICES'];
+    private const array NO_EXPORT_MODULES = [];
 
     /**
      * @var list<string>

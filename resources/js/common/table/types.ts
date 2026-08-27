@@ -9,6 +9,21 @@
 
 export type SortDirection = 'asc' | 'desc';
 
+/**
+ * An inclusive `created_at` window, both ends `YYYY-MM-DD` or null.
+ *
+ * Deliberately a pair of ISO date strings, never JS `Date`s: that is what
+ * Laravel's `date` rule and an Eloquent `date` cast both expect, and it keeps a
+ * timezone out of a value that has none (see `common/form/DatePickerInput.vue`).
+ */
+export type DateRange = {
+    from: string | null;
+    to: string | null;
+};
+
+/** The formats the Shared `ExportPort` can stream a filtered list as. */
+export type ExportFormat = 'xlsx' | 'csv' | 'pdf';
+
 export type DataTableSort = {
     /** Matches the `key` of the column being sorted. */
     field: string;

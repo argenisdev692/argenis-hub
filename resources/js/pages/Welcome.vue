@@ -2,10 +2,12 @@
 import { Head, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import CursorOrb from '@/common/feedback/CursorOrb.vue';
+import NoiseGrain from '@/common/feedback/NoiseGrain.vue';
 import MotionRoot from '@/common/motion/MotionRoot.vue';
 import CtaSection from '@/modules/marketing/components/CtaSection.vue';
 import FeatureBento from '@/modules/marketing/components/FeatureBento.vue';
 import HeroSection from '@/modules/marketing/components/HeroSection.vue';
+import LandingBackdrop from '@/modules/marketing/components/LandingBackdrop.vue';
 import LandingFooter from '@/modules/marketing/components/LandingFooter.vue';
 import LandingNav from '@/modules/marketing/components/LandingNav.vue';
 import LoginDialog from '@/modules/marketing/components/LoginDialog.vue';
@@ -46,6 +48,8 @@ function openLogin(): void {
 
     <MotionRoot>
         <div class="min-h-svh">
+            <LandingBackdrop />
+
             <a
                 href="#main"
                 class="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-4 focus-visible:left-4 focus-visible:z-[60] focus-visible:rounded-md focus-visible:bg-primary focus-visible:px-4 focus-visible:py-2 focus-visible:text-primary-foreground"
@@ -71,6 +75,7 @@ function openLogin(): void {
 
             <LoginDialog v-model:open="loginOpen" />
 
+            <NoiseGrain />
             <CursorOrb />
         </div>
     </MotionRoot>

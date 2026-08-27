@@ -18,6 +18,11 @@ return new class extends Migration
             $table->json('attribute_changes')->nullable();
             $table->json('properties')->nullable();
             $table->timestamps();
+
+            // Every list / export query filters + sorts on `created_at`, and the
+            // trail is most often narrowed by `event` first (BACKEND-PHP §4.1 #6).
+            $table->index('created_at');
+            $table->index(['event', 'created_at']);
         });
     }
 };

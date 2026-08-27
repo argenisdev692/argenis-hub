@@ -91,6 +91,7 @@ defineProps<{
 
             <Button
                 type="submit"
+                variant="shine"
                 class="mt-4 w-full"
                 :tabindex="4"
                 :disabled="processing"

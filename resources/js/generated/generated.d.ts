@@ -42,6 +42,48 @@ declare namespace Illuminate {
         Illuminate.LengthAwarePaginator<TKey, TValue>;
 }
 declare namespace Modules {
+    namespace ActivityLog {
+        namespace Application {
+            namespace DTOs {
+                export type ActivityLogData = {
+                    readonly id: number;
+                    readonly log_name: string | null;
+                    readonly description: string;
+                    readonly event: string | null;
+                    readonly subject_type: string | null;
+                    readonly subject_id: string | null;
+                    readonly causer_id: string | null;
+                    readonly causer_label: string | null;
+                    readonly created_at: string | null;
+                };
+                export type ActivityLogDetailData = {
+                    readonly id: number;
+                    readonly log_name: string | null;
+                    readonly description: string;
+                    readonly event: string | null;
+                    readonly subject_type: string | null;
+                    readonly subject_id: string | null;
+                    readonly causer_id: string | null;
+                    readonly causer_type: string | null;
+                    readonly causer_label: string | null;
+                    readonly properties: Record<string, any> | null;
+                    readonly attribute_changes: Record<string, any> | null;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                };
+                export type ActivityLogFilterData = {
+                    search: string | null;
+                    event: string | null;
+                    log_name: string | null;
+                    causer_id: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                    sort_direction: string;
+                    per_page: number;
+                };
+            }
+        }
+    }
     namespace Auth {
         namespace Application {
             namespace DTOs {

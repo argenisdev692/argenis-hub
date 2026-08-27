@@ -44,7 +44,7 @@ const ctaPanel: MotionVariants = {
             while-in-view="visible"
         >
             <div
-                class="pointer-events-none absolute -top-24 left-1/2 -z-10 h-96 w-96 -translate-x-1/2 ambient-blob-purple"
+                class="pointer-events-none absolute -top-24 left-1/2 -z-10 h-96 w-96 -translate-x-1/2 ambient-blob-animated ambient-blob-purple"
                 aria-hidden="true"
             />
 

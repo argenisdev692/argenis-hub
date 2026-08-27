@@ -237,9 +237,11 @@
     --ambient-position: 18% 12%, 78% 8%, 12% 88%, 90% 78%;
     --ambient-position-end: 31% 27%, 63% 21%, 27% 71%, 73% 92%;
     --ambient-size: 220% 220%;
-    /* Damped hard against the light ground, but not to the point of being a
-       grey wash — below roughly 0.2 the brand hues stop registering at all. */
-    --ambient-opacity: 0.22;
+    /* Damped against the light ground, but kept high enough that the brand
+       hues actually read through the app shell's translucent surfaces (the
+       inset is ~75% opaque white — anything under ~0.28 here nets out to an
+       invisible tint on the dashboard). */
+    --ambient-opacity: 0.32;
 
     /* Readability scrim over the image. Transparent where the glow should be
        felt, opaque toward the fold so long pages keep AA body contrast. */
@@ -300,10 +302,10 @@
        The app shell (sidebar, inset, sticky headers) sits ON the ambient layer
        rather than over it. Derived from the opaque roles so a theme change
        needs no second edit. */
-    --surface-app: color-mix(in oklab, var(--background) 82%, transparent);
+    --surface-app: color-mix(in oklab, var(--background) 75%, transparent);
     --surface-sidebar: color-mix(
         in oklab,
-        var(--sidebar-background) 72%,
+        var(--sidebar-background) 66%,
         transparent
     );
     --surface-glass: color-mix(in oklab, var(--card) 70%, transparent);
@@ -360,6 +362,25 @@
        survive being multiplied by both. At the old 10% it did not: the orb was
        painting, just below the threshold anything could be seen at. */
     --cursor-orb-tint: color-mix(in oklab, var(--primary) 20%, transparent);
+
+    /* ---- film grain ----
+       A fixed, tiled monochrome-noise overlay sitting on top of the ambient
+       mesh — the cinematic texture the brand mockups carry
+       (BRAND/noise-grain-login.html). Painted by `NoiseGrain.vue`, which
+       teleports one node into <body> (styling lives in app.css, `.noise-grain`).
+       The SVG is untinted; all colour comes from the blend mode, so this token
+       only decides how far the texture is allowed to intrude. Damped hard in
+       light for the same reason as --ambient-opacity — on a white ground the
+       same grain reads as dirt on the screen and costs body contrast. */
+    --noise-grain-opacity: 0.04;
+    --noise-grain-tile: 160px;
+
+    /* ---- landing backdrop ----
+       Dims the whole animated-blob layer on `/` in one number (the blobs carry
+       their own low alpha via --ambient-blob-*). Gentler in light, where the
+       pools blend `normal` over white; full strength in dark, where they run
+       `screen` as light sources. See `.landing-backdrop` in app.css. */
+    --landing-backdrop-opacity: 0.7;
 }
 
 .dark {
@@ -390,10 +411,10 @@
         transparent
     );
 
-    --surface-app: color-mix(in oklab, var(--background) 72%, transparent);
+    --surface-app: color-mix(in oklab, var(--background) 66%, transparent);
     --surface-sidebar: color-mix(
         in oklab,
-        var(--sidebar-background) 62%,
+        var(--sidebar-background) 56%,
         transparent
     );
     --surface-glass: color-mix(in oklab, var(--card) 62%, transparent);
@@ -407,4 +428,10 @@
 
     --scrollbar-thumb: color-mix(in oklab, var(--primary) 55%, transparent);
     --cursor-orb-tint: color-mix(in oklab, var(--primary) 32%, transparent);
+
+    /* The night bases are the grain's native ground (same as the mesh), so it
+       can run several times stronger than in light without touching contrast. */
+    --noise-grain-opacity: 0.08;
+
+    --landing-backdrop-opacity: 1;
 }

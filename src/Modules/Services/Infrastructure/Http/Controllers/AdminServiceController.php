@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Services\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Modules\Services\Application\Commands\BulkDeleteServiceHandler;
@@ -16,10 +18,14 @@ use Modules\Services\Application\Commands\UpdateServiceHandler;
 use Modules\Services\Application\DTOs\ServiceFilterData;
 use Modules\Services\Application\Queries\GetServiceHandler;
 use Modules\Services\Application\Queries\ListServicesHandler;
+use Modules\Services\Infrastructure\Http\Export\ServiceExportTransformer;
 use Modules\Services\Infrastructure\Http\Requests\BulkDeleteServiceRequest;
 use Modules\Services\Infrastructure\Http\Requests\BulkRestoreServiceRequest;
 use Modules\Services\Infrastructure\Http\Requests\StoreServiceRequest;
 use Modules\Services\Infrastructure\Http\Requests\UpdateServiceRequest;
+use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
+use Shared\Domain\Ports\ExportPort;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The admin catalog: one Inertia page (`page()`) plus the JSON data endpoints
@@ -39,6 +45,7 @@ final readonly class AdminServiceController
         private RestoreServiceHandler $restoreService,
         private BulkDeleteServiceHandler $bulkDeleteService,
         private BulkRestoreServiceHandler $bulkRestoreService,
+        private ExportPort $export,
     ) {}
 
     /**
@@ -53,6 +60,40 @@ final readonly class AdminServiceController
     public function index(ServiceFilterData $filters): JsonResponse
     {
         return response()->json($this->listServices->handle($filters));
+    }
+
+    /**
+     * Streams the filtered catalog as CSV / Excel / PDF. Reuses the SAME
+     * `ServiceEloquentModel::applyFilters()` the list query runs (DRY) minus
+     * pagination, so an export is exactly what the table currently shows. The
+     * date-range invariant (`date_from` ≤ `date_to`) is enforced by
+     * {@see ServiceFilterData}; an unknown `format` is a 422.
+     */
+    public function export(Request $request, ServiceFilterData $filters): StreamedResponse|Response
+    {
+        $format = (string) $request->string('format', 'xlsx');
+        abort_unless(in_array($format, ['csv', 'xlsx', 'pdf'], true), 422);
+
+        $rows = ServiceEloquentModel::query()
+            ->applyFilters($filters)
+            ->select(['id', 'uuid', 'name', 'slug', 'description', 'is_active', 'sort_order', 'created_at', 'deleted_at'])
+            ->lazy();
+
+        return match ($format) {
+            'pdf' => $this->export->pdf(
+                'services.pdf',
+                'exports.pdf.services',
+                [
+                    'rows' => $rows->map(ServiceExportTransformer::toRow(...)),
+                    'generatedAt' => now()->format('F j, Y H:i'),
+                ],
+            ),
+            default => $this->export->tabular(
+                "services.{$format}",
+                ServiceExportTransformer::headers(),
+                $rows->map(ServiceExportTransformer::toRow(...)),
+            ),
+        };
     }
 
     public function store(StoreServiceRequest $request): JsonResponse

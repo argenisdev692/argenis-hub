@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified'])
         Route::middleware('permission:CREATE_SERVICES')->post('/', [AdminServiceController::class, 'store'])->name('store');
         Route::middleware('permission:BULK_DELETE_SERVICES')->post('/bulk-delete', [AdminServiceController::class, 'bulkDelete'])->name('bulk-delete');
         Route::middleware('permission:BULK_RESTORE_SERVICES')->post('/bulk-restore', [AdminServiceController::class, 'bulkRestore'])->name('bulk-restore');
+        Route::middleware('permission:EXPORT_SERVICES')->get('/export', [AdminServiceController::class, 'export'])->name('export');
         Route::middleware('permission:VIEW_SERVICES')->get('/{uuid}', [AdminServiceController::class, 'show'])->whereUuid('uuid')->name('show');
         Route::middleware('permission:UPDATE_SERVICES')->put('/{uuid}', [AdminServiceController::class, 'update'])->whereUuid('uuid')->name('update');
         Route::middleware('permission:DELETE_SERVICES')->delete('/{uuid}', [AdminServiceController::class, 'destroy'])->whereUuid('uuid')->name('destroy');

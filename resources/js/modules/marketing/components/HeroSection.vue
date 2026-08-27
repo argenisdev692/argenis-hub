@@ -44,7 +44,7 @@ const trustCascade = staggerContainer(MOTION_STAGGER * 0.5);
              the boundary with FeatureBento below, so it can never repeat the
              hard-edge clip that removing the others fixed. -->
         <div
-            class="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 ambient-blob-cyan"
+            class="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[34rem] w-[34rem] -translate-x-1/2 ambient-blob-animated ambient-blob-cyan"
             aria-hidden="true"
         />
 

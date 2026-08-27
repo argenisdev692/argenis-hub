@@ -51,6 +51,10 @@ export type ServiceStatusFilter = 'all' | 'active' | 'deleted';
 export type ServiceFilters = {
     search: string;
     status: ServiceStatusFilter;
+    /** Inclusive `created_at` lower bound, `YYYY-MM-DD` — `ServiceFilterData::$dateFrom`. */
+    date_from: string | null;
+    /** Inclusive `created_at` upper bound, `YYYY-MM-DD` — `ServiceFilterData::$dateTo`. */
+    date_to: string | null;
     sort_field: 'name' | 'slug' | 'sort_order' | 'created_at';
     sort_order: 1 | -1;
     page: number;

@@ -14,8 +14,12 @@ return [
     /*
      * When the clean command is executed, all recording activities older than
      * the number of days specified here will be deleted.
+     *
+     * Nightly retention is handled by `activity-log:archive` (Modules\ActivityLog),
+     * which archives to R2 before purging. This value is aligned to the same
+     * 90-day hot window for the rare manual `activitylog:clean` run.
      */
-    'clean_after_days' => 365,
+    'clean_after_days' => 90,
 
     /*
      * If no log name is passed to the activity() helper

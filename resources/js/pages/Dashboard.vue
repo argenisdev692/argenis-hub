@@ -3,12 +3,14 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { Download, Plus } from '@lucide/vue';
 import { m } from 'motion-v';
 import { computed } from 'vue';
+import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import { Button } from '@/components/ui/button';
 import {
     MOTION_STAGGER_TIGHT,
     REVEAL_FADE,
     staggerContainer,
 } from '@/lib/motion';
+import ActivityLogFeedPanel from '@/modules/activity-log/components/ActivityLogFeedPanel.vue';
 import ActivityPanel from '@/modules/dashboard/components/ActivityPanel.vue';
 import KpiCard from '@/modules/dashboard/components/KpiCard.vue';
 import PipelinePanel from '@/modules/dashboard/components/PipelinePanel.vue';
@@ -122,7 +124,16 @@ const groupCascade = staggerContainer(MOTION_STAGGER_TIGHT);
             initial="hidden"
             animate="visible"
         >
-            <ActivityPanel :entries="data.activity" />
+            <!-- Real audit trail for anyone who may see it; the demo panel is
+                 the fallback so the grid stays balanced for everyone else. -->
+            <PermissionGuard permission="VIEW_ANY_ACTIVITY_LOGS">
+                <ActivityLogFeedPanel />
+
+                <template #denied>
+                    <ActivityPanel :entries="data.activity" />
+                </template>
+            </PermissionGuard>
+
             <UpcomingPanel :items="data.upcoming" />
         </m.div>
     </div>

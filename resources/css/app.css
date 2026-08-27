@@ -163,6 +163,72 @@
     }
 }
 
+/*
+  Shine sweep — a diagonal glare that crosses a button on a long, mostly-idle
+  loop. Reserved for the ONE primary call to action on a view (the login
+  submit, a checkout confirm), never every button in a form: an infinite
+  highlight on a row of buttons is noise, not emphasis.
+
+  Ships the brand gradient fill and lift with it so the call site only adds
+  `class="btn-shine"` (or `variant="shine"` on the shared Button). The sweep is
+  a single `::before` pass; `overflow: hidden` clips it to the pill and the
+  long 0%→62% dead zone is what keeps one glare every ~5s rather than a
+  strobe — well under the WCAG 2.3.1 three-per-second line.
+*/
+@utility btn-shine {
+    position: relative;
+    overflow: hidden;
+    background-image: var(--gradient-tech);
+    color: var(--primary-foreground);
+    box-shadow: 0 4px 20px
+        color-mix(in oklab, var(--brand-purple) 35%, transparent);
+    transition:
+        box-shadow var(--motion-base) var(--motion-ease),
+        filter var(--motion-base) var(--motion-ease);
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            60deg,
+            transparent 30%,
+            color-mix(in oklab, var(--primary-foreground) 25%, transparent) 50%,
+            transparent 70%
+        );
+        translate: -100% 0;
+        animation: btn-shine-sweep 5s var(--motion-ease) infinite;
+    }
+
+    &:hover {
+        filter: brightness(1.08);
+        box-shadow: 0 8px 32px
+            color-mix(in oklab, var(--brand-purple) 50%, transparent);
+    }
+}
+
+@keyframes btn-shine-sweep {
+    0%,
+    62% {
+        translate: -100% 0;
+    }
+    100% {
+        translate: 220% 0;
+    }
+}
+
+/*
+  Same reasoning as `.bg-brand-gradient-animated`: the global clamp would still
+  let one near-instant pass play out. Drop the sweep entirely and keep the
+  gradient button.
+*/
+@media (prefers-reduced-motion: reduce) {
+    .btn-shine::before {
+        animation: none;
+        display: none;
+    }
+}
+
 /* Frosted panel — the 2026 "glass" surface, but token-backed so it inverts
    correctly instead of being a fixed white wash. Use on anything that must
    float over the ambient glow: sticky headers, hero cards, KPI tiles. */
@@ -204,6 +270,56 @@
         var(--ambient-blob-magenta) 0%,
         transparent 70%
     );
+}
+
+/*
+  Opt-in life for a section blob: a slow swell (`scale`) crossed with an even
+  slower opacity breath, on two durations that never resync into one visible
+  loop — the same technique as the page mesh, and for the same reason.
+
+  Deliberately `scale` + `opacity` only, no positional drift: the hero and CTA
+  blobs are centred with `-translate-x-1/2`, so animating `translate` here would
+  fight Tailwind's own centring and shove the glow off-axis. A blob that has to
+  travel wants a layout that frees the `translate` property first.
+
+  Pair it with an `ambient-blob-*` hue utility on the same element. Killed for
+  reduced-motion and frozen on phones / print, exactly like `body::before`.
+*/
+@utility ambient-blob-animated {
+    animation:
+        ambient-blob-pulse 21s var(--motion-ease) infinite alternate,
+        ambient-blob-breathe 13s var(--motion-ease) infinite alternate;
+    will-change: transform;
+}
+
+@keyframes ambient-blob-pulse {
+    from {
+        scale: 0.92;
+    }
+    to {
+        scale: 1.12;
+    }
+}
+
+@keyframes ambient-blob-breathe {
+    from {
+        opacity: 0.55;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ambient-blob-animated {
+        animation: none;
+    }
+}
+
+@media (max-width: 640px), print {
+    .ambient-blob-animated {
+        animation: none;
+    }
 }
 
 /* Gradient hairline used to separate the landing's stacked sections without a
@@ -271,13 +387,12 @@
       Negative z-index puts them above body's own background but below all
       content, and `pointer-events: none` keeps them out of hit-testing.
 
-      The three background layers are stacked -3 → -2 → -1 (mesh, veil, cursor
-      orb) rather than sharing values. Within one stacking context, equal
-      z-index falls back to tree order, and `::after` is generated as body's
-      LAST child — so a veil sharing the orb's -1 wins the tie and paints over
-      it. That is not a tuning problem; it is the orb being covered by an
-      opaque-toward-the-fold scrim. Explicit, distinct depths make the order a
-      stated fact instead of a consequence of where a node happens to sit.
+      Distinct depths, not a shared value: mesh at -3, veil at -2. `.noise-grain`
+      sits at -1 (the grain belongs on top of the mesh but still behind
+      content). The cursor orb is the exception — it moved OUT of this stack to
+      z-index 40 so it reads over the app chrome; see its own block below.
+      Explicit depths keep the order a stated fact rather than a consequence of
+      tree position.
     */
     body::before,
     body::after {
@@ -455,14 +570,20 @@
 }
 
 /*
-  Cursor orb — a soft accent glow trailing the pointer.
+  Cursor orb — a soft accent glow that follows the pointer anywhere on the page.
 
   `CursorOrb.vue` writes --cursor-x / --cursor-y on pointermove and adds
   `--active` after the first move, so it never flashes at the 0,0 corner on
-  load. It sits at z-index -1 — the top of the three ambient layers, above the
-  veil at -2 (see the stacking note there) but BELOW content: the app's surfaces
-  are translucent, so the orb reads through the glass instead of washing over
-  table text and costing contrast.
+  load.
+
+  It rides ABOVE the app chrome (z-index 40): over page content, the sidebar
+  (z-10/20) and sticky headers, but under dialogs, dropdowns, popovers and
+  toasts (z-50+) so it never glows on top of a modal. `pointer-events: none`
+  means it never intercepts a click or a hover. The tint is deliberately low
+  (`--cursor-orb-tint`, ~18% of --primary in light, ~32% in dark) and decays to
+  fully transparent well before the edge, so over body text it reads as a faint
+  moving wash rather than a scrim — turn `--cursor-orb-tint` down in globals.css
+  if it feels heavy on a light background.
 
   The follow is animated with `translate` rather than `left`/`top` so it runs on
   the compositor — no layout or repaint per frame.
@@ -471,7 +592,7 @@
     position: fixed;
     top: 0;
     left: 0;
-    z-index: -1;
+    z-index: 40;
     width: var(--cursor-orb-size);
     height: var(--cursor-orb-size);
     border-radius: 50%;
@@ -511,6 +632,171 @@
 @media (pointer: coarse), (prefers-reduced-motion: reduce), print {
     .cursor-orb {
         display: none;
+    }
+}
+
+/*
+  Film grain — a fixed, tiled monochrome-noise overlay across the whole
+  viewport, the last of the ambient layers.
+
+  `NoiseGrain.vue` teleports one bare <div> into <body> after mount; this rule
+  is the whole of its look. It sits at z-index -1, the same band as the cursor
+  orb: both are decorative, sub-5% effects that read THROUGH the app's
+  translucent surfaces rather than over content, and their front-to-back order
+  relative to each other is not something the eye can resolve at this strength.
+
+  The texture is inline SVG `feTurbulence` (fractal noise, 4 octaves,
+  `stitchTiles` so the tile edge does not seam) as a data URI — no HTTP request,
+  and `img-src 'self' data:` in the CSP already allows it. `mix-blend-mode:
+  overlay` is what turns a flat grey stipple into grain that takes on the hue of
+  whatever ambient pool sits beneath it; `--noise-grain-opacity` (globals.css)
+  is the single knob, damped hard in light and near 5% on the night bases.
+
+  Static on purpose — no animation — so it needs no reduced-motion handling
+  beyond being dropped for print.
+*/
+.noise-grain {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--noise-grain-opacity);
+    mix-blend-mode: overlay;
+    background-repeat: repeat;
+    background-size: var(--noise-grain-tile) var(--noise-grain-tile);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media print {
+    .noise-grain {
+        display: none;
+    }
+}
+
+/*
+  Landing backdrop — three drifting brand-hue pools behind the public page.
+
+  `LandingBackdrop.vue` (marketing module) teleports the markup into <body>;
+  this is the whole of its look. Fixed, full-viewport, non-interactive, at
+  z-index -1 — above the page mesh/veil, below all content. It shares that band
+  with `.noise-grain`; the grain being generated later in <body> paints on top,
+  which is the order we want (texture over glow).
+
+  Louder than `body::before` by design and scoped to `/` only — the app screens
+  keep the damped global mesh. `--landing-backdrop-opacity` (globals.css) dims
+  the whole layer per theme in one number.
+
+  No `filter: blur()` — the pools are wide soft radial gradients instead, the
+  same call the rest of the ambient system makes: a blur on a box this size,
+  animated, is a repaint every frame for no visible gain over a gradient that
+  is already soft. `translate` is free here (hand-written element, nothing sets
+  it) so the drift is real positional movement, not just a swell.
+*/
+.landing-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: var(--landing-backdrop-opacity);
+}
+
+.landing-backdrop__blob {
+    position: absolute;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-image: radial-gradient(
+        circle at 50% 50%,
+        var(--landing-backdrop-tint, var(--ambient-blob-purple)) 0%,
+        transparent 68%
+    );
+    will-change: transform;
+}
+
+.landing-backdrop__blob--a {
+    width: clamp(24rem, 58vw, 46rem);
+    top: -12%;
+    left: -8%;
+    --landing-backdrop-tint: var(--ambient-blob-purple);
+    animation: landing-blob-a 23s var(--motion-ease) infinite alternate;
+}
+
+.landing-backdrop__blob--b {
+    width: clamp(22rem, 52vw, 42rem);
+    top: 26%;
+    right: -14%;
+    --landing-backdrop-tint: var(--ambient-blob-cyan);
+    animation: landing-blob-b 29s var(--motion-ease) -6s infinite alternate;
+}
+
+.landing-backdrop__blob--c {
+    width: clamp(20rem, 44vw, 36rem);
+    bottom: -14%;
+    left: 20%;
+    --landing-backdrop-tint: var(--ambient-blob-magenta);
+    animation: landing-blob-c 19s var(--motion-ease) -11s infinite alternate;
+}
+
+/*
+  Dark is the pools' native ground — `screen` makes them read as light sources.
+  On the light theme `screen` over white is invisible, so they stay `normal`
+  and lean on the translucent --ambient-blob-* tint instead.
+*/
+:is(.dark) .landing-backdrop__blob {
+    mix-blend-mode: screen;
+}
+
+@keyframes landing-blob-a {
+    from {
+        translate: 0 0;
+        scale: 1;
+    }
+    to {
+        translate: 7% 9%;
+        scale: 1.12;
+    }
+}
+
+@keyframes landing-blob-b {
+    from {
+        translate: 0 0;
+        scale: 1.05;
+    }
+    to {
+        translate: -9% -6%;
+        scale: 0.95;
+    }
+}
+
+@keyframes landing-blob-c {
+    from {
+        translate: 0 0;
+        scale: 0.98;
+    }
+    to {
+        translate: 6% -8%;
+        scale: 1.1;
+    }
+}
+
+/*
+  Same reasoning as `body::before`: the global reduced-motion clamp would still
+  let one near-instant pass play out. Stop the drift outright — the pools stay,
+  just still.
+*/
+@media (prefers-reduced-motion: reduce) {
+    .landing-backdrop__blob {
+        animation: none;
+    }
+}
+
+/*
+  Panning three big gradients is a repaint every frame — not worth the battery
+  on a phone, meaningless on paper. Freeze; the colour still shows.
+*/
+@media (max-width: 640px), print {
+    .landing-backdrop__blob {
+        animation: none;
     }
 }
 
@@ -580,5 +866,49 @@
             opacity: 1;
             translate: 0 0;
         }
+    }
+}
+
+/*
+  Vertical activity ticker — the dashboard "Recent activity" list scrolls its
+  own overflow upward on a slow, calm loop inside a fixed-height window.
+
+  The track carries the rows twice (the second copy `aria-hidden`); a -50%
+  translate loops copy two into copy one's start position, so the seam is
+  invisible. `--marquee-vertical-duration` scales with the row count at the call
+  site to hold a roughly constant speed.
+
+  `[data-paused]` (hover / focus-within, set by the component) freezes it so a
+  row can be read and its link followed — the loop is otherwise uninterruptible.
+*/
+@utility marquee-vertical-track {
+    display: flex;
+    flex-direction: column;
+    animation: marquee-vertical-scroll var(--marquee-vertical-duration, 30s)
+        linear infinite;
+
+    &[data-paused='true'] {
+        animation-play-state: paused;
+    }
+}
+
+@keyframes marquee-vertical-scroll {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(-50%);
+    }
+}
+
+/*
+  The global reduced-motion rule only clamps `animation-duration`, which would
+  leave the list crawling. Stop it dead instead; the component swaps the clipped
+  window for a normal scrollable one so every entry stays reachable.
+*/
+@media (prefers-reduced-motion: reduce) {
+    .marquee-vertical-track {
+        animation: none;
+        transform: none;
     }
 }

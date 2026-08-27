@@ -5,10 +5,12 @@ import { httpJson } from '@/lib/http';
 import { index } from '@/routes/services/admin';
 import type { ServiceFilters, ServicePage } from '../types';
 
-function defaultFilters(): ServiceFilters {
+export function defaultServiceFilters(): ServiceFilters {
     return {
         search: '',
         status: 'all',
+        date_from: null,
+        date_to: null,
         sort_field: 'created_at',
         sort_order: -1,
         page: 1,
@@ -25,18 +27,23 @@ function defaultFilters(): ServiceFilters {
  * `FRONTEND/SKILL.md` §6.
  */
 export function useServices() {
-    const filters = ref<ServiceFilters>(defaultFilters());
+    const filters = ref<ServiceFilters>(defaultServiceFilters());
 
     /**
      * `ServiceFilterData::status` only branches on `'active'`, `'deleted'`
      * or empty/`null` (meaning "both") — there is no `'all'` case on the
      * backend, so the UI's "All" option is sent as an omitted param instead
-     * of the literal string.
+     * of the literal string. Empty search / unset date bounds are dropped the
+     * same way so the query key (and the URL, via `useUrlSyncedFilters`) stay
+     * clean.
      */
     const queryParams = computed(() => ({
         ...filters.value,
         status:
             filters.value.status === 'all' ? undefined : filters.value.status,
+        search: filters.value.search || undefined,
+        date_from: filters.value.date_from ?? undefined,
+        date_to: filters.value.date_to ?? undefined,
     }));
 
     const { data, ...query } = useQuery<ServicePage>({

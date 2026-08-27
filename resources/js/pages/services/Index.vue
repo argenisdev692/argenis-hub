@@ -1,24 +1,39 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { PencilIcon, PlusIcon, RotateCcwIcon, Trash2Icon } from '@lucide/vue';
-import { computed, onWatcherCleanup, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import type { FilterSelectOption } from '@/common/form';
 import { FilterSelect } from '@/common/form';
 import type {
     DataTableColumn,
     DataTableSort,
+    DateRange,
     PaginationMeta,
 } from '@/common/table';
-import { ConfirmModal, DataTable, Paginator } from '@/common/table';
+import {
+    ConfirmModal,
+    DataTable,
+    DataTableBulkActions,
+    DataTableDateRangeFilter,
+    DataTableExportMenu,
+    DataTableSearch,
+    DataTableToolbar,
+    Paginator,
+} from '@/common/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
+import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
 import ServiceFormDialog from '@/modules/services/components/ServiceFormDialog.vue';
 import { useServiceMutations } from '@/modules/services/composables/useServiceMutations';
-import { useServices } from '@/modules/services/composables/useServices';
+import {
+    defaultServiceFilters,
+    useServices,
+} from '@/modules/services/composables/useServices';
 import type { Service, ServiceStatusFilter } from '@/modules/services/types';
 import { index } from '@/routes/services';
+import { exportMethod } from '@/routes/services/admin';
 
 defineOptions({
     layout: {
@@ -34,6 +49,16 @@ const {
     bulkRestoreServices,
 } = useServiceMutations();
 
+const { can } = usePermissions();
+
+// Restore search / status / date range / page / sort from the URL on load,
+// and mirror every later change back with `history.replaceState`. `per_page`
+// is fixed, so it stays out of the query string.
+useUrlSyncedFilters(filters, {
+    defaults: defaultServiceFilters(),
+    exclude: ['per_page'],
+});
+
 const meta = computed<PaginationMeta>(
     () =>
         queryMeta.value ?? {
@@ -46,17 +71,38 @@ const meta = computed<PaginationMeta>(
         },
 );
 
-const searchInput = ref(filters.value.search);
-
-/** Debounced, with the timer torn down by `onWatcherCleanup` (Vue 3.5 §4.5). */
-watch(searchInput, (value) => {
-    const timer = setTimeout(() => {
+/** `DataTableSearch` debounces internally; committing a term resets the page. */
+const searchTerm = computed<string>({
+    get: () => filters.value.search,
+    set: (value) => {
         filters.value.search = value;
         filters.value.page = 1;
-    }, 300);
-
-    onWatcherCleanup(() => clearTimeout(timer));
+    },
 });
+
+const dateRange = computed<DateRange>({
+    get: () => ({
+        from: filters.value.date_from,
+        to: filters.value.date_to,
+    }),
+    set: (value) => {
+        filters.value.date_from = value.from;
+        filters.value.date_to = value.to;
+        filters.value.page = 1;
+    },
+});
+
+/** The active filter set, as the export endpoint's query string wants it. */
+const exportParams = computed(() => ({
+    search: filters.value.search || undefined,
+    status: filters.value.status === 'all' ? undefined : filters.value.status,
+    date_from: filters.value.date_from ?? undefined,
+    date_to: filters.value.date_to ?? undefined,
+    sort_field: filters.value.sort_field,
+    sort_order: filters.value.sort_order,
+}));
+
+const exportEndpoint = exportMethod.url();
 
 const statusOptions: FilterSelectOption[] = [
     { value: 'all', label: 'All' },
@@ -237,65 +283,70 @@ async function onBulkRestore(): Promise<void> {
     <Head title="Services" />
 
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:p-6">
-        <header class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-semibold tracking-tight">Services</h1>
-                <p class="text-sm text-muted-foreground">
-                    Catalog entries shown in the public booking form.
-                </p>
-            </div>
-
-            <PermissionGuard permission="CREATE_SERVICES">
-                <Button @click="openCreateDialog">
-                    <PlusIcon class="size-4" aria-hidden="true" />
-                    New service
-                </Button>
-            </PermissionGuard>
+        <header class="flex flex-col gap-1">
+            <h1 class="text-2xl font-semibold tracking-tight">Services</h1>
+            <p class="text-sm text-muted-foreground">
+                Catalog entries shown in the public booking form.
+            </p>
         </header>
 
-        <div class="flex flex-wrap items-center gap-3">
-            <Input
-                v-model="searchInput"
-                class="max-w-xs"
-                type="search"
-                placeholder="Search name or slug…"
-                aria-label="Search services"
-            />
+        <DataTableToolbar
+            :selected-count="selection.length"
+            selection-label="selected"
+        >
+            <template #search>
+                <DataTableSearch
+                    v-model="searchTerm"
+                    placeholder="Search name or slug…"
+                    aria-label="Search services"
+                />
+            </template>
 
-            <FilterSelect
-                class="w-36"
-                :options="statusOptions"
-                :clearable="false"
-                :model-value="filters.status"
-                @update:model-value="onStatusChange"
-            />
+            <template #filters>
+                <DataTableDateRangeFilter
+                    v-model="dateRange"
+                    placeholder="Created any time"
+                />
 
-            <div class="ml-auto flex items-center gap-2">
-                <PermissionGuard permission="RESTORE_SERVICES">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        :disabled="selectedDeleted.length === 0"
-                        @click="onBulkRestore"
-                    >
-                        <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        Restore ({{ selectedDeleted.length }})
-                    </Button>
+                <FilterSelect
+                    class="w-36"
+                    :options="statusOptions"
+                    :clearable="false"
+                    :model-value="filters.status"
+                    @update:model-value="onStatusChange"
+                />
+            </template>
+
+            <template #bulk>
+                <DataTableBulkActions
+                    :selection="selection"
+                    :can-delete="can('BULK_DELETE_SERVICES')"
+                    :can-restore="can('BULK_RESTORE_SERVICES')"
+                    :busy="
+                        bulkDeleteServices.isLoading.value ||
+                        bulkRestoreServices.isLoading.value
+                    "
+                    @bulk-delete="confirmBulkDeleteOpen = true"
+                    @bulk-restore="onBulkRestore"
+                />
+            </template>
+
+            <template #actions>
+                <PermissionGuard permission="EXPORT_SERVICES">
+                    <DataTableExportMenu
+                        :endpoint="exportEndpoint"
+                        :params="exportParams"
+                    />
                 </PermissionGuard>
 
-                <PermissionGuard permission="DELETE_SERVICES">
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        :disabled="selectedActive.length === 0"
-                        @click="confirmBulkDeleteOpen = true"
-                    >
-                        <Trash2Icon class="size-4" aria-hidden="true" />
-                        Delete ({{ selectedActive.length }})
+                <PermissionGuard permission="CREATE_SERVICES">
+                    <Button @click="openCreateDialog">
+                        <PlusIcon class="size-4" aria-hidden="true" />
+                        New service
                     </Button>
                 </PermissionGuard>
-            </div>
-        </div>
+            </template>
+        </DataTableToolbar>
 
         <div class="flex flex-col">
             <DataTable

@@ -19,6 +19,11 @@ export const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // Brand-gradient primary with a slow diagonal shine. Reserve for the
+        // single main CTA on a view (login submit, checkout confirm) — see the
+        // `btn-shine` utility in app.css. The fill, lift and reduced-motion
+        // fallback all live there.
+        shine: "btn-shine",
       },
       size: {
         "default": "h-9 px-4 py-2 has-[>svg]:px-3",

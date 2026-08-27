@@ -18,6 +18,11 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
+// Module test suites live beside their code under src/Modules/{Name}/Tests.
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
+    ->in(__DIR__.'/../src/Modules');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations

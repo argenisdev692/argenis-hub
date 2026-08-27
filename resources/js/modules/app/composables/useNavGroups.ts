@@ -9,11 +9,14 @@ import {
     Layers,
     LayoutGrid,
     Megaphone,
+    ScrollText,
     ShieldCheck,
     Users,
 } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
+import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
+import { index as activityLogIndex } from '@/routes/activity-logs';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
@@ -41,9 +44,14 @@ export type NavGroupItem = NavItem & {
  *
  * Items whose modules have not shipped are marked `comingSoon` and rendered
  * disabled — the shape of the product stays visible without any dead links.
+ * Items carrying a `permission` are dropped for users who lack it (and a group
+ * left empty drops with them); the route behind each one is independently
+ * guarded by `permission:*` middleware.
  */
 export function useNavGroups(): readonly NavGroup[] {
-    return [
+    const { can } = usePermissions();
+
+    const groups: NavGroup[] = [
         {
             id: 'workspace',
             label: 'Workspace',
@@ -54,6 +62,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: dashboard(),
                     icon: CalendarDays,
                     comingSoon: true,
+                },
+                {
+                    title: 'Activity log',
+                    href: activityLogIndex(),
+                    icon: ScrollText,
+                    permission: 'VIEW_ANY_ACTIVITY_LOGS',
                 },
             ],
         },
@@ -136,5 +150,14 @@ export function useNavGroups(): readonly NavGroup[] {
                 { title: 'Security', href: editSecurity(), icon: ShieldCheck },
             ],
         },
-    ] as const;
+    ];
+
+    return groups
+        .map((group) => ({
+            ...group,
+            items: group.items.filter(
+                (item) => !item.permission || can(item.permission),
+            ),
+        }))
+        .filter((group) => group.items.length > 0);
 }
