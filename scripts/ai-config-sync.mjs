@@ -378,14 +378,14 @@ function buildPlan(facts) {
     }
   }
 
-  // CLAUDE.md (Laravel Boost) → .cursor/rules/laravel-boost.mdc
+  // CLAUDE.md → .cursor/rules/project-guidelines.mdc
   if (exists('CLAUDE.md')) {
     plan.set(
-      '.cursor/rules/laravel-boost.mdc',
+      '.cursor/rules/project-guidelines.mdc',
       [
         '---',
         'alwaysApply: true',
-        'description: Laravel Boost guidelines — framework versions, Herd runtime, Inertia, Pest conventions',
+        'description: Project guidelines — framework versions, Herd runtime, Inertia, Pest conventions',
         '---',
         '',
         GENERATED_BANNER,

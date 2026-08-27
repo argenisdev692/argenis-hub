@@ -48,7 +48,8 @@
       "Bash(php artisan db:wipe*)",
       "Bash(php artisan migrate --force*)",
       "Bash(composer remove*)",
-      "Bash(composer update*)"
+      "Bash(composer update*)",
+      "Read(vendor/**)"
     ],
     "deny": [
       "Bash(git push --force*)",
@@ -59,7 +60,19 @@
       "Read(.env.*)",
       "Read(**/secrets/**)",
       "Read(**/storage/oauth-*.key)",
-      "Read(**/storage/oauth-*.pub)"
+      "Read(**/storage/oauth-*.pub)",
+      "Read(**/node_modules/**)",
+      "Read(backup/**)",
+      "Read(public/build/**)",
+      "Read(public/hot)",
+      "Read(bootstrap/cache/**)",
+      "Read(storage/framework/**)",
+      "Read(storage/app/**)",
+      "Read(storage/debugbar/**)",
+      "Read(.phpunit.cache/**)",
+      "Read(**/.git/**)",
+      "Read(**/*.min.js)",
+      "Read(**/*.map)"
     ]
   },
   "env": {
@@ -75,12 +88,18 @@
     "context7": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
     },
     "tavily": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "tavily-mcp"],
+      "args": [
+        "-y",
+        "tavily-mcp"
+      ],
       "env": {
         "TAVILY_API_KEY": "${TAVILY_API_KEY}"
       }
@@ -103,6 +122,19 @@
             "command": "node scripts/claude-sync-hook.mjs",
             "timeout": 30,
             "statusMessage": "Syncing .claude/ → .cursor/"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/claude-guard-hook.mjs",
+            "timeout": 10,
+            "statusMessage": "Checking navigation guardrails"
           }
         ]
       }

@@ -102,8 +102,5 @@
       "Bash(rmdir \"src/Modules/ActivityLog/Infrastructure/Http/Presenters\")"
     ]
   },
-  "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "laravel-boost"
-  ]
+  "enableAllProjectMcpServers": true
 }
