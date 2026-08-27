@@ -1,7 +1,7 @@
 import type { RequestPayload } from '@inertiajs/core';
 import { router } from '@inertiajs/vue3';
 import type { AnyFieldApi } from '@tanstack/vue-form';
-import { useForm } from '@tanstack/vue-form';
+import { revalidateLogic, useForm } from '@tanstack/vue-form';
 import { toast } from 'vue-sonner';
 
 /**
@@ -140,7 +140,14 @@ export function applyServerErrors(
 export function useAppForm<TValues extends Record<string, unknown>>(options: {
     defaultValues: TValues;
     schema?: StandardSchema;
-    /** Validate on blur as well as on submit. Defaults to true. */
+    /**
+     * Validate on blur before the first submit. Defaults to true; pass false to
+     * hold every message back until the user actually submits.
+     *
+     * Either way, once the form has been submitted once, validation switches to
+     * on-change so a corrected field clears its error while the user types
+     * rather than making them blur again ("reward early, punish late").
+     */
     validateOnBlur?: boolean;
     /** Inertia submission. Omit it and supply `onSubmit` to handle it yourself. */
     submit?: InertiaSubmitOptions<TValues>;
@@ -156,9 +163,12 @@ export function useAppForm<TValues extends Record<string, unknown>>(options: {
 
     const form = useForm({
         defaultValues,
+        validationLogic: revalidateLogic({
+            mode: validateOnBlur ? 'blur' : 'submit',
+            modeAfterSubmission: 'change',
+        }),
         validators: {
-            ...(schema ? { onSubmit: schema } : {}),
-            ...(schema && validateOnBlur ? { onBlur: schema } : {}),
+            ...(schema ? { onDynamic: schema } : {}),
         },
         onSubmit: async ({ value }: { value: TValues }) => {
             if (onSubmit) {

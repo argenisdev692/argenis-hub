@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import PasskeyVerify from '@/components/PasskeyVerify.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
-import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -62,14 +61,14 @@ defineProps<{
             <div class="grid gap-2">
                 <div class="flex items-center justify-between">
                     <Label for="password">Password</Label>
-                    <TextLink
+                    <Link
                         v-if="canResetPassword"
                         :href="request()"
-                        class="text-sm"
+                        class="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                         :tabindex="5"
                     >
                         Forgot your password?
-                    </TextLink>
+                    </Link>
                 </div>
                 <PasswordInput
                     id="password"

@@ -5,6 +5,7 @@ use App\Providers\FortifyServiceProvider;
 use App\Providers\TypeScriptTransformerServiceProvider;
 use Modules\ActivityLog\Providers\ActivityLogServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
+use Modules\Backups\Providers\BackupsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
 use Modules\Services\Providers\ServicesServiceProvider;
 use Shared\Providers\SharedServiceProvider;
@@ -21,4 +22,5 @@ return [
     CompanyServiceProvider::class,
     ServicesServiceProvider::class,
     ActivityLogServiceProvider::class,
+    BackupsServiceProvider::class,
 ];

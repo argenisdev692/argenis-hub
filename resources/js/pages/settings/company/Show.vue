@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { PencilIcon } from '@lucide/vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { PencilIcon, Trash2Icon } from '@lucide/vue';
 import { m } from 'motion-v';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
+import ConfirmModal from '@/common/table/ConfirmModal.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { MOTION_STAGGER_TIGHT, staggerContainer } from '@/lib/motion';
@@ -27,16 +28,24 @@ import {
     SOCIAL_FIELDS,
 } from '@/modules/company/helpers/companyFields';
 import type { CompanyProfile } from '@/modules/company/types';
-import { edit as editCompany, show as showCompany } from '@/routes/company';
+import {
+    destroy as destroyCompany,
+    edit as editCompany,
+    show as showCompany,
+} from '@/routes/company';
 
 /**
  * The company record, read-first.
  *
- * A singleton — there is no index and no `{uuid}`, because nothing may create a
- * second company or delete the only one. Each section is editable in place
- * through a dialog; the full-page form at `/settings/company/edit` remains for
- * anyone who would rather work through every field in one pass, and both post
- * the same payload to the same route.
+ * A singleton — there is no index and no `{uuid}`. Each section is editable in
+ * place through a dialog; the full-page form at `/settings/company/edit` remains
+ * for anyone who would rather work through every field in one pass, and both
+ * post the same payload to the same route.
+ *
+ * The record can be soft-deleted from the danger zone below (SUPER_ADMIN only,
+ * `DELETE_COMPANY_DATA`). While it is deleted every branding surface falls back
+ * to the app defaults and this screen is replaced by `settings/company/Deleted`,
+ * which offers the matching restore.
  */
 const { company } = defineProps<{ company: CompanyProfile }>();
 
@@ -45,6 +54,12 @@ defineOptions({
         breadcrumbs: [{ title: 'Company', href: showCompany() }],
     },
 });
+
+const confirmDeleteOpen = ref(false);
+
+function deleteCompany(): void {
+    router.delete(destroyCompany.url(), { preserveScroll: true });
+}
 
 /**
  * Which dialog is open, as one value rather than six booleans — two dialogs can
@@ -171,7 +186,51 @@ const fiscal = computed(() => fiscalDetails(company));
         <p v-if="company.updated_at" class="text-xs text-muted-foreground">
             Last updated {{ company.updated_at }}
         </p>
+
+        <PermissionGuard permission="DELETE_COMPANY_DATA">
+            <section
+                class="mt-2 flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div>
+                    <h2 class="text-sm font-semibold text-destructive">
+                        Delete company profile
+                    </h2>
+                    <p class="text-sm text-muted-foreground">
+                        Emails, invoices and the public site fall back to app
+                        defaults until it is restored.
+                    </p>
+                </div>
+
+                <Button
+                    variant="destructive"
+                    size="sm"
+                    class="w-fit shrink-0"
+                    @click="confirmDeleteOpen = true"
+                >
+                    <Trash2Icon class="size-4" aria-hidden="true" />
+                    Delete
+                </Button>
+            </section>
+        </PermissionGuard>
     </div>
+
+    <ConfirmModal
+        v-model:open="confirmDeleteOpen"
+        destructive
+        title="Delete this company profile?"
+        description="It will be soft-deleted — you can restore it afterwards. While deleted, emails, invoices and the public site fall back to app defaults."
+        confirm-label="Delete"
+        @confirm="deleteCompany"
+    >
+        <div
+            class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
+        >
+            <p class="font-medium">{{ company.company_name }}</p>
+            <p v-if="company.legal_name" class="text-muted-foreground">
+                {{ company.legal_name }}
+            </p>
+        </div>
+    </ConfirmModal>
 
     <CompanySectionDialog
         v-model:open="identityOpen"

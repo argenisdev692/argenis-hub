@@ -150,7 +150,8 @@ async function onSubmit(event: Event): Promise<void> {
 
                 <Button
                     type="submit"
-                    class="w-full"
+                    variant="shine"
+                    class="mt-2 w-full"
                     :disabled="isSubmitting"
                     data-test="login-dialog-submit"
                 >

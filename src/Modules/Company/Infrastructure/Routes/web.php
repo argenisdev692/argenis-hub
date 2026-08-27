@@ -10,13 +10,13 @@ use Modules\Company\Infrastructure\Http\Controllers\CompanyController;
 | Company module — web routes (session + Inertia)
 |--------------------------------------------------------------------------
 |
-| A singleton, so there is no index and no {uuid} segment. Only the four
-| operations the record actually supports exist: read it, open the form, apply
-| an edit, replace a brand mark. There is no store and no destroy — nothing may
-| create a second company or remove the only one.
+| A singleton, so there is no index and no {uuid} segment. There is no store —
+| the row is provisioned by CompanySeeder. It does support a reversible soft
+| delete: DELETE trashes the record, PATCH /restore brings it back.
 |
-| VIEW_COMPANY_DATA guards reading, UPDATE_COMPANY_DATA guards both writes.
-| The logo upload carries the tighter limiter of the two: every accepted file is
+| VIEW_COMPANY_DATA guards reading, UPDATE_COMPANY_DATA guards the writes,
+| DELETE_COMPANY_DATA / RESTORE_COMPANY_DATA guard the delete pair (SUPER_ADMIN
+| only). The logo upload carries the tightest limiter: every accepted file is
 | decoded and re-encoded, so it costs real CPU where a field edit costs a query.
 |
 */
@@ -39,4 +39,14 @@ Route::middleware(['auth', 'verified'])
                 ->middleware('throttle:company-logos')
                 ->name('logos.update');
         });
+
+        Route::middleware('permission:DELETE_COMPANY_DATA')
+            ->delete('/', [CompanyController::class, 'destroy'])
+            ->middleware('throttle:6,1')
+            ->name('destroy');
+
+        Route::middleware('permission:RESTORE_COMPANY_DATA')
+            ->patch('/restore', [CompanyController::class, 'restore'])
+            ->middleware('throttle:6,1')
+            ->name('restore');
     });

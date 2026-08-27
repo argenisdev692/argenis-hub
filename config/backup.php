@@ -26,8 +26,10 @@ return [
                  * The list of directories and files that will be included in the backup.
                  */
                 'include' => [
-                    base_path(),
-                    // storage_path(),  // Include if you use zero downtime deployments and don't follow symlinks
+                    // Database-only project: file backups are intentionally
+                    // disabled. `backup:run --only-db` is scheduled, and this
+                    // empty list means even a bare `backup:run` produces just
+                    // the database dump.
                 ],
 
                 /*
@@ -161,10 +163,12 @@ return [
             'filename_prefix' => '',
 
             /*
-             * The disk names on which the backups will be stored.
+             * The disk names on which the backups will be stored. Cloudflare R2
+             * is the project's persistent file destination (BACKEND-PHP §5);
+             * override with BACKUP_DISK where a different disk is provisioned.
              */
             'disks' => [
-                'local',
+                env('BACKUP_DISK', 'r2'),
             ],
 
             /*
@@ -297,7 +301,7 @@ return [
     'monitor_backups' => [
         [
             'name' => env('APP_NAME', 'laravel-backup'),
-            'disks' => ['local'],
+            'disks' => [env('BACKUP_DISK', 'r2')],
             'health_checks' => [
                 MaximumAgeInDays::class => 1,
                 MaximumStorageInMegabytes::class => 5000,

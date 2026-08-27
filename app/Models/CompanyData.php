@@ -174,11 +174,16 @@ class CompanyData extends Model
             }
         });
 
-        // Keep the email-branding cache fresh.
+        // Keep the email-branding cache fresh. A soft delete reverts every
+        // consumer to the app defaults; a restore brings the row back — both
+        // must invalidate the cached profile, PDF and public payloads.
         static::saved(static function (): void {
             CompanyProfile::forget();
         });
         static::deleted(static function (): void {
+            CompanyProfile::forget();
+        });
+        static::restored(static function (): void {
             CompanyProfile::forget();
         });
     }

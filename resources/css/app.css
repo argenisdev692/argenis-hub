@@ -174,7 +174,20 @@
   a single `::before` pass; `overflow: hidden` clips it to the pill and the
   long 0%→62% dead zone is what keeps one glare every ~5s rather than a
   strobe — well under the WCAG 2.3.1 three-per-second line.
+
+  The `::after` layer is the "running silhouette" — a light segment that laps
+  the button's outline once every 3s. It is a conic gradient masked down to a
+  1px ring (border-box XOR content-box), rotated via the registered
+  `--btn-runner-angle` custom property. One lap per 3s is 0.33 flashes/s, well
+  under the same WCAG 2.3.1 line. `overflow: hidden` does NOT clip it because
+  the ring sits at `inset: 0`, flush inside the pill.
 */
+@property --btn-runner-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
 @utility btn-shine {
     position: relative;
     overflow: hidden;
@@ -190,6 +203,7 @@
         content: '';
         position: absolute;
         inset: 0;
+        z-index: 1;
         background: linear-gradient(
             60deg,
             transparent 30%,
@@ -198,6 +212,38 @@
         );
         translate: -100% 0;
         animation: btn-shine-sweep 5s var(--motion-ease) infinite;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        border-radius: inherit;
+        padding: 1px;
+        background: conic-gradient(
+            from var(--btn-runner-angle),
+            transparent 0deg,
+            transparent 250deg,
+            color-mix(in oklab, var(--primary-foreground) 30%, transparent) 300deg,
+            color-mix(in oklab, var(--brand-cyan) 55%, var(--primary-foreground)) 335deg,
+            color-mix(in oklab, var(--primary-foreground) 30%, transparent) 350deg,
+            transparent 360deg
+        );
+        mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+        -webkit-mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+        mask-composite: exclude;
+        -webkit-mask-composite: xor;
+        animation: btn-runner-lap 3s linear infinite;
+    }
+
+    & > * {
+        position: relative;
+        z-index: 2;
     }
 
     &:hover {
@@ -217,13 +263,20 @@
     }
 }
 
+@keyframes btn-runner-lap {
+    to {
+        --btn-runner-angle: 360deg;
+    }
+}
+
 /*
   Same reasoning as `.bg-brand-gradient-animated`: the global clamp would still
   let one near-instant pass play out. Drop the sweep entirely and keep the
   gradient button.
 */
 @media (prefers-reduced-motion: reduce) {
-    .btn-shine::before {
+    .btn-shine::before,
+    .btn-shine::after {
         animation: none;
         display: none;
     }

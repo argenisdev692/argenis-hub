@@ -425,17 +425,40 @@ async function onBulkRestore(): Promise<void> {
         v-model:open="confirmDeleteOpen"
         destructive
         title="Delete this service?"
-        :description="`${pendingDelete?.name ?? 'This service'} will be soft-deleted. You can restore it afterwards.`"
+        description="It will be soft-deleted — you can restore it afterwards."
         confirm-label="Delete"
         @confirm="confirmDelete"
-    />
+    >
+        <div
+            v-if="pendingDelete"
+            class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
+        >
+            <p class="font-medium">{{ pendingDelete.name }}</p>
+            <p class="text-muted-foreground">{{ pendingDelete.slug }}</p>
+        </div>
+    </ConfirmModal>
 
     <ConfirmModal
         v-model:open="confirmBulkDeleteOpen"
         destructive
-        title="Delete the selected services?"
-        :description="`${selectedActive.length} service(s) will be soft-deleted. You can restore them afterwards.`"
+        :title="`Delete ${selectedActive.length} ${selectedActive.length === 1 ? 'service' : 'services'}?`"
+        description="They will be soft-deleted — you can restore them afterwards."
         confirm-label="Delete"
         @confirm="confirmBulkDelete"
-    />
+    >
+        <ul
+            class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
+        >
+            <li
+                v-for="service in selectedActive"
+                :key="service.uuid"
+                class="flex items-baseline justify-between gap-3"
+            >
+                <span class="truncate font-medium">{{ service.name }}</span>
+                <span class="shrink-0 text-muted-foreground">
+                    {{ service.slug }}
+                </span>
+            </li>
+        </ul>
+    </ConfirmModal>
 </template>

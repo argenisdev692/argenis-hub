@@ -27,20 +27,22 @@ class RolePermissionSeeder extends Seeder
 
     /**
      * Singleton records: one row, provisioned by a seeder, edited in place and
-     * never listed, created, deleted or exported. Only VIEW and UPDATE mean
-     * anything — the other seven standard actions would be dead permissions,
+     * never listed, created or exported. VIEW / UPDATE / DELETE / RESTORE mean
+     * something — the other five standard actions would be dead permissions,
      * the same reason EXPORT is omitted from {@see self::NO_EXPORT_MODULES} and
      * FORCE_DELETE from {@see self::MODULES_ACTIONS}.
      *
-     * COMPANY_DATA moved here when the Company module shipped: the module has no
-     * index, no store and no destroy route to guard.
+     * COMPANY_DATA moved here when the Company module shipped: it has no index,
+     * no store and no export route. It does support a soft DELETE + RESTORE
+     * pair (`DELETE`/`PATCH /settings/company`), guarded by
+     * DELETE_COMPANY_DATA / RESTORE_COMPANY_DATA and held by SUPER_ADMIN only.
      *
      * @var list<string>
      */
     private const array SINGLETON_MODULES = ['COMPANY_DATA'];
 
     /** @var list<string> */
-    private const array SINGLETON_ACTIONS = ['VIEW', 'UPDATE'];
+    private const array SINGLETON_ACTIONS = ['VIEW', 'UPDATE', 'DELETE', 'RESTORE'];
 
     /**
      * Modules with the same CRUD shape as {@see self::MODULES} but no export
@@ -213,12 +215,18 @@ class RolePermissionSeeder extends Seeder
     private const array SELF_SERVICE_ROLES = ['ADMIN', 'MODERATOR', 'USER'];
 
     /**
-     * Backups panel (spatie/laravel-backup): list, download an archive, run a
-     * backup on demand, delete an archive. No update — a backup is immutable.
+     * Backups panel (Modules\Backups · spatie/laravel-backup, database-only):
+     * browse the archive index, view one entry, download an archive, trigger a
+     * backup on demand, delete an archive (single + bulk), and export the index
+     * to CSV / Excel / PDF.
+     *
+     * No UPDATE — a backup archive is immutable. No RESTORE / BULK_RESTORE — a
+     * deleted archive is physically gone from the disk, so there is nothing to
+     * soft-restore (the `backups` table has no `deleted_at`).
      *
      * @var list<string>
      */
-    private const array BACKUP_ACTIONS = ['VIEW_ANY', 'DOWNLOAD', 'CREATE', 'DELETE'];
+    private const array BACKUP_ACTIONS = ['VIEW_ANY', 'VIEW', 'DOWNLOAD', 'CREATE', 'DELETE', 'BULK_DELETE', 'EXPORT'];
 
     /**
      * Video export pipeline (no DB catalog): view panel, create jobs, download results.

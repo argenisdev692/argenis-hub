@@ -6,6 +6,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\AuthSessionEloquentModel;
+use Modules\Backups\Infrastructure\Console\Commands\SyncBackupsCommand;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
 
 Artisan::command('inspire', function () {
@@ -34,3 +35,21 @@ Schedule::command('model:prune', [
         OneTimePassword::class,
     ],
 ])->dailyAt('03:15');
+
+/*
+|--------------------------------------------------------------------------
+| Database backups (Modules\Backups · spatie/laravel-backup, database-only)
+|--------------------------------------------------------------------------
+|
+| `backup:clean` prunes old archives per the retention strategy, `backup:run
+| --only-db` writes a fresh gzip dump to the configured disk (R2), `backups:sync`
+| reconciles the `backups` index table with what is now on disk, and
+| `backup:monitor` fires the unhealthy-backup notification if the newest archive
+| is too old or the destination is oversized.
+|
+*/
+
+Schedule::command('backup:clean')->dailyAt('01:00');
+Schedule::command('backup:run --only-db')->dailyAt('02:00');
+Schedule::command(SyncBackupsCommand::class)->dailyAt('02:30');
+Schedule::command('backup:monitor')->dailyAt('03:00');

@@ -34,6 +34,213 @@
                 }
             }
         },
+        "/activity-logs": {
+            "get": {
+                "operationId": "activity-logs.index",
+                "description": "Returns a paginated, filtered list of audit-trail entries, newest first.\nAccepts `search`, `event`, `log_name`, `causer_id`, `date_from`, `date_to`,\n`sort_direction` and `per_page` (capped at 100 to bound resource\nconsumption \u2014 OWASP API4).",
+                "summary": "List activity log entries",
+                "tags": [
+                    "ActivityLogApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "event",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "log_name",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "causer_id",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "sort_direction",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "asc",
+                                "desc",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LengthAwarePaginator"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/activity-logs/{id}": {
+            "get": {
+                "operationId": "activity-logs.show",
+                "description": "Returns a single audit-trail entry with its full property and\nattribute-change payloads.",
+                "summary": "Show an activity log entry",
+                "tags": [
+                    "ActivityLogApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ActivityLogDetailData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "operationId": "auth.login",
@@ -241,6 +448,94 @@
             }
         },
         "schemas": {
+            "ActivityLogDetailData": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "log_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "event": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "subject_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "subject_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "causer_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "causer_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "causer_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "properties": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "attribute_changes": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "description"
+                ],
+                "title": "ActivityLogDetailData"
+            },
             "ApiLoginRequest": {
                 "type": "object",
                 "description": "Credentials for `POST /api/auth/login`.\n\n`device_name` names the token so it can be rotated and revoked per device\n(\"Pixel 8\", \"iPad\"). It is attacker-controlled text that ends up in a token\nlabel, so it is length-capped and never interpolated anywhere but the label.\n\n`code` carries the TOTP or recovery code and is required only when the\naccount has confirmed two-factor authentication \u2014 enforced in the controller,\nbecause demanding it up front would leak which accounts have 2FA enabled.",
@@ -342,6 +637,123 @@
                     "permissions"
                 ],
                 "title": "AuthenticatedUserData"
+            },
+            "LengthAwarePaginator": {
+                "type": "object",
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "first_page_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "from": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1
+                    },
+                    "last_page_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "links": {
+                        "type": "array",
+                        "description": "Generated paginator links.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "url": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "active": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": [
+                                "url",
+                                "label",
+                                "active"
+                            ]
+                        }
+                    },
+                    "next_page_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "path": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Base path for paginator generated URLs."
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "description": "Number of items shown per page.",
+                        "minimum": 0
+                    },
+                    "prev_page_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "to": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "Number of the last item in the slice.",
+                        "minimum": 1
+                    },
+                    "total": {
+                        "type": "integer",
+                        "description": "Total number of items being paginated.",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "current_page",
+                    "data",
+                    "first_page_url",
+                    "from",
+                    "last_page_url",
+                    "last_page",
+                    "links",
+                    "next_page_url",
+                    "path",
+                    "per_page",
+                    "prev_page_url",
+                    "to",
+                    "total"
+                ],
+                "title": "LengthAwarePaginator"
             },
             "PublicCompanyData": {
                 "type": "object",

@@ -43,6 +43,29 @@ final readonly class EloquentCompanyRepository implements CompanyRepositoryPort
         return CompanyMapper::toSnapshot($model->refresh());
     }
 
+    public function delete(): void
+    {
+        // The model `deleted` hook flushes the branding caches; every consumer
+        // then falls back to the app defaults until the row is restored.
+        $this->model()->delete();
+    }
+
+    public function restore(): CompanySnapshot
+    {
+        $model = CompanyData::onlyTrashed()->orderBy('id')->first()
+            ?? throw CompanyNotConfigured::make();
+
+        // The model `restored` hook flushes the branding caches.
+        $model->restore();
+
+        return CompanyMapper::toSnapshot($model->refresh());
+    }
+
+    public function trashedExists(): bool
+    {
+        return CompanyData::onlyTrashed()->exists();
+    }
+
     private function model(): CompanyData
     {
         return CompanyData::query()->orderBy('id')->first()
