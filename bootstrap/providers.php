@@ -9,6 +9,7 @@ use Modules\Backups\Providers\BackupsServiceProvider;
 use Modules\Clients\Providers\ClientsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
 use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
+use Modules\Portfolios\Providers\PortfoliosServiceProvider;
 use Modules\Services\Providers\ServicesServiceProvider;
 use Shared\Providers\SharedServiceProvider;
 
@@ -25,6 +26,7 @@ return [
     ServicesServiceProvider::class,
     ClientsServiceProvider::class,
     ContactSupportServiceProvider::class,
+    PortfoliosServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
 ];

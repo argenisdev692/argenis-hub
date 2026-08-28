@@ -347,6 +347,57 @@ declare namespace Modules {
             }
         }
     }
+    namespace Portfolios {
+        namespace Application {
+            namespace DTOs {
+                export type PortfolioData = {
+                    readonly uuid: string;
+                    readonly title: string;
+                    readonly client_name: string;
+                    readonly project_type: string;
+                    readonly tech_stack: string[];
+                    readonly live_url: string | null;
+                    readonly published_at: string | null;
+                    readonly is_public: boolean;
+                    readonly cover_path: string | null;
+                    readonly cover_url: string | null;
+                    readonly video_path: string | null;
+                    readonly video_url: string | null;
+                    readonly description: string | null;
+                    readonly sort_order: number;
+                    readonly media_paths: string[];
+                    readonly gallery: string[];
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type PortfolioFilterData = {
+                    readonly search: string | null;
+                    readonly status: string | null;
+                    readonly dateFrom: string | null;
+                    readonly dateTo: string | null;
+                    readonly sortField: string;
+                    readonly sortOrder: number;
+                    readonly page: number;
+                    readonly perPage: number;
+                };
+                export type PublicPortfolioData = {
+                    readonly uuid: string;
+                    readonly title: string;
+                    readonly client_name: string;
+                    readonly project_type: string;
+                    readonly tech_stack: string[];
+                    readonly live_url: string | null;
+                    readonly cover_url: string | null;
+                    readonly video_url: string | null;
+                    readonly description: string | null;
+                    readonly published_at: string | null;
+                    readonly sort_order: number;
+                    readonly gallery: string[];
+                };
+            }
+        }
+    }
     namespace Services {
         namespace Application {
             namespace DTOs {

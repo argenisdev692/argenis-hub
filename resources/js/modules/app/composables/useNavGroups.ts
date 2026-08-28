@@ -20,6 +20,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
 import { index as activityLogIndex } from '@/routes/activity-logs';
 import { index as backupsIndex } from '@/routes/backups';
+import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
@@ -93,9 +94,9 @@ export function useNavGroups(): readonly NavGroup[] {
             items: [
                 {
                     title: 'Clients',
-                    href: dashboard(),
+                    href: clientsIndex(),
                     icon: Handshake,
-                    comingSoon: true,
+                    permission: 'VIEW_ANY_CLIENTS',
                 },
                 {
                     title: 'Invoices',

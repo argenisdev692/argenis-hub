@@ -6,9 +6,13 @@ namespace Modules\ContactSupport\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Modules\ContactSupport\Domain\Events\ContactSupportSubmitted;
+use Modules\ContactSupport\Domain\Spam\SpamGuard;
+use Modules\ContactSupport\Infrastructure\Listeners\SendContactSupportReceivedNotificationListener;
 use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSupportEloquentModel;
 
 /**
@@ -21,11 +25,28 @@ use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSup
  */
 final class ContactSupportServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        // Content-heuristic spam scorer for the public form. Built from
+        // config/contact-support.php so an operator can retune weights and the
+        // blocklist without a deploy.
+        $this->app->singleton(SpamGuard::class, static fn (): SpamGuard => SpamGuard::fromConfig());
+    }
+
     public function boot(): void
     {
         $this->configureRateLimiters();
         $this->registerWebRoutes();
         $this->registerApiRoutes();
+        $this->registerListeners();
+    }
+
+    /**
+     * A new public submission emails the company inbox off the request path.
+     */
+    private function registerListeners(): void
+    {
+        Event::listen(ContactSupportSubmitted::class, [SendContactSupportReceivedNotificationListener::class, 'handle']);
     }
 
     /**

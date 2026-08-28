@@ -449,6 +449,75 @@
                 "security": []
             }
         },
+        "/public/portfolios/export": {
+            "get": {
+                "operationId": "public.portfolios.export",
+                "summary": "Download the same published showcase as CSV / Excel / PDF. Narrower\ncolumns than the admin export ({@see PublicPortfolioExportTransformer}) \u2014\nno owner, no lifecycle status. An unknown `format` is a 422",
+                "tags": [
+                    "PublicPortfolio"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/public/portfolios": {
+            "get": {
+                "operationId": "public.portfolios.index",
+                "summary": "List the published portfolio projects, in display order",
+                "tags": [
+                    "PublicPortfolio"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
         "/public/services": {
             "get": {
                 "operationId": "public.services",

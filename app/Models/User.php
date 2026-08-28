@@ -29,6 +29,7 @@ use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Permission;
 use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Role;
 use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
 use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSupportEloquentModel;
+use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioEloquentModel;
 use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
@@ -76,6 +77,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $password_histories_count
  * @property-read Collection<int, ServiceEloquentModel> $services
  * @property-read int|null $services_count
+ * @property-read Collection<int, PortfolioEloquentModel> $portfolios
+ * @property-read int|null $portfolios_count
  * @property-read Collection<int, ClientEloquentModel> $clients
  * @property-read int|null $clients_count
  * @property-read Collection<int, ContactSupportEloquentModel> $contactSupports
@@ -233,6 +236,20 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function services(): HasMany
     {
         return $this->hasMany(ServiceEloquentModel::class);
+    }
+
+    /**
+     * The portfolio projects this user owns.
+     *
+     * Inverse of `PortfolioEloquentModel::user()` — declared here because
+     * `portfolios.user_id` is a foreign key and every FK in this project
+     * carries both sides of the relation.
+     *
+     * @return HasMany<PortfolioEloquentModel, $this>
+     */
+    public function portfolios(): HasMany
+    {
+        return $this->hasMany(PortfolioEloquentModel::class);
     }
 
     /**
