@@ -12,6 +12,7 @@ import LandingFooter from '@/modules/marketing/components/LandingFooter.vue';
 import LandingNav from '@/modules/marketing/components/LandingNav.vue';
 import LoginDialog from '@/modules/marketing/components/LoginDialog.vue';
 import MetricsStrip from '@/modules/marketing/components/MetricsStrip.vue';
+import PortfolioShowcase from '@/modules/marketing/components/PortfolioShowcase.vue';
 import WorkflowSection from '@/modules/marketing/components/WorkflowSection.vue';
 import type { CompanyContact } from '@/modules/marketing/types';
 
@@ -68,6 +69,7 @@ function openLogin(): void {
                 <FeatureBento />
                 <MetricsStrip />
                 <WorkflowSection />
+                <PortfolioShowcase />
                 <CtaSection @sign-in="openLogin" />
             </main>
 

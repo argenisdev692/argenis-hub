@@ -6,6 +6,7 @@ import {
     ChartLine,
     DatabaseBackup,
     FileText,
+    GalleryVerticalEnd,
     Handshake,
     Layers,
     LayoutGrid,
@@ -22,6 +23,7 @@ import { index as activityLogIndex } from '@/routes/activity-logs';
 import { index as backupsIndex } from '@/routes/backups';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
+import { index as portfoliosIndex } from '@/routes/portfolios';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
@@ -144,6 +146,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     title: 'Services',
                     href: servicesIndex(),
                     icon: Layers,
+                },
+                {
+                    title: 'Portfolio',
+                    href: portfoliosIndex(),
+                    icon: GalleryVerticalEnd,
+                    permission: 'VIEW_ANY_PORTFOLIOS',
                 },
                 {
                     title: 'Posts',

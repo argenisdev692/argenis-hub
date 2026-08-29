@@ -13,6 +13,7 @@ export { default as DatePickerInput } from './DatePickerInput.vue';
 export { default as FileDropzone } from './FileDropzone.vue';
 export { default as FilterSelect } from './FilterSelect.vue';
 export { default as FormDialog } from './FormDialog.vue';
+export { default as FormSheet } from './FormSheet.vue';
 export { default as PhoneInput } from './PhoneInput.vue';
 export { default as SignaturePadInput } from './SignaturePadInput.vue';
 export { default as SortableList } from './SortableList.vue';
