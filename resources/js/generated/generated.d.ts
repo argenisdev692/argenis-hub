@@ -149,6 +149,41 @@ declare namespace Modules {
             }
         }
     }
+    namespace Blog {
+        namespace Application {
+            namespace DTOs {
+                export type BlogCategoryData = {
+                    name: string;
+                    description: string | null;
+                    image: undefined | null;
+                };
+                export type BlogCategoryFilterData = {
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+            }
+            namespace ReadModels {
+                export type BlogCategoryPublicReadModel = {
+                    uuid: string;
+                    name: string | null;
+                    description: string | null;
+                    image_url: string | null;
+                    posts_count: number;
+                    posts: Modules.Blog.Application.ReadModels.PublicCategoryPostReadModel[];
+                };
+                export type PublicCategoryPostReadModel = {
+                    uuid: string;
+                    title: string;
+                    slug: string;
+                    excerpt: string | null;
+                    cover_image_url: string | null;
+                    published_at: string | null;
+                };
+            }
+        }
+    }
     namespace Clients {
         namespace Application {
             namespace DTOs {
@@ -395,6 +430,142 @@ declare namespace Modules {
                     readonly sort_order: number;
                     readonly gallery: string[];
                 };
+            }
+        }
+    }
+    namespace Post {
+        namespace Application {
+            namespace DTOs {
+                export type GenerateContentVariantData = {
+                    topic: string;
+                    provider: string;
+                    angle: string | null;
+                    keyTrend: string | null;
+                };
+                export type GeneratePostContentData = {
+                    topic: string;
+                    provider: string;
+                    angle: string | null;
+                    keyTrend: string | null;
+                    generateCoverImage: boolean;
+                };
+                export type GeneratedPostContentData = {
+                    title: string;
+                    content: string;
+                    excerpt: string;
+                    meta_title: string;
+                    meta_description: string;
+                    meta_keywords: string;
+                    cover_image_path: string | null;
+                    cover_image_url: string | null;
+                    image_prompts: {
+                        background: string;
+                        content: string;
+                    };
+                    provider: string;
+                    seo_score: number;
+                    eeat_score: number;
+                    virality_score: number;
+                    roi_score: number;
+                    human_writing_index: number;
+                    ai_detection_risk: number;
+                    all_scores_pass: boolean;
+                    iterations_required: number;
+                    quality_warning: boolean;
+                    quality_warning_message: string | null;
+                    scores: Record<string, any>;
+                    optimization_suggestions: string[];
+                    seo_analysis: {
+                        primary_keyword: string;
+                        lsi_keywords: string[];
+                    };
+                };
+                export type PostData = {
+                    title: string;
+                    content: string;
+                    excerpt: string | null;
+                    coverImage: undefined | null;
+                    coverImagePath: string | null;
+                    metaTitle: string | null;
+                    metaDescription: string | null;
+                    metaKeywords: string | null;
+                    categoryUuid: string | null;
+                    status: string;
+                    scheduledAt: string | null;
+                    isAiGenerated: boolean;
+                    aiProvider: string | null;
+                    seoScore: number | null;
+                    eeatScore: number | null;
+                    humanWritingIndex: number | null;
+                    aiDetectionRisk: number | null;
+                    aiScores: Record<string, any> | null;
+                };
+                export type PostFilterData = {
+                    category_uuid: string | null;
+                    sort_field: string;
+                    sort_order: number;
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type PostTopicIdeaData = {
+                    title: string;
+                    angle: string;
+                    hook: string;
+                    estimated_virality: number;
+                    estimated_roi: number;
+                    eeat_potential: number;
+                    why_it_works: string;
+                    key_trend: string;
+                };
+                export type ReelPackageData = {
+                    scenes: Modules.Post.Application.DTOs.ReelSceneData[];
+                    clean_script: string;
+                    sound_suggestion: string;
+                    tiktok_caption: string;
+                    tiktok_hashtags: string[];
+                    voiceover_audio_url: string | null;
+                    target_duration_seconds: number;
+                    creative_style: string;
+                };
+                export type ReelSceneData = {
+                    time_range: string;
+                    action: string;
+                    on_screen_text: string;
+                    voiceover_line: string;
+                    visual_prompt: string;
+                };
+                export type SocialCopyData = {
+                    linkedin_post: string;
+                    social_caption: string;
+                    hashtags: string[];
+                };
+                export type SuggestPostTopicsData = {
+                    provider: string;
+                    topic: string | null;
+                };
+            }
+            namespace ReadModels {
+                export type PostPublicReadModel = {
+                    uuid: string;
+                    title: string;
+                    slug: string;
+                    excerpt: string | null;
+                    content: string | null;
+                    cover_image_url: string | null;
+                    meta_title: string | null;
+                    meta_description: string | null;
+                    meta_keywords: string | null;
+                    category_uuid: string | null;
+                    category_name: string | null;
+                    published_at: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type PostStatus = 'draft' | 'published' | 'scheduled';
             }
         }
     }

@@ -391,6 +391,588 @@
                 }
             }
         },
+        "/blog-categories": {
+            "get": {
+                "operationId": "blog-categories.index",
+                "description": "Returns a paginated list of blog categories. `per_page` is capped at 100 to\nbound resource consumption (OWASP API4).",
+                "summary": "List blog categories",
+                "tags": [
+                    "BlogCategoryApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/blog-categories/{uuid}": {
+            "get": {
+                "operationId": "blog-categories.show",
+                "description": "Returns a single blog category by UUID.",
+                "summary": "Show a blog category",
+                "tags": [
+                    "BlogCategoryApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/BlogCategoryEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/posts": {
+            "get": {
+                "operationId": "posts.index",
+                "description": "Returns a paginated list of posts. `per_page` is capped at 100 to bound\nresource consumption (OWASP API4).",
+                "summary": "List posts",
+                "tags": [
+                    "PostApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/posts/ai/suggest-topics": {
+            "post": {
+                "operationId": "posts.ai.suggest-topics",
+                "description": "Returns up to 10 candidate blog topics grounded in the company profile\nand current web trends. Real, billed provider request.",
+                "summary": "Suggest AI topic ideas",
+                "tags": [
+                    "PostApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SuggestPostTopicsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PostTopicIdeaData"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/posts/ai/generate-content": {
+            "post": {
+                "operationId": "posts.ai.generate-content",
+                "description": "Returns a full SEO/EEAT-scored draft for a chosen topic/angle, with an\noptional on-brand cover image. Real, billed provider request.",
+                "summary": "Generate an AI blog draft",
+                "tags": [
+                    "PostApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GeneratePostContentData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/GeneratedPostContentData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/posts/ai/generate-social-copy": {
+            "post": {
+                "operationId": "posts.ai.generate-social-copy",
+                "description": "Returns a LinkedIn post + shared Instagram/Facebook caption + hashtags\nfor a chosen topic/angle. Real, billed provider request.",
+                "summary": "Generate AI social copy",
+                "tags": [
+                    "PostApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateContentVariantData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SocialCopyData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/posts/ai/generate-reel": {
+            "post": {
+                "operationId": "posts.ai.generate-reel",
+                "description": "Returns a scene timeline, clean script, sound cue, TikTok caption/hashtags\nand an AI voiceover (when synthesis succeeds). Real, billed provider request.",
+                "summary": "Generate an AI Reel/TikTok package",
+                "tags": [
+                    "PostApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateContentVariantData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ReelPackageData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/posts/{uuid}": {
+            "get": {
+                "operationId": "posts.show",
+                "description": "Returns a single post by UUID.",
+                "summary": "Show a post",
+                "tags": [
+                    "PostApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PostEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/blog-categories/public": {
+            "get": {
+                "operationId": "blog-categories.public",
+                "description": "Every active category with its published posts and post count, for the\nlanding page's category selector. Wrapped in a `data` envelope to match\nthe rest of this API's JSON shape.",
+                "summary": "List public blog categories",
+                "tags": [
+                    "PublicBlogCategory"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string"
+                                                    },
+                                                    "name": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "description": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "image_url": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "posts_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "posts": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "additionalProperties": {}
+                                                        }
+                                                    }
+                                                },
+                                                "required": [
+                                                    "uuid",
+                                                    "name",
+                                                    "description",
+                                                    "image_url",
+                                                    "posts_count",
+                                                    "posts"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
         "/public/company": {
             "get": {
                 "operationId": "public.company",
@@ -510,6 +1092,72 @@
                                     "items": {
                                         "type": "string"
                                     }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/posts/public": {
+            "get": {
+                "operationId": "posts.public",
+                "description": "Paginated feed of published posts for the landing page, optionally\nscoped to one category via `?category_uuid=`. `per_page` is capped at\n100 to bound resource consumption (OWASP API4).",
+                "summary": "List public posts",
+                "tags": [
+                    "PublicPost"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PaginatedDataCollection`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDataCollection"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/posts/public/{slug}": {
+            "get": {
+                "operationId": "posts.public.show",
+                "description": "Returns a single published post by its slug, including full content \u2014\nfor the landing page's article detail view.",
+                "summary": "Show a public post",
+                "tags": [
+                    "PublicPost"
+                ],
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PostPublicReadModel`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PostPublicReadModel"
                                 }
                             }
                         }
@@ -742,6 +1390,269 @@
                 ],
                 "title": "AuthenticatedUserData"
             },
+            "BlogCategoryEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "blog_category_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "blog_category_description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "blog_category_image": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "image_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "blog_category_name",
+                    "blog_category_description",
+                    "blog_category_image",
+                    "user_id",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at",
+                    "image_url"
+                ],
+                "title": "BlogCategoryEloquentModel"
+            },
+            "GenerateContentVariantData": {
+                "type": "object",
+                "description": "Shared input for the social-copy and reel-package generators \u2014 both need\nonly the chosen topic/angle/trend (from {@see PostTopicIdeaData} or a\nfreehand topic) plus the provider, same as {@see GeneratePostContentData}\nminus the cover-image flag.",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "angle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "key_trend": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "topic",
+                    "provider"
+                ],
+                "title": "GenerateContentVariantData"
+            },
+            "GeneratePostContentData": {
+                "type": "object",
+                "description": "Input for full draft generation: either a title picked from\n{@see PostTopicIdeaData} or a freehand topic the user typed directly.",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "angle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "key_trend": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "generate_cover_image": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "topic",
+                    "provider"
+                ],
+                "title": "GeneratePostContentData"
+            },
+            "GeneratedPostContentData": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "content": {
+                        "type": "string"
+                    },
+                    "excerpt": {
+                        "type": "string"
+                    },
+                    "meta_title": {
+                        "type": "string"
+                    },
+                    "meta_description": {
+                        "type": "string"
+                    },
+                    "meta_keywords": {
+                        "type": "string"
+                    },
+                    "cover_image_path": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cover_image_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "image_prompts": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "seo_score": {
+                        "type": "integer"
+                    },
+                    "eeat_score": {
+                        "type": "integer"
+                    },
+                    "virality_score": {
+                        "type": "integer"
+                    },
+                    "roi_score": {
+                        "type": "integer"
+                    },
+                    "human_writing_index": {
+                        "type": "integer"
+                    },
+                    "ai_detection_risk": {
+                        "type": "integer"
+                    },
+                    "all_scores_pass": {
+                        "type": "boolean"
+                    },
+                    "iterations_required": {
+                        "type": "integer"
+                    },
+                    "quality_warning": {
+                        "type": "boolean"
+                    },
+                    "quality_warning_message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "scores": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "optimization_suggestions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "seo_analysis": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "title",
+                    "content",
+                    "excerpt",
+                    "meta_title",
+                    "meta_description",
+                    "meta_keywords",
+                    "image_prompts",
+                    "provider",
+                    "seo_score",
+                    "eeat_score",
+                    "virality_score",
+                    "roi_score",
+                    "human_writing_index",
+                    "ai_detection_risk",
+                    "all_scores_pass",
+                    "iterations_required",
+                    "quality_warning",
+                    "scores",
+                    "optimization_suggestions",
+                    "seo_analysis"
+                ],
+                "title": "GeneratedPostContentData"
+            },
             "LengthAwarePaginator": {
                 "type": "object",
                 "properties": {
@@ -859,6 +1770,299 @@
                 ],
                 "title": "LengthAwarePaginator"
             },
+            "PaginatedDataCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "PaginatedDataCollection"
+            },
+            "PostEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "post_title": {
+                        "type": "string"
+                    },
+                    "post_title_slug": {
+                        "type": "string"
+                    },
+                    "post_content": {
+                        "type": "string"
+                    },
+                    "post_excerpt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "post_cover_image": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meta_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meta_description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meta_keywords": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "post_status": {
+                        "$ref": "#/components/schemas/PostStatus"
+                    },
+                    "scheduled_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "published_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "is_ai_generated": {
+                        "type": "boolean"
+                    },
+                    "ai_provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ai_generated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "seo_score": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "eeat_score": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "human_writing_index": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "ai_detection_risk": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "ai_scores": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "cover_image_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "post_title",
+                    "post_title_slug",
+                    "post_content",
+                    "post_excerpt",
+                    "post_cover_image",
+                    "meta_title",
+                    "meta_description",
+                    "meta_keywords",
+                    "post_status",
+                    "scheduled_at",
+                    "published_at",
+                    "is_ai_generated",
+                    "ai_provider",
+                    "ai_generated_at",
+                    "seo_score",
+                    "eeat_score",
+                    "human_writing_index",
+                    "ai_detection_risk",
+                    "ai_scores",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at",
+                    "cover_image_url"
+                ],
+                "title": "PostEloquentModel"
+            },
+            "PostPublicReadModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "excerpt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "content": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cover_image_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meta_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meta_description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meta_keywords": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "category_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "category_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "published_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "title",
+                    "slug"
+                ],
+                "title": "PostPublicReadModel"
+            },
+            "PostStatus": {
+                "type": "string",
+                "enum": [
+                    "draft",
+                    "published",
+                    "scheduled"
+                ],
+                "title": "PostStatus"
+            },
+            "PostTopicIdeaData": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "angle": {
+                        "type": "string"
+                    },
+                    "hook": {
+                        "type": "string"
+                    },
+                    "estimated_virality": {
+                        "type": "integer"
+                    },
+                    "estimated_roi": {
+                        "type": "integer"
+                    },
+                    "eeat_potential": {
+                        "type": "integer"
+                    },
+                    "why_it_works": {
+                        "type": "string"
+                    },
+                    "key_trend": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "title",
+                    "angle",
+                    "hook",
+                    "estimated_virality",
+                    "estimated_roi",
+                    "eeat_potential",
+                    "why_it_works",
+                    "key_trend"
+                ],
+                "title": "PostTopicIdeaData"
+            },
             "PublicCompanyData": {
                 "type": "object",
                 "properties": {
@@ -929,6 +2133,77 @@
                 ],
                 "title": "PublicContactSupportData"
             },
+            "ReelPackageData": {
+                "type": "object",
+                "properties": {
+                    "scenes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReelSceneData"
+                        }
+                    },
+                    "clean_script": {
+                        "type": "string"
+                    },
+                    "sound_suggestion": {
+                        "type": "string"
+                    },
+                    "tiktok_caption": {
+                        "type": "string"
+                    },
+                    "tiktok_hashtags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "voiceover_audio_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "target_duration_seconds": {
+                        "type": "integer"
+                    },
+                    "creative_style": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "scenes",
+                    "clean_script",
+                    "sound_suggestion",
+                    "tiktok_caption",
+                    "tiktok_hashtags",
+                    "target_duration_seconds",
+                    "creative_style"
+                ],
+                "title": "ReelPackageData"
+            },
+            "SocialCopyData": {
+                "type": "object",
+                "properties": {
+                    "linkedin_post": {
+                        "type": "string"
+                    },
+                    "social_caption": {
+                        "type": "string"
+                    },
+                    "hashtags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "linkedin_post",
+                    "social_caption",
+                    "hashtags"
+                ],
+                "title": "SocialCopyData"
+            },
             "StorePublicContactSupportRequest": {
                 "type": "object",
                 "description": "The public landing-page contact form. Unauthenticated: the route is throttled\nand honeypot-protected ({@see ProtectAgainstSpam}), and this\nrequest is the authoritative validation gate \u2014 the client-side Zod schema is\nUX only (OWASP \u00a73 / \u00a715.5). Triage columns (`readed`, `is_spam`, `spam_*`)\nare NOT accepted here; the submission pipeline owns them.",
@@ -973,6 +2248,31 @@
                     "message"
                 ],
                 "title": "StorePublicContactSupportRequest"
+            },
+            "SuggestPostTopicsData": {
+                "type": "object",
+                "description": "Input for topic ideation. `topic` is an optional steer \u2014 when blank the\nagent leans entirely on the company profile + Tavily trend research; when\ngiven, ideas are angled around that topic instead of a free niche scan.",
+                "properties": {
+                    "provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "topic": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "provider"
+                ],
+                "title": "SuggestPostTopicsData"
             },
             "User": {
                 "type": "object",
