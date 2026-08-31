@@ -15,6 +15,17 @@ export { default as FilterSelect } from './FilterSelect.vue';
 export { default as FormDialog } from './FormDialog.vue';
 export { default as FormSheet } from './FormSheet.vue';
 export { default as PhoneInput } from './PhoneInput.vue';
+
+/*
+ * `RichTextInput` is deliberately NOT re-exported here.
+ *
+ * It carries Tiptap and ProseMirror — roughly 200 kB gzipped — and this barrel
+ * is imported by every screen with a form on it. Listing it here put that
+ * payload in the shared `form` chunk, so a login dialog started shipping a rich
+ * text editor. Import it by path instead:
+ *
+ *     import RichTextInput from '@/common/form/RichTextInput.vue';
+ */
 export { default as SignaturePadInput } from './SignaturePadInput.vue';
 export { default as SortableList } from './SortableList.vue';
 export { default as TextField } from './TextField.vue';

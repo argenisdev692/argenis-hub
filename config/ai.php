@@ -15,6 +15,18 @@ return [
 
     'default' => 'openai',
     'default_for_images' => 'gemini',
+
+    /*
+     * Quality-gate judge. Content generation lets the caller pick the writing
+     * provider per request; the SCORING model is deliberately NOT the same
+     * one. A model grading its own draft inflates every score it reports —
+     * it has no independent view of the text — so the loop would exit on
+     * self-congratulation rather than on quality. Point this at a provider
+     * other than the one you generate with; if the two ever resolve to the
+     * same provider the gate still runs, but it stops being independent.
+     */
+    'default_for_evaluation' => env('AI_EVALUATOR_PROVIDER', 'anthropic'),
+
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
     'default_for_embeddings' => 'openai',

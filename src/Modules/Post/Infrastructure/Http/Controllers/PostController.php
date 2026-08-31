@@ -60,6 +60,21 @@ final readonly class PostController
         ]);
     }
 
+    /**
+     * Read-only detail. Resolves through the same `findByUuid()` as edit, which
+     * is `withTrashed()` — a suspended post stays inspectable, which is the
+     * whole point of a view that is not an edit form.
+     */
+    public function show(string $uuid, GetPostHandler $get): InertiaResponse|JsonResponse
+    {
+        $post = $get->handle($uuid);
+
+        return match (request()->expectsJson()) {
+            true => response()->json(['data' => $post]),
+            false => Inertia::render('posts/Show', ['post' => $post]),
+        };
+    }
+
     public function store(Request $request, PostData $data, CreatePostHandler $create): RedirectResponse
     {
         (void) $create->handle($data, (int) $request->user()->id);

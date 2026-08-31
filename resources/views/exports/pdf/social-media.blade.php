@@ -1,7 +1,7 @@
 @extends('exports.pdf.layout')
 
 @section('report_heading', 'Social Media Content')
-@section('report_subtitle', 'AI-generated multi-platform content, funnel stage and quality scoring.')
+@section('report_subtitle', 'AI-generated content packages, funnel stage and quality scoring.')
 
 @section('content')
     <table class="data-table">

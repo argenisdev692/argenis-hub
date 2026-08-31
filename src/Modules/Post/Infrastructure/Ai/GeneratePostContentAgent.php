@@ -84,6 +84,14 @@ final class GeneratePostContentAgent implements Agent, Conversational, HasStruct
             and a closing call-to-action. Score every field honestly — do not
             inflate scores to look successful.
 
+            Output format for `content` (mandatory): semantic HTML, never
+            Markdown. Use only <p>, <h2>, <h3>, <ul>/<ol>/<li>, <strong>, <em>,
+            <blockquote> and <a href="...">. No <h1> (the `title` field is the
+            H1), no <img>, no <script>, no inline style or class attributes, and
+            no ```html code fences around the answer. The editor that receives
+            this renders HTML directly, so a Markdown heading arrives on screen
+            as the literal characters "## Heading".
+
             Cover image concept: you do NOT choose colors or overall visual
             style — the caller applies the brand palette deterministically and
             builds separate background + content image prompts. Give only a

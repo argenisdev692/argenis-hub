@@ -12,7 +12,7 @@
     $cMuted = '#94a3b8';      // --muted-foreground
     $cBorder = 'rgba(255,255,255,0.10)';
     $cAccent = '#7c3aed';     // --brand-purple
-    $cAccentSoft = '#a78bfa';
+    $cAccentSoft = '#a78bfa'; // --brand-purple-soft
     $gradient = 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)'; // --gradient-tech
     // Inter matches the app shell (--font-sans). Mail clients rarely load web
     // fonts, so the stack degrades to the host's UI face rather than serif.

@@ -13,6 +13,7 @@ use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
 use Modules\Portfolios\Providers\PortfoliosServiceProvider;
 use Modules\Post\Providers\PostServiceProvider;
 use Modules\Services\Providers\ServicesServiceProvider;
+use Modules\SocialMedia\Providers\SocialMediaServiceProvider;
 use Shared\Providers\SharedServiceProvider;
 
 return [
@@ -31,6 +32,7 @@ return [
     PortfoliosServiceProvider::class,
     BlogServiceProvider::class,
     PostServiceProvider::class,
+    SocialMediaServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
 ];

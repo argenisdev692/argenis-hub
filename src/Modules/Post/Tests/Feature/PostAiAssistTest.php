@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
 use Modules\Post\Infrastructure\Ai\GeneratePostContentAgent;
 use Modules\Post\Infrastructure\Ai\SuggestPostTopicsAgent;
+use Shared\Infrastructure\Branding\BrandPalette;
 use Tests\TestCase;
 
 /**
@@ -146,9 +147,12 @@ final class PostAiAssistTest extends TestCase
         $background = (string) $response->json('data.image_prompts.background');
         $content = (string) $response->json('data.image_prompts.content');
 
-        $this->assertStringContainsString('#0a0a1a', $background);
-        $this->assertStringContainsString('#6366f1', $background);
-        $this->assertStringContainsString('#a78bfa', $background);
+        // Asserted through the constants, never as literals: this test used to
+        // pin #0a0a1a / #6366f1 / #a78bfa, which is how BrandPalette drifted
+        // away from resources/css/globals.css without anything failing.
+        $this->assertStringContainsString(BrandPalette::BACKGROUND, $background);
+        $this->assertStringContainsString(BrandPalette::PRIMARY_ACCENT, $background);
+        $this->assertStringContainsString(BrandPalette::SECONDARY_ACCENT, $background);
         $this->assertStringContainsString('workflow node network', $content);
         $this->assertStringContainsString('Onboarding Automated', $content);
     }

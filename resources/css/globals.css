@@ -36,6 +36,11 @@
     --brand-purple: #7c3aed;
     --brand-magenta: #d946ef;
     --brand-indigo: #6366f1;
+    /* Lightened violet for text and hairlines that must stay legible ON the
+       primary violet. It was already in use, unnamed, inside the email layout;
+       naming it here keeps globals.css the one place a brand colour is
+       decided. Server-side consumers read it via Shared\...\BrandPalette. */
+    --brand-purple-soft: #a78bfa;
 
     /* executive / financial — invoices paid, primary CTA, VIP status. Sparingly. */
     --accent-gold: #d4af37;

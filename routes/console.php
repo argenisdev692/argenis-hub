@@ -49,6 +49,21 @@ Schedule::command('model:prune', [
 |
 */
 
+/*
+|--------------------------------------------------------------------------
+| Scheduled social media publishing (Modules\SocialMedia)
+|--------------------------------------------------------------------------
+|
+| `social-media:publish-scheduled` flips every package whose `scheduled_at`
+| has been reached from `scheduled` to `published`. Runs every minute so a
+| package scheduled for 14:30 goes out at 14:30, not on the next hourly tick;
+| the command is a no-op query when nothing is due, and
+| `withoutOverlapping()` stops a slow tick from stacking with the next one.
+|
+*/
+
+Schedule::command('social-media:publish-scheduled')->everyMinute()->withoutOverlapping();
+
 Schedule::command('backup:clean')->dailyAt('01:00');
 Schedule::command('backup:run --only-db')->dailyAt('02:00');
 Schedule::command(SyncBackupsCommand::class)->dailyAt('02:30');

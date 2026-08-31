@@ -24,6 +24,7 @@ import { index as backupsIndex } from '@/routes/backups';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
 import { index as portfoliosIndex } from '@/routes/portfolios';
+import { index as postsIndex } from '@/routes/posts';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
@@ -155,9 +156,9 @@ export function useNavGroups(): readonly NavGroup[] {
                 },
                 {
                     title: 'Posts',
-                    href: dashboard(),
+                    href: postsIndex(),
                     icon: BotMessageSquare,
-                    comingSoon: true,
+                    permission: 'VIEW_ANY_POSTS',
                 },
                 {
                     title: 'Campaigns',

@@ -51,6 +51,12 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('posts')->name('post
     Route::get('/{uuid}/edit', [PostController::class, 'edit'])
         ->middleware('permission:VIEW_POSTS')->whereUuid('uuid')->name('edit');
 
+    // Read-only detail. Declared after every static GET segment above so
+    // `create` and `export` are never swallowed by the wildcard, and after
+    // `/{uuid}/edit` because the longer pattern has to win.
+    Route::get('/{uuid}', [PostController::class, 'show'])
+        ->middleware('permission:VIEW_POSTS')->whereUuid('uuid')->name('show');
+
     Route::put('/{uuid}', [PostController::class, 'update'])
         ->middleware('permission:UPDATE_POSTS')->whereUuid('uuid')->name('update');
 

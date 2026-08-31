@@ -606,6 +606,202 @@ declare namespace Modules {
             }
         }
     }
+    namespace SocialMedia {
+        namespace Application {
+            namespace DTOs {
+                export type ContentEvaluationData = {
+                    scores: Modules.SocialMedia.Application.DTOs.ScoreSetData;
+                    eeat_analysis: {
+                        experience_signals: string[];
+                        expertise_signals: string[];
+                        authoritativeness_signals: string[];
+                        trustworthiness_signals: string[];
+                    };
+                    optimization_suggestions: string[];
+                    ai_detection_risk: {
+                        value: number;
+                        label: string;
+                        explanation: string;
+                    };
+                    evaluator_provider: string;
+                };
+                export type GenerateSocialMediaContentData = {
+                    topic: string;
+                    provider: string;
+                    language: string;
+                    businessGoal: string;
+                    brandVoice: string;
+                    funnelStage: string;
+                    angle: string | null;
+                    hook: string | null;
+                    keyTrend: string | null;
+                    niche: string | null;
+                    audience: string | null;
+                    imageMode: Modules.SocialMedia.Domain.Enums.SocialMediaImageMode;
+                    generateVoiceover: boolean;
+                };
+                export type GeneratedSocialMediaContentData = {
+                    headline: string;
+                    body: string;
+                    call_to_action: string;
+                    hashtags: string[];
+                    platforms: Record<
+                        string,
+                        Modules.SocialMedia.Application.DTOs.PlatformContentData
+                    >;
+                    cover_image_concept: Modules.SocialMedia.Application.DTOs.ImageConceptData;
+                    research_sources: {
+                        source: string;
+                        relevance: string;
+                        key_insight: string;
+                        used_in: string[];
+                    }[];
+                    tavily_data_used: string[];
+                    provider: string;
+                    cover_image_prompt: string;
+                    cover_image_path: string | null;
+                    cover_image_url: string | null;
+                };
+                export type ImageConceptData = {
+                    title: string;
+                    visual: string;
+                    route: string;
+                    svg_steps: string[];
+                };
+                export type PlatformContentData = {
+                    platform: string;
+                    adapted_content: string;
+                    character_count: number;
+                    hashtags: string[];
+                    image_concept: Modules.SocialMedia.Application.DTOs.ImageConceptData;
+                    is_thread: boolean;
+                    thread_tweets: string[];
+                    video_package: Modules.SocialMedia.Application.DTOs.VideoPackageData | null;
+                    image_prompt: string;
+                    image_path: string | null;
+                    image_url: string | null;
+                    voiceover_audio_path: string | null;
+                    voiceover_audio_url: string | null;
+                };
+                export type ScoreResultData = {
+                    value: number;
+                    threshold: number;
+                    passes: boolean;
+                    factors: Record<string, number>;
+                    explanation: string;
+                };
+                export type ScoreSetData = {
+                    human_writing_index: Modules.SocialMedia.Application.DTOs.ScoreResultData;
+                    virality_score: Modules.SocialMedia.Application.DTOs.ScoreResultData;
+                    engagement_score: Modules.SocialMedia.Application.DTOs.ScoreResultData;
+                    roi_score: Modules.SocialMedia.Application.DTOs.ScoreResultData;
+                    trend_alignment: Modules.SocialMedia.Application.DTOs.ScoreResultData;
+                    all_scores_pass: boolean;
+                    overall_average: number;
+                };
+                export type SocialMediaContentFilterData = {
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type SocialMediaTopicIdeaData = {
+                    title: string;
+                    angle: string;
+                    hook: string;
+                    platform: string;
+                    estimated_virality: number;
+                    estimated_engagement: string;
+                    estimated_roi: number;
+                    difficulty: string;
+                    why_it_works: string;
+                    key_trend: string;
+                    suggested_format: string;
+                    content_type: string;
+                    funnel_stage: string;
+                };
+                export type SuggestSocialMediaTopicsData = {
+                    provider: string;
+                    language: string;
+                    niche: string | null;
+                    audience: string | null;
+                    businessGoal: string | null;
+                };
+                export type UpdateSocialMediaContentData = {
+                    headline: string;
+                    body: string;
+                    callToAction: string;
+                    hashtags: string[];
+                    status: string;
+                    scheduledAt: string | null;
+                };
+                export type VideoPackageData = {
+                    scenes: Modules.SocialMedia.Application.DTOs.VideoSceneData[];
+                    clean_script: string;
+                    sound_suggestion: string;
+                    target_duration_seconds: number;
+                    creative_style: string;
+                };
+                export type VideoSceneData = {
+                    time_range: string;
+                    action: string;
+                    on_screen_text: string;
+                    voiceover_line: string;
+                    visual_prompt: string;
+                };
+            }
+            namespace ReadModels {
+                export type SocialMediaContentPublicReadModel = {
+                    uuid: string;
+                    topic: string;
+                    headline: string | null;
+                    body: string | null;
+                    call_to_action: string | null;
+                    hashtags: string[];
+                    cover_image_url: string | null;
+                    funnel_stage: string;
+                    language: string;
+                    platforms: Record<
+                        string,
+                        {
+                            platform: string;
+                            adapted_content: string;
+                            hashtags: string[];
+                            image_url: string | null;
+                        }
+                    > | null;
+                    published_at: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type BrandVoice =
+                    | 'professional'
+                    | 'conversational'
+                    | 'trendy'
+                    | 'inspirational'
+                    | 'humorous';
+                export type BusinessGoal =
+                    | 'awareness'
+                    | 'engagement'
+                    | 'viral'
+                    | 'leads'
+                    | 'sales'
+                    | 'community';
+                export type ContentLanguage = 'es' | 'en' | 'pt-PT';
+                export type FunnelStage = 'tofu' | 'mofu' | 'bofu';
+                export type SocialMediaContentStatus =
+                    | 'draft'
+                    | 'generating'
+                    | 'ready'
+                    | 'needs_review'
+                    | 'published'
+                    | 'scheduled';
+                export type SocialMediaImageMode = 'full' | 'base' | 'none';
+            }
+        }
+    }
 }
 declare namespace Shared {
     namespace Application {

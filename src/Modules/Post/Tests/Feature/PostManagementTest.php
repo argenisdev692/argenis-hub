@@ -220,4 +220,57 @@ final class PostManagementTest extends TestCase
         $this->actingAs($plain)->get('/posts')->assertForbidden();
         $this->actingAs($plain)->post('/posts', ['title' => 'X', 'content' => 'Y', 'status' => 'draft'])->assertForbidden();
     }
+
+    public function test_show_returns_the_post(): void
+    {
+        $category = BlogCategoryEloquentModel::factory()->create();
+        $post = PostEloquentModel::factory()->create([
+            'post_title' => 'A Post Worth Reading',
+            'category_id' => $category->id,
+        ]);
+
+        $this->actingAs($this->superAdmin())
+            ->getJson('/posts/'.$post->uuid)
+            ->assertOk()
+            ->assertJsonPath('data.post_title', 'A Post Worth Reading')
+            ->assertJsonPath('data.category.uuid', $category->uuid);
+    }
+
+    /**
+     * The detail view resolves through `findByUuid()`, which is `withTrashed()`.
+     * A suspended post staying inspectable is the point of a read-only view —
+     * otherwise the only way to see what you suspended is to restore it first.
+     */
+    public function test_show_still_resolves_a_suspended_post(): void
+    {
+        $post = PostEloquentModel::factory()->create(['post_title' => 'Suspended But Readable']);
+        $post->delete();
+
+        $this->actingAs($this->superAdmin())
+            ->getJson('/posts/'.$post->uuid)
+            ->assertOk()
+            ->assertJsonPath('data.post_title', 'Suspended But Readable');
+    }
+
+    /**
+     * `create` and `export` are static GET segments declared before the
+     * `/{uuid}` wildcard; `whereUuid` is the second line of defence. If either
+     * ever regresses, these hit the show handler and 404 on a missing model.
+     */
+    public function test_static_segments_are_not_captured_by_the_show_wildcard(): void
+    {
+        $admin = $this->superAdmin();
+
+        $this->actingAs($admin)->get('/posts/create')->assertOk();
+        $this->actingAs($admin)->get('/posts/export?format=csv')->assertOk();
+    }
+
+    public function test_a_user_without_permission_cannot_view_a_post(): void
+    {
+        $plain = User::factory()->create();
+        $plain->assignRole('USER');
+        $post = PostEloquentModel::factory()->create();
+
+        $this->actingAs($plain)->get('/posts/'.$post->uuid)->assertForbidden();
+    }
 }

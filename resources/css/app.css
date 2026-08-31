@@ -82,6 +82,7 @@
     --color-brand-purple: var(--brand-purple);
     --color-brand-magenta: var(--brand-magenta);
     --color-brand-indigo: var(--brand-indigo);
+    --color-brand-purple-soft: var(--brand-purple-soft);
     --color-accent-gold: var(--accent-gold);
     --color-accent-gold-hover: var(--accent-gold-hover);
     --color-accent-gold-light: var(--accent-gold-light);
@@ -225,9 +226,16 @@
             from var(--btn-runner-angle),
             transparent 0deg,
             transparent 250deg,
-            color-mix(in oklab, var(--primary-foreground) 30%, transparent) 300deg,
-            color-mix(in oklab, var(--brand-cyan) 55%, var(--primary-foreground)) 335deg,
-            color-mix(in oklab, var(--primary-foreground) 30%, transparent) 350deg,
+            color-mix(in oklab, var(--primary-foreground) 30%, transparent)
+                300deg,
+            color-mix(
+                    in oklab,
+                    var(--brand-cyan) 55%,
+                    var(--primary-foreground)
+                )
+                335deg,
+            color-mix(in oklab, var(--primary-foreground) 30%, transparent)
+                350deg,
             transparent 360deg
         );
         mask:
@@ -963,5 +971,139 @@
     .marquee-vertical-track {
         animation: none;
         transform: none;
+    }
+}
+
+/*
+  Rich-text body copy — the one typographic scale shared by the post editor's
+  writing surface and every read-only render of what it produced.
+
+  It lives here rather than inside the editor component because the two have to
+  agree: if the draft and the published article disagree about what an <h2>
+  looks like, the WYSIWYG promise is broken. Tailwind's typography plugin is not
+  installed and this needs ~40 lines, so a utility on the project's own tokens
+  is both smaller and mode-aware for free.
+
+  Element selectors are unavoidable here: the content is `v-html` from the
+  database, so there is nothing to hang a class on.
+*/
+@utility rich-text-content {
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.75;
+
+    & > * + * {
+        margin-top: 1em;
+    }
+
+    & h2,
+    & h3,
+    & h4 {
+        font-weight: 600;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+        text-wrap: balance;
+    }
+
+    & h2 {
+        font-size: 1.375rem;
+        margin-top: 1.6em;
+    }
+
+    & h3 {
+        font-size: 1.125rem;
+        margin-top: 1.4em;
+    }
+
+    & h4 {
+        font-size: 1rem;
+        margin-top: 1.2em;
+    }
+
+    & ul,
+    & ol {
+        padding-inline-start: 1.5rem;
+    }
+
+    & ul {
+        list-style: disc;
+    }
+
+    & ol {
+        list-style: decimal;
+    }
+
+    & li::marker {
+        color: var(--muted-foreground);
+    }
+
+    & li + li {
+        margin-top: 0.35em;
+    }
+
+    & a {
+        color: var(--primary);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    & blockquote {
+        border-inline-start: 3px solid var(--border);
+        padding-inline-start: 1rem;
+        color: var(--muted-foreground);
+        font-style: italic;
+    }
+
+    & code {
+        font-family: var(--font-mono);
+        font-size: 0.85em;
+        background: var(--muted);
+        border-radius: calc(var(--radius) - 4px);
+        padding: 0.15em 0.35em;
+    }
+
+    & pre {
+        font-family: var(--font-mono);
+        font-size: 0.85em;
+        background: var(--muted);
+        border-radius: var(--radius);
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+    }
+
+    /* The <code> inside a block already sits on the block's ground. */
+    & pre code {
+        background: none;
+        padding: 0;
+    }
+
+    & hr {
+        border: 0;
+        border-top: 1px solid var(--border);
+        margin-block: 1.75em;
+    }
+
+    & strong {
+        font-weight: 600;
+    }
+}
+
+/*
+  The editable half of the same surface: focus handling, and the Tiptap
+  Placeholder extension's per-line hint. `data-placeholder` is written by the
+  extension onto every empty top-level node, so `:first-child` narrows it to the
+  one an empty document actually shows.
+*/
+@utility rich-text-editable {
+    outline: none;
+    min-height: var(--rich-text-min-height, 18rem);
+
+    & p.is-editor-empty:first-child::before {
+        content: attr(data-placeholder);
+        color: var(--muted-foreground);
+        float: inline-start;
+        height: 0;
+        pointer-events: none;
     }
 }

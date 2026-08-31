@@ -1190,6 +1190,327 @@
                 },
                 "security": []
             }
+        },
+        "/social-media/public": {
+            "get": {
+                "operationId": "social-media.public",
+                "description": "Paginated feed of published content packages. `body` and `platforms` are\nomitted here for bandwidth; fetch a single package for the full copy.\n`per_page` is capped at 100 to bound resource consumption (OWASP API4).",
+                "summary": "List public social media content",
+                "tags": [
+                    "PublicSocialMedia"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PaginatedDataCollection`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDataCollection"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/social-media/public/{uuid}": {
+            "get": {
+                "operationId": "social-media.public.show",
+                "description": "Returns one published package by UUID, including the full body and the\npublic slice of the per-platform copy. Anything not published returns\n404, the same as an unknown UUID.",
+                "summary": "Show a public social media content package",
+                "tags": [
+                    "PublicSocialMedia"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`SocialMediaContentPublicReadModel`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SocialMediaContentPublicReadModel"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/social-media": {
+            "get": {
+                "operationId": "social-media.index",
+                "description": "Returns a paginated list. `per_page` is capped at 100 to bound resource\nconsumption (OWASP API4).",
+                "summary": "List content packages",
+                "tags": [
+                    "SocialMediaApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/social-media/ai/suggest-topics": {
+            "post": {
+                "operationId": "social-media.ai.suggest-topics",
+                "description": "Returns exactly 10 candidate topics classified by TOFU/MOFU/BOFU funnel\nstage, grounded in the company profile and current web trends. Real,\nbilled provider request.",
+                "summary": "Suggest AI viral topics",
+                "tags": [
+                    "SocialMediaApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SuggestSocialMediaTopicsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/SocialMediaTopicIdeaData"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/social-media/ai/generate-content": {
+            "post": {
+                "operationId": "social-media.ai.generate-content",
+                "description": "Returns immediately with a `generating` row and kicks off the\nup-to-5-iteration quality loop in the background \u2014 poll `show()` or\nsubscribe to `social-media.ai.progress` for completion. Real, billed\nprovider request.",
+                "summary": "Generate a social media content package",
+                "tags": [
+                    "SocialMediaApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateSocialMediaContentData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SocialMediaContentEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/social-media/{uuid}": {
+            "get": {
+                "operationId": "social-media.show",
+                "description": "Returns a single package by UUID, including per-platform copy and scores.",
+                "summary": "Show a content package",
+                "tags": [
+                    "SocialMediaApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SocialMediaContentEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1458,6 +1779,49 @@
                 ],
                 "title": "BlogCategoryEloquentModel"
             },
+            "BrandVoice": {
+                "type": "string",
+                "enum": [
+                    "professional",
+                    "conversational",
+                    "trendy",
+                    "inspirational",
+                    "humorous"
+                ],
+                "title": "BrandVoice"
+            },
+            "BusinessGoal": {
+                "type": "string",
+                "enum": [
+                    "awareness",
+                    "engagement",
+                    "viral",
+                    "leads",
+                    "sales",
+                    "community"
+                ],
+                "title": "BusinessGoal"
+            },
+            "ContentLanguage": {
+                "type": "string",
+                "description": "Output language the user picks for AI generation \u2014 never inferred, always explicit (the same topic/niche can be worked in either market). pt-PT = European Portuguese (Portugal), not Brazilian.\n",
+                "enum": [
+                    "es",
+                    "en",
+                    "pt-PT"
+                ],
+                "title": "ContentLanguage"
+            },
+            "FunnelStage": {
+                "type": "string",
+                "description": "TOFU/MOFU/BOFU classification the topic-ideation agent assigns to every candidate topic. Drives which CTA rules the content-generation agent applies \u2014 it is not cosmetic: TOFU never gets a hard-sell CTA, BOFU never gets a soft \"follow for more\".\n",
+                "enum": [
+                    "tofu",
+                    "mofu",
+                    "bofu"
+                ],
+                "title": "FunnelStage"
+            },
             "GenerateContentVariantData": {
                 "type": "object",
                 "description": "Shared input for the social-copy and reel-package generators \u2014 both need\nonly the chosen topic/angle/trend (from {@see PostTopicIdeaData} or a\nfreehand topic) plus the provider, same as {@see GeneratePostContentData}\nminus the cover-image flag.",
@@ -1541,6 +1905,93 @@
                     "provider"
                 ],
                 "title": "GeneratePostContentData"
+            },
+            "GenerateSocialMediaContentData": {
+                "type": "object",
+                "description": "Input for Step 2 (quality-loop content generation). One instance is reused\nacross every iteration of {@see GenerateSocialMediaContentJob};\nonly the previous-scores/weaknesses feedback (passed separately to the\nport) changes between iterations.\n\n`imageMode` decides how much artwork is actually rendered against the theme\npalette \u2014 `full` (composite cover + 5 platform graphics), `base` (palette\nbackground plates only, to composite elsewhere) or `none` (prompts only, no\nbilled image call). It defaults to `full` so an omitted field keeps the\nprevious behaviour.",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/ContentLanguage"
+                    },
+                    "business_goal": {
+                        "$ref": "#/components/schemas/BusinessGoal"
+                    },
+                    "brand_voice": {
+                        "$ref": "#/components/schemas/BrandVoice"
+                    },
+                    "funnel_stage": {
+                        "$ref": "#/components/schemas/FunnelStage"
+                    },
+                    "angle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "hook": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "key_trend": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "niche": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "audience": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "image_mode": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/SocialMediaImageMode"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "generate_voiceover": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "topic",
+                    "provider",
+                    "language",
+                    "business_goal",
+                    "brand_voice",
+                    "funnel_stage"
+                ],
+                "title": "GenerateSocialMediaContentData"
             },
             "GeneratedPostContentData": {
                 "type": "object",
@@ -2225,6 +2676,158 @@
                 ],
                 "title": "SocialCopyData"
             },
+            "SocialMediaContentEloquentModel": {
+                "type": "array",
+                "prefixItems": [
+                    {
+                        "type": "string"
+                    }
+                ],
+                "minItems": 1,
+                "maxItems": 1,
+                "additionalItems": false,
+                "title": "SocialMediaContentEloquentModel"
+            },
+            "SocialMediaContentPublicReadModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "topic": {
+                        "type": "string"
+                    },
+                    "headline": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "body": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "call_to_action": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "hashtags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "cover_image_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "funnel_stage": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "platforms": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "published_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "topic",
+                    "hashtags",
+                    "funnel_stage",
+                    "language"
+                ],
+                "title": "SocialMediaContentPublicReadModel"
+            },
+            "SocialMediaImageMode": {
+                "type": "string",
+                "description": "How much of the cover / per-platform artwork the generation loop actually renders. Same three-way contract as Post's {@see PostImageMode}, extended to the 5-platform fan-out: one choice applies to the cover AND every platform variant, because mixing modes per platform buys nothing and doubles the billing surface. All three modes always return the palette-locked prompts on the DTO, so the user can render externally regardless of the choice \u2014 the mode only decides whether a billed image call is made, and what it draws.  `Full` is expensive: 6 images (cover + 5 platforms) per accepted attempt. `Base` renders the palette background plate only \u2014 the plate a designer composites a title over in Figma/Canva. `None` bills nothing.\n| |\n|---|\n| `full` <br/> Composite: palette background + subject + short title (route A/B/C). |\n| `base` <br/> Palette-locked background plate only \u2014 no subject, no title. |\n| `none` <br/> No image call at all; prompts only. |",
+                "enum": [
+                    "full",
+                    "base",
+                    "none"
+                ],
+                "title": "SocialMediaImageMode"
+            },
+            "SocialMediaTopicIdeaData": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "angle": {
+                        "type": "string"
+                    },
+                    "hook": {
+                        "type": "string"
+                    },
+                    "platform": {
+                        "type": "string"
+                    },
+                    "estimated_virality": {
+                        "type": "integer"
+                    },
+                    "estimated_engagement": {
+                        "type": "string"
+                    },
+                    "estimated_roi": {
+                        "type": "integer"
+                    },
+                    "difficulty": {
+                        "type": "string"
+                    },
+                    "why_it_works": {
+                        "type": "string"
+                    },
+                    "key_trend": {
+                        "type": "string"
+                    },
+                    "suggested_format": {
+                        "type": "string"
+                    },
+                    "content_type": {
+                        "type": "string"
+                    },
+                    "funnel_stage": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "title",
+                    "angle",
+                    "hook",
+                    "platform",
+                    "estimated_virality",
+                    "estimated_engagement",
+                    "estimated_roi",
+                    "difficulty",
+                    "why_it_works",
+                    "key_trend",
+                    "suggested_format",
+                    "content_type",
+                    "funnel_stage"
+                ],
+                "title": "SocialMediaTopicIdeaData"
+            },
             "StorePublicContactSupportRequest": {
                 "type": "object",
                 "description": "The public landing-page contact form. Unauthenticated: the route is throttled\nand honeypot-protected ({@see ProtectAgainstSpam}), and this\nrequest is the authoritative validation gate \u2014 the client-side Zod schema is\nUX only (OWASP \u00a73 / \u00a715.5). Triage columns (`readed`, `is_spam`, `spam_*`)\nare NOT accepted here; the submission pipeline owns them.",
@@ -2299,6 +2902,52 @@
                     "category_uuid"
                 ],
                 "title": "SuggestPostTopicsData"
+            },
+            "SuggestSocialMediaTopicsData": {
+                "type": "object",
+                "description": "Input for Step 1 (10 viral topics). `niche` is an optional steer \u2014 when\nblank the agent leans entirely on the company profile + Tavily trend\nresearch, mirroring {@see SuggestPostTopicsData}.",
+                "properties": {
+                    "provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/ContentLanguage"
+                    },
+                    "niche": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "audience": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "business_goal": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/BusinessGoal"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "provider",
+                    "language"
+                ],
+                "title": "SuggestSocialMediaTopicsData"
             },
             "User": {
                 "type": "object",
