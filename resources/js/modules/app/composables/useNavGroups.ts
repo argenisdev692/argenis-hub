@@ -13,6 +13,7 @@ import {
     LifeBuoy,
     Megaphone,
     ScrollText,
+    Share2,
     ShieldCheck,
     Users,
 } from '@lucide/vue';
@@ -28,6 +29,7 @@ import { index as postsIndex } from '@/routes/posts';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
+import { index as socialMediaIndex } from '@/routes/social-media';
 import type { NavItem } from '@/types';
 
 export type NavGroup = {
@@ -159,6 +161,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: postsIndex(),
                     icon: BotMessageSquare,
                     permission: 'VIEW_ANY_POSTS',
+                },
+                {
+                    title: 'Social media',
+                    href: socialMediaIndex(),
+                    icon: Share2,
+                    permission: 'VIEW_ANY_SOCIAL_MEDIA',
                 },
                 {
                     title: 'Campaigns',

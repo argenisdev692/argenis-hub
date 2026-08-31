@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
 use Modules\Post\Domain\Enums\PostImageMode;
+use Modules\Post\Infrastructure\Ai\EvaluatePostContentAgent;
 use Modules\Post\Infrastructure\Ai\GeneratePostContentAgent;
 use Modules\Post\Infrastructure\Ai\SuggestPostTopicsAgent;
 use Shared\Infrastructure\AI\AIClientInterface;
@@ -37,6 +38,9 @@ function postAssistAdmin(): User
 }
 
 /**
+ * The WRITER's output — text only. Scores live in the judge's payload below,
+ * because the writer no longer grades its own draft.
+ *
  * @return array<string, mixed>
  */
 function postAssistDraftPayload(): array
@@ -52,20 +56,58 @@ function postAssistDraftPayload(): array
             'title' => 'Onboarding Automated',
             'visual' => 'a stylized workflow node network',
         ],
-        'scores' => [
-            'seo_score' => 80,
-            'eeat_score' => 75,
-            'virality_score' => 76,
-            'roi_score' => 74,
-            'human_writing_index' => 82,
-            'ai_detection_risk' => 15,
-        ],
         'seo_analysis' => [
             'primary_keyword' => 'onboarding',
             'lsi_keywords' => ['kw1', 'kw2'],
         ],
+    ];
+}
+
+/**
+ * The JUDGE's verdict. Defaults clear every threshold so the loop stops on
+ * iteration 1; pass overrides to fail a specific score.
+ *
+ * @param  array<string, int>  $overrides
+ * @return array<string, mixed>
+ */
+function postAssistJudgePayload(array $overrides = []): array
+{
+    $scores = [
+        'human_writing_index' => 82,
+        'eeat_score' => 75,
+        'virality_score' => 76,
+        'roi_score' => 74,
+        'seo_score' => 80,
+        ...$overrides,
+    ];
+
+    return [
+        'scores' => array_map(
+            static fn (int $value): array => ['value' => $value, 'explanation' => 'Because it scored that.'],
+            $scores,
+        ),
+        'eeat_analysis' => [
+            'experience_signals' => ['One concrete rollout with a date.'],
+            'expertise_signals' => ['Explains why the queue backs up.'],
+            'authoritativeness_signals' => [],
+            'trustworthiness_signals' => ['Names one limitation.'],
+        ],
+        'ai_detection_risk' => 15,
         'optimization_suggestions' => ['Add more data.'],
     ];
+}
+
+/**
+ * Fakes both halves of one quality-loop attempt: the writer and the
+ * independent judge. Every generate-content test needs both — a faked writer
+ * with a live judge would leave the gate trying to reach a real provider.
+ *
+ * @param  array<string, int>  $judgeOverrides
+ */
+function fakePostContentPipeline(array $judgeOverrides = []): void
+{
+    GeneratePostContentAgent::fake([postAssistDraftPayload()]);
+    EvaluatePostContentAgent::fake([postAssistJudgePayload($judgeOverrides)]);
 }
 
 /**
@@ -191,7 +233,7 @@ it('returns exactly ten viral ideas for the chosen category', function (): void 
 });
 
 it('renders the full composite cover in full image mode', function (): void {
-    GeneratePostContentAgent::fake([postAssistDraftPayload()]);
+    fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
     $this->actingAs(postAssistAdmin())
@@ -212,7 +254,7 @@ it('renders the full composite cover in full image mode', function (): void {
 });
 
 it('renders only the palette background plate in base image mode', function (): void {
-    GeneratePostContentAgent::fake([postAssistDraftPayload()]);
+    fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
     $response = $this->actingAs(postAssistAdmin())
@@ -241,7 +283,7 @@ it('renders only the palette background plate in base image mode', function (): 
 });
 
 it('bills no image call in none image mode but still returns both prompts', function (): void {
-    GeneratePostContentAgent::fake([postAssistDraftPayload()]);
+    fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
     $this->actingAs(postAssistAdmin())
@@ -271,7 +313,7 @@ it('rejects an unknown image mode', function (): void {
 });
 
 it('defaults to the full composite when no image mode is sent', function (): void {
-    GeneratePostContentAgent::fake([postAssistDraftPayload()]);
+    fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
     $this->actingAs(postAssistAdmin())

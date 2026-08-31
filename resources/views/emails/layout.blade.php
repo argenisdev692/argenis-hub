@@ -1,19 +1,22 @@
 @php
-    // Brand palette (inlined — email clients do not support CSS variables).
-    // Mirrors the dark-mode token values in resources/css/globals.css, which are
-    // themselves ported from BRAND/root.css. Keep the two in step: a change to
-    // one without the other is exactly how an email starts looking off-brand.
-    $cInk = '#050714';        // --background
-    $cBase = '#08081f';       // --card
-    $cSurface = '#131b3a';    // --popover / --secondary
-    $cOverlay = '#1e2a4a';    // --border
-    $cText = '#f4f4f2';       // --foreground
-    $cSecondary = '#cbd2e0';  // between --foreground and --muted-foreground
-    $cMuted = '#94a3b8';      // --muted-foreground
+    // Brand palette, inlined because email clients do not support CSS
+    // variables — but read from Shared\Infrastructure\Branding\BrandPalette,
+    // never re-typed. These hexes used to be literals here, a second copy of
+    // resources/css/globals.css that nothing kept in step; going through the
+    // one PHP mirror means an off-brand email is now impossible without an
+    // off-brand app to match.
+    $palette = \Shared\Infrastructure\Branding\BrandPalette::class;
+    $cInk = $palette::BACKGROUND;
+    $cBase = $palette::SURFACE;
+    $cSurface = $palette::ELEVATED_SURFACE;
+    $cOverlay = $palette::BORDER;
+    $cText = $palette::TEXT_PRIMARY;
+    $cSecondary = $palette::TEXT_SECONDARY;
+    $cMuted = $palette::TEXT_MUTED;
     $cBorder = 'rgba(255,255,255,0.10)';
-    $cAccent = '#7c3aed';     // --brand-purple
-    $cAccentSoft = '#a78bfa'; // --brand-purple-soft
-    $gradient = 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)'; // --gradient-tech
+    $cAccent = $palette::PRIMARY_ACCENT;
+    $cAccentSoft = $palette::PRIMARY_ACCENT_SOFT;
+    $gradient = $palette::gradientTech();
     // Inter matches the app shell (--font-sans). Mail clients rarely load web
     // fonts, so the stack degrades to the host's UI face rather than serif.
     $font = "'Inter', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif";

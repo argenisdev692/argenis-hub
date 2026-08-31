@@ -4,29 +4,36 @@ declare(strict_types=1);
 
 namespace Modules\Post\Application\DTOs;
 
+use Modules\Post\Application\Commands\GeneratePostContentHandler;
 use Modules\Post\Domain\Enums\PostImageMode;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 /**
- * Full generated draft returned to the frontend AI-assist panel — the user
- * reviews/edits this before it is ever persisted via CreatePostHandler /
- * UpdatePostHandler (PostData carries the final, possibly-edited values).
+ * The finished package returned to the frontend AI-assist panel, assembled by
+ * {@see GeneratePostContentHandler} from three separately-priced parts: the
+ * winning {@see PostContentDraftData} (text), the independent
+ * {@see PostEvaluationData} that scored it, and the single
+ * {@see RenderedCoverImageData} render pass. The user reviews/edits this
+ * before it is ever persisted via CreatePostHandler / UpdatePostHandler
+ * (PostData carries the final, possibly-edited values).
  *
  * `imagePrompts` are always present (BrandPalette-locked background + content
  * layers) so the user can generate covers externally in every image mode —
  * including `none`, where no image call was billed. `imageMode` echoes back
  * what was actually rendered so the client never has to infer it from a null
- * `coverImagePath`. `qualityWarning` is true when the quality-loop exhausted
- * iterations without clearing every threshold.
+ * `coverImagePath`. `qualityWarning` is true when the quality loop exhausted
+ * its iterations without clearing every threshold; `evaluatorProvider` names
+ * the model that decided that, which is deliberately not `provider`.
  */
 #[MapOutputName(SnakeCaseMapper::class)]
 final class GeneratedPostContentData extends Data
 {
     /**
      * @param  array{background: string, content: string}  $imagePrompts
-     * @param  array<string, mixed>  $scores
+     * @param  array<string, int>  $scores
+     * @param  array{experience_signals: list<string>, expertise_signals: list<string>, authoritativeness_signals: list<string>, trustworthiness_signals: list<string>}  $eeatAnalysis
      * @param  list<string>  $optimizationSuggestions
      * @param  array{primary_keyword: string, lsi_keywords: list<string>}  $seoAnalysis
      */
@@ -40,7 +47,6 @@ final class GeneratedPostContentData extends Data
         public PostImageMode $imageMode,
         public ?string $coverImagePath,
         public ?string $coverImageUrl,
-        /** @var array{background: string, content: string} */
         public array $imagePrompts,
         public string $provider,
         public int $seoScore,
@@ -53,8 +59,11 @@ final class GeneratedPostContentData extends Data
         public int $iterationsRequired,
         public bool $qualityWarning,
         public ?string $qualityWarningMessage,
+        public int $overallScoreAvg,
         public array $scores,
+        public array $eeatAnalysis,
         public array $optimizationSuggestions,
         public array $seoAnalysis,
+        public string $evaluatorProvider,
     ) {}
 }

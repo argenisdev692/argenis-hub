@@ -8,6 +8,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
+use Modules\Post\Infrastructure\Ai\EvaluatePostContentAgent;
 use Modules\Post\Infrastructure\Ai\GeneratePostContentAgent;
 use Modules\Post\Infrastructure\Ai\SuggestPostTopicsAgent;
 use Shared\Infrastructure\Branding\BrandPalette;
@@ -49,9 +50,12 @@ final class PostAiAssistTest extends TestCase
     }
 
     /**
+     * The WRITER's output — text only. It no longer scores itself; see
+     * {@see self::judgePayload()}.
+     *
      * @return array<string, mixed>
      */
-    private function passingDraftPayload(string $title = 'Generated Title'): array
+    private function draftPayload(string $title = 'Generated Title'): array
     {
         return [
             'title' => $title,
@@ -64,18 +68,43 @@ final class PostAiAssistTest extends TestCase
                 'title' => 'Onboarding Automated',
                 'visual' => 'a stylized workflow node network',
             ],
-            'scores' => [
-                'seo_score' => 80,
-                'eeat_score' => 75,
-                'virality_score' => 76,
-                'roi_score' => 74,
-                'human_writing_index' => 82,
-                'ai_detection_risk' => 15,
-            ],
             'seo_analysis' => [
                 'primary_keyword' => 'onboarding',
                 'lsi_keywords' => ['kw1', 'kw2'],
             ],
+        ];
+    }
+
+    /**
+     * The independent JUDGE's verdict. Defaults clear every threshold, so the
+     * loop stops on iteration 1; pass overrides to fail specific scores.
+     *
+     * @param  array<string, int>  $overrides
+     * @return array<string, mixed>
+     */
+    private function judgePayload(array $overrides = []): array
+    {
+        $scores = [
+            'human_writing_index' => 82,
+            'eeat_score' => 75,
+            'virality_score' => 76,
+            'roi_score' => 74,
+            'seo_score' => 80,
+            ...$overrides,
+        ];
+
+        return [
+            'scores' => array_map(
+                static fn (int $value): array => ['value' => $value, 'explanation' => 'Because it scored that.'],
+                $scores,
+            ),
+            'eeat_analysis' => [
+                'experience_signals' => ['One concrete rollout with a date.'],
+                'expertise_signals' => ['Explains why the queue backs up.'],
+                'authoritativeness_signals' => [],
+                'trustworthiness_signals' => ['Names one limitation.'],
+            ],
+            'ai_detection_risk' => 15,
             'optimization_suggestions' => ['Add more data.'],
         ];
     }
@@ -119,9 +148,8 @@ final class PostAiAssistTest extends TestCase
 
     public function test_generate_content_returns_a_scored_draft_with_layered_image_prompts(): void
     {
-        GeneratePostContentAgent::fake([
-            $this->passingDraftPayload(),
-        ]);
+        GeneratePostContentAgent::fake([$this->draftPayload()]);
+        EvaluatePostContentAgent::fake([$this->judgePayload()]);
 
         $response = $this->actingAs($this->superAdmin())
             ->postJson('/posts/ai/generate-content', [
@@ -159,24 +187,29 @@ final class PostAiAssistTest extends TestCase
 
     public function test_generate_content_quality_loop_keeps_best_attempt_with_warning(): void
     {
-        $failing = $this->passingDraftPayload('Weak Draft');
-        $failing['scores']['virality_score'] = 40;
-        $failing['scores']['roi_score'] = 40;
-        $failing['scores']['human_writing_index'] = 60;
-
-        $stillFailing = $this->passingDraftPayload('Better Draft');
-        $stillFailing['scores']['virality_score'] = 65;
-        $stillFailing['scores']['roi_score'] = 68;
-
-        // Exhaust the 5-iteration loop with near-passes so the best attempt
-        // is returned with quality_warning rather than regenerating forever.
+        // Exhaust the 5-iteration loop with near-passes so the best attempt is
+        // returned with quality_warning rather than regenerating forever. The
+        // scores come from the JUDGE, not the writer — the writer only varies
+        // the title so the assertion can prove which attempt survived.
         GeneratePostContentAgent::fake([
-            $failing,
-            $stillFailing,
-            $stillFailing,
-            $stillFailing,
-            $stillFailing,
+            $this->draftPayload('Weak Draft'),
+            $this->draftPayload('Better Draft'),
+            $this->draftPayload('Better Draft'),
+            $this->draftPayload('Better Draft'),
+            $this->draftPayload('Better Draft'),
         ]);
+
+        $weak = $this->judgePayload([
+            'virality_score' => 40,
+            'roi_score' => 40,
+            'human_writing_index' => 60,
+        ]);
+        $better = $this->judgePayload([
+            'virality_score' => 65,
+            'roi_score' => 68,
+        ]);
+
+        EvaluatePostContentAgent::fake([$weak, $better, $better, $better, $better]);
 
         $this->actingAs($this->superAdmin())
             ->postJson('/posts/ai/generate-content', [

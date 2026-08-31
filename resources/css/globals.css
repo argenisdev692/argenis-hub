@@ -50,6 +50,11 @@
 
     /* brand typography colours (aliases of the night-mode text roles) */
     --text-main: #f4f4f2;
+    /* One step down from --text-main, one step up from --text-muted: body
+       copy that must recede from a heading without reading as disabled. It
+       was already in use, unnamed, inside the email layout; naming it here
+       keeps globals.css the one place a brand colour is decided. */
+    --text-secondary: #cbd2e0;
     --text-muted: #94a3b8;
 
     /* system status — never mixed with gold or cyan/violet */

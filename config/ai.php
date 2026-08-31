@@ -13,8 +13,8 @@ return [
     |
     */
 
-    'default' => 'openai',
-    'default_for_images' => 'gemini',
+    'default' => env('AI_PROVIDER', 'openai'),
+    'default_for_images' => env('AI_IMAGE_PROVIDER', 'gemini'),
 
     /*
      * Quality-gate judge. Content generation lets the caller pick the writing

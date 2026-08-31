@@ -4,44 +4,51 @@ declare(strict_types=1);
 
 namespace Modules\Post\Infrastructure\Ai;
 
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
+use Modules\Post\Application\Commands\GeneratePostContentHandler;
 use Modules\Post\Application\DTOs\GenerateContentVariantData;
-use Modules\Post\Application\DTOs\GeneratedPostContentData;
 use Modules\Post\Application\DTOs\GeneratePostContentData;
+use Modules\Post\Application\DTOs\PostContentDraftData;
 use Modules\Post\Application\DTOs\PostTopicIdeaData;
 use Modules\Post\Application\DTOs\ReelPackageData;
 use Modules\Post\Application\DTOs\ReelSceneData;
 use Modules\Post\Application\DTOs\SocialCopyData;
 use Modules\Post\Application\DTOs\SuggestPostTopicsData;
-use Modules\Post\Domain\Enums\PostImageMode;
+use Modules\Post\Domain\Ports\PostContentEvaluatorPort;
 use Modules\Post\Domain\Ports\PostContentGeneratorPort;
+use Modules\Post\Domain\Ports\PostCoverImageRendererPort;
 use Modules\Post\Domain\Ports\PostTopicIdeatorPort;
 use Modules\Post\Domain\Ports\ReelPackageGeneratorPort;
 use Modules\Post\Domain\Ports\SocialCopyGeneratorPort;
 use Modules\Post\Domain\Services\PostContentQualityEvaluator;
-use Modules\Post\Infrastructure\Broadcasting\PostAiGenerationProgress;
+use Modules\Post\Infrastructure\Broadcasting\PostProgressNotifier;
 use Shared\Domain\Ports\SpeechSynthesizerPort;
 use Shared\Domain\Ports\StoragePort;
 use Shared\Infrastructure\AI\AIClientInterface;
 use Shared\Infrastructure\Company\CompanyProfile;
 use Shared\Infrastructure\Research\TavilyClientInterface;
-use Throwable;
 
 /**
- * Single adapter behind all four AI ports the Post module needs — they share
- * the same underlying `laravel/ai` + Tavily infrastructure, so one class
- * composing the agents avoids duplicating the research/prompt-assembly
- * plumbing while each port stays small (ISP) for its own consumer.
+ * Single adapter behind the text-producing Post AI ports — they share the same
+ * underlying `laravel/ai` + Tavily infrastructure, so one class composing the
+ * agents avoids duplicating the research/prompt-assembly plumbing while each
+ * port stays small (ISP) for its own consumer.
+ *
+ * It performs exactly ONE attempt per {@see self::generate()} call and returns
+ * text only. The other two thirds of an attempt live elsewhere on purpose:
+ * scoring in {@see PostContentEvaluatorPort} (a different model, so the gate
+ * is independent) and artwork in {@see PostCoverImageRendererPort} (once,
+ * after the loop, so rejected drafts cost no images). The loop itself is
+ * {@see GeneratePostContentHandler}.
  *
  * Caching lives HERE, in the module adapter — never in the Shared AI/Tavily
- * clients. `suggestTopics` / social / reel cache the full result. `generate()`
- * runs an up-to-5-iteration quality loop and caches only the final best
- * attempt keyed on the input payload (iteration state is never part of the
- * cache key).
+ * clients (those stay pure transport + circuit breaker). `suggestTopics` /
+ * social / reel cache the full result. `generate()` caches ONLY the first
+ * attempt (iteration 1, no previous weaknesses) — from iteration 2 onward the
+ * quality loop deliberately targets specific failing scores, so those attempts
+ * are never safe to reuse from cache.
  */
 final readonly class LaravelAiPostAssistantAdapter implements PostContentGeneratorPort, PostTopicIdeatorPort, ReelPackageGeneratorPort, SocialCopyGeneratorPort
 {
@@ -52,8 +59,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
         private TavilyClientInterface $research,
         private StoragePort $storage,
         private SpeechSynthesizerPort $speech,
-        private PostContentQualityEvaluator $evaluator = new PostContentQualityEvaluator,
-        private BrandImagePromptFactory $prompts = new BrandImagePromptFactory,
+        private PostProgressNotifier $progress,
     ) {}
 
     public function suggestTopics(SuggestPostTopicsData $data, ?object $causer = null): array
@@ -62,7 +68,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
             $this->cacheKey('suggest-topics', $data->toArray()),
             now()->addMinutes(self::CACHE_TTL_MINUTES),
             function () use ($data, $causer): array {
-                $this->broadcast($causer, 'topics', 'researching', 'Researching current trends…', 20);
+                $this->progress->notify($causer, 'topics', 'researching', 'Researching current trends…', 20);
 
                 $company = CompanyProfile::data();
                 $category = $this->resolveCategory($data->categoryUuid);
@@ -80,7 +86,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
 
                 $prompt = $this->buildTopicsPrompt($data, $category, $company, $research);
 
-                $this->broadcast($causer, 'topics', 'generating', 'Drafting topic ideas…', 60);
+                $this->progress->notify($causer, 'topics', 'generating', 'Drafting topic ideas…', 60);
 
                 $response = $this->ai->generateStructured(SuggestPostTopicsAgent::class, $prompt, $data->provider);
 
@@ -98,162 +104,97 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                     (array) $response['content_ideas'],
                 );
 
-                $this->broadcast($causer, 'topics', 'done', 'Topic ideas ready.', 100);
+                $this->progress->notify($causer, 'topics', 'done', 'Topic ideas ready.', 100);
 
                 return $ideas;
             },
         );
     }
 
-    public function generate(GeneratePostContentData $data, ?object $causer = null): GeneratedPostContentData
-    {
+    public function generate(
+        GeneratePostContentData $data,
+        int $iteration = 1,
+        array $previousWeaknesses = [],
+        ?object $causer = null,
+    ): PostContentDraftData {
+        $attempt = fn (): PostContentDraftData => $this->generateAttempt($data, $iteration, $previousWeaknesses, $causer);
+
+        if ($iteration !== 1 || $previousWeaknesses !== []) {
+            return $attempt();
+        }
+
         return Cache::remember(
-            $this->cacheKey('generate', $data->toArray()),
+            // `image_mode` is excluded: it steers the renderer, not a single
+            // word of the text this cache holds. Keying on it split one
+            // reusable draft into three identical entries and re-ran the whole
+            // quality loop when the user merely toggled the cover option.
+            $this->cacheKey('generate', $this->payloadExcept($data->toArray(), ['image_mode'])),
             now()->addMinutes(self::CACHE_TTL_MINUTES),
-            function () use ($data, $causer): GeneratedPostContentData {
-                $company = CompanyProfile::data();
+            $attempt,
+        );
+    }
 
-                $bestResponse = null;
-                $bestThresholdScores = [];
-                $bestOverallAverage = -1;
-                $previousWeaknesses = [];
-                $iterationsRan = 0;
-                $allScoresPass = false;
+    /**
+     * Drops fields that must not take part in a cache key.
+     *
+     * Keys are normalised to snake_case first because `Data::toArray()` emits
+     * PROPERTY names: {@see GeneratePostContentData} carries `MapInputName`
+     * only, so the key is `imageMode`, and a naive `array_diff_key` against
+     * `image_mode` silently excluded nothing at all.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  list<string>  $except
+     * @return array<string, mixed>
+     */
+    private function payloadExcept(array $payload, array $except): array
+    {
+        $normalized = [];
 
-                for ($iteration = 1; $iteration <= PostContentQualityEvaluator::MAX_ITERATIONS; $iteration++) {
-                    $iterationsRan = $iteration;
-                    $progressBase = (int) round((($iteration - 1) / PostContentQualityEvaluator::MAX_ITERATIONS) * 80);
+        foreach ($payload as $key => $value) {
+            $normalized[Str::snake((string) $key)] = $value;
+        }
 
-                    $this->broadcast(
-                        $causer,
-                        'content',
-                        'researching',
-                        "Iteration {$iteration}: researching…",
-                        $progressBase + 5,
-                    );
+        return array_diff_key($normalized, array_flip($except));
+    }
 
-                    try {
-                        $research = $this->research->search(
-                            $this->researchQueriesForIteration($data->topic, $data->keyTrend, $iteration),
-                        );
-                        $prompt = $this->buildContentPrompt($data, $company, $research, $iteration, $previousWeaknesses);
+    /**
+     * @param  list<array{score: string, current: int, target: int, gap: int, explanation: string}>  $previousWeaknesses
+     */
+    private function generateAttempt(
+        GeneratePostContentData $data,
+        int $iteration,
+        array $previousWeaknesses,
+        ?object $causer,
+    ): PostContentDraftData {
+        $progressBase = (int) round((($iteration - 1) / PostContentQualityEvaluator::MAX_ITERATIONS) * 80);
 
-                        $this->broadcast(
-                            $causer,
-                            'content',
-                            'writing',
-                            "Iteration {$iteration}: writing the blog draft…",
-                            $progressBase + 15,
-                        );
+        $this->progress->notify($causer, 'content', 'researching', "Iteration {$iteration}: researching…", $progressBase + 5);
 
-                        $response = $this->ai->generateStructured(GeneratePostContentAgent::class, $prompt, $data->provider);
-                    } catch (Throwable $exception) {
-                        Log::warning('post.ai.generation.iteration_failed', [
-                            'iteration' => $iteration,
-                            'error' => $exception->getMessage(),
-                        ]);
+        $company = CompanyProfile::data();
+        $research = $this->research->search(
+            $this->researchQueriesForIteration($data->topic, $data->keyTrend, $iteration),
+        );
+        $prompt = $this->buildContentPrompt($data, $company, $research, $iteration, $previousWeaknesses);
 
-                        continue;
-                    }
+        $this->progress->notify($causer, 'content', 'writing', "Iteration {$iteration}: writing the blog draft…", $progressBase + 8);
 
-                    /** @var array<string, mixed> $rawScores */
-                    $rawScores = (array) $response['scores'];
-                    $thresholdScores = [
-                        'human_writing_index' => (int) ($rawScores['human_writing_index'] ?? 0),
-                        'eeat_score' => (int) ($rawScores['eeat_score'] ?? 0),
-                        'virality_score' => (int) ($rawScores['virality_score'] ?? 0),
-                        'roi_score' => (int) ($rawScores['roi_score'] ?? 0),
-                        'seo_score' => (int) ($rawScores['seo_score'] ?? 0),
-                    ];
+        $response = $this->ai->generateStructured(GeneratePostContentAgent::class, $prompt, $data->provider);
 
-                    $evaluation = $this->evaluator->evaluate($thresholdScores);
+        /** @var array{title: string, visual: string} $concept */
+        $concept = (array) $response['cover_image_concept'];
+        /** @var array{primary_keyword: string, lsi_keywords: list<string>} $seoAnalysis */
+        $seoAnalysis = (array) $response['seo_analysis'];
 
-                    if ($evaluation->overallAverage > $bestOverallAverage) {
-                        $bestOverallAverage = $evaluation->overallAverage;
-                        $bestResponse = $response;
-                        $bestThresholdScores = $thresholdScores;
-                    }
-
-                    if ($evaluation->allPass) {
-                        $allScoresPass = true;
-                        break;
-                    }
-
-                    $previousWeaknesses = $this->evaluator->identifyWeaknesses(
-                        $thresholdScores,
-                        array_map(static fn (int $value): string => "Scored {$value}", $thresholdScores),
-                    );
-                }
-
-                if ($bestResponse === null) {
-                    throw new \RuntimeException('Post content generation failed on every iteration.');
-                }
-
-                /** @var array{title: string, visual: string} $concept */
-                $concept = (array) $bestResponse['cover_image_concept'];
-                $conceptTitle = (string) $concept['title'];
-                $conceptVisual = (string) $concept['visual'];
-
-                // Always echoed back, in every mode — `none` still leaves the
-                // user able to render the cover elsewhere.
-                $imagePrompts = $this->prompts->layered($conceptTitle, $conceptVisual);
-
-                if ($data->imageMode->rendersImage()) {
-                    $this->broadcast($causer, 'content', 'image', 'Generating the on-brand cover image…', 90);
-                }
-
-                $coverImagePath = match ($data->imageMode) {
-                    PostImageMode::Full => $this->storeGeneratedImage($this->prompts->composite($conceptTitle, $conceptVisual)),
-                    PostImageMode::Base => $this->storeGeneratedImage($imagePrompts['background']),
-                    PostImageMode::None => null,
-                };
-
-                $coverImageUrl = $coverImagePath !== null ? $this->storage->publicUrl($coverImagePath) : null;
-
-                /** @var array<string, mixed> $scores */
-                $scores = (array) $bestResponse['scores'];
-                /** @var array{primary_keyword: string, lsi_keywords: list<string>} $seoAnalysis */
-                $seoAnalysis = (array) $bestResponse['seo_analysis'];
-
-                $qualityWarning = ! $allScoresPass;
-
-                $this->broadcast(
-                    $causer,
-                    'content',
-                    'done',
-                    $qualityWarning ? 'Best attempt ready for review.' : 'Draft ready — all scores passed.',
-                    100,
-                );
-
-                return new GeneratedPostContentData(
-                    title: (string) $bestResponse['title'],
-                    content: (string) $bestResponse['content'],
-                    excerpt: (string) $bestResponse['excerpt'],
-                    metaTitle: (string) $bestResponse['meta_title'],
-                    metaDescription: (string) $bestResponse['meta_description'],
-                    metaKeywords: (string) $bestResponse['meta_keywords'],
-                    imageMode: $data->imageMode,
-                    coverImagePath: $coverImagePath,
-                    coverImageUrl: $coverImageUrl,
-                    imagePrompts: $imagePrompts,
-                    provider: $data->provider,
-                    seoScore: $bestThresholdScores['seo_score'],
-                    eeatScore: $bestThresholdScores['eeat_score'],
-                    viralityScore: $bestThresholdScores['virality_score'],
-                    roiScore: $bestThresholdScores['roi_score'],
-                    humanWritingIndex: $bestThresholdScores['human_writing_index'],
-                    aiDetectionRisk: (int) ($scores['ai_detection_risk'] ?? 0),
-                    allScoresPass: $allScoresPass,
-                    iterationsRequired: $iterationsRan,
-                    qualityWarning: $qualityWarning,
-                    qualityWarningMessage: $qualityWarning
-                        ? 'Maximum iterations reached — showing the best attempt for manual review.'
-                        : null,
-                    scores: $scores,
-                    optimizationSuggestions: (array) $bestResponse['optimization_suggestions'],
-                    seoAnalysis: $seoAnalysis,
-                );
-            },
+        return new PostContentDraftData(
+            title: (string) $response['title'],
+            content: (string) $response['content'],
+            excerpt: (string) $response['excerpt'],
+            metaTitle: (string) $response['meta_title'],
+            metaDescription: (string) $response['meta_description'],
+            metaKeywords: (string) $response['meta_keywords'],
+            coverImageConcept: ['title' => (string) $concept['title'], 'visual' => (string) $concept['visual']],
+            seoAnalysis: $seoAnalysis,
+            provider: $data->provider,
         );
     }
 
@@ -263,7 +204,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
             $this->cacheKey('generate-social-copy', $data->toArray()),
             now()->addMinutes(self::CACHE_TTL_MINUTES),
             function () use ($data, $causer): SocialCopyData {
-                $this->broadcast($causer, 'social', 'researching', 'Researching current trends…', 25);
+                $this->progress->notify($causer, 'social', 'researching', 'Researching current trends…', 25);
 
                 $company = CompanyProfile::data();
                 $research = $this->research->search($this->researchQueries($data->topic, $data->keyTrend));
@@ -274,11 +215,11 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                     'Write the LinkedIn post and the Instagram/Facebook caption exactly as specified in your instructions.',
                 );
 
-                $this->broadcast($causer, 'social', 'writing', 'Writing the social copy…', 70);
+                $this->progress->notify($causer, 'social', 'writing', 'Writing the social copy…', 70);
 
                 $response = $this->ai->generateStructured(GenerateSocialCopyAgent::class, $prompt, $data->provider);
 
-                $this->broadcast($causer, 'social', 'done', 'Social copy ready.', 100);
+                $this->progress->notify($causer, 'social', 'done', 'Social copy ready.', 100);
 
                 return new SocialCopyData(
                     linkedinPost: (string) $response['linkedin_post'],
@@ -295,7 +236,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
             $this->cacheKey('generate-reel-package', $data->toArray()),
             now()->addMinutes(self::CACHE_TTL_MINUTES),
             function () use ($data, $causer): ReelPackageData {
-                $this->broadcast($causer, 'reel', 'researching', 'Researching current trends…', 15);
+                $this->progress->notify($causer, 'reel', 'researching', 'Researching current trends…', 15);
 
                 $company = CompanyProfile::data();
                 $research = $this->research->search($this->researchQueries($data->topic, $data->keyTrend));
@@ -306,7 +247,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                     'Write the complete Reel/TikTok package exactly as specified in your instructions.',
                 );
 
-                $this->broadcast($causer, 'reel', 'writing', 'Writing the Reel/TikTok script…', 45);
+                $this->progress->notify($causer, 'reel', 'writing', 'Writing the Reel/TikTok script…', 45);
 
                 $response = $this->ai->generateStructured(GenerateReelPackageAgent::class, $prompt, $data->provider);
 
@@ -323,11 +264,14 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
 
                 $cleanScript = (string) $response['clean_script'];
 
-                $this->broadcast($causer, 'reel', 'voiceover', 'Synthesizing the AI voiceover…', 80);
+                $this->progress->notify($causer, 'reel', 'voiceover', 'Synthesizing the AI voiceover…', 80);
 
+                // One script, one TTS call: the Reel flow has no quality loop,
+                // so this is already the "render once, on the final text" shape
+                // the content loop had to be restructured into.
                 $voiceoverAudioUrl = $this->generateAndStoreVoiceover($cleanScript);
 
-                $this->broadcast($causer, 'reel', 'done', 'Reel package ready.', 100);
+                $this->progress->notify($causer, 'reel', 'done', 'Reel package ready.', 100);
 
                 $targetDuration = (int) ($response['target_duration_seconds'] ?? 15);
                 $targetDuration = max(15, min(30, $targetDuration));
@@ -347,31 +291,11 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
     }
 
     /**
-     * Pushes a real-time progress tick to the causer's own private channel
-     * (see {@see PostAiGenerationProgress}). Silently a no-op when there is no
-     * authenticated causer (e.g. a future system-triggered call) — the
-     * generation itself never depends on the socket push succeeding.
-     */
-    private function broadcast(?object $causer, string $flow, string $stage, string $message, int $progress): void
-    {
-        if (! $causer instanceof Authenticatable) {
-            return;
-        }
-
-        try {
-            broadcast(new PostAiGenerationProgress(
-                userId: (int) $causer->getAuthIdentifier(),
-                flow: $flow,
-                stage: $stage,
-                message: $message,
-                progress: $progress,
-            ));
-        } catch (Throwable $exception) {
-            Log::warning('post.ai.broadcast_failed', ['message' => $exception->getMessage()]);
-        }
-    }
-
-    /**
+     * Deterministic cache key for one AI operation, scoped by every input
+     * field that affects the output. `$causer` is deliberately excluded —
+     * two different users requesting the identical payload should share the
+     * cache entry.
+     *
      * @param  array<string, mixed>  $payload
      */
     private function cacheKey(string $operation, array $payload): string
@@ -478,7 +402,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
     /**
      * @param  list<array{score: string, current: int, target: int, gap: int, explanation: string}>  $weaknesses
      */
-    private function formatIterationFeedback(int $iteration, array $weaknesses): ?string
+    private function formatIterationFeedback(int $iteration, array $weaknesses): string
     {
         if ($iteration === 1 || $weaknesses === []) {
             return "Current iteration: {$iteration} of ".PostContentQualityEvaluator::MAX_ITERATIONS
@@ -486,14 +410,14 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
         }
 
         $lines = array_map(
-            static fn (array $w): string => "- {$w['score']}: was {$w['current']}, needs {$w['target']}+. {$w['explanation']}",
+            static fn (array $w): string => "- {$w['score']}: was {$w['current']}, needs {$w['target']}+. Why it failed: {$w['explanation']}",
             $weaknesses,
         );
 
         return "Iteration {$iteration} of ".PostContentQualityEvaluator::MAX_ITERATIONS
-            .". Previous attempt failed these scores:\n"
+            .". An independent reviewer failed these scores on your previous attempt:\n"
             .implode("\n", $lines)
-            ."\nDo NOT repeat the same content — change the hook, evidence, or CTA for each failing score.";
+            ."\nDo NOT repeat the same content — change the hook, evidence, or CTA for each failing score while keeping what worked.";
     }
 
     /**
@@ -530,22 +454,6 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
             static fn (array $r): string => "- {$r['title']} ({$r['url']}): {$r['content']}",
             array_slice($research, 0, 10),
         ));
-    }
-
-    /**
-     * Renders one palette-locked prompt through the image provider and stores
-     * the bytes on the configured disk. Shared by the `full` (composite) and
-     * `base` (background plate) image modes — the ONLY difference between them
-     * is which {@see BrandImagePromptFactory} prompt arrives here.
-     */
-    private function storeGeneratedImage(string $prompt): ?string
-    {
-        $image = $this->ai->generateImage($prompt, provider: null, size: '16:9', quality: 'high');
-
-        $extension = str_contains($image['mime'], 'png') ? 'png' : 'jpg';
-        $path = 'posts/ai/'.Str::uuid7().'.'.$extension;
-
-        return $this->storage->put($path, base64_decode($image['base64'], true) ?: '', 'public');
     }
 
     /**

@@ -4,20 +4,32 @@ declare(strict_types=1);
 
 namespace Modules\Post\Domain\Ports;
 
-use Modules\Post\Application\DTOs\GeneratedPostContentData;
+use Modules\Post\Application\Commands\GeneratePostContentHandler;
 use Modules\Post\Application\DTOs\GeneratePostContentData;
-use Modules\Post\Domain\Enums\PostImageMode;
+use Modules\Post\Application\DTOs\PostContentDraftData;
 
 /**
- * Generates a complete, SEO/EEAT/virality/ROI-scored blog draft for a chosen
- * topic. The caller's {@see PostImageMode} decides
- * how much cover artwork is rendered against the brand palette — the full
- * composite, the background plate alone, or nothing — while the layered
- * BrandPalette prompts come back in every mode. Internally may run up to 5
- * quality-loop iterations. Read-only — the caller decides whether/when to
- * persist the result via CreatePostHandler / UpdatePostHandler.
+ * The writing half of the quality gate: produces ONE text-only blog draft per
+ * call — no scores, no artwork.
+ *
+ * Scoring is {@see PostContentEvaluatorPort} (a different model, so the gate
+ * is independent) and the cover is {@see PostCoverImageRendererPort} (invoked
+ * once, after the loop, so rejected drafts cost no images). The loop that
+ * calls all three is
+ * {@see GeneratePostContentHandler}.
+ *
+ * Read-only — the caller decides whether/when to persist the result via
+ * CreatePostHandler / UpdatePostHandler.
  */
 interface PostContentGeneratorPort
 {
-    public function generate(GeneratePostContentData $data, ?object $causer = null): GeneratedPostContentData;
+    /**
+     * @param  list<array{score: string, current: int, target: int, gap: int, explanation: string}>  $previousWeaknesses
+     */
+    public function generate(
+        GeneratePostContentData $data,
+        int $iteration = 1,
+        array $previousWeaknesses = [],
+        ?object $causer = null,
+    ): PostContentDraftData;
 }

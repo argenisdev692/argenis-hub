@@ -474,12 +474,37 @@ declare namespace Modules {
                     iterations_required: number;
                     quality_warning: boolean;
                     quality_warning_message: string | null;
-                    scores: Record<string, any>;
+                    overall_score_avg: number;
+                    scores: Record<string, number>;
+                    eeat_analysis: {
+                        experience_signals: string[];
+                        expertise_signals: string[];
+                        authoritativeness_signals: string[];
+                        trustworthiness_signals: string[];
+                    };
                     optimization_suggestions: string[];
                     seo_analysis: {
                         primary_keyword: string;
                         lsi_keywords: string[];
                     };
+                    evaluator_provider: string;
+                };
+                export type PostContentDraftData = {
+                    title: string;
+                    content: string;
+                    excerpt: string;
+                    meta_title: string;
+                    meta_description: string;
+                    meta_keywords: string;
+                    cover_image_concept: {
+                        title: string;
+                        visual: string;
+                    };
+                    seo_analysis: {
+                        primary_keyword: string;
+                        lsi_keywords: string[];
+                    };
+                    provider: string;
                 };
                 export type PostData = {
                     title: string;
@@ -500,6 +525,21 @@ declare namespace Modules {
                     humanWritingIndex: number | null;
                     aiDetectionRisk: number | null;
                     aiScores: Record<string, any> | null;
+                };
+                export type PostEvaluationData = {
+                    scores: Record<string, number>;
+                    explanations: Record<string, string>;
+                    eeat_analysis: {
+                        experience_signals: string[];
+                        expertise_signals: string[];
+                        authoritativeness_signals: string[];
+                        trustworthiness_signals: string[];
+                    };
+                    ai_detection_risk: number;
+                    optimization_suggestions: string[];
+                    all_scores_pass: boolean;
+                    overall_average: number;
+                    evaluator_provider: string;
                 };
                 export type PostFilterData = {
                     category_uuid: string | null;
@@ -536,6 +576,14 @@ declare namespace Modules {
                     on_screen_text: string;
                     voiceover_line: string;
                     visual_prompt: string;
+                };
+                export type RenderedCoverImageData = {
+                    prompts: {
+                        background: string;
+                        content: string;
+                    };
+                    path: string | null;
+                    url: string | null;
                 };
                 export type SocialCopyData = {
                     linkedin_post: string;

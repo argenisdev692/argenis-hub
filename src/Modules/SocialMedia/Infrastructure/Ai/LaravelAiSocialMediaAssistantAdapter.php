@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\SocialMedia\Infrastructure\Ai;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Modules\Post\Infrastructure\Ai\LaravelAiPostAssistantAdapter;
 use Modules\SocialMedia\Application\DTOs\GeneratedSocialMediaContentData;
 use Modules\SocialMedia\Application\DTOs\GenerateSocialMediaContentData;
@@ -122,7 +123,7 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
             // `image_mode` / `generate_voiceover` are excluded: they steer the
             // renderer, not a single word of the text this cache holds. Keying
             // on them split one reusable draft into six identical entries.
-            $this->cacheKey('generate', array_diff_key($data->toArray(), array_flip(['image_mode', 'generate_voiceover']))),
+            $this->cacheKey('generate', $this->payloadExcept($data->toArray(), ['image_mode', 'generate_voiceover'])),
             now()->addMinutes(self::CACHE_TTL_MINUTES),
             $attempt,
         );
@@ -334,5 +335,30 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
     private function cacheKey(string $operation, array $payload): string
     {
         return 'social_media:ai:'.$operation.':'.md5(json_encode($payload, JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Drops fields that must not take part in a cache key.
+     *
+     * Keys are normalised to snake_case first because `Data::toArray()` emits
+     * PROPERTY names: {@see GenerateSocialMediaContentData} carries
+     * `MapInputName` only, so the keys are `imageMode` / `generateVoiceover`,
+     * and a naive `array_diff_key` against their snake_case spellings silently
+     * excluded nothing at all — every image mode kept its own copy of an
+     * identical draft and re-ran the whole quality loop to produce it.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  list<string>  $except
+     * @return array<string, mixed>
+     */
+    private function payloadExcept(array $payload, array $except): array
+    {
+        $normalized = [];
+
+        foreach ($payload as $key => $value) {
+            $normalized[Str::snake((string) $key)] = $value;
+        }
+
+        return array_diff_key($normalized, array_flip($except));
     }
 }

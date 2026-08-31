@@ -14,10 +14,16 @@ use Laravel\Ai\Promptable;
 use Stringable;
 
 /**
- * Generates a single, publish-ready blog draft with SEO/EEAT/virality/ROI/
- * human-writing scoring (Post module). The prompt supplied at call time embeds
- * the topic, brand voice, Tavily research, and optional iteration feedback —
- * this class owns only the persona, the quality rules and the output contract.
+ * The WRITER: produces a single, publish-ready blog draft (Post module). The
+ * prompt supplied at call time embeds the topic, brand voice, Tavily research,
+ * and the judge's feedback from the previous iteration — this class owns only
+ * the persona, the quality rules and the output contract.
+ *
+ * It does NOT score its own work. Scoring belongs to
+ * {@see EvaluatePostContentAgent}, which runs on a different provider, because
+ * a model reporting its own quality reports it generously and the loop then
+ * exits on self-congratulation. Artwork is not here either: the cover is
+ * rendered once, on the winning draft, by {@see PostCoverImageRenderer}.
  */
 final class GeneratePostContentAgent implements Agent, Conversational, HasStructuredOutput
 {
@@ -81,16 +87,20 @@ final class GeneratePostContentAgent implements Agent, Conversational, HasStruct
               the first two paragraphs (snippet/AI-Overview friendly).
 
             Length: 800-1500 words, one H1-equivalent title plus 3-5 H2 sections
-            and a closing call-to-action. Score every field honestly — do not
-            inflate scores to look successful.
+            and a closing call-to-action.
+
+            You do NOT score your own draft and you are not asked to. An
+            independent reviewer running on a different model scores it against
+            the thresholds above, and its verdict is what decides whether this
+            draft ships. Write for that reviewer, not for a self-report.
 
             Output format for `content` (mandatory): semantic HTML, never
             Markdown. Use only <p>, <h2>, <h3>, <ul>/<ol>/<li>, <strong>, <em>,
             <blockquote> and <a href="...">. No <h1> (the `title` field is the
             H1), no <img>, no <script>, no inline style or class attributes, and
-            no ```html code fences around the answer. The editor that receives
-            this renders HTML directly, so a Markdown heading arrives on screen
-            as the literal characters "## Heading".
+            no code fences around the answer. The editor that receives this
+            renders HTML directly, so a Markdown heading arrives on screen as
+            the literal characters "## Heading".
 
             Cover image concept: you do NOT choose colors or overall visual
             style — the caller applies the brand palette deterministically and
@@ -98,7 +108,7 @@ final class GeneratePostContentAgent implements Agent, Conversational, HasStruct
             short 2-5 word title and a one-sentence visual concept
             (e.g. "a stylized API gateway rendered as a glowing node network").
 
-            If iteration feedback lists failing scores, do NOT repeat the same
+            If reviewer feedback lists failing scores, do NOT repeat the same
             draft — change the hook, evidence, CTA, or structure for each
             failing score while keeping what already worked.
             INSTRUCTIONS;
@@ -113,6 +123,10 @@ final class GeneratePostContentAgent implements Agent, Conversational, HasStruct
     }
 
     /**
+     * Text only. `scores`, `ai_detection_risk` and `optimization_suggestions`
+     * left the writer's schema when the judge was introduced — see
+     * {@see EvaluatePostContentAgent}.
+     *
      * @return array<string, Type>
      */
     public function schema(JsonSchema $schema): array
@@ -129,21 +143,10 @@ final class GeneratePostContentAgent implements Agent, Conversational, HasStruct
                 'visual' => $schema->string()->required(),
             ])->required(),
 
-            'scores' => $schema->object(fn ($schema) => [
-                'seo_score' => $schema->integer()->min(0)->max(100)->required(),
-                'eeat_score' => $schema->integer()->min(0)->max(100)->required(),
-                'virality_score' => $schema->integer()->min(0)->max(100)->required(),
-                'roi_score' => $schema->integer()->min(0)->max(100)->required(),
-                'human_writing_index' => $schema->integer()->min(0)->max(100)->required(),
-                'ai_detection_risk' => $schema->integer()->min(0)->max(100)->required(),
-            ])->required(),
-
             'seo_analysis' => $schema->object(fn ($schema) => [
                 'primary_keyword' => $schema->string()->required(),
                 'lsi_keywords' => $schema->array()->items($schema->string())->required(),
             ])->required(),
-
-            'optimization_suggestions' => $schema->array()->items($schema->string())->required(),
         ];
     }
 }
