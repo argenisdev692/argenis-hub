@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
 use Modules\Post\Application\DTOs\GenerateContentVariantData;
 use Modules\Post\Application\DTOs\GeneratedPostContentData;
 use Modules\Post\Application\DTOs\GeneratePostContentData;
@@ -16,6 +17,7 @@ use Modules\Post\Application\DTOs\ReelPackageData;
 use Modules\Post\Application\DTOs\ReelSceneData;
 use Modules\Post\Application\DTOs\SocialCopyData;
 use Modules\Post\Application\DTOs\SuggestPostTopicsData;
+use Modules\Post\Domain\Enums\PostImageMode;
 use Modules\Post\Domain\Ports\PostContentGeneratorPort;
 use Modules\Post\Domain\Ports\PostTopicIdeatorPort;
 use Modules\Post\Domain\Ports\ReelPackageGeneratorPort;
@@ -25,7 +27,6 @@ use Modules\Post\Infrastructure\Broadcasting\PostAiGenerationProgress;
 use Shared\Domain\Ports\SpeechSynthesizerPort;
 use Shared\Domain\Ports\StoragePort;
 use Shared\Infrastructure\AI\AIClientInterface;
-use Shared\Infrastructure\Branding\BrandPalette;
 use Shared\Infrastructure\Company\CompanyProfile;
 use Shared\Infrastructure\Research\TavilyClientInterface;
 use Throwable;
@@ -52,6 +53,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
         private StoragePort $storage,
         private SpeechSynthesizerPort $speech,
         private PostContentQualityEvaluator $evaluator = new PostContentQualityEvaluator,
+        private BrandImagePromptFactory $prompts = new BrandImagePromptFactory,
     ) {}
 
     public function suggestTopics(SuggestPostTopicsData $data, ?object $causer = null): array
@@ -63,7 +65,12 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                 $this->broadcast($causer, 'topics', 'researching', 'Researching current trends…', 20);
 
                 $company = CompanyProfile::data();
-                $niche = $data->topic ?? $company['description'] ?? $company['name'];
+                $category = $this->resolveCategory($data->categoryUuid);
+
+                // Category-first flow: the chosen category IS the niche. A
+                // freehand `topic` only narrows the angle inside it, so both are
+                // folded into the research phrase when present.
+                $niche = trim($category['name'].' '.($data->topic ?? ''));
 
                 $research = $this->research->search([
                     "{$niche} trends 2026",
@@ -71,7 +78,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                     "{$niche} audience pain points",
                 ]);
 
-                $prompt = $this->buildTopicsPrompt($data, $company, $research);
+                $prompt = $this->buildTopicsPrompt($data, $category, $company, $research);
 
                 $this->broadcast($causer, 'topics', 'generating', 'Drafting topic ideas…', 60);
 
@@ -184,16 +191,22 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
 
                 /** @var array{title: string, visual: string} $concept */
                 $concept = (array) $bestResponse['cover_image_concept'];
-                $imagePrompts = $this->buildLayeredImagePrompts((string) $concept['title'], (string) $concept['visual']);
+                $conceptTitle = (string) $concept['title'];
+                $conceptVisual = (string) $concept['visual'];
 
-                $coverImagePath = null;
-                if ($data->generateCoverImage) {
+                // Always echoed back, in every mode — `none` still leaves the
+                // user able to render the cover elsewhere.
+                $imagePrompts = $this->prompts->layered($conceptTitle, $conceptVisual);
+
+                if ($data->imageMode->rendersImage()) {
                     $this->broadcast($causer, 'content', 'image', 'Generating the on-brand cover image…', 90);
-                    $coverImagePath = $this->generateAndStoreCoverImage(
-                        (string) $concept['title'],
-                        (string) $concept['visual'],
-                    );
                 }
+
+                $coverImagePath = match ($data->imageMode) {
+                    PostImageMode::Full => $this->storeGeneratedImage($this->prompts->composite($conceptTitle, $conceptVisual)),
+                    PostImageMode::Base => $this->storeGeneratedImage($imagePrompts['background']),
+                    PostImageMode::None => null,
+                };
 
                 $coverImageUrl = $coverImagePath !== null ? $this->storage->publicUrl($coverImagePath) : null;
 
@@ -219,6 +232,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                     metaTitle: (string) $bestResponse['meta_title'],
                     metaDescription: (string) $bestResponse['meta_description'],
                     metaKeywords: (string) $bestResponse['meta_keywords'],
+                    imageMode: $data->imageMode,
                     coverImagePath: $coverImagePath,
                     coverImageUrl: $coverImageUrl,
                     imagePrompts: $imagePrompts,
@@ -397,17 +411,43 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
     }
 
     /**
+     * Resolves the selected blog category to its name + description, which
+     * together define the niche for ideation. Validation already guarantees the
+     * UUID exists (`SuggestPostTopicsData::rules()`); the null-coalesce only
+     * covers the race where it is soft-deleted between validation and here.
+     *
+     * @return array{name: string, description: ?string}
+     */
+    private function resolveCategory(string $categoryUuid): array
+    {
+        $category = BlogCategoryEloquentModel::query()
+            ->select(['blog_category_name', 'blog_category_description'])
+            ->where('uuid', $categoryUuid)
+            ->first();
+
+        return [
+            'name' => (string) ($category?->blog_category_name ?? ''),
+            'description' => $category?->blog_category_description,
+        ];
+    }
+
+    /**
+     * @param  array{name: string, description: ?string}  $category
      * @param  array{name: string, description: ?string}  $company
      * @param  list<array{title: string, url: string, content: string, score: float}>  $research
      */
-    private function buildTopicsPrompt(SuggestPostTopicsData $data, array $company, array $research): string
+    private function buildTopicsPrompt(SuggestPostTopicsData $data, array $category, array $company, array $research): string
     {
         return implode("\n\n", array_filter([
             "Company: {$company['name']}",
             $company['description'] !== null ? "Company description: {$company['description']}" : null,
-            $data->topic !== null ? "Requested topic steer: {$data->topic}" : 'No specific topic given — propose a broad spread across the company\'s niche.',
+            "Content category (the niche): {$category['name']}",
+            $category['description'] !== null ? "Category description: {$category['description']}" : null,
+            $data->topic !== null
+                ? "Narrow the ideas to this angle inside the category: {$data->topic}"
+                : 'No extra steer given — spread the ideas across the whole category.',
             'Web research context:'."\n".$this->formatResearch($research),
-            'Generate exactly 10 blog topic ideas as specified in your instructions.',
+            "Generate exactly 10 viral blog topic ideas for the \"{$category['name']}\" category, as specified in your instructions.",
         ]));
     }
 
@@ -493,57 +533,13 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
     }
 
     /**
-     * Deterministic BrandPalette-locked prompts for separate layer generation
-     * (background plate + content/foreground). Always returned to the client.
-     *
-     * @return array{background: string, content: string}
+     * Renders one palette-locked prompt through the image provider and stores
+     * the bytes on the configured disk. Shared by the `full` (composite) and
+     * `base` (background plate) image modes — the ONLY difference between them
+     * is which {@see BrandImagePromptFactory} prompt arrives here.
      */
-    private function buildLayeredImagePrompts(string $title, string $visual): array
+    private function storeGeneratedImage(string $prompt): ?string
     {
-        $background = BrandPalette::BACKGROUND;
-        $primaryAccent = BrandPalette::PRIMARY_ACCENT;
-        $secondaryAccent = BrandPalette::SECONDARY_ACCENT;
-
-        return [
-            'background' => <<<PROMPT
-                Abstract premium dark-mode background only, no objects, no people, no text, no logo, no watermark.
-                Deep navy base ({$background}) with soft vertical cinematic gradient, faint geometric grid, subtle film grain.
-                Soft indigo glow ({$primaryAccent}) from upper-left, lilac haze ({$secondaryAccent}) lower-right, low contrast, wide negative space in center for later compositing.
-                Editorial tech aesthetic, 16:9, 4k, photorealistic lighting, empty center stage.
-                PROMPT,
-            'content' => <<<PROMPT
-                Isolated subject on pure transparent or pure black cutout-ready background: {$visual},
-                rendered as glowing 3D glass-and-neon in electric indigo ({$primaryAccent}) with soft lilac accents ({$secondaryAccent}),
-                rim light, subtle reflections, sharp focus, depth of field.
-                Optional single short title below in clean bold sans-serif: "{$title}".
-                No paragraphs, no extra UI, no watermark, centered, Apple-keynote quality, 16:9.
-                PROMPT,
-        ];
-    }
-
-    /**
-     * Composite cover (background + content + title) for Gemini Imagen when
-     * `generate_cover_image` is true — see {@see BrandPalette}.
-     */
-    private function generateAndStoreCoverImage(string $title, string $visual): ?string
-    {
-        $background = BrandPalette::BACKGROUND;
-        $primaryAccent = BrandPalette::PRIMARY_ACCENT;
-        $secondaryAccent = BrandPalette::SECONDARY_ACCENT;
-
-        $prompt = <<<PROMPT
-            Premium tech social media graphic, dark mode, minimalist, high-end.
-            Background: deep navy blue ({$background}) with a subtle gradient
-            and soft cinematic lighting from top. Centered composition: {$visual},
-            rendered as a glowing 3D glass-and-neon element in electric purple
-            ({$primaryAccent}) with soft accents in ({$secondaryAccent}),
-            soft rim light, subtle reflections. Below it, one short title in clean
-            bold sans-serif: "{$title}". Generous negative space, thin geometric
-            accent lines, faint grid texture. Aesthetic: engineered, editorial,
-            Apple-keynote quality. Sharp focus, depth of field, 4k. No extra text,
-            no paragraphs, no watermark.
-            PROMPT;
-
         $image = $this->ai->generateImage($prompt, provider: null, size: '16:9', quality: 'high');
 
         $extension = str_contains($image['mime'], 'png') ? 'png' : 'jpg';

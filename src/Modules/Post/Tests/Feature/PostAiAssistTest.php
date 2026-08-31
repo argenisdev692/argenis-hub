@@ -7,6 +7,7 @@ namespace Modules\Post\Tests\Feature;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
 use Modules\Post\Infrastructure\Ai\GeneratePostContentAgent;
 use Modules\Post\Infrastructure\Ai\SuggestPostTopicsAgent;
 use Tests\TestCase;
@@ -32,6 +33,18 @@ final class PostAiAssistTest extends TestCase
         $admin->assignRole('SUPER_ADMIN');
 
         return $admin;
+    }
+
+    /**
+     * Topic ideation is category-first, so every suggest-topics call needs a
+     * real category to hang the niche on.
+     */
+    private function categoryUuid(): string
+    {
+        return (string) BlogCategoryEloquentModel::factory()->create([
+            'blog_category_name' => 'Backend Engineering',
+            'blog_category_description' => 'Laravel, APIs and system design.',
+        ])->uuid;
     }
 
     /**
@@ -90,7 +103,10 @@ final class PostAiAssistTest extends TestCase
         $admin = $this->superAdmin();
 
         $this->actingAs($admin)
-            ->postJson('/posts/ai/suggest-topics', ['provider' => 'openai'])
+            ->postJson('/posts/ai/suggest-topics', [
+                'provider' => 'openai',
+                'category_uuid' => $this->categoryUuid(),
+            ])
             ->assertOk()
             ->assertJsonCount(10, 'data');
 
@@ -110,7 +126,7 @@ final class PostAiAssistTest extends TestCase
             ->postJson('/posts/ai/generate-content', [
                 'topic' => 'Onboarding automation',
                 'provider' => 'openai',
-                'generate_cover_image' => false,
+                'image_mode' => 'none',
             ])
             ->assertOk()
             ->assertJsonPath('data.title', 'Generated Title')
@@ -162,7 +178,7 @@ final class PostAiAssistTest extends TestCase
             ->postJson('/posts/ai/generate-content', [
                 'topic' => 'Quality loop topic',
                 'provider' => 'openai',
-                'generate_cover_image' => false,
+                'image_mode' => 'none',
             ])
             ->assertOk()
             ->assertJsonPath('data.title', 'Better Draft')

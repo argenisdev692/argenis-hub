@@ -33,7 +33,12 @@ final readonly class SuggestPostTopicsHandler
 
         $this->audit->log(
             event: 'post.ai.topics_suggested',
-            properties: ['provider' => $data->provider, 'topic' => $data->topic, 'idea_count' => count($ideas)],
+            properties: [
+                'provider' => $data->provider,
+                'category_uuid' => $data->categoryUuid,
+                'topic' => $data->topic,
+                'idea_count' => count($ideas),
+            ],
             causer: $causer,
             logName: 'post',
         );

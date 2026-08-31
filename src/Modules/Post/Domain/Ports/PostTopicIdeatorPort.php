@@ -8,8 +8,10 @@ use Modules\Post\Application\DTOs\PostTopicIdeaData;
 use Modules\Post\Application\DTOs\SuggestPostTopicsData;
 
 /**
- * Suggests viral, on-brand blog topics grounded in the company profile and
- * current web trends (Tavily). Read-only — never persists anything.
+ * Suggests the 10 most viral, on-brand blog topics for ONE chosen blog
+ * category — the category is the niche, and its name/description drive both
+ * the Tavily trend research and the agent prompt, on top of the company
+ * profile. Read-only — never persists anything.
  */
 interface PostTopicIdeatorPort
 {

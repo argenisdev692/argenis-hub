@@ -18,7 +18,6 @@ use Shared\Infrastructure\AI\AIClientInterface;
 use Shared\Infrastructure\AI\LaravelAIAdapter;
 use Shared\Infrastructure\Audit\SpatieActivityLogAdapter;
 use Shared\Infrastructure\Company\CompanyProfile;
-use Shared\Infrastructure\Console\Commands\OptimizeBrandImagesCommand;
 use Shared\Infrastructure\Console\Commands\PingRedisCommand;
 use Shared\Infrastructure\Console\Commands\SyncR2CorsCommand;
 use Shared\Infrastructure\Docs\Context7ClientInterface;
@@ -71,8 +70,6 @@ final class SharedServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
-                OptimizeBrandImagesCommand::class,
-                OptimizeBrandImagesCommand::class,
                 PingRedisCommand::class,
                 SyncR2CorsCommand::class,
             ]);

@@ -447,7 +447,7 @@ declare namespace Modules {
                     provider: string;
                     angle: string | null;
                     keyTrend: string | null;
-                    generateCoverImage: boolean;
+                    imageMode: Modules.Post.Domain.Enums.PostImageMode;
                 };
                 export type GeneratedPostContentData = {
                     title: string;
@@ -456,6 +456,7 @@ declare namespace Modules {
                     meta_title: string;
                     meta_description: string;
                     meta_keywords: string;
+                    image_mode: Modules.Post.Domain.Enums.PostImageMode;
                     cover_image_path: string | null;
                     cover_image_url: string | null;
                     image_prompts: {
@@ -543,6 +544,7 @@ declare namespace Modules {
                 };
                 export type SuggestPostTopicsData = {
                     provider: string;
+                    categoryUuid: string;
                     topic: string | null;
                 };
             }
@@ -565,6 +567,7 @@ declare namespace Modules {
         }
         namespace Domain {
             namespace Enums {
+                export type PostImageMode = 'full' | 'base' | 'none';
                 export type PostStatus = 'draft' | 'published' | 'scheduled';
             }
         }

@@ -30,7 +30,7 @@ final readonly class GeneratePostContentHandler
             properties: [
                 'provider' => $data->provider,
                 'topic' => $data->topic,
-                'generate_cover_image' => $data->generateCoverImage,
+                'image_mode' => $data->imageMode->value,
                 'seo_score' => $draft->seoScore,
                 'eeat_score' => $draft->eeatScore,
                 'virality_score' => $draft->viralityScore,

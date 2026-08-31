@@ -35,8 +35,8 @@ use Throwable;
  * mark cached for as long as the edge decides to keep it. The superseded object
  * is deleted by the handler once the row points at the new key.
  *
- * The GD driver matches `OptimizeBrandImagesCommand` — Herd ships GD with WebP
- * support and no Imagick.
+ * Uses the GD driver rather than Imagick: Herd ships GD with WebP support and
+ * no Imagick.
  */
 final readonly class CompanyLogoStorage implements CompanyLogoStoragePort
 {

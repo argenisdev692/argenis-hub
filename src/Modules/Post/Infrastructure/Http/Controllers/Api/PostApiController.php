@@ -58,8 +58,11 @@ final readonly class PostApiController
     /**
      * Suggest AI topic ideas.
      *
-     * Returns up to 10 candidate blog topics grounded in the company profile
-     * and current web trends. Real, billed provider request.
+     * Returns the 10 most viral candidate blog topics for the blog category
+     * given in `category_uuid` (required — the category is the niche), ranked
+     * with virality / ROI / EEAT estimates and grounded in current web trends.
+     * An optional `topic` narrows the angle inside that category. Real, billed
+     * provider request.
      */
     public function suggestTopics(SuggestPostTopicsData $data, Request $request, SuggestPostTopicsHandler $suggestTopics): JsonResponse
     {
@@ -71,8 +74,12 @@ final readonly class PostApiController
     /**
      * Generate an AI blog draft.
      *
-     * Returns a full SEO/EEAT-scored draft for a chosen topic/angle, with an
-     * optional on-brand cover image. Real, billed provider request.
+     * Returns a full SEO/EEAT-scored draft for a chosen topic/angle. The
+     * `image_mode` field controls the cover artwork: `full` renders the
+     * complete brand-palette composite, `base` renders only the palette
+     * background plate to composite on yourself, and `none` bills no image
+     * call. The layered image prompts are returned in every mode. Real, billed
+     * provider request.
      */
     public function generateContent(GeneratePostContentData $data, Request $request, GeneratePostContentHandler $generateContent): JsonResponse
     {

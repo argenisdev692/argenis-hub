@@ -8,6 +8,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
 use Modules\Post\Infrastructure\Ai\SuggestPostTopicsAgent;
 use Tests\TestCase;
 
@@ -25,6 +26,15 @@ final class PostAiAssistApiTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolePermissionSeeder::class);
+    }
+
+    /**
+     * Topic ideation is category-first, so every suggest-topics call needs a
+     * real category to hang the niche on.
+     */
+    private function categoryUuid(): string
+    {
+        return (string) BlogCategoryEloquentModel::factory()->create()->uuid;
     }
 
     public function test_authenticated_api_suggests_topics_with_permission(): void
@@ -53,7 +63,10 @@ final class PostAiAssistApiTest extends TestCase
 
         Sanctum::actingAs($admin);
 
-        $this->postJson('/api/posts/ai/suggest-topics', ['provider' => 'openai'])
+        $this->postJson('/api/posts/ai/suggest-topics', [
+            'provider' => 'openai',
+            'category_uuid' => $this->categoryUuid(),
+        ])
             ->assertOk()
             ->assertJsonCount(10, 'data');
 
@@ -70,7 +83,12 @@ final class PostAiAssistApiTest extends TestCase
 
         Sanctum::actingAs($plain);
 
-        $this->postJson('/api/posts/ai/suggest-topics', ['provider' => 'openai'])
+        // Fully valid payload — proves the 403 comes from the permission check,
+        // not from a validation short-circuit.
+        $this->postJson('/api/posts/ai/suggest-topics', [
+            'provider' => 'openai',
+            'category_uuid' => $this->categoryUuid(),
+        ])
             ->assertForbidden();
     }
 

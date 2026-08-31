@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Post\Application\DTOs;
 
+use Modules\Post\Domain\Enums\PostImageMode;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -14,9 +15,11 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * UpdatePostHandler (PostData carries the final, possibly-edited values).
  *
  * `imagePrompts` are always present (BrandPalette-locked background + content
- * layers) so the user can generate covers externally even when
- * `generate_cover_image` was false. `qualityWarning` is true when the
- * quality-loop exhausted iterations without clearing every threshold.
+ * layers) so the user can generate covers externally in every image mode —
+ * including `none`, where no image call was billed. `imageMode` echoes back
+ * what was actually rendered so the client never has to infer it from a null
+ * `coverImagePath`. `qualityWarning` is true when the quality-loop exhausted
+ * iterations without clearing every threshold.
  */
 #[MapOutputName(SnakeCaseMapper::class)]
 final class GeneratedPostContentData extends Data
@@ -34,6 +37,7 @@ final class GeneratedPostContentData extends Data
         public string $metaTitle,
         public string $metaDescription,
         public string $metaKeywords,
+        public PostImageMode $imageMode,
         public ?string $coverImagePath,
         public ?string $coverImageUrl,
         /** @var array{background: string, content: string} */

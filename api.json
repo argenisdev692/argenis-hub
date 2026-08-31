@@ -573,7 +573,7 @@
         "/posts/ai/suggest-topics": {
             "post": {
                 "operationId": "posts.ai.suggest-topics",
-                "description": "Returns up to 10 candidate blog topics grounded in the company profile\nand current web trends. Real, billed provider request.",
+                "description": "Returns the 10 most viral candidate blog topics for the blog category\ngiven in `category_uuid` (required \u2014 the category is the niche), ranked\nwith virality / ROI / EEAT estimates and grounded in current web trends.\nAn optional `topic` narrows the angle inside that category. Real, billed\nprovider request.",
                 "summary": "Suggest AI topic ideas",
                 "tags": [
                     "PostApi"
@@ -641,7 +641,7 @@
         "/posts/ai/generate-content": {
             "post": {
                 "operationId": "posts.ai.generate-content",
-                "description": "Returns a full SEO/EEAT-scored draft for a chosen topic/angle, with an\noptional on-brand cover image. Real, billed provider request.",
+                "description": "Returns a full SEO/EEAT-scored draft for a chosen topic/angle. The\n`image_mode` field controls the cover artwork: `full` renders the\ncomplete brand-palette composite, `base` renders only the palette\nbackground plate to composite on yourself, and `none` bills no image\ncall. The layered image prompts are returned in every mode. Real, billed\nprovider request.",
                 "summary": "Generate an AI blog draft",
                 "tags": [
                     "PostApi"
@@ -1497,7 +1497,7 @@
             },
             "GeneratePostContentData": {
                 "type": "object",
-                "description": "Input for full draft generation: either a title picked from\n{@see PostTopicIdeaData} or a freehand topic the user typed directly.",
+                "description": "Input for full draft generation: either a title picked from\n{@see PostTopicIdeaData} or a freehand topic the user typed directly.\n\n`imageMode` decides how much cover artwork is actually rendered against the\nbrand palette \u2014 `full` composites background + subject + title, `base`\nrenders only the palette background plate for the user to composite on, and\n`none` bills no image call. The layered prompts come back in all three\ncases, so `none` still leaves the user able to generate externally.",
                 "properties": {
                     "topic": {
                         "type": "string",
@@ -1525,8 +1525,15 @@
                         ],
                         "maxLength": 255
                     },
-                    "generate_cover_image": {
-                        "type": "boolean"
+                    "image_mode": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PostImageMode"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     }
                 },
                 "required": [
@@ -1554,6 +1561,9 @@
                         "type": "string"
                     },
                     "meta_keywords": {
+                        "type": "string"
+                    },
+                    "image_mode": {
                         "type": "string"
                     },
                     "cover_image_path": {
@@ -1636,6 +1646,7 @@
                     "meta_title",
                     "meta_description",
                     "meta_keywords",
+                    "image_mode",
                     "image_prompts",
                     "provider",
                     "seo_score",
@@ -1939,6 +1950,16 @@
                     "cover_image_url"
                 ],
                 "title": "PostEloquentModel"
+            },
+            "PostImageMode": {
+                "type": "string",
+                "description": "How much of the cover artwork the AI assist step should actually render. All three modes always return the layered BrandPalette prompts, so the user can regenerate externally regardless of the choice \u2014 the mode only decides whether a billed image call is made, and what it draws.\n| |\n|---|\n| `full` <br/> Composite cover: palette background + subject + short title. |\n| `base` <br/> Palette-locked background plate only \u2014 no subject, no title. |\n| `none` <br/> No image call at all; prompts only. |",
+                "enum": [
+                    "full",
+                    "base",
+                    "none"
+                ],
+                "title": "PostImageMode"
             },
             "PostPublicReadModel": {
                 "type": "object",
@@ -2251,7 +2272,7 @@
             },
             "SuggestPostTopicsData": {
                 "type": "object",
-                "description": "Input for topic ideation. `topic` is an optional steer \u2014 when blank the\nagent leans entirely on the company profile + Tavily trend research; when\ngiven, ideas are angled around that topic instead of a free niche scan.",
+                "description": "Input for topic ideation. The flow is category-first: the chosen blog\ncategory IS the niche, so `categoryUuid` is required and its name +\ndescription drive both the Tavily research queries and the agent prompt.\n`topic` stays an optional extra steer that narrows the angle inside that\ncategory \u2014 when blank the agent scans the whole category.",
                 "properties": {
                     "provider": {
                         "type": "string",
@@ -2260,6 +2281,10 @@
                             "anthropic",
                             "gemini"
                         ]
+                    },
+                    "category_uuid": {
+                        "type": "string",
+                        "format": "uuid"
                     },
                     "topic": {
                         "type": [
@@ -2270,7 +2295,8 @@
                     }
                 },
                 "required": [
-                    "provider"
+                    "provider",
+                    "category_uuid"
                 ],
                 "title": "SuggestPostTopicsData"
             },
