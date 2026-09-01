@@ -5,8 +5,10 @@ use App\Providers\FortifyServiceProvider;
 use App\Providers\TypeScriptTransformerServiceProvider;
 use Modules\ActivityLog\Providers\ActivityLogServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
+use Modules\Authorization\Providers\AuthorizationServiceProvider;
 use Modules\Backups\Providers\BackupsServiceProvider;
 use Modules\Blog\Providers\BlogServiceProvider;
+use Modules\Campaigns\Providers\CampaignServiceProvider;
 use Modules\Clients\Providers\ClientsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
 use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
@@ -25,6 +27,8 @@ return [
     // modules depend on — must come before the module providers.
     SharedServiceProvider::class,
     AuthServiceProvider::class,
+    // Roles/permissions back every other module's `permission:*` middleware.
+    AuthorizationServiceProvider::class,
     CompanyServiceProvider::class,
     ServicesServiceProvider::class,
     ClientsServiceProvider::class,
@@ -33,6 +37,7 @@ return [
     BlogServiceProvider::class,
     PostServiceProvider::class,
     SocialMediaServiceProvider::class,
+    CampaignServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
 ];

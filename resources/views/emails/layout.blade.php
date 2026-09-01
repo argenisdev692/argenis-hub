@@ -24,8 +24,10 @@
     // DB-first company branding (App\Models\CompanyData), config/env fallback.
     $profile = \Shared\Infrastructure\Company\CompanyProfile::data();
     $company = $profile['name'];
-    // White logo renders on the dark gradient header.
-    $logo = $profile['logo_white_url'];
+    // White logo renders on the dark gradient header. The `_email_` variant is
+    // the PNG rendition: Outlook for Windows draws mail through Word, which
+    // cannot decode the WebP every other surface in the app is served.
+    $logo = $profile['logo_email_white_url'];
     $companyUrl = $profile['url'];
     $location = collect([
         $profile['city'] ?? null,

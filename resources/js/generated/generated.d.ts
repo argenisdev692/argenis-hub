@@ -113,6 +113,31 @@ declare namespace Modules {
             }
         }
     }
+    namespace Authorization {
+        namespace Application {
+            namespace DTOs {
+                export type PermissionData = {
+                    name: string;
+                };
+                export type PermissionFilterData = {
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type RoleData = {
+                    name: string;
+                    permissions: string[];
+                };
+                export type RoleFilterData = {
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+            }
+        }
+    }
     namespace Backups {
         namespace Application {
             namespace DTOs {
@@ -181,6 +206,226 @@ declare namespace Modules {
                     cover_image_url: string | null;
                     published_at: string | null;
                 };
+            }
+        }
+    }
+    namespace Campaigns {
+        namespace Application {
+            namespace DTOs {
+                export type CampaignDraftData = {
+                    headline: string;
+                    primary_text: string;
+                    description: string | null;
+                    call_to_action: string;
+                    hashtags: string[];
+                    lead_form_questions: string[];
+                    targeting_suggestions: string[];
+                    platforms: Record<
+                        string,
+                        Modules.Campaigns.Application.DTOs.PlatformCampaignContentData
+                    >;
+                    cover_image_concept: Modules.Campaigns.Application.DTOs.CampaignImageConceptData;
+                    research_sources: {
+                        source: string;
+                        relevance: string;
+                        key_insight: string;
+                        used_in: string[];
+                    }[];
+                    tavily_data_used: string[];
+                    provider: string;
+                    cover_image_path: string | null;
+                    cover_image_url: string | null;
+                    cover_image_prompt: string | null;
+                };
+                export type CampaignEvaluationData = {
+                    scores: Modules.Campaigns.Application.DTOs.CampaignScoreSetData;
+                    explanations: Record<string, string>;
+                    optimization_suggestions: string[];
+                    ai_detection_risk: {
+                        value: number;
+                        label: string;
+                        explanation: string;
+                    };
+                    evaluator_provider: string;
+                };
+                export type CampaignFilterData = {
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type CampaignImageConceptData = {
+                    title: string;
+                    visual: string;
+                };
+                export type CampaignScoreResultData = {
+                    value: number;
+                    threshold: number;
+                    passes: boolean;
+                    factors: Record<string, number>;
+                    explanation: string;
+                };
+                export type CampaignScoreSetData = {
+                    audience_fit_score: Modules.Campaigns.Application.DTOs.CampaignScoreResultData;
+                    virality_score: Modules.Campaigns.Application.DTOs.CampaignScoreResultData;
+                    roi_potential_score: Modules.Campaigns.Application.DTOs.CampaignScoreResultData;
+                    lead_quality_score: Modules.Campaigns.Application.DTOs.CampaignScoreResultData;
+                    trend_relevance_score: Modules.Campaigns.Application.DTOs.CampaignScoreResultData;
+                    all_scores_pass: boolean;
+                    overall_average: number;
+                    success_probability_label: string;
+                };
+                export type CampaignTopicIdeaData = {
+                    title: string;
+                    angle: string;
+                    hook: string;
+                    platform: string;
+                    estimated_virality: number;
+                    estimated_engagement: string;
+                    estimated_roi: number;
+                    estimated_lead_potential: number;
+                    difficulty: string;
+                    why_it_works: string;
+                    key_trend: string;
+                    suggested_format: string;
+                    content_type: string;
+                    funnel_stage: string;
+                };
+                export type CampaignVideoPackageData = {
+                    scenes: Modules.Campaigns.Application.DTOs.CampaignVideoSceneData[];
+                    clean_script: string;
+                    sound_suggestion: string;
+                    target_duration_seconds: number;
+                    creative_style: string;
+                    voiceover_audio_path: string | null;
+                    voiceover_audio_url: string | null;
+                };
+                export type CampaignVideoSceneData = {
+                    time_range: string;
+                    action: string;
+                    on_screen_text: string;
+                    voiceover_line: string;
+                    visual_prompt: string;
+                };
+                export type GenerateCampaignData = {
+                    topic: string;
+                    provider: string;
+                    language: string;
+                    businessGoal: string;
+                    brandVoice: string;
+                    funnelStage: string;
+                    platform: string;
+                    adFormat: string;
+                    angle: string | null;
+                    hook: string | null;
+                    keyTrend: string | null;
+                    niche: string | null;
+                    audience: string | null;
+                    generateImages: boolean;
+                    city: string | null;
+                    state: string | null;
+                    country: string | null;
+                    location: string | null;
+                };
+                export type GeneratedCampaignData = {
+                    headline: string;
+                    primary_text: string;
+                    description: string | null;
+                    call_to_action: string;
+                    hashtags: string[];
+                    lead_form_questions: string[];
+                    targeting_suggestions: string[];
+                    platforms: Record<
+                        string,
+                        Modules.Campaigns.Application.DTOs.PlatformCampaignContentData
+                    >;
+                    cover_image_path: string | null;
+                    cover_image_url: string | null;
+                    cover_image_prompt: string | null;
+                    scores: Modules.Campaigns.Application.DTOs.CampaignScoreSetData;
+                    optimization_suggestions: string[];
+                    research_sources: {
+                        source: string;
+                        relevance: string;
+                        key_insight: string;
+                        used_in: string[];
+                    }[];
+                    tavily_data_used: string[];
+                    ai_detection_risk: {
+                        value: number;
+                        label: string;
+                        explanation: string;
+                    };
+                    provider: string;
+                    evaluator_provider: string;
+                    iterations_required: number;
+                    quality_warning: boolean;
+                    quality_warning_message: string | null;
+                };
+                export type PlatformCampaignContentData = {
+                    platform: string;
+                    adapted_primary_text: string;
+                    character_count: number;
+                    headline: string;
+                    description: string | null;
+                    hashtags: string[];
+                    image_concept: Modules.Campaigns.Application.DTOs.CampaignImageConceptData;
+                    video_package: Modules.Campaigns.Application.DTOs.CampaignVideoPackageData | null;
+                    image_prompt: string | null;
+                    image_path: string | null;
+                    image_url: string | null;
+                };
+                export type SuggestCampaignTopicsData = {
+                    provider: string;
+                    language: string;
+                    niche: string | null;
+                    audience: string | null;
+                    businessGoal: string | null;
+                    city: string | null;
+                    state: string | null;
+                    country: string | null;
+                    location: string | null;
+                };
+                export type UpdateCampaignData = {
+                    headline: string;
+                    primaryText: string;
+                    description: string | null;
+                    callToAction: string;
+                    hashtags: string[];
+                    leadFormQuestions: string[];
+                    status: string;
+                    scheduledAt: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type CampaignAdFormat =
+                    'feed' | 'story' | 'reel' | 'carousel' | 'lead_form';
+                export type CampaignBrandVoice =
+                    | 'professional'
+                    | 'conversational'
+                    | 'trendy'
+                    | 'inspirational'
+                    | 'humorous';
+                export type CampaignBusinessGoal =
+                    | 'awareness'
+                    | 'engagement'
+                    | 'leads'
+                    | 'sales'
+                    | 'retention';
+                export type CampaignFunnelStage =
+                    'tofu' | 'mofu' | 'bofu' | 'loyalty';
+                export type CampaignLanguage = 'es' | 'en' | 'pt-PT';
+                export type CampaignPlatform =
+                    'facebook' | 'instagram' | 'both';
+                export type CampaignStatus =
+                    | 'draft'
+                    | 'generating'
+                    | 'ready'
+                    | 'needs_review'
+                    | 'published'
+                    | 'scheduled';
             }
         }
     }
@@ -489,6 +734,21 @@ declare namespace Modules {
                     };
                     evaluator_provider: string;
                 };
+                export type PostAiGenerationData = {
+                    uuid: string;
+                    topic: string;
+                    provider: string;
+                    image_mode: Modules.Post.Domain.Enums.PostImageMode;
+                    status: Modules.Post.Domain.Enums.PostAiGenerationStatus;
+                    label: string;
+                    stage_message: string | null;
+                    progress: number;
+                    iteration: number;
+                    max_iterations: number;
+                    is_terminal: boolean;
+                    result: Modules.Post.Application.DTOs.GeneratedPostContentData | null;
+                    error_message: string | null;
+                };
                 export type PostContentDraftData = {
                     title: string;
                     content: string;
@@ -615,6 +875,15 @@ declare namespace Modules {
         }
         namespace Domain {
             namespace Enums {
+                export type PostAiGenerationStatus =
+                    | 'draft'
+                    | 'queued'
+                    | 'researching'
+                    | 'writing'
+                    | 'judging'
+                    | 'generating_image'
+                    | 'completed'
+                    | 'failed';
                 export type PostImageMode = 'full' | 'base' | 'none';
                 export type PostStatus = 'draft' | 'published' | 'scheduled';
             }

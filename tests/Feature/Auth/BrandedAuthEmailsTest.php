@@ -29,7 +29,7 @@ test('the new-device email renders the branded layout with its payload', functio
         ->toContain('Mozilla/5.0 (Macintosh)')
         ->toContain('Mon, Aug 25, 2026 9:15 AM')
         ->toContain(route('auth.sessions.index'))
-        ->toContain('img/Logo-white.png')
+        ->toContain('img/logo-argenis-hub-white.png')
         ->toContain('#7c3aed');
 });
 
@@ -44,7 +44,7 @@ test('the password-changed email renders the branded layout with its payload', f
     expect($html)
         ->toContain('198.51.100.7')
         ->toContain('Mon, Aug 25, 2026 9:20 AM')
-        ->toContain('img/Logo-white.png')
+        ->toContain('img/logo-argenis-hub-white.png')
         ->toContain('#7c3aed');
 });
 
@@ -58,7 +58,7 @@ test('the one-time-password email renders the code inside the branded layout', f
 
     expect($html)
         ->toContain($oneTimePassword->password)
-        ->toContain('img/Logo-white.png')
+        ->toContain('img/logo-argenis-hub-white.png')
         ->toContain('#7c3aed');
 });
 

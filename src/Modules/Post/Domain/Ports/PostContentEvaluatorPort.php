@@ -23,6 +23,7 @@ use Modules\Post\Domain\Services\PostContentQualityEvaluator;
 interface PostContentEvaluatorPort
 {
     public function evaluate(
+        ?string $generationUuid,
         PostContentDraftData $draft,
         GeneratePostContentData $data,
         int $iteration = 1,

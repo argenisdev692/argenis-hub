@@ -334,6 +334,22 @@
         0 0 0 1px var(--glass-border),
         0 12px 40px color-mix(in oklab, var(--brand-purple) 12%, transparent);
 
+    /* Logotype elevation — `filter: drop-shadow()`, not `box-shadow`.
+       The wordmark ships with a real alpha channel, so a box shadow would
+       trace its bounding rectangle instead of the glyph. Two passes: a tight
+       contact shadow that keeps the mark legible against a glass surface, and
+       a wide brand-tinted bloom that reads as light coming off the logo rather
+       than a grey smudge under it. */
+    --logo-shadow: drop-shadow(0 1px 1px rgb(11 16 32 / 0.12))
+        drop-shadow(
+            0 6px 16px color-mix(in oklab, var(--brand-purple) 20%, transparent)
+        );
+    --logo-shadow-hover: drop-shadow(0 2px 3px rgb(11 16 32 / 0.14))
+        drop-shadow(
+            0 10px 26px
+                color-mix(in oklab, var(--brand-purple) 34%, transparent)
+        );
+
     /* Motion — capped at 0.4s so nothing can flash above the WCAG 2.3.1
        three-per-second threshold. */
     --motion-fast: 140ms;
@@ -435,6 +451,16 @@
     --shadow-glow:
         0 0 0 1px var(--glass-border),
         0 12px 40px color-mix(in oklab, var(--brand-purple) 22%, transparent);
+
+    /* The contact pass drops out entirely at night — a black shadow under a
+       logo sitting on #050714 is invisible work. What separates the mark from
+       the ground there is the brand bloom, so it runs correspondingly wider. */
+    --logo-shadow: drop-shadow(
+        0 8px 22px color-mix(in oklab, var(--brand-purple) 32%, transparent)
+    );
+    --logo-shadow-hover: drop-shadow(
+        0 12px 34px color-mix(in oklab, var(--brand-purple) 48%, transparent)
+    );
 
     --scrollbar-thumb: color-mix(in oklab, var(--primary) 55%, transparent);
     --cursor-orb-tint: color-mix(in oklab, var(--primary) 32%, transparent);

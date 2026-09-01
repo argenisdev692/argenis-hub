@@ -23,8 +23,16 @@ use Modules\Company\Application\Queries\GetPublicCompanyHandler;
  * - a 30-minute cache in the query handler, so landing traffic does not become
  *   database traffic for a row that changes a few times a year.
  *
- * A browser fetching this cross-origin still needs the origin listed in
- * config/cors.php; a build-time or SSR fetch from Astro does not.
+ * Astro consumes this at build time / from SSR, where CORS never applies. A
+ * browser fetching it cross-origin is governed by Laravel's HandleCors
+ * middleware, which currently runs on framework defaults — `config/cors.php` is
+ * NOT published in this application, so `api/*` answers
+ * `Access-Control-Allow-Origin: *` with `supports_credentials => false`.
+ * Nothing credentialed leaks through that (bearer tokens are not sent
+ * automatically and no cookie is honoured cross-origin), but it is wider than
+ * the explicit allowlist OWASP §5 asks for. Narrowing it means publishing the
+ * config with the real landing-site origins — an application-wide change that
+ * also covers every Sanctum route, so it is tracked outside this module.
  */
 final readonly class PublicCompanyController
 {

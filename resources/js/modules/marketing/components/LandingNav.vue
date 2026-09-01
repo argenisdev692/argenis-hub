@@ -4,8 +4,8 @@ import { ArrowRight, Menu } from '@lucide/vue';
 import { useWindowScroll } from '@vueuse/core';
 import { m } from 'motion-v';
 import { computed } from 'vue';
+import BrandLogo from '@/common/brand/BrandLogo.vue';
 import ThemeToggle from '@/common/feedback/ThemeToggle.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Button } from '@/components/ui/button';
 import {
     Sheet,
@@ -82,16 +82,18 @@ const NAV_ENTRANCE = {
             :animate="{ height: navHeight }"
             :transition="BRAND_TRANSITION"
         >
-            <Link
-                href="/"
-                class="flex items-center gap-2.5 rounded-md font-semibold tracking-tight"
-            >
-                <span
-                    class="flex size-8 items-center justify-center rounded-lg bg-brand-gradient"
-                >
-                    <AppLogoIcon class="size-4 fill-current text-white" />
-                </span>
-                <span>{{ appName }}</span>
+            <!--
+              The wordmark already reads the brand name, so it replaces the
+              glyph-plus-text pair outright rather than sitting next to a second
+              copy of it. `alt` is what names the link.
+            -->
+            <Link href="/" class="flex items-center rounded-md">
+                <!-- Deferred: the bar itself is mid-entrance (NAV_ENTRANCE), and
+                     two fades running together read as one. -->
+                <BrandLogo
+                    :alt="appName"
+                    class="h-8 brand-logo-deferred sm:h-9"
+                />
             </Link>
 
             <ul class="hidden items-center gap-1 md:flex">
@@ -109,7 +111,7 @@ const NAV_ENTRANCE = {
                 <ThemeToggle />
 
                 <template v-if="isAuthenticated">
-                    <Button as-child size="sm">
+                    <Button as-child variant="gold" size="sm">
                         <Link :href="dashboard()">
                             Dashboard
                             <ArrowRight />
@@ -119,6 +121,7 @@ const NAV_ENTRANCE = {
 
                 <template v-else>
                     <Button
+                        variant="gold"
                         size="sm"
                         class="hidden sm:inline-flex"
                         @click="emit('signIn')"
@@ -159,7 +162,9 @@ const NAV_ENTRANCE = {
                             v-if="!isAuthenticated"
                             class="mt-auto grid gap-2 p-4"
                         >
-                            <Button @click="emit('signIn')">Sign in</Button>
+                            <Button variant="gold" @click="emit('signIn')">
+                                Sign in
+                            </Button>
                         </div>
                     </SheetContent>
                 </Sheet>

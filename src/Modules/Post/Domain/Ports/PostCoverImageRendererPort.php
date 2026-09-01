@@ -25,6 +25,7 @@ use Modules\Post\Domain\Enums\PostImageMode;
 interface PostCoverImageRendererPort
 {
     public function render(
+        ?string $generationUuid,
         PostContentDraftData $draft,
         GeneratePostContentData $data,
         ?object $causer = null,

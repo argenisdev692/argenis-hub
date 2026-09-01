@@ -172,9 +172,9 @@ describe('reading', function (): void {
         $this->actingAs(operator())
             ->getJson(route('company.show'))
             ->assertOk()
-            ->assertJsonPath('logos.logo', $base.'/img/Logo.png')
-            ->assertJsonPath('logos.logo_white', $base.'/img/Logo-white.png')
-            ->assertJsonPath('logos.mark', $base.'/img/Mark.png');
+            ->assertJsonPath('logos.logo', $base.'/img/Logo.webp')
+            ->assertJsonPath('logos.logo_white', $base.'/img/Logo-white.webp')
+            ->assertJsonPath('logos.mark', $base.'/img/Mark.webp');
     });
 });
 

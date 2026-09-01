@@ -6,6 +6,7 @@ namespace Modules\ActivityLog\Infrastructure\Console\Commands;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
 use Modules\ActivityLog\Providers\ActivityLogServiceProvider;
 use Shared\Domain\Ports\AuditPort;
 use Shared\Domain\Ports\StoragePort;
@@ -69,19 +70,29 @@ final class ArchiveActivityLogsCommand extends Command
             return self::FAILURE;
         }
 
-        $query->clone()->orderBy('id')->chunkById(1000, function ($activities) use ($gz): void {
-            foreach ($activities as $activity) {
-                gzwrite($gz, json_encode(
-                    $activity->attributesToArray(),
-                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-                ).PHP_EOL);
+        // try/finally: a failed chunk or a failed upload must never strand the
+        // gzip handle or the temp file — this command runs nightly, unattended.
+        try {
+            $query->clone()->orderBy('id')->chunkById(1000, function (Collection $activities) use ($gz): void {
+                foreach ($activities as $activity) {
+                    gzwrite($gz, json_encode(
+                        $activity->attributesToArray(),
+                        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+                    ).PHP_EOL);
+                }
+            });
+
+            gzclose($gz);
+            $gz = null;
+
+            $storage->putFromPath($objectKey, $tmpPath, 'private');
+        } finally {
+            if ($gz !== null) {
+                gzclose($gz);
             }
-        });
 
-        gzclose($gz);
-
-        $storage->putFromPath($objectKey, $tmpPath, 'private');
-        @unlink($tmpPath);
+            @unlink($tmpPath);
+        }
 
         $deleted = $query->clone()->delete();
 

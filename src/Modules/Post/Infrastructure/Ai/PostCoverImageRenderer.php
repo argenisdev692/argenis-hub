@@ -10,10 +10,11 @@ use Modules\Post\Application\Commands\GeneratePostContentHandler;
 use Modules\Post\Application\DTOs\GeneratePostContentData;
 use Modules\Post\Application\DTOs\PostContentDraftData;
 use Modules\Post\Application\DTOs\RenderedCoverImageData;
+use Modules\Post\Domain\Enums\PostAiGenerationStatus;
 use Modules\Post\Domain\Enums\PostImageMode;
 use Modules\Post\Domain\Ports\PostCoverImageRendererPort;
 use Modules\Post\Domain\Services\PostContentQualityEvaluator;
-use Modules\Post\Infrastructure\Broadcasting\PostProgressNotifier;
+use Modules\Post\Infrastructure\Broadcasting\PostGenerationProgressReporter;
 use Shared\Domain\Ports\StoragePort;
 use Shared\Infrastructure\AI\AIClientInterface;
 use Throwable;
@@ -40,10 +41,11 @@ final readonly class PostCoverImageRenderer implements PostCoverImageRendererPor
         private AIClientInterface $ai,
         private StoragePort $storage,
         private BrandImagePromptFactory $prompts,
-        private PostProgressNotifier $progress,
+        private PostGenerationProgressReporter $reporter,
     ) {}
 
     public function render(
+        ?string $generationUuid,
         PostContentDraftData $draft,
         GeneratePostContentData $data,
         ?object $causer = null,
@@ -60,7 +62,13 @@ final readonly class PostCoverImageRenderer implements PostCoverImageRendererPor
             return new RenderedCoverImageData(prompts: $prompts);
         }
 
-        $this->progress->notify($causer, 'content', 'image', 'Generating the on-brand cover image…', 90);
+        $this->reporter->report(
+            $generationUuid,
+            $causer,
+            PostAiGenerationStatus::GeneratingImage,
+            'Generating the on-brand cover image…',
+            90,
+        );
 
         $path = $this->store(match ($data->imageMode) {
             PostImageMode::Full => $this->prompts->composite($conceptTitle, $conceptVisual),

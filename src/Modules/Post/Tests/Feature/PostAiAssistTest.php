@@ -146,34 +146,57 @@ final class PostAiAssistTest extends TestCase
         ]);
     }
 
+    /**
+     * Runs one generation and returns the finished draft.
+     *
+     * `generate-content` answers 202 with a queued row now, not the draft —
+     * under the suite's `sync` queue driver the job has already finished by the
+     * time the response lands, so the poll is one extra call, not a wait. One
+     * admin serves both calls: the status endpoint is scoped to whoever started
+     * the run.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function generateDraft(array $payload): array
+    {
+        $admin = $this->superAdmin();
+
+        $uuid = (string) $this->actingAs($admin)
+            ->postJson('/posts/ai/generate-content', $payload)
+            ->assertStatus(202)
+            ->json('data.uuid');
+
+        return (array) $this->actingAs($admin)
+            ->getJson("/posts/ai/generations/{$uuid}")
+            ->assertOk()
+            ->json('data.result');
+    }
+
     public function test_generate_content_returns_a_scored_draft_with_layered_image_prompts(): void
     {
         GeneratePostContentAgent::fake([$this->draftPayload()]);
         EvaluatePostContentAgent::fake([$this->judgePayload()]);
 
-        $response = $this->actingAs($this->superAdmin())
-            ->postJson('/posts/ai/generate-content', [
-                'topic' => 'Onboarding automation',
-                'provider' => 'openai',
-                'image_mode' => 'none',
-            ])
-            ->assertOk()
-            ->assertJsonPath('data.title', 'Generated Title')
-            ->assertJsonPath('data.seo_score', 80)
-            ->assertJsonPath('data.virality_score', 76)
-            ->assertJsonPath('data.roi_score', 74)
-            ->assertJsonPath('data.all_scores_pass', true)
-            ->assertJsonPath('data.quality_warning', false)
-            ->assertJsonPath('data.iterations_required', 1)
-            ->assertJsonPath('data.cover_image_path', null)
-            ->assertJsonStructure([
-                'data' => [
-                    'image_prompts' => ['background', 'content'],
-                ],
-            ]);
+        $draft = $this->generateDraft([
+            'topic' => 'Onboarding automation',
+            'provider' => 'openai',
+            'image_mode' => 'none',
+        ]);
 
-        $background = (string) $response->json('data.image_prompts.background');
-        $content = (string) $response->json('data.image_prompts.content');
+        $this->assertSame('Generated Title', $draft['title']);
+        $this->assertSame(80, $draft['seo_score']);
+        $this->assertSame(76, $draft['virality_score']);
+        $this->assertSame(74, $draft['roi_score']);
+        $this->assertTrue($draft['all_scores_pass']);
+        $this->assertFalse($draft['quality_warning']);
+        $this->assertSame(1, $draft['iterations_required']);
+        $this->assertNull($draft['cover_image_path']);
+        $this->assertArrayHasKey('background', $draft['image_prompts']);
+        $this->assertArrayHasKey('content', $draft['image_prompts']);
+
+        $background = (string) $draft['image_prompts']['background'];
+        $content = (string) $draft['image_prompts']['content'];
 
         // Asserted through the constants, never as literals: this test used to
         // pin #0a0a1a / #6366f1 / #a78bfa, which is how BrandPalette drifted
@@ -211,18 +234,17 @@ final class PostAiAssistTest extends TestCase
 
         EvaluatePostContentAgent::fake([$weak, $better, $better, $better, $better]);
 
-        $this->actingAs($this->superAdmin())
-            ->postJson('/posts/ai/generate-content', [
-                'topic' => 'Quality loop topic',
-                'provider' => 'openai',
-                'image_mode' => 'none',
-            ])
-            ->assertOk()
-            ->assertJsonPath('data.title', 'Better Draft')
-            ->assertJsonPath('data.all_scores_pass', false)
-            ->assertJsonPath('data.quality_warning', true)
-            ->assertJsonPath('data.iterations_required', 5)
-            ->assertJsonPath('data.virality_score', 65);
+        $draft = $this->generateDraft([
+            'topic' => 'Quality loop topic',
+            'provider' => 'openai',
+            'image_mode' => 'none',
+        ]);
+
+        $this->assertSame('Better Draft', $draft['title']);
+        $this->assertFalse($draft['all_scores_pass']);
+        $this->assertTrue($draft['quality_warning']);
+        $this->assertSame(5, $draft['iterations_required']);
+        $this->assertSame(65, $draft['virality_score']);
     }
 
     public function test_ai_endpoints_are_gated_by_create_permission(): void

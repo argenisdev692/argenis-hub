@@ -6,14 +6,15 @@ namespace Modules\Post\Infrastructure\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\Post\Application\Commands\GeneratePostContentHandler;
 use Modules\Post\Application\Commands\GenerateReelPackageHandler;
 use Modules\Post\Application\Commands\GenerateSocialCopyHandler;
+use Modules\Post\Application\Commands\StartPostContentGenerationHandler;
 use Modules\Post\Application\Commands\SuggestPostTopicsHandler;
 use Modules\Post\Application\DTOs\GenerateContentVariantData;
 use Modules\Post\Application\DTOs\GeneratePostContentData;
 use Modules\Post\Application\DTOs\PostFilterData;
 use Modules\Post\Application\DTOs\SuggestPostTopicsData;
+use Modules\Post\Application\Queries\GetPostAiGenerationHandler;
 use Modules\Post\Application\Queries\GetPostHandler;
 use Modules\Post\Application\Queries\ListPostsHandler;
 use Modules\Post\Infrastructure\Http\Controllers\PostAiAssistController;
@@ -72,20 +73,39 @@ final readonly class PostApiController
     }
 
     /**
-     * Generate an AI blog draft.
+     * Start an AI blog draft generation.
      *
-     * Returns a full SEO/EEAT-scored draft for a chosen topic/angle. The
-     * `image_mode` field controls the cover artwork: `full` renders the
+     * Answers `202` immediately with a `queued` generation record and runs the
+     * up-to-5-iteration quality loop in the background — poll
+     * `GET /api/posts/ai/generations/{uuid}` until `is_terminal` is true, then
+     * read `result` for the finished draft.
+     *
+     * The `image_mode` field controls the cover artwork: `full` renders the
      * complete brand-palette composite, `base` renders only the palette
      * background plate to composite on yourself, and `none` bills no image
      * call. The layered image prompts are returned in every mode. Real, billed
      * provider request.
      */
-    public function generateContent(GeneratePostContentData $data, Request $request, GeneratePostContentHandler $generateContent): JsonResponse
+    public function generateContent(GeneratePostContentData $data, Request $request, StartPostContentGenerationHandler $startGeneration): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermissionTo('CREATE_POSTS'), 403);
 
-        return response()->json(['data' => $generateContent->handle($data, $request->user())]);
+        return response()->json(['data' => $startGeneration->handle($data, $request->user())], 202);
+    }
+
+    /**
+     * Poll an AI blog draft generation.
+     *
+     * Reports the live phase (`researching`, `writing`, `judging`,
+     * `generating_image`) and, once `status` is `completed`, the finished
+     * draft in `result`. A generation started by another user is reported as
+     * not found.
+     */
+    public function generationStatus(string $uuid, Request $request, GetPostAiGenerationHandler $getGeneration): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermissionTo('CREATE_POSTS'), 403);
+
+        return response()->json(['data' => $getGeneration->handle($uuid, $request->user())]);
     }
 
     /**

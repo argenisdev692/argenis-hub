@@ -29,6 +29,7 @@ use Modules\Company\Domain\ValueObjects\WebUrl;
  */
 final readonly class CompanyMapper
 {
+    #[\NoDiscard('toSnapshot() returns the Domain shape; the model is not mutated.')]
     public static function toSnapshot(CompanyData $model): CompanySnapshot
     {
         return new CompanySnapshot(
@@ -70,6 +71,7 @@ final readonly class CompanyMapper
      *
      * @return array<string, mixed>
      */
+    #[\NoDiscard('toColumns() returns the column map that must be filled onto the model.')]
     public static function toColumns(CompanySnapshot $company): array
     {
         $columns = [

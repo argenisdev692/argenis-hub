@@ -229,6 +229,28 @@ export type PostAiBrief = {
 export type PostTopicIdea = Modules.Post.Application.DTOs.PostTopicIdeaData;
 export type GeneratedPostContent =
     Modules.Post.Application.DTOs.GeneratedPostContentData;
+
+/** One background draft run, as returned by accept and by every poll. */
+export type PostAiGeneration =
+    Modules.Post.Application.DTOs.PostAiGenerationData;
+export type PostAiGenerationStatus =
+    Modules.Post.Domain.Enums.PostAiGenerationStatus;
+
+/**
+ * The phases the progress list renders, in the order the pipeline runs them.
+ *
+ * `draft` / `queued` are not here: nothing has started yet, so every row shows
+ * as pending, which is exactly right. `completed` / `failed` are terminal and
+ * end the list rather than appearing in it.
+ */
+export const POST_GENERATION_PHASES = [
+    'researching',
+    'writing',
+    'judging',
+    'generating_image',
+] as const satisfies readonly PostAiGenerationStatus[];
+
+export type PostGenerationPhase = (typeof POST_GENERATION_PHASES)[number];
 export type PostSocialCopy = Modules.Post.Application.DTOs.SocialCopyData;
 export type PostReelPackage = Modules.Post.Application.DTOs.ReelPackageData;
 export type PostReelScene = Modules.Post.Application.DTOs.ReelSceneData;

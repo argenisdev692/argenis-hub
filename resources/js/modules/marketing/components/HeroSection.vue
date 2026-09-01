@@ -88,6 +88,7 @@ const trustCascade = staggerContainer(MOTION_STAGGER * 0.5);
                 :variants="REVEAL_ITEM"
             >
                 <Button
+                    variant="gold"
                     size="lg"
                     class="w-full sm:w-auto"
                     @click="emit('signIn')"

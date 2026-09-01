@@ -24,9 +24,14 @@ use Modules\Post\Application\DTOs\PostContentDraftData;
 interface PostContentGeneratorPort
 {
     /**
+     * `$generationUuid` identifies the row whose live phase this call updates
+     * (see {@see PostAiGenerationRepositoryPort}). Null when the pipeline runs
+     * outside a queued generation, in which case progress is broadcast only.
+     *
      * @param  list<array{score: string, current: int, target: int, gap: int, explanation: string}>  $previousWeaknesses
      */
     public function generate(
+        ?string $generationUuid,
         GeneratePostContentData $data,
         int $iteration = 1,
         array $previousWeaknesses = [],

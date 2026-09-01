@@ -24,6 +24,11 @@ export const buttonVariants = cva(
         // `btn-shine` utility in app.css. The fill, lift and reduced-motion
         // fallback all live there.
         shine: "btn-shine",
+        // Solid gold — the executive accent (globals.css: "invoices paid,
+        // primary CTA, VIP status. Sparingly."). Reserved for the sign-in
+        // entry point on the landing page. Spending it on ordinary form
+        // buttons is exactly what stops gold reading as "the money action".
+        gold: "bg-accent-gold text-gold-foreground font-semibold shadow-gold hover:bg-accent-gold-hover",
       },
       size: {
         "default": "h-9 px-4 py-2 has-[>svg]:px-3",

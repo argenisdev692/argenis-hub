@@ -6,6 +6,7 @@ namespace Modules\Post\Application\DTOs;
 
 use Modules\Post\Application\Commands\GeneratePostContentHandler;
 use Modules\Post\Domain\Enums\PostImageMode;
+use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -27,6 +28,14 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * its iterations without clearing every threshold; `evaluatorProvider` names
  * the model that decided that, which is deliberately not `provider`.
  */
+/*
+ * `MapInputName` is not decoration: the finished draft is stored as JSON on
+ * `post_ai_generations.result` in the snake_case shape `toArray()` produces,
+ * and {@see PostAiGenerationData::fromModel()} hydrates it straight back with
+ * `::from()`. Without the input mapper that round-trip silently produces an
+ * object with every property unset.
+ */
+#[MapInputName(SnakeCaseMapper::class)]
 #[MapOutputName(SnakeCaseMapper::class)]
 final class GeneratedPostContentData extends Data
 {

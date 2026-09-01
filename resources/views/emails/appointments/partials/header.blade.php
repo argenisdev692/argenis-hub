@@ -1,7 +1,8 @@
 {{-- Expects $company (Shared\Infrastructure\Company\CompanyProfile::data()). --}}
 <div class="header">
-    @if (! empty($company['logo_url']))
-        <img src="{{ $company['logo_url'] }}" alt="{{ $company['name'] }}">
+    {{-- PNG rendition, not `logo_url`: Outlook for Windows has no WebP decoder. --}}
+    @if (! empty($company['logo_email_url']))
+        <img src="{{ $company['logo_email_url'] }}" alt="{{ $company['name'] }}">
     @endif
     <span class="brand-name">{{ $company['name'] }}</span>
 </div>

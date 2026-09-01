@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Responses\StructuredAgentResponse;
+use Modules\Post\Domain\Enums\PostAiGenerationStatus;
 use Modules\Post\Domain\Services\PostContentQualityEvaluator;
 use Modules\Post\Infrastructure\Ai\EvaluatePostContentAgent;
 use Modules\Post\Infrastructure\Ai\GeneratePostContentAgent;
@@ -22,6 +24,11 @@ use Shared\Infrastructure\AI\AIClientInterface;
 |   2. The judge runs on a DIFFERENT provider from the writer, so the gate is
 |      an outside opinion rather than the writer marking its own homework.
 |
+| `QUEUE_CONNECTION=sync` in phpunit.xml means GeneratePostContentJob runs
+| inline inside the accepting request, so these still drive the whole pipeline
+| through one HTTP call — they just read the outcome off the generation row
+| instead of the response body.
+|
 | Tavily is not faked explicitly — TAVILY_API_KEY is unset in the testing
 | environment, so TavilyResearchAdapter::search() short-circuits to an empty
 | array without any HTTP call.
@@ -31,6 +38,13 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 
     config()->set('ai.default_for_evaluation', 'anthropic');
+
+    // `throttle:5,1` on generate-content is keyed by user id, and RefreshDatabase
+    // reuses ids across tests while the cache store survives them — so without
+    // this the fifth accepted generation in the FILE fails, not the fifth in a
+    // test. Flushing here (not mid-test) leaves the AI result cache a test
+    // writes for itself untouched, which the image-mode case depends on.
+    Cache::flush();
 });
 
 function postCostAdmin(): User
@@ -133,6 +147,26 @@ function spyOnPostAiCalls(): object
     return $spy;
 }
 
+/**
+ * Runs one generation end to end and returns the finished row's payload.
+ *
+ * @param  array<string, mixed>  $payload
+ * @return array<string, mixed>
+ */
+function runPostGeneration(User $admin, array $payload): array
+{
+    $accepted = test()->actingAs($admin)
+        ->postJson('/posts/ai/generate-content', $payload)
+        ->assertStatus(202);
+
+    $uuid = (string) $accepted->json('data.uuid');
+
+    return (array) test()->actingAs($admin)
+        ->getJson("/posts/ai/generations/{$uuid}")
+        ->assertOk()
+        ->json('data');
+}
+
 it('bills exactly one cover image even when the loop runs every iteration', function (): void {
     $max = PostContentQualityEvaluator::MAX_ITERATIONS;
 
@@ -146,15 +180,15 @@ it('bills exactly one cover image even when the loop runs every iteration', func
 
     $spy = spyOnPostAiCalls();
 
-    $this->actingAs(postCostAdmin())
-        ->postJson('/posts/ai/generate-content', [
-            'topic' => 'Cost of the loop',
-            'provider' => 'openai',
-            'image_mode' => 'full',
-        ])
-        ->assertOk()
-        ->assertJsonPath('data.iterations_required', $max)
-        ->assertJsonPath('data.quality_warning', true);
+    $generation = runPostGeneration(postCostAdmin(), [
+        'topic' => 'Cost of the loop',
+        'provider' => 'openai',
+        'image_mode' => 'full',
+    ]);
+
+    expect($generation['status'])->toBe(PostAiGenerationStatus::Completed->value)
+        ->and($generation['result']['iterations_required'])->toBe($max)
+        ->and($generation['result']['quality_warning'])->toBeTrue();
 
     $writes = array_filter($spy->structured, static fn (array $c): bool => $c['agent'] === GeneratePostContentAgent::class);
     $judgements = array_filter($spy->structured, static fn (array $c): bool => $c['agent'] === EvaluatePostContentAgent::class);
@@ -171,15 +205,14 @@ it('scores every attempt on a different provider from the one that wrote it', fu
 
     $spy = spyOnPostAiCalls();
 
-    $this->actingAs(postCostAdmin())
-        ->postJson('/posts/ai/generate-content', [
-            'topic' => 'Independent gate',
-            'provider' => 'openai',
-            'image_mode' => 'none',
-        ])
-        ->assertOk()
-        ->assertJsonPath('data.provider', 'openai')
-        ->assertJsonPath('data.evaluator_provider', 'anthropic');
+    $generation = runPostGeneration(postCostAdmin(), [
+        'topic' => 'Independent gate',
+        'provider' => 'openai',
+        'image_mode' => 'none',
+    ]);
+
+    expect($generation['result']['provider'])->toBe('openai')
+        ->and($generation['result']['evaluator_provider'])->toBe('anthropic');
 
     $providerFor = static fn (string $agent): ?string => array_first(array_values(array_map(
         static fn (array $c): ?string => $c['provider'],
@@ -206,19 +239,15 @@ it('does not re-run the text loop when only the image mode changes', function ()
         'provider' => 'openai',
     ];
 
-    $this->actingAs($admin)
-        ->postJson('/posts/ai/generate-content', [...$payload, 'image_mode' => 'none'])
-        ->assertOk()
-        ->assertJsonPath('data.cover_image_path', null);
+    $first = runPostGeneration($admin, [...$payload, 'image_mode' => 'none']);
+    $second = runPostGeneration($admin, [...$payload, 'image_mode' => 'full']);
 
-    $this->actingAs($admin)
-        ->postJson('/posts/ai/generate-content', [...$payload, 'image_mode' => 'full'])
-        ->assertOk()
-        ->assertJsonPath('data.title', 'Cost Draft');
+    expect($first['result']['cover_image_path'])->toBeNull()
+        ->and($second['result']['title'])->toBe('Cost Draft');
 
     $writes = array_filter($spy->structured, static fn (array $c): bool => $c['agent'] === GeneratePostContentAgent::class);
 
-    // The text was written once and reused; only the second call paid for art.
+    // The text was written once and reused; only the second run paid for art.
     expect($writes)->toHaveCount(1)
         ->and($spy->images)->toHaveCount(1);
 });

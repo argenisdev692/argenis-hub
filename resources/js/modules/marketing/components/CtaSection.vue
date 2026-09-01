@@ -70,6 +70,7 @@ const ctaPanel: MotionVariants = {
                 :variants="REVEAL_ITEM"
             >
                 <Button
+                    variant="gold"
                     size="lg"
                     class="w-full sm:w-auto"
                     @click="emit('signIn')"

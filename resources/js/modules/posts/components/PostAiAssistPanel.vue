@@ -42,6 +42,7 @@ import type {
 import PostAiReelResult from './PostAiReelResult.vue';
 import PostAiSocialCopyResult from './PostAiSocialCopyResult.vue';
 import PostAiTopicIdeaList from './PostAiTopicIdeaList.vue';
+import PostGenerationProgress from './PostGenerationProgress.vue';
 import PostQualityScores from './PostQualityScores.vue';
 
 /**
@@ -77,11 +78,21 @@ const emit = defineEmits<{
 }>();
 
 const {
+    generatingUuid,
+    generation,
     suggestPostTopics,
     generatePostContent,
     generatePostSocialCopy,
     generatePostReel,
-} = usePostAi();
+} = usePostAi({
+    // The draft no longer comes back from the click — it arrives whenever the
+    // background run finishes, which is why this is a callback and not an
+    // `await` on the mutation.
+    onReady(finished) {
+        draft.value = finished;
+        emit('apply', finished);
+    },
+});
 
 const PROVIDERS: { value: PostAiProvider; label: string }[] = [
     { value: 'openai', label: 'OpenAI' },
@@ -136,6 +147,16 @@ const categoryFieldId = `${uid}-category`;
 const canIdeate = computed(() => Boolean(brief.value.category_uuid));
 const canGenerate = computed(() => brief.value.topic.trim().length > 0);
 
+/**
+ * True from the click until the background run reaches a terminal state — the
+ * accept call resolves in milliseconds, so the mutation's own `isLoading` only
+ * covers the hand-off and would let the user fire a second billed run while the
+ * first was still going.
+ */
+const isGenerating = computed(
+    () => generatePostContent.isLoading.value || generatingUuid.value !== null,
+);
+
 function isProvider(value: unknown): value is PostAiProvider {
     return PROVIDERS.some((provider) => provider.value === value);
 }
@@ -180,14 +201,19 @@ function onSelectIdea(idea: PostTopicIdea): void {
     tab.value = 'draft';
 }
 
+/**
+ * Starts a run; it does NOT wait for one. The draft lands through `onReady`
+ * above once the queued job reports a terminal state, so the previous result
+ * is cleared here to stop a stale draft sitting under a live progress list.
+ */
 async function onGenerateDraft(): Promise<void> {
+    draft.value = null;
+
     try {
-        draft.value = await generatePostContent.mutateAsync({
+        await generatePostContent.mutateAsync({
             ...variantPayload.value,
             image_mode: brief.value.image_mode,
         });
-
-        emit('apply', draft.value);
     } catch {
         // Already reported.
     }
@@ -388,15 +414,10 @@ async function onGenerateReel(): Promise<void> {
                     <Button
                         type="button"
                         class="self-start"
-                        :disabled="
-                            !canGenerate || generatePostContent.isLoading.value
-                        "
+                        :disabled="!canGenerate || isGenerating"
                         @click="onGenerateDraft"
                     >
-                        <Spinner
-                            v-if="generatePostContent.isLoading.value"
-                            class="size-4"
-                        />
+                        <Spinner v-if="isGenerating" class="size-4" />
                         <SparklesIcon
                             v-else
                             class="size-4"
@@ -405,14 +426,10 @@ async function onGenerateReel(): Promise<void> {
                         Generate draft
                     </Button>
 
-                    <p
-                        v-if="generatePostContent.isLoading.value"
-                        class="text-xs text-muted-foreground"
-                        aria-live="polite"
-                    >
-                        Researching, drafting and scoring — this runs up to five
-                        passes and can take a minute.
-                    </p>
+                    <PostGenerationProgress
+                        v-if="generation && isGenerating"
+                        :generation="generation"
+                    />
 
                     <template v-if="draft">
                         <Alert v-if="draft.quality_warning" variant="default">

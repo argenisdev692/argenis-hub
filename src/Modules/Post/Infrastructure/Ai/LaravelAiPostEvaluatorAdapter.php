@@ -8,10 +8,13 @@ use Illuminate\Support\Facades\Log;
 use Modules\Post\Application\DTOs\GeneratePostContentData;
 use Modules\Post\Application\DTOs\PostContentDraftData;
 use Modules\Post\Application\DTOs\PostEvaluationData;
+use Modules\Post\Domain\Enums\PostAiGenerationStatus;
+use Modules\Post\Domain\Exceptions\PostGenerationUnavailableException;
 use Modules\Post\Domain\Ports\PostContentEvaluatorPort;
 use Modules\Post\Domain\Services\PostContentQualityEvaluator;
-use Modules\Post\Infrastructure\Broadcasting\PostProgressNotifier;
+use Modules\Post\Infrastructure\Broadcasting\PostGenerationProgressReporter;
 use Shared\Infrastructure\AI\AIClientInterface;
+use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
 
 /**
  * The quality gate's independent half: runs {@see EvaluatePostContentAgent} on
@@ -27,29 +30,39 @@ final readonly class LaravelAiPostEvaluatorAdapter implements PostContentEvaluat
     public function __construct(
         private AIClientInterface $ai,
         private PostContentQualityEvaluator $evaluator,
-        private PostProgressNotifier $progress,
+        private PostGenerationProgressReporter $reporter,
     ) {}
 
     public function evaluate(
+        ?string $generationUuid,
         PostContentDraftData $draft,
         GeneratePostContentData $data,
         int $iteration = 1,
         ?object $causer = null,
     ): PostEvaluationData {
-        $this->progress->notify(
+        $this->reporter->report(
+            $generationUuid,
             $causer,
-            'content',
-            'scoring',
+            PostAiGenerationStatus::Judging,
             "Iteration {$iteration}: an independent model is scoring the draft…",
             $this->scoringProgress($iteration),
+            $iteration,
         );
 
         $provider = $this->provider($data->provider);
-        $response = $this->ai->generateStructured(
-            EvaluatePostContentAgent::class,
-            $this->buildEvaluationPrompt($draft, $data),
-            $provider,
-        );
+
+        // Same boundary translation as the writer: the judge runs on its OWN
+        // provider, so its breaker opens independently — a down judge must not
+        // read as a down writer.
+        try {
+            $response = $this->ai->generateStructured(
+                EvaluatePostContentAgent::class,
+                $this->buildEvaluationPrompt($draft, $data),
+                $provider,
+            );
+        } catch (CircuitBreakerOpenException $exception) {
+            throw PostGenerationUnavailableException::forService($provider, $exception);
+        }
 
         /** @var array<string, mixed> $rawScores */
         $rawScores = (array) $response['scores'];

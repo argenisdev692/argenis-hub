@@ -8,6 +8,7 @@ import {
     FileText,
     GalleryVerticalEnd,
     Handshake,
+    KeyRound,
     Layers,
     LayoutGrid,
     LifeBuoy,
@@ -16,6 +17,7 @@ import {
     Share2,
     ShieldCheck,
     Users,
+    UsersRound,
 } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
 import { usePermissions } from '@/composables/usePermissions';
@@ -24,9 +26,11 @@ import { index as activityLogIndex } from '@/routes/activity-logs';
 import { index as backupsIndex } from '@/routes/backups';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
+import { index as permissionsIndex } from '@/routes/permissions';
 import { index as portfoliosIndex } from '@/routes/portfolios';
 import { index as postsIndex } from '@/routes/posts';
 import { edit as editProfile } from '@/routes/profile';
+import { index as rolesIndex } from '@/routes/roles';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
 import { index as socialMediaIndex } from '@/routes/social-media';
@@ -173,6 +177,24 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: dashboard(),
                     icon: Megaphone,
                     comingSoon: true,
+                },
+            ],
+        },
+        {
+            id: 'access-control',
+            label: 'Access control',
+            items: [
+                {
+                    title: 'Roles',
+                    href: rolesIndex(),
+                    icon: UsersRound,
+                    permission: 'VIEW_ANY_ROLES',
+                },
+                {
+                    title: 'Permissions',
+                    href: permissionsIndex(),
+                    icon: KeyRound,
+                    permission: 'VIEW_ANY_PERMISSIONS',
                 },
             ],
         },

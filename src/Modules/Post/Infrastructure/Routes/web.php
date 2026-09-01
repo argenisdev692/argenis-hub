@@ -37,16 +37,24 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('posts')->name('post
         ->middleware(['permission:EXPORT_POSTS', 'throttle:10,1'])->name('export');
 
     Route::post('/ai/suggest-topics', [PostAiAssistController::class, 'suggestTopics'])
-        ->middleware(['permission:CREATE_POSTS', 'throttle:10,1'])->name('ai.suggest-topics');
+        ->middleware(['permission:CREATE_POSTS', 'throttle:post-ai-assist'])->name('ai.suggest-topics');
 
+    // Accepts and queues; answers 202 with the generation row. The tighter
+    // 5/min reflects what it starts — an up-to-5-iteration billed loop — not
+    // the cost of the request itself.
     Route::post('/ai/generate-content', [PostAiAssistController::class, 'generateContent'])
-        ->middleware(['permission:CREATE_POSTS', 'throttle:10,1'])->name('ai.generate-content');
+        ->middleware(['permission:CREATE_POSTS', 'throttle:post-ai-generate'])->name('ai.generate-content');
+
+    // The wizard's poll target. Cheap and read-only, so it gets the headroom
+    // the panel's poll interval is chosen to sit under.
+    Route::get('/ai/generations/{uuid}', [PostAiAssistController::class, 'generationStatus'])
+        ->middleware(['permission:CREATE_POSTS', 'throttle:post-ai-status'])->whereUuid('uuid')->name('ai.generation-status');
 
     Route::post('/ai/generate-social-copy', [PostAiAssistController::class, 'generateSocialCopy'])
-        ->middleware(['permission:CREATE_POSTS', 'throttle:10,1'])->name('ai.generate-social-copy');
+        ->middleware(['permission:CREATE_POSTS', 'throttle:post-ai-assist'])->name('ai.generate-social-copy');
 
     Route::post('/ai/generate-reel', [PostAiAssistController::class, 'generateReel'])
-        ->middleware(['permission:CREATE_POSTS', 'throttle:5,1'])->name('ai.generate-reel');
+        ->middleware(['permission:CREATE_POSTS', 'throttle:post-ai-generate'])->name('ai.generate-reel');
 
     Route::get('/{uuid}/edit', [PostController::class, 'edit'])
         ->middleware('permission:VIEW_POSTS')->whereUuid('uuid')->name('edit');

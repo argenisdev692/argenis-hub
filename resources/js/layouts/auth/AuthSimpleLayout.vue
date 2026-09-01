@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { ArrowLeft } from '@lucide/vue';
+import { computed } from 'vue';
+import BrandLogo from '@/common/brand/BrandLogo.vue';
 import ThemeToggle from '@/common/feedback/ThemeToggle.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Button } from '@/components/ui/button';
 import { home } from '@/routes';
 
@@ -21,6 +22,8 @@ const { title = '', description = '' } = defineProps<{
 defineSlots<{
     default: () => unknown;
 }>();
+
+const appName = computed(() => usePage().props.name);
 </script>
 
 <template>
@@ -44,12 +47,13 @@ defineSlots<{
         <main class="flex flex-1 items-center justify-center py-10">
             <div class="w-full max-w-sm">
                 <div class="flex flex-col items-center gap-3 text-center">
-                    <Link
-                        :href="home()"
-                        class="flex size-12 items-center justify-center rounded-xl bg-brand-gradient"
-                        aria-label="Home"
-                    >
-                        <AppLogoIcon class="size-6 fill-current text-white" />
+                    <!--
+                      The full wordmark, not the glyph in a tile: this is the
+                      first screen of the product a returning user sees, and
+                      the one place the brand is worth stating in full.
+                    -->
+                    <Link :href="home()" class="rounded-md">
+                        <BrandLogo :alt="appName" class="h-9 sm:h-10" />
                     </Link>
 
                     <div class="space-y-1.5">

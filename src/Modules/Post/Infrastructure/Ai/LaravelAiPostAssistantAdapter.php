@@ -16,6 +16,8 @@ use Modules\Post\Application\DTOs\ReelPackageData;
 use Modules\Post\Application\DTOs\ReelSceneData;
 use Modules\Post\Application\DTOs\SocialCopyData;
 use Modules\Post\Application\DTOs\SuggestPostTopicsData;
+use Modules\Post\Domain\Enums\PostAiGenerationStatus;
+use Modules\Post\Domain\Exceptions\PostGenerationUnavailableException;
 use Modules\Post\Domain\Ports\PostContentEvaluatorPort;
 use Modules\Post\Domain\Ports\PostContentGeneratorPort;
 use Modules\Post\Domain\Ports\PostCoverImageRendererPort;
@@ -23,12 +25,14 @@ use Modules\Post\Domain\Ports\PostTopicIdeatorPort;
 use Modules\Post\Domain\Ports\ReelPackageGeneratorPort;
 use Modules\Post\Domain\Ports\SocialCopyGeneratorPort;
 use Modules\Post\Domain\Services\PostContentQualityEvaluator;
+use Modules\Post\Infrastructure\Broadcasting\PostGenerationProgressReporter;
 use Modules\Post\Infrastructure\Broadcasting\PostProgressNotifier;
 use Shared\Domain\Ports\SpeechSynthesizerPort;
 use Shared\Domain\Ports\StoragePort;
 use Shared\Infrastructure\AI\AIClientInterface;
 use Shared\Infrastructure\Company\CompanyProfile;
 use Shared\Infrastructure\Research\TavilyClientInterface;
+use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
 
 /**
  * Single adapter behind the text-producing Post AI ports — they share the same
@@ -60,6 +64,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
         private StoragePort $storage,
         private SpeechSynthesizerPort $speech,
         private PostProgressNotifier $progress,
+        private PostGenerationProgressReporter $reporter,
     ) {}
 
     public function suggestTopics(SuggestPostTopicsData $data, ?object $causer = null): array
@@ -112,12 +117,13 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
     }
 
     public function generate(
+        ?string $generationUuid,
         GeneratePostContentData $data,
         int $iteration = 1,
         array $previousWeaknesses = [],
         ?object $causer = null,
     ): PostContentDraftData {
-        $attempt = fn (): PostContentDraftData => $this->generateAttempt($data, $iteration, $previousWeaknesses, $causer);
+        $attempt = fn (): PostContentDraftData => $this->generateAttempt($generationUuid, $data, $iteration, $previousWeaknesses, $causer);
 
         if ($iteration !== 1 || $previousWeaknesses !== []) {
             return $attempt();
@@ -161,6 +167,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
      * @param  list<array{score: string, current: int, target: int, gap: int, explanation: string}>  $previousWeaknesses
      */
     private function generateAttempt(
+        ?string $generationUuid,
         GeneratePostContentData $data,
         int $iteration,
         array $previousWeaknesses,
@@ -168,17 +175,26 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
     ): PostContentDraftData {
         $progressBase = (int) round((($iteration - 1) / PostContentQualityEvaluator::MAX_ITERATIONS) * 80);
 
-        $this->progress->notify($causer, 'content', 'researching', "Iteration {$iteration}: researching…", $progressBase + 5);
+        $this->reporter->report($generationUuid, $causer, PostAiGenerationStatus::Researching, "Iteration {$iteration}: researching…", $progressBase + 5, $iteration);
 
         $company = CompanyProfile::data();
-        $research = $this->research->search(
-            $this->researchQueriesForIteration($data->topic, $data->keyTrend, $iteration),
-        );
-        $prompt = $this->buildContentPrompt($data, $company, $research, $iteration, $previousWeaknesses);
 
-        $this->progress->notify($causer, 'content', 'writing', "Iteration {$iteration}: writing the blog draft…", $progressBase + 8);
+        // Translated at the boundary: an open breaker is an infrastructure
+        // decision, but "this provider is down" is something the quality loop
+        // has to understand, and Application must not import the resilience
+        // implementation to learn it.
+        try {
+            $research = $this->research->search(
+                $this->researchQueriesForIteration($data->topic, $data->keyTrend, $iteration),
+            );
+            $prompt = $this->buildContentPrompt($data, $company, $research, $iteration, $previousWeaknesses);
 
-        $response = $this->ai->generateStructured(GeneratePostContentAgent::class, $prompt, $data->provider);
+            $this->reporter->report($generationUuid, $causer, PostAiGenerationStatus::Writing, "Iteration {$iteration}: writing the blog draft…", $progressBase + 8, $iteration);
+
+            $response = $this->ai->generateStructured(GeneratePostContentAgent::class, $prompt, $data->provider);
+        } catch (CircuitBreakerOpenException $exception) {
+            throw PostGenerationUnavailableException::forService($data->provider, $exception);
+        }
 
         /** @var array{title: string, visual: string} $concept */
         $concept = (array) $response['cover_image_concept'];

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { watch } from 'vue';
+import BrandLogo from '@/common/brand/BrandLogo.vue';
 import { AppField, useAppForm } from '@/common/form';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,11 +67,19 @@ async function onSubmit(event: Event): Promise<void> {
     <Dialog v-model:open="open">
         <DialogContent class="sm:max-w-md">
             <DialogHeader class="items-center text-center">
-                <span
-                    class="mb-2 flex size-11 items-center justify-center rounded-xl bg-brand-gradient"
-                >
-                    <AppLogoIcon class="size-5 fill-current text-white" />
-                </span>
+                <!--
+                  The mark, not the wordmark: the dialog is 448px at its widest
+                  and a 4:1 logotype would either dominate the header or shrink
+                  below its own legibility. Deferred because the dialog zooms
+                  in under it — same reasoning as the landing bar.
+
+                  `alt` is empty: DialogTitle already names this dialog, and a
+                  second accessible name here would be read out ahead of it.
+                -->
+                <BrandLogo
+                    asset="mark"
+                    class="mb-2 size-11 brand-logo-deferred"
+                />
                 <DialogTitle>Welcome back</DialogTitle>
                 <DialogDescription>
                     Sign in to pick up where you left off.

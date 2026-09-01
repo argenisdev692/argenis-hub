@@ -138,7 +138,7 @@ it('serves the brand marks as absolute URLs', function (): void {
 
     $this->getJson(route('api.public.company'))
         ->assertOk()
-        ->assertJsonPath('logos.logo', rtrim((string) config('app.url'), '/').'/img/Logo.png');
+        ->assertJsonPath('logos.logo', rtrim((string) config('app.url'), '/').'/img/Logo.webp');
 });
 
 it('serves later callers from the cache', function (): void {

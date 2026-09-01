@@ -111,6 +111,34 @@ function fakePostContentPipeline(array $judgeOverrides = []): void
 }
 
 /**
+ * Runs one generation and returns the finished draft.
+ *
+ * `generate-content` answers 202 with a queued row now, not the draft — under
+ * the suite's `sync` queue driver the job has already finished by the time the
+ * response lands, so the poll below is one extra call rather than a wait.
+ *
+ * @param  array<string, mixed>  $payload
+ * @return array<string, mixed>
+ */
+function generatePostDraft(array $payload): array
+{
+    // One admin for both calls, not one per call: the status endpoint is scoped
+    // to whoever started the run, so a second user here would 404 on its own
+    // generation.
+    $admin = postAssistAdmin();
+
+    $uuid = (string) test()->actingAs($admin)
+        ->postJson('/posts/ai/generate-content', $payload)
+        ->assertStatus(202)
+        ->json('data.uuid');
+
+    return (array) test()->actingAs($admin)
+        ->getJson("/posts/ai/generations/{$uuid}")
+        ->assertOk()
+        ->json('data.result');
+}
+
+/**
  * Decorates the bound AI client so structured generation keeps flowing through
  * the agent fakes while every image prompt is recorded instead of billed. The
  * returned spy exposes `->prompts`, so a test can assert both HOW MANY image
@@ -236,15 +264,14 @@ it('renders the full composite cover in full image mode', function (): void {
     fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
-    $this->actingAs(postAssistAdmin())
-        ->postJson('/posts/ai/generate-content', [
-            'topic' => 'Onboarding automation',
-            'provider' => 'openai',
-            'image_mode' => 'full',
-        ])
-        ->assertOk()
-        ->assertJsonPath('data.image_mode', 'full')
-        ->assertJsonPath('data.title', 'Generated Title');
+    $draft = generatePostDraft([
+        'topic' => 'Onboarding automation',
+        'provider' => 'openai',
+        'image_mode' => 'full',
+    ]);
+
+    expect($draft['image_mode'])->toBe('full')
+        ->and($draft['title'])->toBe('Generated Title');
 
     expect($spy->prompts)->toHaveCount(1)
         ->and($spy->prompts[0])->toContain('Premium tech social media graphic')
@@ -257,14 +284,13 @@ it('renders only the palette background plate in base image mode', function (): 
     fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
-    $response = $this->actingAs(postAssistAdmin())
-        ->postJson('/posts/ai/generate-content', [
-            'topic' => 'Onboarding automation',
-            'provider' => 'openai',
-            'image_mode' => 'base',
-        ])
-        ->assertOk()
-        ->assertJsonPath('data.image_mode', 'base');
+    $draft = generatePostDraft([
+        'topic' => 'Onboarding automation',
+        'provider' => 'openai',
+        'image_mode' => 'base',
+    ]);
+
+    expect($draft['image_mode'])->toBe('base');
 
     expect($spy->prompts)->toHaveCount(1);
 
@@ -272,31 +298,30 @@ it('renders only the palette background plate in base image mode', function (): 
 
     // The base render is literally the advertised background prompt, and it
     // carries neither the subject nor the title.
-    expect($rendered)->toBe((string) $response->json('data.image_prompts.background'))
+    expect($rendered)->toBe((string) $draft['image_prompts']['background'])
         ->and($rendered)->toContain(BrandPalette::BACKGROUND)
         ->and($rendered)->toContain(BrandPalette::PRIMARY_ACCENT)
         ->and($rendered)->toContain(BrandPalette::SECONDARY_ACCENT)
         ->and($rendered)->not->toContain('workflow node network')
         ->and($rendered)->not->toContain('Onboarding Automated');
 
-    expect($response->json('data.cover_image_path'))->not->toBeNull();
+    expect($draft['cover_image_path'])->not->toBeNull();
 });
 
 it('bills no image call in none image mode but still returns both prompts', function (): void {
     fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
-    $this->actingAs(postAssistAdmin())
-        ->postJson('/posts/ai/generate-content', [
-            'topic' => 'Onboarding automation',
-            'provider' => 'openai',
-            'image_mode' => 'none',
-        ])
-        ->assertOk()
-        ->assertJsonPath('data.image_mode', 'none')
-        ->assertJsonPath('data.cover_image_path', null)
-        ->assertJsonPath('data.cover_image_url', null)
-        ->assertJsonStructure(['data' => ['image_prompts' => ['background', 'content']]]);
+    $draft = generatePostDraft([
+        'topic' => 'Onboarding automation',
+        'provider' => 'openai',
+        'image_mode' => 'none',
+    ]);
+
+    expect($draft['image_mode'])->toBe('none')
+        ->and($draft['cover_image_path'])->toBeNull()
+        ->and($draft['cover_image_url'])->toBeNull()
+        ->and($draft['image_prompts'])->toHaveKeys(['background', 'content']);
 
     expect($spy->prompts)->toBeEmpty();
 });
@@ -316,13 +341,12 @@ it('defaults to the full composite when no image mode is sent', function (): voi
     fakePostContentPipeline();
     $spy = spyOnPostImageProvider();
 
-    $this->actingAs(postAssistAdmin())
-        ->postJson('/posts/ai/generate-content', [
-            'topic' => 'Defaulted image mode',
-            'provider' => 'openai',
-        ])
-        ->assertOk()
-        ->assertJsonPath('data.image_mode', 'full');
+    $draft = generatePostDraft([
+        'topic' => 'Defaulted image mode',
+        'provider' => 'openai',
+    ]);
+
+    expect($draft['image_mode'])->toBe('full');
 
     expect($spy->prompts)->toHaveCount(1);
 });

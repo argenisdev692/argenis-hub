@@ -27,13 +27,18 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])
         Route::get('/', [PostApiController::class, 'index'])->name('index');
 
         Route::post('/ai/suggest-topics', [PostApiController::class, 'suggestTopics'])
-            ->middleware('throttle:10,1')->name('ai.suggest-topics');
+            ->middleware('throttle:post-ai-assist')->name('ai.suggest-topics');
+        // Accepts and queues; answers 202 with the generation row, then the
+        // client polls `ai/generations/{uuid}`. Declared before `/{uuid}` so
+        // the static `ai` segment is never captured as a UUID.
         Route::post('/ai/generate-content', [PostApiController::class, 'generateContent'])
-            ->middleware('throttle:10,1')->name('ai.generate-content');
+            ->middleware('throttle:post-ai-generate')->name('ai.generate-content');
+        Route::get('/ai/generations/{uuid}', [PostApiController::class, 'generationStatus'])
+            ->middleware('throttle:post-ai-status')->whereUuid('uuid')->name('ai.generation-status');
         Route::post('/ai/generate-social-copy', [PostApiController::class, 'generateSocialCopy'])
-            ->middleware('throttle:10,1')->name('ai.generate-social-copy');
+            ->middleware('throttle:post-ai-assist')->name('ai.generate-social-copy');
         Route::post('/ai/generate-reel', [PostApiController::class, 'generateReel'])
-            ->middleware('throttle:5,1')->name('ai.generate-reel');
+            ->middleware('throttle:post-ai-generate')->name('ai.generate-reel');
 
         Route::get('/{uuid}', [PostApiController::class, 'show'])
             ->whereUuid('uuid')

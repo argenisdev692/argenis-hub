@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Support\Facades\Storage;
+use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
 use Spatie\Activitylog\Models\Activity;
 
 beforeEach(function (): void {
@@ -54,6 +55,21 @@ it('shows a single activity-log entry with its payloads', function (): void {
         ->assertJsonPath('data.description', 'did another thing');
 });
 
+it('exposes the before/after diff a LogsActivity model recorded', function (): void {
+    // `attribute_changes` is cast to a Collection by the vendor Activity model
+    // (activitylog v5) — the detail projection must unwrap it, not drop it.
+    $category = BlogCategoryEloquentModel::factory()->create(['blog_category_name' => 'Before']);
+    $category->update(['blog_category_name' => 'After']);
+
+    $activity = Activity::query()->where('event', 'updated')->latest('id')->firstOrFail();
+
+    $this->actingAs(activityLogAdmin())
+        ->getJson("/activity-logs/{$activity->id}")
+        ->assertOk()
+        ->assertJsonPath('data.attribute_changes.attributes.blog_category_name', 'After')
+        ->assertJsonPath('data.attribute_changes.old.blog_category_name', 'Before');
+});
+
 it('forbids users without permission from viewing the trail', function (): void {
     recordActivity('sensitive');
 
@@ -66,8 +82,15 @@ it('filters the trail by an inclusive date range', function (): void {
     $inside = recordActivity('inside the window', now()->subDays(2));
     $outside = recordActivity('outside the window', now()->subDays(20));
 
+    // Scoped by `search` like the list test above: RolePermissionSeeder writes
+    // one activity row per seeded permission, all stamped `now()`, which would
+    // otherwise push `$inside` off the first page.
+    $query = 'search='.urlencode('the window')
+        .'&date_from='.now()->subDays(5)->toDateString()
+        .'&date_to='.now()->toDateString();
+
     $this->actingAs(activityLogAdmin())
-        ->getJson('/activity-logs?date_from='.now()->subDays(5)->toDateString().'&date_to='.now()->toDateString())
+        ->getJson('/activity-logs?'.$query)
         ->assertOk()
         ->assertJsonFragment(['id' => $inside->id])
         ->assertJsonMissing(['id' => $outside->id]);

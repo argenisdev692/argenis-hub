@@ -59,7 +59,6 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read Collection<int, Activity> $activitiesAsSubject
  * @property-read int|null $activities_as_subject_count
  * @property-read User|null $user
- *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData onlyTrashed()
@@ -105,10 +104,9 @@ use Spatie\Activitylog\Support\LogOptions;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData withoutTrashed()
  * @method static \Database\Factories\CompanyDataFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData whereGithubLink($value)
- *
  * @mixin \Eloquent
  */
-class CompanyData extends Model
+final class CompanyData extends Model
 {
     /** @use HasFactory<CompanyDataFactory> */
     use HasFactory, LogsActivity, SoftDeletes;
@@ -168,7 +166,7 @@ class CompanyData extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (CompanyData $company): void {
+        self::creating(function (CompanyData $company): void {
             if (empty($company->uuid)) {
                 $company->uuid = (string) Str::uuid7();
             }
@@ -177,13 +175,13 @@ class CompanyData extends Model
         // Keep the email-branding cache fresh. A soft delete reverts every
         // consumer to the app defaults; a restore brings the row back — both
         // must invalidate the cached profile, PDF and public payloads.
-        static::saved(static function (): void {
+        self::saved(static function (): void {
             CompanyProfile::forget();
         });
-        static::deleted(static function (): void {
+        self::deleted(static function (): void {
             CompanyProfile::forget();
         });
-        static::restored(static function (): void {
+        self::restored(static function (): void {
             CompanyProfile::forget();
         });
     }

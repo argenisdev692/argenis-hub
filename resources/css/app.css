@@ -108,6 +108,10 @@
     --color-surface-glass-strong: var(--surface-glass-strong);
     --color-glass-border: var(--glass-border);
 
+    /* Gold lift — the executive accent's own elevation, so a gold CTA does
+       not borrow the neutral --shadow-soft and lose its warm halo. */
+    --shadow-gold: var(--accent-gold-shadow);
+
     --shadow-soft: var(--shadow-soft);
     --shadow-lifted: var(--shadow-lifted);
     --shadow-glow: var(--shadow-glow);
@@ -305,6 +309,83 @@
     backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
     border: 1px solid var(--glass-border);
+}
+
+/*
+  The logotype treatment — one settle on arrival, one lift under the pointer.
+
+  Deliberately not a loop. The 2026 read on motion is that it has to earn its
+  keep by communicating something, and a wordmark that pulses forever
+  communicates nothing while competing with the content for attention on every
+  screen it appears on. So this says exactly two things: the shell has
+  finished mounting, and the mark is a link.
+
+  `filter` and `transform` only — both composite on the GPU, so the animation
+  never touches layout or paint. `will-change` is left off on purpose: the mark
+  is idle for the entire session after ~0.4s, and a permanent compositor layer
+  on the app shell costs more than the one frame it would save.
+*/
+@utility brand-logo {
+    display: block;
+    filter: var(--logo-shadow);
+    transform-origin: left center;
+    animation: brand-logo-settle var(--motion-slow) var(--motion-ease)
+        var(--brand-logo-delay, 0ms) backwards;
+    transition:
+        filter var(--motion-base) var(--motion-ease),
+        transform var(--motion-base) var(--motion-ease);
+
+    /*
+      Hover is scoped to devices that actually have a pointer. On touch, a
+      `:hover` rule sticks after the tap and leaves the logo parked in its lit
+      state until something else is tapped — the mark ends up looking broken
+      rather than interactive.
+
+      The ancestor selector means a call site only has to wrap the mark in its
+      link; it does not have to remember to add `group`.
+    */
+    @media (hover: hover) {
+        &:hover,
+        :where(a, button):hover & {
+            filter: var(--logo-shadow-hover);
+            transform: translateY(-1px);
+        }
+    }
+}
+
+/*
+  For a mark whose container makes its own entrance — the landing bar fading
+  down from `opacity: 0`, a dialog zooming in.
+
+  Without it the two motions run concurrently and the logo's settle plays
+  underneath a parent that is itself still fading up, which reads as no
+  animation at all: the eye sees one fade and attributes it to the container.
+  One `--motion-base` of daylight is enough to turn it back into a sequence.
+
+  Shipped as a custom property rather than an `animation-delay` declaration on
+  purpose. `animation-delay` in a second utility is a coin flip on stylesheet
+  order — whichever of the two lands later wins, and `brand-logo`'s shorthand
+  would reset the delay to 0 if it came second. A custom property is read at
+  computed-value time, so the pair cannot be ordered wrongly.
+*/
+@utility brand-logo-deferred {
+    --brand-logo-delay: var(--motion-base);
+}
+
+/*
+  `backwards`, never `forwards`/`both`: the fill must hold the mark hidden
+  through the delay above, and must NOT persist once the settle is done.
+  A forwards fill pins `transform` at the animation's cascade origin, which
+  outranks a normal declaration — and the hover lift is a normal declaration.
+*/
+@keyframes brand-logo-settle {
+    from {
+        opacity: 0;
+        /* Under 8px, and scaled from 0.98 rather than a rounder number: at the
+           sizes this mark is rendered, anything further reads as the header
+           re-laying itself out on every navigation. */
+        transform: translateY(-6px) scale(0.98);
+    }
 }
 
 /* A soft radial light source. Size and place it with the usual utilities;

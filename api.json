@@ -513,6 +513,383 @@
                 }
             }
         },
+        "/campaigns": {
+            "get": {
+                "operationId": "campaigns.index",
+                "description": "Returns a paginated list. `per_page` is capped at 100 to bound resource\nconsumption (OWASP API4).",
+                "summary": "List campaigns",
+                "tags": [
+                    "CampaignApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/campaigns/ai/suggest-topics": {
+            "post": {
+                "operationId": "campaigns.ai.suggest-topics",
+                "description": "Returns exactly 10 candidate Meta Ads lead-gen angles classified by\nTOFU/MOFU/BOFU/LOYALTY funnel stage, grounded in the company profile\nand current web trends. Real, billed provider request.",
+                "summary": "Suggest AI campaign angles",
+                "tags": [
+                    "CampaignApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SuggestCampaignTopicsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CampaignTopicIdeaData"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/campaigns/ai/generate-campaign": {
+            "post": {
+                "operationId": "campaigns.ai.generate-campaign",
+                "description": "Returns immediately with a `generating` row and kicks off the\nup-to-5-iteration quality loop in the background \u2014 poll `show()` or\nsubscribe to `campaigns.ai.progress` for completion. Real, billed\nprovider request.",
+                "summary": "Generate a Meta Ads campaign",
+                "tags": [
+                    "CampaignApi"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateCampaignData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CampaignEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/campaigns/{uuid}": {
+            "get": {
+                "operationId": "campaigns.show",
+                "description": "Returns a single campaign by UUID, including per-platform Meta Ads copy\nand success-probability scores.",
+                "summary": "Show a campaign",
+                "tags": [
+                    "CampaignApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CampaignEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/permissions": {
+            "get": {
+                "operationId": "permissions.index",
+                "description": "Returns a paginated list of permissions. `per_page` is capped at 100 to\nbound resource consumption (OWASP API4).",
+                "summary": "List permissions",
+                "tags": [
+                    "PermissionApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/permissions/{uuid}": {
+            "get": {
+                "operationId": "permissions.show",
+                "description": "Returns a single permission by UUID.",
+                "summary": "Show a permission",
+                "tags": [
+                    "PermissionApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Permission"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/posts": {
             "get": {
                 "operationId": "posts.index",
@@ -641,8 +1018,8 @@
         "/posts/ai/generate-content": {
             "post": {
                 "operationId": "posts.ai.generate-content",
-                "description": "Returns a full SEO/EEAT-scored draft for a chosen topic/angle. The\n`image_mode` field controls the cover artwork: `full` renders the\ncomplete brand-palette composite, `base` renders only the palette\nbackground plate to composite on yourself, and `none` bills no image\ncall. The layered image prompts are returned in every mode. Real, billed\nprovider request.",
-                "summary": "Generate an AI blog draft",
+                "description": "Answers `202` immediately with a `queued` generation record and runs the\nup-to-5-iteration quality loop in the background \u2014 poll\n`GET /api/posts/ai/generations/{uuid}` until `is_terminal` is true, then\nread `result` for the finished draft.\n\nThe `image_mode` field controls the cover artwork: `full` renders the\ncomplete brand-palette composite, `base` renders only the palette\nbackground plate to composite on yourself, and `none` bills no image\ncall. The layered image prompts are returned in every mode. Real, billed\nprovider request.",
+                "summary": "Start an AI blog draft generation",
                 "tags": [
                     "PostApi"
                 ],
@@ -657,6 +1034,71 @@
                     }
                 },
                 "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PostAiGenerationData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/posts/ai/generations/{uuid}": {
+            "get": {
+                "operationId": "posts.ai.generation-status",
+                "description": "Reports the live phase (`researching`, `writing`, `judging`,\n`generating_image`) and, once `status` is `completed`, the finished\ndraft in `result`. A generation started by another user is reported as\nnot found.",
+                "summary": "Poll an AI blog draft generation",
+                "tags": [
+                    "PostApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
                     "200": {
                         "description": "",
                         "content": {
@@ -665,7 +1107,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/GeneratedPostContentData"
+                                            "$ref": "#/components/schemas/PostAiGenerationData"
                                         }
                                     },
                                     "required": [
@@ -1257,6 +1699,128 @@
                 "security": []
             }
         },
+        "/roles": {
+            "get": {
+                "operationId": "roles.index",
+                "description": "Returns a paginated list of roles on the `web` guard. `per_page` is capped\nat 100 to bound resource consumption (OWASP API4).",
+                "summary": "List roles",
+                "tags": [
+                    "RoleApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/roles/{uuid}": {
+            "get": {
+                "operationId": "roles.show",
+                "description": "Returns a single role with its permissions by UUID.",
+                "summary": "Show a role",
+                "tags": [
+                    "RoleApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Role"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/social-media": {
             "get": {
                 "operationId": "social-media.index",
@@ -1802,6 +2366,463 @@
                 ],
                 "title": "BusinessGoal"
             },
+            "CampaignAdFormat": {
+                "type": "string",
+                "description": "Meta Ads placement/format. `LeadForm` targets Meta's native Instant Forms \u2014 the single highest-intent lead-gen unit on Meta \u2014 and is the format the generation agent leans on when `business_goal` is Leads.\n",
+                "enum": [
+                    "feed",
+                    "story",
+                    "reel",
+                    "carousel",
+                    "lead_form"
+                ],
+                "title": "CampaignAdFormat"
+            },
+            "CampaignBrandVoice": {
+                "type": "string",
+                "enum": [
+                    "professional",
+                    "conversational",
+                    "trendy",
+                    "inspirational",
+                    "humorous"
+                ],
+                "title": "CampaignBrandVoice"
+            },
+            "CampaignBusinessGoal": {
+                "type": "string",
+                "description": "Campaigns is a paid Meta Ads module \u2014 every goal here is acquisition or retention-oriented, unlike SocialMedia's organic set (which also allows 'viral'/'community'). Own Domain enum copy \u2014 modules never cross-import.\n",
+                "enum": [
+                    "awareness",
+                    "engagement",
+                    "leads",
+                    "sales",
+                    "retention"
+                ],
+                "title": "CampaignBusinessGoal"
+            },
+            "CampaignEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "niche": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "topic": {
+                        "type": "string"
+                    },
+                    "angle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "hook": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "key_trend": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "audience": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "business_goal": {
+                        "$ref": "#/components/schemas/CampaignBusinessGoal"
+                    },
+                    "brand_voice": {
+                        "$ref": "#/components/schemas/CampaignBrandVoice"
+                    },
+                    "funnel_stage": {
+                        "$ref": "#/components/schemas/CampaignFunnelStage"
+                    },
+                    "platform": {
+                        "$ref": "#/components/schemas/CampaignPlatform"
+                    },
+                    "ad_format": {
+                        "$ref": "#/components/schemas/CampaignAdFormat"
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/CampaignLanguage"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/CampaignStatus"
+                    },
+                    "scheduled_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "published_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "headline": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "primary_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "call_to_action": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "hashtags": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "lead_form_questions": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "targeting_suggestions": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "platforms": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "cover_image_path": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cover_image_prompt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "scores": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "audience_fit_score": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "virality_score": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "roi_potential_score": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "lead_quality_score": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "trend_relevance_score": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "overall_score_avg": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "success_probability_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "all_scores_pass": {
+                        "type": "boolean"
+                    },
+                    "iterations_required": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "quality_warning": {
+                        "type": "boolean"
+                    },
+                    "quality_warning_message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "optimization_suggestions": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "research_sources": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "tavily_data_used": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "ai_detection_risk": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "cover_image_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "niche",
+                    "topic",
+                    "angle",
+                    "hook",
+                    "key_trend",
+                    "audience",
+                    "business_goal",
+                    "brand_voice",
+                    "funnel_stage",
+                    "platform",
+                    "ad_format",
+                    "language",
+                    "provider",
+                    "status",
+                    "scheduled_at",
+                    "published_at",
+                    "headline",
+                    "primary_text",
+                    "description",
+                    "call_to_action",
+                    "hashtags",
+                    "lead_form_questions",
+                    "targeting_suggestions",
+                    "platforms",
+                    "cover_image_path",
+                    "cover_image_prompt",
+                    "scores",
+                    "audience_fit_score",
+                    "virality_score",
+                    "roi_potential_score",
+                    "lead_quality_score",
+                    "trend_relevance_score",
+                    "overall_score_avg",
+                    "success_probability_label",
+                    "all_scores_pass",
+                    "iterations_required",
+                    "quality_warning",
+                    "quality_warning_message",
+                    "optimization_suggestions",
+                    "research_sources",
+                    "tavily_data_used",
+                    "ai_detection_risk",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at",
+                    "cover_image_url"
+                ],
+                "title": "CampaignEloquentModel"
+            },
+            "CampaignFunnelStage": {
+                "type": "string",
+                "description": "TOFU/MOFU/BOFU/LOYALTY classification the topic-ideation agent assigns to every candidate Meta Ads angle. Drives which CTA and Meta objective rules the generation agent applies \u2014 Loyalty is the 4th stage (retention/ retargeting) real Meta Ads accounts budget separately from acquisition, per 2026 full-funnel playbooks (60-70% TOFU / 20-30% MOFU / 5-10% BOFU / 5-10% Loyalty budget split).\n",
+                "enum": [
+                    "tofu",
+                    "mofu",
+                    "bofu",
+                    "loyalty"
+                ],
+                "title": "CampaignFunnelStage"
+            },
+            "CampaignLanguage": {
+                "type": "string",
+                "description": "Output language the user picks for AI generation \u2014 never inferred, always explicit (the same niche can be worked in either market). pt-PT = European Portuguese (Portugal), not Brazilian.\n",
+                "enum": [
+                    "es",
+                    "en",
+                    "pt-PT"
+                ],
+                "title": "CampaignLanguage"
+            },
+            "CampaignPlatform": {
+                "type": "string",
+                "description": "Meta Ads surface the campaign targets. 'Both' generates adapted copy for Facebook AND Instagram in one attempt (see PlatformCampaignContentData) \u2014 a single angle rarely needs a 3rd Meta surface, unlike SocialMedia's 5-network spread, so this stays a flat enum rather than a multi-select.\n",
+                "enum": [
+                    "facebook",
+                    "instagram",
+                    "both"
+                ],
+                "title": "CampaignPlatform"
+            },
+            "CampaignStatus": {
+                "type": "string",
+                "enum": [
+                    "draft",
+                    "generating",
+                    "ready",
+                    "needs_review",
+                    "published",
+                    "scheduled"
+                ],
+                "title": "CampaignStatus"
+            },
+            "CampaignTopicIdeaData": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string"
+                    },
+                    "angle": {
+                        "type": "string"
+                    },
+                    "hook": {
+                        "type": "string"
+                    },
+                    "platform": {
+                        "type": "string"
+                    },
+                    "estimated_virality": {
+                        "type": "integer"
+                    },
+                    "estimated_engagement": {
+                        "type": "string"
+                    },
+                    "estimated_roi": {
+                        "type": "integer"
+                    },
+                    "estimated_lead_potential": {
+                        "type": "integer"
+                    },
+                    "difficulty": {
+                        "type": "string"
+                    },
+                    "why_it_works": {
+                        "type": "string"
+                    },
+                    "key_trend": {
+                        "type": "string"
+                    },
+                    "suggested_format": {
+                        "type": "string"
+                    },
+                    "content_type": {
+                        "type": "string"
+                    },
+                    "funnel_stage": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "title",
+                    "angle",
+                    "hook",
+                    "platform",
+                    "estimated_virality",
+                    "estimated_engagement",
+                    "estimated_roi",
+                    "estimated_lead_potential",
+                    "difficulty",
+                    "why_it_works",
+                    "key_trend",
+                    "suggested_format",
+                    "content_type",
+                    "funnel_stage"
+                ],
+                "title": "CampaignTopicIdeaData"
+            },
             "ContentLanguage": {
                 "type": "string",
                 "description": "Output language the user picks for AI generation \u2014 never inferred, always explicit (the same topic/niche can be worked in either market). pt-PT = European Portuguese (Portugal), not Brazilian.\n",
@@ -1821,6 +2842,119 @@
                     "bofu"
                 ],
                 "title": "FunnelStage"
+            },
+            "GenerateCampaignData": {
+                "type": "object",
+                "description": "Input for Step 2 (quality-loop campaign generation). One instance is\nreused across every iteration of the Infrastructure quality-loop Job;\nonly the previous-scores/weaknesses feedback (passed separately to the\nport) changes between iterations.",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/CampaignLanguage"
+                    },
+                    "business_goal": {
+                        "$ref": "#/components/schemas/CampaignBusinessGoal"
+                    },
+                    "brand_voice": {
+                        "$ref": "#/components/schemas/CampaignBrandVoice"
+                    },
+                    "funnel_stage": {
+                        "$ref": "#/components/schemas/CampaignFunnelStage"
+                    },
+                    "platform": {
+                        "$ref": "#/components/schemas/CampaignPlatform"
+                    },
+                    "ad_format": {
+                        "$ref": "#/components/schemas/CampaignAdFormat"
+                    },
+                    "angle": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "hook": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "key_trend": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "niche": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "audience": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "generate_images": {
+                        "type": "boolean"
+                    },
+                    "city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "state": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "country": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "topic",
+                    "provider",
+                    "language",
+                    "business_goal",
+                    "brand_voice",
+                    "funnel_stage",
+                    "platform",
+                    "ad_format"
+                ],
+                "title": "GenerateCampaignData"
             },
             "GenerateContentVariantData": {
                 "type": "object",
@@ -1993,143 +3127,6 @@
                 ],
                 "title": "GenerateSocialMediaContentData"
             },
-            "GeneratedPostContentData": {
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string"
-                    },
-                    "content": {
-                        "type": "string"
-                    },
-                    "excerpt": {
-                        "type": "string"
-                    },
-                    "meta_title": {
-                        "type": "string"
-                    },
-                    "meta_description": {
-                        "type": "string"
-                    },
-                    "meta_keywords": {
-                        "type": "string"
-                    },
-                    "image_mode": {
-                        "type": "string"
-                    },
-                    "cover_image_path": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "cover_image_url": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "image_prompts": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "provider": {
-                        "type": "string"
-                    },
-                    "seo_score": {
-                        "type": "integer"
-                    },
-                    "eeat_score": {
-                        "type": "integer"
-                    },
-                    "virality_score": {
-                        "type": "integer"
-                    },
-                    "roi_score": {
-                        "type": "integer"
-                    },
-                    "human_writing_index": {
-                        "type": "integer"
-                    },
-                    "ai_detection_risk": {
-                        "type": "integer"
-                    },
-                    "all_scores_pass": {
-                        "type": "boolean"
-                    },
-                    "iterations_required": {
-                        "type": "integer"
-                    },
-                    "quality_warning": {
-                        "type": "boolean"
-                    },
-                    "quality_warning_message": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "overall_score_avg": {
-                        "type": "integer"
-                    },
-                    "scores": {
-                        "type": "array",
-                        "items": {
-                            "type": "integer"
-                        }
-                    },
-                    "eeat_analysis": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "optimization_suggestions": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "seo_analysis": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "evaluator_provider": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "title",
-                    "content",
-                    "excerpt",
-                    "meta_title",
-                    "meta_description",
-                    "meta_keywords",
-                    "image_mode",
-                    "image_prompts",
-                    "provider",
-                    "seo_score",
-                    "eeat_score",
-                    "virality_score",
-                    "roi_score",
-                    "human_writing_index",
-                    "ai_detection_risk",
-                    "all_scores_pass",
-                    "iterations_required",
-                    "quality_warning",
-                    "overall_score_avg",
-                    "scores",
-                    "eeat_analysis",
-                    "optimization_suggestions",
-                    "seo_analysis",
-                    "evaluator_provider"
-                ],
-                "title": "GeneratedPostContentData"
-            },
             "LengthAwarePaginator": {
                 "type": "object",
                 "properties": {
@@ -2251,6 +3248,113 @@
                 "type": "object",
                 "additionalProperties": {},
                 "title": "PaginatedDataCollection"
+            },
+            "Permission": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "guard_name": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "name",
+                    "guard_name",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "title": "Permission"
+            },
+            "PostAiGenerationData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "topic": {
+                        "type": "string"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "image_mode": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "stage_message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "iteration": {
+                        "type": "integer"
+                    },
+                    "max_iterations": {
+                        "type": "integer"
+                    },
+                    "is_terminal": {
+                        "type": "boolean"
+                    },
+                    "result": {
+                        "$ref": "#/components/schemas/GeneratedPostContentData"
+                    },
+                    "error_message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "topic",
+                    "provider",
+                    "image_mode",
+                    "status",
+                    "label",
+                    "progress",
+                    "iteration",
+                    "max_iterations",
+                    "is_terminal"
+                ],
+                "title": "PostAiGenerationData"
             },
             "PostEloquentModel": {
                 "type": "object",
@@ -2667,6 +3771,50 @@
                     "creative_style"
                 ],
                 "title": "ReelPackageData"
+            },
+            "Role": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "guard_name": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "name",
+                    "guard_name",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "title": "Role"
             },
             "SocialCopyData": {
                 "type": "object",
@@ -3172,6 +4320,80 @@
                     "message"
                 ],
                 "title": "StorePublicContactSupportRequest"
+            },
+            "SuggestCampaignTopicsData": {
+                "type": "object",
+                "description": "Input for Step 1 (10 Meta Ads lead-gen angle candidates). `niche` is an\noptional steer \u2014 when blank the agent leans entirely on the company\nprofile + Tavily trend research, mirroring\n{@see SuggestSocialMediaTopicsData}.",
+                "properties": {
+                    "provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/CampaignLanguage"
+                    },
+                    "niche": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "audience": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "business_goal": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/CampaignBusinessGoal"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "state": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "country": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "location": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "provider",
+                    "language"
+                ],
+                "title": "SuggestCampaignTopicsData"
             },
             "SuggestPostTopicsData": {
                 "type": "object",

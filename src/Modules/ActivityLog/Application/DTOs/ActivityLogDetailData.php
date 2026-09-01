@@ -14,6 +14,10 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * plus the actor type and the `properties` / `attribute_changes` JSON payloads.
  * Admin-gated (`permission:VIEW_ACTIVITY_LOGS`): these blobs hold whatever the
  * logging models declared in `logOnly([...])`, never raw secrets.
+ *
+ * Both payload columns are cast to `Illuminate\Support\Collection` by the vendor
+ * {@see Activity} model (activitylog v5 `casts()`), so both are unwrapped the
+ * same way — `?->toArray()`.
  */
 #[MapOutputName(SnakeCaseMapper::class)]
 final class ActivityLogDetailData extends Data
@@ -53,26 +57,9 @@ final class ActivityLogDetailData extends Data
             causerType: ActivityLogData::shortType($activity->causer_type),
             causerLabel: $base->causerLabel,
             properties: $activity->properties?->toArray(),
-            attributeChanges: self::rawJson($activity, 'attribute_changes'),
+            attributeChanges: $activity->attribute_changes?->toArray(),
             createdAt: $base->createdAt,
             updatedAt: $activity->updated_at?->toIso8601String(),
         );
-    }
-
-    /**
-     * Reads a JSON column the default Spatie model does not cast (this project's
-     * migration adds `attribute_changes`).
-     *
-     * @return array<string, mixed>|null
-     */
-    private static function rawJson(Activity $activity, string $column): ?array
-    {
-        $value = $activity->getAttribute($column);
-
-        return match (true) {
-            is_array($value) => $value,
-            is_string($value) => (is_array($decoded = json_decode($value, true)) ? $decoded : null),
-            default => null,
-        };
     }
 }
