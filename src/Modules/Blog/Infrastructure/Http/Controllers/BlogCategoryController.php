@@ -33,18 +33,20 @@ final readonly class BlogCategoryController
         $filters = BlogCategoryFilterData::validateAndCreate($request);
         $categories = $list->handle($filters, min(max($request->integer('per_page', 15), 1), 100));
 
-        return $request->expectsJson()
-            ? response()->json($categories)
-            : Inertia::render('blog-categories/Index', ['blogCategories' => $categories, 'filters' => $filters]);
+        return match ($request->expectsJson()) {
+            true => response()->json($categories),
+            false => Inertia::render('blog-categories/Index', ['blogCategories' => $categories, 'filters' => $filters]),
+        };
     }
 
-    public function show(string $uuid, GetBlogCategoryHandler $get): InertiaResponse|JsonResponse
+    public function show(Request $request, string $uuid, GetBlogCategoryHandler $get): InertiaResponse|JsonResponse
     {
         $category = $get->handle($uuid);
 
-        return request()->expectsJson()
-            ? response()->json(['data' => $category])
-            : Inertia::render('blog-categories/Show', ['blogCategory' => $category]);
+        return match ($request->expectsJson()) {
+            true => response()->json(['data' => $category]),
+            false => Inertia::render('blog-categories/Show', ['blogCategory' => $category]),
+        };
     }
 
     public function store(Request $request, BlogCategoryData $data, CreateBlogCategoryHandler $create): RedirectResponse

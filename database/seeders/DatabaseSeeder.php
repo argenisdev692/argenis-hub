@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             ClientSeeder::class,
             PortfolioSeeder::class,
+            BlogCategorySeeder::class,
         ]);
     }
 }

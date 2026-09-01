@@ -24,6 +24,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
 import { index as activityLogIndex } from '@/routes/activity-logs';
 import { index as backupsIndex } from '@/routes/backups';
+import { index as campaignsIndex } from '@/routes/campaigns';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
 import { index as permissionsIndex } from '@/routes/permissions';
@@ -174,9 +175,9 @@ export function useNavGroups(): readonly NavGroup[] {
                 },
                 {
                     title: 'Campaigns',
-                    href: dashboard(),
+                    href: campaignsIndex(),
                     icon: Megaphone,
-                    comingSoon: true,
+                    permission: 'VIEW_ANY_CAMPAIGNS',
                 },
             ],
         },

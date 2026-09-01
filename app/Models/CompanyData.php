@@ -59,6 +59,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read Collection<int, Activity> $activitiesAsSubject
  * @property-read int|null $activities_as_subject_count
  * @property-read User|null $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData onlyTrashed()
@@ -104,6 +105,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData withoutTrashed()
  * @method static \Database\Factories\CompanyDataFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|CompanyData whereGithubLink($value)
+ *
  * @mixin \Eloquent
  */
 final class CompanyData extends Model

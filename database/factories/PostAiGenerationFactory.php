@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 use Modules\Post\Domain\Enums\PostAiGenerationStatus;
@@ -81,5 +82,15 @@ final class PostAiGenerationFactory extends Factory
             'started_at' => now()->subMinute(),
             'finished_at' => now(),
         ]);
+    }
+
+    /**
+     * Attribute the run to a causer — `created_by`, matching the sibling
+     * `forUser()` states on PostFactory, CampaignFactory and
+     * SocialMediaContentFactory.
+     */
+    public function forUser(User $user): self
+    {
+        return $this->state(fn (): array => ['created_by' => $user->id]);
     }
 }

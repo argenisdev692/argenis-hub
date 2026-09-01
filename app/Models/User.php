@@ -28,10 +28,14 @@ use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\PasswordHistoryEloqu
 use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Permission;
 use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Role;
 use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquentModel;
+use Modules\Campaigns\Infrastructure\Persistence\Eloquent\Models\CampaignEloquentModel;
 use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
 use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSupportEloquentModel;
 use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioEloquentModel;
+use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostAiGenerationEloquentModel;
+use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostEloquentModel;
 use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
+use Modules\SocialMedia\Infrastructure\Persistence\Eloquent\Models\SocialMediaContentEloquentModel;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
 use Spatie\Permission\Traits\HasRoles;
@@ -86,6 +90,14 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $blog_categories_count
  * @property-read Collection<int, ContactSupportEloquentModel> $contactSupports
  * @property-read int|null $contact_supports_count
+ * @property-read Collection<int, PostEloquentModel> $posts
+ * @property-read int|null $posts_count
+ * @property-read Collection<int, PostAiGenerationEloquentModel> $postAiGenerations
+ * @property-read int|null $post_ai_generations_count
+ * @property-read Collection<int, SocialMediaContentEloquentModel> $socialMediaContents
+ * @property-read int|null $social_media_contents_count
+ * @property-read Collection<int, CampaignEloquentModel> $campaigns
+ * @property-read int|null $campaigns_count
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read Collection<int, OneTimePassword> $oneTimePasswords
@@ -98,6 +110,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $roles_count
  * @property-read Collection<int, Permission> $teams
  * @property-read int|null $teams_count
+ *
  * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newQuery()
@@ -111,8 +124,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutRole($roles, ?string $guard = null)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutTeam($teams)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutTrashed()
+ *
  * @property-read Collection<int, PersonalAccessToken> $tokens
  * @property-read int|null $tokens_count
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAddress($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAddress2($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereCity($value)
@@ -147,6 +162,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUsername($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUuid($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereZipCode($value)
+ *
  * @mixin \Eloquent
  */
 #[Fillable([
@@ -291,6 +307,59 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function contactSupports(): HasMany
     {
         return $this->hasMany(ContactSupportEloquentModel::class);
+    }
+
+    /**
+     * The blog posts this user authored.
+     *
+     * Inverse of `PostEloquentModel::user()`. `posts.user_id` is nullable and
+     * `ON DELETE SET NULL` — a deleted author leaves the post orphaned but
+     * published, so this collection is authorship, not ownership.
+     *
+     * @return HasMany<PostEloquentModel, $this>
+     */
+    public function posts(): HasMany
+    {
+        return $this->hasMany(PostEloquentModel::class);
+    }
+
+    /**
+     * The AI post-generation runs this user launched.
+     *
+     * Inverse of `PostAiGenerationEloquentModel::causer()`; the FK is
+     * `post_ai_generations.created_by`, not the conventional `user_id`.
+     *
+     * @return HasMany<PostAiGenerationEloquentModel, $this>
+     */
+    public function postAiGenerations(): HasMany
+    {
+        return $this->hasMany(PostAiGenerationEloquentModel::class, 'created_by');
+    }
+
+    /**
+     * The social-media contents this user created.
+     *
+     * Inverse of `SocialMediaContentEloquentModel::user()`; the FK is
+     * `social_media_contents.created_by`, not the conventional `user_id`.
+     *
+     * @return HasMany<SocialMediaContentEloquentModel, $this>
+     */
+    public function socialMediaContents(): HasMany
+    {
+        return $this->hasMany(SocialMediaContentEloquentModel::class, 'created_by');
+    }
+
+    /**
+     * The campaigns this user created.
+     *
+     * Inverse of `CampaignEloquentModel::creator()`; the FK is
+     * `campaigns.created_by`, not the conventional `user_id`.
+     *
+     * @return HasMany<CampaignEloquentModel, $this>
+     */
+    public function campaigns(): HasMany
+    {
+        return $this->hasMany(CampaignEloquentModel::class, 'created_by');
     }
 
     /**

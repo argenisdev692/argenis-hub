@@ -25,6 +25,7 @@ final readonly class UpdateBlogCategoryHandler
         private BlogCategoryPublicFeedCachePort $feedCache,
     ) {}
 
+    #[\NoDiscard]
     public function handle(BlogCategoryEloquentModel $category, BlogCategoryData $data): BlogCategoryEloquentModel
     {
         $attributes = [

@@ -42,8 +42,8 @@ final readonly class BlogCategoryExportTransformer
 
     private static function authorLabel(BlogCategoryEloquentModel $category): string
     {
-        $name = trim(sprintf('%s %s', $category->user?->first_name ?? '', $category->user?->last_name ?? ''));
-
-        return $name !== '' ? $name : 'System';
+        return sprintf('%s %s', $category->user?->first_name ?? '', $category->user?->last_name ?? '')
+            |> trim(...)
+            |> (static fn (string $name): string => $name !== '' ? $name : 'System');
     }
 }

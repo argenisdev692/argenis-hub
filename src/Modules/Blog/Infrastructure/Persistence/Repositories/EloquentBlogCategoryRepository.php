@@ -15,9 +15,18 @@ use Shared\Infrastructure\Persistence\Concerns\BulkSoftDeletesByUuid;
  * Eloquent adapter for {@see BlogCategoryRepositoryPort}. Bulk soft-delete/restore
  * are inherited from the Shared {@see BulkSoftDeletesByUuid} trait (DRY).
  */
-final class EloquentBlogCategoryRepository implements BlogCategoryRepositoryPort
+final readonly class EloquentBlogCategoryRepository implements BlogCategoryRepositoryPort
 {
     use BulkSoftDeletesByUuid;
+
+    /**
+     * Hard caps on the anonymous landing-page feed (OWASP API4). Kept here — the
+     * only place that composes that query — rather than in the handler, so the
+     * bound cannot be bypassed by a second caller of `listPublic()`.
+     */
+    private const int MAX_PUBLIC_CATEGORIES = 100;
+
+    private const int MAX_PUBLIC_POSTS_PER_CATEGORY = 12;
 
     /**
      * @return class-string<BlogCategoryEloquentModel>
@@ -55,6 +64,15 @@ final class EloquentBlogCategoryRepository implements BlogCategoryRepositoryPort
      * SoftDeletes global scope adds `deleted_at is null`. Column-scoped eager
      * load + `withCount` keep it N+1-free (BACKEND-PHP §4.1).
      *
+     * BOTH axes of this anonymous response are bounded (OWASP API4 —
+     * unrestricted resource consumption): at most {@see self::MAX_PUBLIC_CATEGORIES}
+     * categories, each embedding at most {@see self::MAX_PUBLIC_POSTS_PER_CATEGORY}
+     * of its newest published posts. The per-parent limit is applied inside the
+     * eager-load closure (Laravel 11+ resolves it with a window function, so it
+     * stays one query). `published_posts_count` comes from `withCount` and
+     * therefore still reports the TRUE total, so a "view all" affordance can
+     * show the real number while the payload stays bounded.
+     *
      * @return Collection<int, BlogCategoryEloquentModel>
      */
     public function listPublic(): Collection
@@ -78,10 +96,11 @@ final class EloquentBlogCategoryRepository implements BlogCategoryRepositoryPort
                     'post_cover_image',
                     'published_at',
                 ])
-                ->orderByDesc('published_at')])
+                ->orderByDesc('published_at')
+                ->limit(self::MAX_PUBLIC_POSTS_PER_CATEGORY)])
             ->withCount('publishedPosts as published_posts_count')
             ->orderBy('blog_category_name')
-            ->limit(100)
+            ->limit(self::MAX_PUBLIC_CATEGORIES)
             ->get();
     }
 

@@ -22,7 +22,7 @@ use Throwable;
  * fallbacks (e.g. CACHE_STORE=array in tests) invalidate too — same strategy as
  * {@see PostPublicFeedCache}.
  */
-final class BlogCategoryPublicFeedCache implements BlogCategoryPublicFeedCachePort
+final readonly class BlogCategoryPublicFeedCache implements BlogCategoryPublicFeedCachePort
 {
     public const string PUBLIC_TAG = 'blog_categories_public';
 
@@ -42,12 +42,17 @@ final class BlogCategoryPublicFeedCache implements BlogCategoryPublicFeedCachePo
         $versionedKey = "{$key}.v{$version}";
         $ttl = now()->addMinutes(self::TTL_MINUTES);
 
+        // The port accepts any `callable` so the Domain stays free of a concrete
+        // type; Laravel's `Repository::remember()` type-hints `Closure`. Promote
+        // once here, at the adapter boundary, via first-class callable syntax.
+        $closure = $callback(...);
+
         try {
-            return Cache::tags([self::PUBLIC_TAG])->remember($versionedKey, $ttl, $callback);
+            return Cache::tags([self::PUBLIC_TAG])->remember($versionedKey, $ttl, $closure);
         } catch (Throwable) {
             // Array/file stores reject tags — the version bump on flush still
             // invalidates the plain key.
-            return Cache::remember($versionedKey, $ttl, $callback);
+            return Cache::remember($versionedKey, $ttl, $closure);
         }
     }
 
