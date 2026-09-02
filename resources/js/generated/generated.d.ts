@@ -138,6 +138,41 @@ declare namespace Modules {
             }
         }
     }
+    namespace Availability {
+        namespace Application {
+            namespace DTOs {
+                export type AvailabilityExceptionData = {
+                    date: string;
+                    isAvailable: boolean;
+                    startTime: string | null;
+                    endTime: string | null;
+                    reason: string | null;
+                };
+                export type AvailabilityExceptionFilterData = {
+                    availability: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type AvailabilityRuleData = {
+                    dayOfWeek: number;
+                    startTime: string;
+                    endTime: string;
+                    isAvailable: boolean;
+                };
+                export type AvailabilityRuleFilterData = {
+                    day_of_week: number | null;
+                    availability: string | null;
+                    status: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace ValueObjects {
+                export type ExceptionSource = 'manual' | 'holiday';
+            }
+        }
+    }
     namespace Backups {
         namespace Application {
             namespace DTOs {
@@ -624,6 +659,44 @@ declare namespace Modules {
                     readonly uuid: string;
                     readonly subject: string;
                 };
+            }
+        }
+    }
+    namespace Cvs {
+        namespace Application {
+            namespace DTOs {
+                export type CvData = {
+                    readonly uuid: string;
+                    readonly title: string;
+                    readonly niche: Modules.Cvs.Domain.Enums.CvNiche;
+                    readonly is_primary: boolean;
+                    readonly file_type: Modules.Cvs.Domain.Enums.CvFileType;
+                    readonly original_filename: string;
+                    readonly owner_name: string | null;
+                    readonly download_url: string | null;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type CvFilterData = {
+                    niche: Modules.Cvs.Domain.Enums.CvNiche | null;
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type UploadCvData = {
+                    title: string;
+                    niche: Modules.Cvs.Domain.Enums.CvNiche;
+                    is_primary: boolean;
+                    file: undefined | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type CvFileType = 'pdf' | 'md';
+                export type CvNiche = 'fullstack' | 'other';
             }
         }
     }

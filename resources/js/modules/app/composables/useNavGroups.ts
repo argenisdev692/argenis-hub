@@ -16,6 +16,7 @@ import {
     ScrollText,
     Share2,
     ShieldCheck,
+    Tags,
     Users,
     UsersRound,
 } from '@lucide/vue';
@@ -24,6 +25,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
 import { index as activityLogIndex } from '@/routes/activity-logs';
 import { index as backupsIndex } from '@/routes/backups';
+import { index as blogCategoriesIndex } from '@/routes/blog-categories';
 import { index as campaignsIndex } from '@/routes/campaigns';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
@@ -160,6 +162,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: portfoliosIndex(),
                     icon: GalleryVerticalEnd,
                     permission: 'VIEW_ANY_PORTFOLIOS',
+                },
+                {
+                    title: 'Blog categories',
+                    href: blogCategoriesIndex(),
+                    icon: Tags,
+                    permission: 'VIEW_ANY_BLOG_CATEGORIES',
                 },
                 {
                     title: 'Posts',

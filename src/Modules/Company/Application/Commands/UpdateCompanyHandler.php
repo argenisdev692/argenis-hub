@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Company\Application\Commands;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Company\Application\DTOs\CompanyProfileData;
 use Modules\Company\Application\DTOs\UpdateCompanyData;
 use Modules\Company\Domain\Enums\SocialChannel;
+use Modules\Company\Domain\Events\CompanyCountryChanged;
 use Modules\Company\Domain\Ports\CompanyLogoStoragePort;
 use Modules\Company\Domain\Ports\CompanyRepositoryPort;
 use Modules\Company\Domain\ValueObjects\GeoCoordinates;
@@ -30,14 +32,24 @@ final readonly class UpdateCompanyHandler
     public function __construct(
         private CompanyRepositoryPort $companies,
         private CompanyLogoStoragePort $logos,
+        private Dispatcher $events,
     ) {}
 
     #[\NoDiscard('handle() returns the updated company profile.')]
     public function handle(UpdateCompanyData $data): CompanyProfileData
     {
-        $updated = $this->companies->current()
+        $current = $this->companies->current();
+
+        $updated = $current
             ->with($this->changesFrom($data))
             |> $this->companies->save(...);
+
+        // Only a real relocation is announced — re-saving the same code is not a
+        // country change, and downstream consumers (Availability rebuilds the
+        // national holidays it materialised) must not be woken by a no-op edit.
+        if ($current->countryCode !== $updated->countryCode) {
+            $this->events->dispatch(new CompanyCountryChanged($current->countryCode, $updated->countryCode));
+        }
 
         return CompanyProfileData::fromSnapshot($updated, $this->logos->urls($updated->logos));
     }

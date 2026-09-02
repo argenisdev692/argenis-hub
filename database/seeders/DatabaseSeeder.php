@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             ClientSeeder::class,
             PortfolioSeeder::class,
             BlogCategorySeeder::class,
+            AvailabilitySeeder::class,
         ]);
     }
 }

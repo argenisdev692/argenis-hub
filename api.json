@@ -391,6 +391,162 @@
                 }
             }
         },
+        "/availability-exceptions": {
+            "get": {
+                "operationId": "availability-exceptions.index",
+                "description": "Returns a paginated list of date exceptions. `per_page` is capped at 100 to\nbound resource consumption (OWASP API4).",
+                "summary": "List availability exceptions",
+                "tags": [
+                    "AvailabilityExceptionApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/availability-exceptions/{uuid}": {
+            "get": {
+                "operationId": "availability-exceptions.show",
+                "description": "Returns a single date exception by UUID.",
+                "summary": "Show an availability exception",
+                "tags": [
+                    "AvailabilityExceptionApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AvailabilityExceptionEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/availability-rules": {
+            "get": {
+                "operationId": "availability-rules.index",
+                "description": "Returns a paginated list of weekly availability rules. `per_page` is capped\nat 100 to bound resource consumption (OWASP API4).",
+                "summary": "List availability rules",
+                "tags": [
+                    "AvailabilityRuleApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/availability-rules/{uuid}": {
+            "get": {
+                "operationId": "availability-rules.show",
+                "description": "Returns a single weekly availability rule by UUID.",
+                "summary": "Show an availability rule",
+                "tags": [
+                    "AvailabilityRuleApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AvailabilityRuleEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/blog-categories": {
             "get": {
                 "operationId": "blog-categories.index",
@@ -757,6 +913,104 @@
                                     },
                                     "required": [
                                         "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cvs": {
+            "get": {
+                "operationId": "cvs.index",
+                "description": "Returns a paginated, filterable list of the authenticated user's own CVs.\n`per_page` is capped at 100 to bound resource consumption (OWASP API4).",
+                "summary": "List CVs",
+                "tags": [
+                    "CvApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/DataCollection"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/PaginatedDataCollection"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/CursorPaginatedDataCollection"
+                                        },
+                                        {
+                                            "type": "object"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/LazyCollection"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cvs/{uuid}": {
+            "get": {
+                "operationId": "cvs.show",
+                "description": "Returns one of the authenticated user's own CVs by UUID, including a\nshort-lived signed download URL. A CV owned by anyone else is a 404.",
+                "summary": "Show a CV",
+                "tags": [
+                    "CvApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CvData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
                                     ]
                                 }
                             }
@@ -2275,6 +2529,26 @@
                 ],
                 "title": "AuthenticatedUserData"
             },
+            "AvailabilityExceptionEloquentModel": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 0,
+                "maxItems": 0,
+                "additionalItems": false,
+                "title": "AvailabilityExceptionEloquentModel"
+            },
+            "AvailabilityRuleEloquentModel": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "minItems": 0,
+                "maxItems": 0,
+                "additionalItems": false,
+                "title": "AvailabilityRuleEloquentModel"
+            },
             "BlogCategoryEloquentModel": {
                 "type": "object",
                 "properties": {
@@ -2833,6 +3107,78 @@
                 ],
                 "title": "ContentLanguage"
             },
+            "CursorPaginatedDataCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "CursorPaginatedDataCollection"
+            },
+            "CvData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "niche": {
+                        "type": "string"
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    },
+                    "file_type": {
+                        "type": "string"
+                    },
+                    "original_filename": {
+                        "type": "string"
+                    },
+                    "owner_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "download_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "title",
+                    "niche",
+                    "is_primary",
+                    "file_type",
+                    "original_filename"
+                ],
+                "title": "CvData"
+            },
+            "DataCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "DataCollection"
+            },
             "FunnelStage": {
                 "type": "string",
                 "description": "TOFU/MOFU/BOFU classification the topic-ideation agent assigns to every candidate topic. Drives which CTA rules the content-generation agent applies \u2014 it is not cosmetic: TOFU never gets a hard-sell CTA, BOFU never gets a soft \"follow for more\".\n",
@@ -3126,6 +3472,11 @@
                     "funnel_stage"
                 ],
                 "title": "GenerateSocialMediaContentData"
+            },
+            "LazyCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "LazyCollection"
             },
             "LengthAwarePaginator": {
                 "type": "object",

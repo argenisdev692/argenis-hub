@@ -31,6 +31,7 @@ use Modules\Blog\Infrastructure\Persistence\Eloquent\Models\BlogCategoryEloquent
 use Modules\Campaigns\Infrastructure\Persistence\Eloquent\Models\CampaignEloquentModel;
 use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
 use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSupportEloquentModel;
+use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioEloquentModel;
 use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostAiGenerationEloquentModel;
 use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostEloquentModel;
@@ -98,6 +99,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $social_media_contents_count
  * @property-read Collection<int, CampaignEloquentModel> $campaigns
  * @property-read int|null $campaigns_count
+ * @property-read Collection<int, CvEloquentModel> $cvs
+ * @property-read int|null $cvs_count
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read Collection<int, OneTimePassword> $oneTimePasswords
@@ -110,7 +113,6 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $roles_count
  * @property-read Collection<int, Permission> $teams
  * @property-read int|null $teams_count
- *
  * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newQuery()
@@ -124,10 +126,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutRole($roles, ?string $guard = null)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutTeam($teams)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutTrashed()
- *
  * @property-read Collection<int, PersonalAccessToken> $tokens
  * @property-read int|null $tokens_count
- *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAddress($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAddress2($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereCity($value)
@@ -162,7 +162,6 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUsername($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUuid($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereZipCode($value)
- *
  * @mixin \Eloquent
  */
 #[Fillable([
@@ -360,6 +359,21 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function campaigns(): HasMany
     {
         return $this->hasMany(CampaignEloquentModel::class, 'created_by');
+    }
+
+    /**
+     * The CVs this user uploaded.
+     *
+     * Inverse of `CvEloquentModel::user()` — declared here because `cvs.user_id`
+     * is a foreign key and every FK in this project carries both sides of the
+     * relation. `ON DELETE CASCADE`: a CV is personal data with no meaning once
+     * its owner is gone, so this collection is ownership, not authorship.
+     *
+     * @return HasMany<CvEloquentModel, $this>
+     */
+    public function cvs(): HasMany
+    {
+        return $this->hasMany(CvEloquentModel::class);
     }
 
     /**

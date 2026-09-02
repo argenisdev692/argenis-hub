@@ -6,12 +6,14 @@ use App\Providers\TypeScriptTransformerServiceProvider;
 use Modules\ActivityLog\Providers\ActivityLogServiceProvider;
 use Modules\Auth\Providers\AuthServiceProvider;
 use Modules\Authorization\Providers\AuthorizationServiceProvider;
+use Modules\Availability\Providers\AvailabilityServiceProvider;
 use Modules\Backups\Providers\BackupsServiceProvider;
 use Modules\Blog\Providers\BlogServiceProvider;
 use Modules\Campaigns\Providers\CampaignServiceProvider;
 use Modules\Clients\Providers\ClientsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
 use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
+use Modules\Cvs\Providers\CvsServiceProvider;
 use Modules\Portfolios\Providers\PortfoliosServiceProvider;
 use Modules\Post\Providers\PostServiceProvider;
 use Modules\Services\Providers\ServicesServiceProvider;
@@ -30,6 +32,8 @@ return [
     // Roles/permissions back every other module's `permission:*` middleware.
     AuthorizationServiceProvider::class,
     CompanyServiceProvider::class,
+    // Listens for CompanyCountryChanged, so it must boot after the Company module.
+    AvailabilityServiceProvider::class,
     ServicesServiceProvider::class,
     ClientsServiceProvider::class,
     ContactSupportServiceProvider::class,
@@ -38,6 +42,7 @@ return [
     PostServiceProvider::class,
     SocialMediaServiceProvider::class,
     CampaignServiceProvider::class,
+    CvsServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
 ];
