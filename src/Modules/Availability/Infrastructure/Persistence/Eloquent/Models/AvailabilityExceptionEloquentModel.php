@@ -59,12 +59,20 @@ final class AvailabilityExceptionEloquentModel extends Model
      * Reusable list filter (BACKEND-PHP §4.1). `suspended` status is applied via
      * `onlyTrashed()` at the repository; the date window narrows to a period.
      *
+     * `search` matches `reason`, the one free-text column on this table. Holiday
+     * rows carry the holiday's own name in it, so a single box finds both a
+     * manual note and a materialised national holiday.
+     *
      * @param  Builder<AvailabilityExceptionEloquentModel>  $query
      * @return Builder<AvailabilityExceptionEloquentModel>
      */
     public function scopeApplyFilters(Builder $query, AvailabilityExceptionFilterData $filters): Builder
     {
         return $query
+            ->when(
+                $filters->search !== null && $filters->search !== '',
+                fn ($q) => $q->where('reason', 'like', '%'.$filters->search.'%'),
+            )
             ->when($filters->availability === 'open', fn ($q) => $q->where('is_available', true))
             ->when($filters->availability === 'closed', fn ($q) => $q->where('is_available', false))
             ->when($filters->dateFrom !== null, fn ($q) => $q->whereDate('date', '>=', $filters->dateFrom))

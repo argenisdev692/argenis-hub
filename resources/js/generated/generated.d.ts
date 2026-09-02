@@ -149,6 +149,7 @@ declare namespace Modules {
                     reason: string | null;
                 };
                 export type AvailabilityExceptionFilterData = {
+                    search: string | null;
                     availability: string | null;
                     status: string | null;
                     date_from: string | null;

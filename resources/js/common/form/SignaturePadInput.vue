@@ -6,6 +6,28 @@ import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/**
+ * A drawn signature, modelled as an `image/png` data URL.
+ *
+ * ## Accessibility caveat — read before making a signature required
+ *
+ * The pad is a pointer-only control: there is no keyboard path to producing a
+ * stroke, so a form that accepts nothing else fails WCAG 2.1.1. Where a
+ * signature is mandatory, the calling form MUST offer a non-pointer
+ * alternative (a typed-name attestation, or an uploaded image). The canvas
+ * carries an accessible name and the Clear button is reachable, but naming a
+ * control is not the same as making it operable.
+ */
+
+/**
+ * The wrapper is the root element, but the fallthrough attrs belong on the
+ * canvas — `AppField` hands down `id`, `name` and the `aria-*` wiring through
+ * `v-bind="control"`, and the `<label for>` has to resolve to the control the
+ * user actually operates. Without this, Vue would ALSO apply them to the root
+ * `<div>`, putting the same `id` on two elements in one document.
+ */
+defineOptions({ inheritAttrs: false });
+
 const {
     height = 180,
     penColor,
@@ -30,6 +52,35 @@ const pad = ref<SignaturePad | null>(null);
 const isEmpty = ref(true);
 
 /**
+ * The last value this component wrote to the model.
+ *
+ * The model watcher repaints the canvas, and `toDataURL()` output flowing back
+ * in would repaint over the strokes that produced it — dropping the internal
+ * stroke data in the process, because `fromDataURL` does not rebuild it. This
+ * lets the watcher tell an external assignment from its own echo.
+ */
+let selfEmitted: string | null = null;
+
+/**
+ * The data URL currently painted on the canvas, when it did not come from
+ * strokes drawn here.
+ *
+ * `fromDataURL` draws the image without populating the internal stroke data
+ * (documented upstream), so `toData()`/`fromData()` cannot carry a hydrated
+ * signature across a resize. Keeping the URL gives `resizeCanvas` something to
+ * replay in that case.
+ */
+const paintedUrl = ref<string | null>(null);
+
+/**
+ * A canvas backing store is in device pixels, so on a HiDPI screen it must be
+ * scaled up or every stroke lands blurry and offset from the cursor.
+ */
+function canvasRatio(): number {
+    return Math.max(window.devicePixelRatio || 1, 1);
+}
+
+/**
  * Reads the live token value so the stroke follows the theme instead of being
  * baked to a hex — the whole pad is repainted on theme change by the caller
  * remounting, but a fresh read here keeps the first paint correct.
@@ -46,10 +97,6 @@ function resolvePenColor(): string {
     return foreground || '#000000';
 }
 
-/**
- * A canvas backing store is in device pixels, so on a HiDPI screen it must be
- * scaled up or every stroke lands blurry and offset from the cursor.
- */
 function resizeCanvas(): void {
     const canvas = canvasRef.value;
     const wrapper = wrapperRef.value;
@@ -58,8 +105,9 @@ function resizeCanvas(): void {
         return;
     }
 
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const ratio = canvasRatio();
     const data = pad.value?.toData();
+    const hydrated = paintedUrl.value;
 
     canvas.width = wrapper.clientWidth * ratio;
     canvas.height = height * ratio;
@@ -70,7 +118,37 @@ function resizeCanvas(): void {
     // Resizing clears the surface, so the strokes go back on afterwards.
     if (data?.length) {
         pad.value?.fromData(data);
+    } else if (hydrated) {
+        void pad.value?.fromDataURL(hydrated, { ratio });
     }
+}
+
+/**
+ * Renders a model value the component did not produce itself — a form default,
+ * or a `form.reset()` back to a stored signature.
+ */
+async function applyModel(value: string | null): Promise<void> {
+    if (!pad.value) {
+        return;
+    }
+
+    pad.value.clear();
+
+    if (value === null) {
+        paintedUrl.value = null;
+        isEmpty.value = true;
+
+        return;
+    }
+
+    await pad.value.fromDataURL(value, { ratio: canvasRatio() });
+    paintedUrl.value = value;
+    isEmpty.value = false;
+}
+
+function commit(value: string | null): void {
+    selfEmitted = value;
+    model.value = value;
 }
 
 onMounted(() => {
@@ -87,14 +165,18 @@ onMounted(() => {
 
     pad.value.addEventListener('endStroke', () => {
         isEmpty.value = pad.value?.isEmpty() ?? true;
-        model.value = isEmpty.value
-            ? null
-            : (pad.value?.toDataURL('image/png') ?? null);
+        // Backed by real stroke data now, so a resize can replay it.
+        paintedUrl.value = null;
+        commit(
+            isEmpty.value ? null : (pad.value?.toDataURL('image/png') ?? null),
+        );
     });
 
     if (disabled) {
         pad.value.off();
     }
+
+    void applyModel(model.value);
 });
 
 onBeforeUnmount(() => {
@@ -115,18 +197,20 @@ watch(
     },
 );
 
-// An external reset (form.reset()) has to wipe the canvas too.
+// An external assignment — a form default, or a reset — has to reach the canvas.
 watch(model, (value) => {
-    if (value === null && !(pad.value?.isEmpty() ?? true)) {
-        pad.value?.clear();
-        isEmpty.value = true;
+    if (value === selfEmitted) {
+        return;
     }
+
+    void applyModel(value);
 });
 
 function clear(): void {
     pad.value?.clear();
+    paintedUrl.value = null;
     isEmpty.value = true;
-    model.value = null;
+    commit(null);
 }
 </script>
 
@@ -146,7 +230,7 @@ function clear(): void {
                 ref="canvasRef"
                 class="touch-none rounded-md"
                 aria-label="Signature drawing area"
-                role="img"
+                :aria-disabled="disabled"
                 v-bind="$attrs"
             />
             <p
@@ -165,7 +249,7 @@ function clear(): void {
                 :disabled="disabled || isEmpty"
                 @click="clear"
             >
-                <Eraser class="size-4" />
+                <Eraser class="size-4" aria-hidden="true" />
                 {{ clearLabel }}
             </Button>
         </div>

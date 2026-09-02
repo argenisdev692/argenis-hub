@@ -2530,23 +2530,125 @@
                 "title": "AuthenticatedUserData"
             },
             "AvailabilityExceptionEloquentModel": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "is_available": {
+                        "type": "boolean"
+                    },
+                    "start_time": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "end_time": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/ExceptionSource"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
                 },
-                "minItems": 0,
-                "maxItems": 0,
-                "additionalItems": false,
+                "required": [
+                    "uuid",
+                    "date",
+                    "is_available",
+                    "start_time",
+                    "end_time",
+                    "reason",
+                    "source",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
                 "title": "AvailabilityExceptionEloquentModel"
             },
             "AvailabilityRuleEloquentModel": {
-                "type": "array",
-                "items": {
-                    "type": "string"
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "day_of_week": {
+                        "type": "integer"
+                    },
+                    "start_time": {
+                        "type": "string"
+                    },
+                    "end_time": {
+                        "type": "string"
+                    },
+                    "is_available": {
+                        "type": "boolean"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
                 },
-                "minItems": 0,
-                "maxItems": 0,
-                "additionalItems": false,
+                "required": [
+                    "uuid",
+                    "day_of_week",
+                    "start_time",
+                    "end_time",
+                    "is_available",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
                 "title": "AvailabilityRuleEloquentModel"
             },
             "BlogCategoryEloquentModel": {
@@ -3178,6 +3280,15 @@
                 "type": "object",
                 "additionalProperties": {},
                 "title": "DataCollection"
+            },
+            "ExceptionSource": {
+                "type": "string",
+                "description": "Provenance of a date exception. A `Manual` row is a user-created override and is never touched by the holiday sync; a `Holiday` row is system-materialised from the country provider and is purged/rebuilt on a country change or the yearly sync. This is the single source of truth for the `source` column.\n",
+                "enum": [
+                    "manual",
+                    "holiday"
+                ],
+                "title": "ExceptionSource"
             },
             "FunnelStage": {
                 "type": "string",

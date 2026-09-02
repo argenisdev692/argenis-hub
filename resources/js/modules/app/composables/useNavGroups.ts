@@ -2,6 +2,8 @@ import {
     Banknote,
     BotMessageSquare,
     Briefcase,
+    CalendarClock,
+    CalendarCog,
     CalendarDays,
     ChartLine,
     DatabaseBackup,
@@ -24,11 +26,14 @@ import type { LucideIcon } from '@lucide/vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
 import { index as activityLogIndex } from '@/routes/activity-logs';
+import { index as availabilityExceptionsIndex } from '@/routes/availability-exceptions';
+import { index as availabilityRulesIndex } from '@/routes/availability-rules';
 import { index as backupsIndex } from '@/routes/backups';
 import { index as blogCategoriesIndex } from '@/routes/blog-categories';
 import { index as campaignsIndex } from '@/routes/campaigns';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
+import { index as cvsIndex } from '@/routes/cvs';
 import { index as permissionsIndex } from '@/routes/permissions';
 import { index as portfoliosIndex } from '@/routes/portfolios';
 import { index as postsIndex } from '@/routes/posts';
@@ -101,6 +106,24 @@ export function useNavGroups(): readonly NavGroup[] {
             ],
         },
         {
+            id: 'scheduling',
+            label: 'Scheduling',
+            items: [
+                {
+                    title: 'Availability rules',
+                    href: availabilityRulesIndex(),
+                    icon: CalendarClock,
+                    permission: 'VIEW_ANY_AVAILABILITY_RULES',
+                },
+                {
+                    title: 'Date exceptions',
+                    href: availabilityExceptionsIndex(),
+                    icon: CalendarCog,
+                    permission: 'VIEW_ANY_AVAILABILITY_EXCEPTIONS',
+                },
+            ],
+        },
+        {
             id: 'revenue',
             label: 'Revenue',
             items: [
@@ -142,9 +165,9 @@ export function useNavGroups(): readonly NavGroup[] {
                 },
                 {
                     title: 'CVs',
-                    href: dashboard(),
+                    href: cvsIndex(),
                     icon: FileText,
-                    comingSoon: true,
+                    permission: 'VIEW_ANY_CVS',
                 },
             ],
         },

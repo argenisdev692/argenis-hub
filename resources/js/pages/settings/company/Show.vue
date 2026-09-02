@@ -27,6 +27,7 @@ import {
     IDENTITY_FIELDS,
     SOCIAL_FIELDS,
 } from '@/modules/company/helpers/companyFields';
+import { formatDateTime } from '@/modules/company/helpers/companyPresentation';
 import type { CompanyProfile } from '@/modules/company/types';
 import {
     destroy as destroyCompany,
@@ -92,6 +93,8 @@ const logosOpen = dialogModel('logos');
  * opens to check a number, and a slow cascade is a tax at that frequency.
  */
 const sectionCascade = staggerContainer(MOTION_STAGGER_TIGHT);
+
+const lastUpdated = computed(() => formatDateTime(company.updated_at));
 
 const identity = computed(() => identityDetails(company));
 const contact = computed(() => contactDetails(company));
@@ -183,8 +186,11 @@ const fiscal = computed(() => fiscalDetails(company));
             </CompanySectionCard>
         </m.div>
 
-        <p v-if="company.updated_at" class="text-xs text-muted-foreground">
-            Last updated {{ company.updated_at }}
+        <p v-if="lastUpdated" class="text-xs text-muted-foreground">
+            Last updated
+            <time :datetime="company.updated_at ?? undefined">
+                {{ lastUpdated }}
+            </time>
         </p>
 
         <PermissionGuard permission="DELETE_COMPANY_DATA">

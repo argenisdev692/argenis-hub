@@ -173,6 +173,34 @@ final class AvailabilityExceptionManagementTest extends TestCase
         }
     }
 
+    public function test_search_narrows_the_list_to_matching_reasons(): void
+    {
+        AvailabilityExceptionEloquentModel::factory()->on('2026-05-20')->create(['reason' => 'Christmas Day']);
+        AvailabilityExceptionEloquentModel::factory()->on('2026-05-21')->create(['reason' => 'Team offsite']);
+
+        $response = $this->actingAs($this->superAdmin())
+            ->getJson('/availability-exceptions?search=christ')
+            ->assertOk();
+
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame('Christmas Day', $response->json('data.0.reason'));
+    }
+
+    /**
+     * A term the export must honour too: the download and the on-screen list read
+     * the SAME {@see AvailabilityExceptionFilterData}, so a filtered export can
+     * never cover a different set than the table it was triggered from.
+     */
+    public function test_search_also_narrows_the_export(): void
+    {
+        AvailabilityExceptionEloquentModel::factory()->on('2026-05-20')->create(['reason' => 'Christmas Day']);
+        AvailabilityExceptionEloquentModel::factory()->on('2026-05-21')->create(['reason' => 'Team offsite']);
+
+        $this->actingAs($this->superAdmin())
+            ->get('/availability-exceptions/export?format=csv&search=christ')
+            ->assertOk();
+    }
+
     public function test_super_admin_can_export_exceptions_as_csv(): void
     {
         AvailabilityExceptionEloquentModel::factory()->on('2026-05-20')->create();

@@ -13,7 +13,17 @@ const {
     hint,
     class: className,
 } = defineProps<{
-    /** MIME types the picker offers and the client re-checks, e.g. `['image/png','application/pdf']`. */
+    /**
+     * What the picker offers and the client re-checks — the same vocabulary the
+     * HTML `accept` attribute uses, so either a MIME type
+     * (`'application/pdf'`) or a dot-prefixed extension (`'.md'`). A file
+     * matching any entry is accepted.
+     *
+     * Extensions are not decoration: the OS has no MIME mapping for several
+     * plain-text formats, so a `.md` picked on Windows arrives with an empty
+     * `File.type` and a MIME-only list would reject it. e.g.
+     * `['application/pdf', '.md']`.
+     */
     accept?: string[];
     maxSizeMb?: number;
     multiple?: boolean;
@@ -46,6 +56,17 @@ function formatSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Matches `accept` the way the HTML attribute does: MIME type or extension. */
+function isAccepted(file: File): boolean {
+    const name = file.name.toLowerCase();
+
+    return accept.some((entry) =>
+        entry.startsWith('.')
+            ? name.endsWith(entry.toLowerCase())
+            : entry === file.type,
+    );
+}
+
 /**
  * Client-side checks are a UX affordance only — the browser can be bypassed
  * trivially, so the server MUST re-validate mime, size and extension. See the
@@ -56,7 +77,7 @@ function validate(file: File): string | null {
         return `${file.name} is ${formatSize(file.size)} — the limit is ${maxSizeMb} MB.`;
     }
 
-    if (accept.length && !accept.includes(file.type)) {
+    if (accept.length && !isAccepted(file)) {
         return `${file.name} is not an accepted file type.`;
     }
 
