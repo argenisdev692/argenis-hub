@@ -83,7 +83,9 @@
     "codebase-memory-mcp": {
       "type": "stdio",
       "command": "codebase-memory-mcp",
-      "args": []
+      "args": [
+        "--ui=true"
+      ]
     },
     "context7": {
       "type": "stdio",

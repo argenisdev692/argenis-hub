@@ -14,11 +14,14 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Modules\Clients\Application\DTOs\ClientFilterData;
 use Modules\Clients\Domain\Enums\ClientStatus;
+use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
+use Modules\Products\Infrastructure\Persistence\Eloquent\Models\ProductEloquentModel;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
@@ -46,6 +49,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  * @property-read User $user
+ * @property-read Collection<int, InvoiceEloquentModel> $invoices
+ * @property-read Collection<int, ProductEloquentModel> $products
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static> applyFilters(ClientFilterData $filters)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ClientEloquentModel newModelQuery()
@@ -131,6 +136,36 @@ final class ClientEloquentModel extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The invoices issued to this client.
+     *
+     * Inverse of `InvoiceEloquentModel::client()` — declared because
+     * `invoices.client_id` is a foreign key and every FK in this project
+     * carries both sides of the relation. The FK is `restrictOnDelete`, so a
+     * client with invoices cannot be hard-deleted out from under them.
+     *
+     * @return HasMany<InvoiceEloquentModel, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(InvoiceEloquentModel::class, 'client_id');
+    }
+
+    /**
+     * The catalog products commissioned by this client (an in-company course,
+     * a video series produced for them).
+     *
+     * Inverse of `ProductEloquentModel::client()` — declared because
+     * `products.client_id` is a foreign key and every FK in this project
+     * carries both sides of the relation.
+     *
+     * @return HasMany<ProductEloquentModel, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(ProductEloquentModel::class, 'client_id');
     }
 
     /**

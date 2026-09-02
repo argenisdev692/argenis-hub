@@ -701,6 +701,189 @@ declare namespace Modules {
             }
         }
     }
+    namespace Invoices {
+        namespace Application {
+            namespace DTOs {
+                export type InvoiceData = {
+                    client_uuid: string;
+                    invoice_number: string;
+                    issue_date: string;
+                    due_date: string;
+                    items: Modules.Invoices.Application.DTOs.InvoiceItemData[];
+                    product_uuid: string | null;
+                    currency: string;
+                    tax_mode: string;
+                    tax_rate: number | null;
+                    tax_label: string;
+                    is_paid: boolean;
+                    payment_method: Modules.PaymentAccounts.Domain.Enums.PaymentMethod | null;
+                    payment_account_uuid: string | null;
+                    transfer_number: string | null;
+                    payment_date: string | null;
+                    amount_received: number | null;
+                    notes: string | null;
+                    additional_notes: string | null;
+                };
+                export type InvoiceDetailData = {
+                    readonly uuid: string;
+                    readonly invoice_number: string;
+                    readonly sequence: number;
+                    readonly year: number;
+                    readonly issue_date: string;
+                    readonly due_date: string;
+                    readonly currency: string;
+                    readonly tax_mode: string;
+                    readonly tax_rate: number | null;
+                    readonly tax_label: string;
+                    readonly subtotal: number;
+                    readonly tax_amount: number;
+                    readonly total: number;
+                    readonly is_paid: boolean;
+                    readonly payment_method: Modules.PaymentAccounts.Domain.Enums.PaymentMethod | null;
+                    readonly payment_account_uuid: string | null;
+                    readonly payment_account_label: string | null;
+                    readonly payment_account_masked: string | null;
+                    readonly transfer_number: string | null;
+                    readonly payment_date: string | null;
+                    readonly amount_received: number | null;
+                    readonly notes: string | null;
+                    readonly additional_notes: string | null;
+                    readonly client_uuid: string | null;
+                    readonly client_name: string | null;
+                    readonly product_uuid: string | null;
+                    readonly product_title: string | null;
+                    readonly items: Modules.Invoices.Application.DTOs.InvoiceItemDetailData[];
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type InvoiceFilterData = {
+                    year: number | null;
+                    client_uuid: string | null;
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type InvoiceItemData = {
+                    title: string;
+                    quantity: number;
+                    unit_price: number;
+                    kind: Modules.Invoices.Domain.Enums.InvoiceItemKind;
+                    unit: Shared.Domain.Enums.BillingUnit;
+                    service_uuid: string | null;
+                    product_uuid: string | null;
+                    description: string | null;
+                    sort_order: number;
+                };
+                export type InvoiceItemDetailData = {
+                    readonly title: string;
+                    readonly description: string | null;
+                    readonly kind: Modules.Invoices.Domain.Enums.InvoiceItemKind;
+                    readonly unit: Shared.Domain.Enums.BillingUnit;
+                    readonly quantity: number;
+                    readonly unit_price: number;
+                    readonly amount: number;
+                    readonly sort_order: number;
+                    readonly service_uuid: string | null;
+                    readonly product_uuid: string | null;
+                };
+                export type InvoiceListItemData = {
+                    readonly uuid: string;
+                    readonly invoice_number: string;
+                    readonly sequence: number;
+                    readonly year: number;
+                    readonly issue_date: string;
+                    readonly due_date: string;
+                    readonly currency: string;
+                    readonly subtotal: number;
+                    readonly tax_amount: number;
+                    readonly total: number;
+                    readonly is_paid: boolean;
+                    readonly payment_method: Modules.PaymentAccounts.Domain.Enums.PaymentMethod | null;
+                    readonly client_uuid: string | null;
+                    readonly client_name: string | null;
+                    readonly product_title: string | null;
+                    readonly created_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type InvoiceItemKind =
+                    'SERVICE' | 'COURSE' | 'VIDEO' | 'CUSTOM';
+            }
+        }
+    }
+    namespace PaymentAccounts {
+        namespace Application {
+            namespace DTOs {
+                export type PaymentAccountData = {
+                    readonly uuid: string;
+                    readonly method: Modules.PaymentAccounts.Domain.Enums.PaymentMethod;
+                    readonly currency: string | null;
+                    readonly label: string;
+                    readonly beneficiary: string | null;
+                    readonly bank_name: string | null;
+                    readonly iban: string | null;
+                    readonly bic: string | null;
+                    readonly account_number: string | null;
+                    readonly routing_number: string | null;
+                    readonly holder_email: string | null;
+                    readonly holder_phone: string | null;
+                    readonly instructions: string | null;
+                    readonly is_default: boolean;
+                    readonly is_active: boolean;
+                    readonly sort_order: number;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type PaymentAccountFilterData = {
+                    readonly search: string | null;
+                    readonly status: string | null;
+                    readonly method: Modules.PaymentAccounts.Domain.Enums.PaymentMethod | null;
+                    readonly currency: string | null;
+                    readonly dateFrom: string | null;
+                    readonly dateTo: string | null;
+                    readonly sortField: string;
+                    readonly sortOrder: number;
+                    readonly page: number;
+                    readonly perPage: number;
+                };
+                export type StorePaymentAccountData = {
+                    method: Modules.PaymentAccounts.Domain.Enums.PaymentMethod;
+                    label: string;
+                    currency: string | null;
+                    beneficiary: string | null;
+                    bank_name: string | null;
+                    iban: string | null;
+                    bic: string | null;
+                    account_number: string | null;
+                    routing_number: string | null;
+                    holder_email: string | null;
+                    holder_phone: string | null;
+                    instructions: string | null;
+                    is_default: boolean;
+                    is_active: boolean;
+                    sort_order: number;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type PaymentMethod =
+                    | 'REMITLY'
+                    | 'BANK_TRANSFER'
+                    | 'WISE'
+                    | 'PAYPAL'
+                    | 'STRIPE'
+                    | 'CASH'
+                    | 'OTHER';
+            }
+        }
+    }
     namespace Portfolios {
         namespace Application {
             namespace DTOs {
@@ -963,6 +1146,73 @@ declare namespace Modules {
             }
         }
     }
+    namespace Products {
+        namespace Application {
+            namespace DTOs {
+                export type ProductData = {
+                    readonly uuid: string;
+                    readonly type: Modules.Products.Domain.Enums.ProductType;
+                    readonly title: string;
+                    readonly slug: string;
+                    readonly description: string | null;
+                    readonly price: number;
+                    readonly currency: string;
+                    readonly default_unit: Shared.Domain.Enums.BillingUnit;
+                    readonly status: Modules.Products.Domain.Enums.ProductStatus;
+                    readonly level: string;
+                    readonly language: string;
+                    readonly client_uuid: string | null;
+                    readonly client_name: string | null;
+                    readonly start_date: string | null;
+                    readonly end_date: string | null;
+                    readonly total_hours: number | null;
+                    readonly total_sessions: number | null;
+                    readonly modality: string | null;
+                    readonly notes: string | null;
+                    readonly created_at: string | null;
+                    readonly updated_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type ProductFilterData = {
+                    readonly search: string | null;
+                    readonly status: string | null;
+                    readonly type: Modules.Products.Domain.Enums.ProductType | null;
+                    readonly productStatus: Modules.Products.Domain.Enums.ProductStatus | null;
+                    readonly dateFrom: string | null;
+                    readonly dateTo: string | null;
+                    readonly sortField: string;
+                    readonly sortOrder: number;
+                    readonly page: number;
+                    readonly perPage: number;
+                };
+                export type StoreProductData = {
+                    type: Modules.Products.Domain.Enums.ProductType;
+                    title: string;
+                    price: number;
+                    description: string | null;
+                    currency: string;
+                    default_unit: Shared.Domain.Enums.BillingUnit;
+                    status: Modules.Products.Domain.Enums.ProductStatus;
+                    level: string;
+                    language: string;
+                    client_uuid: string | null;
+                    start_date: string | null;
+                    end_date: string | null;
+                    total_hours: number | null;
+                    total_sessions: number | null;
+                    modality: string | null;
+                    notes: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type ProductStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+                export type ProductType =
+                    'COURSE' | 'VIDEO_COURSE' | 'WORKSHOP' | 'MENTORING';
+            }
+        }
+    }
     namespace Services {
         namespace Application {
             namespace DTOs {
@@ -1206,6 +1456,12 @@ declare namespace Shared {
                 date_from: string | null;
                 date_to: string | null;
             };
+        }
+    }
+    namespace Domain {
+        namespace Enums {
+            export type BillingUnit =
+                'UNIT' | 'HOUR' | 'SESSION' | 'DAY' | 'MONTH';
         }
     }
     namespace Infrastructure {

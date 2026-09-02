@@ -48,6 +48,16 @@ final class ClientFactory extends Factory
         return $this->state(fn (): array => ['status' => ClientStatus::Draft]);
     }
 
+    /**
+     * Matches the factory default, but stated explicitly: the invoice suites
+     * only ever bill an ACTIVE client, and saying so keeps them readable if the
+     * default lifecycle ever changes.
+     */
+    public function active(): self
+    {
+        return $this->state(fn (): array => ['status' => ClientStatus::Active]);
+    }
+
     public function inactive(): self
     {
         return $this->state(fn (): array => ['status' => ClientStatus::Inactive]);

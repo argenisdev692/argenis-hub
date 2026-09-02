@@ -14,8 +14,11 @@ use Modules\Clients\Providers\ClientsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
 use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
 use Modules\Cvs\Providers\CvsServiceProvider;
+use Modules\Invoices\Providers\InvoicesServiceProvider;
+use Modules\PaymentAccounts\Providers\PaymentAccountsServiceProvider;
 use Modules\Portfolios\Providers\PortfoliosServiceProvider;
 use Modules\Post\Providers\PostServiceProvider;
+use Modules\Products\Providers\ProductsServiceProvider;
 use Modules\Services\Providers\ServicesServiceProvider;
 use Modules\SocialMedia\Providers\SocialMediaServiceProvider;
 use Shared\Providers\SharedServiceProvider;
@@ -43,6 +46,12 @@ return [
     SocialMediaServiceProvider::class,
     CampaignServiceProvider::class,
     CvsServiceProvider::class,
+    // Billable catalog (courses / video courses) — must boot before Invoices,
+    // whose line items and form options read the product catalog.
+    ProductsServiceProvider::class,
+    // Issuer payment accounts — Invoices snapshots one onto every invoice.
+    PaymentAccountsServiceProvider::class,
+    InvoicesServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
 ];

@@ -1022,6 +1022,84 @@
                 }
             }
         },
+        "/invoices": {
+            "get": {
+                "operationId": "invoices.index",
+                "description": "Returns a paginated, filterable invoice list. `per_page` is capped at\n100 to bound resource consumption (OWASP API4).",
+                "summary": "List invoices",
+                "tags": [
+                    "InvoiceApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/invoices/{uuid}": {
+            "get": {
+                "operationId": "invoices.show",
+                "description": "Returns a single invoice by UUID, including line items.",
+                "summary": "Show an invoice",
+                "tags": [
+                    "InvoiceApi"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/InvoiceEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/permissions": {
             "get": {
                 "operationId": "permissions.index",
@@ -3584,6 +3662,176 @@
                 ],
                 "title": "GenerateSocialMediaContentData"
             },
+            "InvoiceEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "client_id": {
+                        "type": "integer"
+                    },
+                    "product_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "invoice_number": {
+                        "type": "string"
+                    },
+                    "sequence": {
+                        "type": "integer"
+                    },
+                    "year": {
+                        "type": "integer"
+                    },
+                    "issue_date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "tax_mode": {
+                        "type": "string"
+                    },
+                    "tax_rate": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "tax_label": {
+                        "type": "string"
+                    },
+                    "subtotal": {
+                        "type": "string"
+                    },
+                    "tax_amount": {
+                        "type": "string"
+                    },
+                    "total": {
+                        "type": "string"
+                    },
+                    "is_paid": {
+                        "type": "boolean"
+                    },
+                    "payment_method": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PaymentMethod"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "payment_account_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "payment_details_json": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "transfer_number": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "payment_date": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "amount_received": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "additional_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "client_id",
+                    "product_id",
+                    "invoice_number",
+                    "sequence",
+                    "year",
+                    "issue_date",
+                    "due_date",
+                    "currency",
+                    "tax_mode",
+                    "tax_rate",
+                    "tax_label",
+                    "subtotal",
+                    "tax_amount",
+                    "total",
+                    "is_paid",
+                    "payment_method",
+                    "payment_account_id",
+                    "payment_details_json",
+                    "transfer_number",
+                    "payment_date",
+                    "amount_received",
+                    "notes",
+                    "additional_notes",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "InvoiceEloquentModel"
+            },
             "LazyCollection": {
                 "type": "object",
                 "additionalProperties": {},
@@ -3710,6 +3958,20 @@
                 "type": "object",
                 "additionalProperties": {},
                 "title": "PaginatedDataCollection"
+            },
+            "PaymentMethod": {
+                "type": "string",
+                "description": "How money moves. Deliberately independent of currency \u2014 Remitly/USD, bank transfer/EUR and bank transfer/USD are all valid combinations, so the currency lives on the account, never baked into the method.\n",
+                "enum": [
+                    "REMITLY",
+                    "BANK_TRANSFER",
+                    "WISE",
+                    "PAYPAL",
+                    "STRIPE",
+                    "CASH",
+                    "OTHER"
+                ],
+                "title": "PaymentMethod"
             },
             "Permission": {
                 "type": "object",

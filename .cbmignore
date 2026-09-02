@@ -10,3 +10,11 @@ resources/js/wayfinder/
 # AI tooling mirrors
 .opencode/
 .claude/
+
+# Course material & invoice mockups (NOT application source).
+# Verified: 216 of 257 indexable files under specs/INVOICE-MODULE/ live here.
+# The reference migrations and phase specs OUTSIDE these paths stay indexed.
+specs/INVOICE-MODULE/FACTURAS-MODELOS/
+specs/INVOICE-MODULE/PRODUCTS-MODULE/Material-Contenido/
+specs/INVOICE-MODULE/PRODUCTS-MODULE/MODULE-PRODUCTS/Material-Contenido/
+specs/INVOICE-MODULE/PRODUCTS-MODULE/MODULE-PRODUCTS/CLASSROOM/

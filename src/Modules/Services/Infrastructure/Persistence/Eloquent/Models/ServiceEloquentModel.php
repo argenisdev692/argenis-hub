@@ -10,12 +10,15 @@ use Database\Factories\ServiceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceItemEloquentModel;
 use Modules\Services\Application\DTOs\ServiceFilterData;
 use Modules\Services\Infrastructure\Cache\ServicePublicFeedCache;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -34,6 +37,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  * @property-read User $user
+ * @property-read Collection<int, InvoiceItemEloquentModel> $invoiceItems
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static> active()
  * @method static \Illuminate\Database\Eloquent\Builder<static> applyFilters(ServiceFilterData $filters)
@@ -82,6 +86,21 @@ final class ServiceEloquentModel extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The invoice lines billed against this catalog service.
+     *
+     * Inverse of `InvoiceItemEloquentModel::service()` — declared because
+     * `invoice_items.service_id` is a foreign key and every FK in this project
+     * carries both sides of the relation. The FK is `nullOnDelete`, so deleting
+     * a service leaves the already-issued invoice lines intact as free text.
+     *
+     * @return HasMany<InvoiceItemEloquentModel, $this>
+     */
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItemEloquentModel::class, 'service_id');
     }
 
     /**

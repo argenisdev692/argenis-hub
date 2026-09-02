@@ -23,7 +23,7 @@ class RolePermissionSeeder extends Seeder
      *
      * @var list<string>
      */
-    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS', 'SERVICES'];
+    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS', 'SERVICES', 'PAYMENT_ACCOUNTS'];
 
     /**
      * Singleton records: one row, provisioned by a seeder, edited in place and
@@ -43,6 +43,7 @@ class RolePermissionSeeder extends Seeder
 
     /** @var list<string> */
     private const array SINGLETON_ACTIONS = ['VIEW', 'UPDATE', 'DELETE', 'RESTORE'];
+
 
     /**
      * Modules with the same CRUD shape as {@see self::MODULES} but no export
@@ -100,6 +101,7 @@ class RolePermissionSeeder extends Seeder
         'CVS',
         'RESUME_STUDIOS',
         'PRODUCTS',
+        'PAYMENT_ACCOUNTS',
         'ENROLLMENTS',
         'STUDENTS',
     ];

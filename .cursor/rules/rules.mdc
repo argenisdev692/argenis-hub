@@ -188,6 +188,22 @@ Recoverable from git history if ever needed: `git log --all -- .agents/skills`.
   2. `Read` — only AFTER the graph has identified the relevant file/symbol.
   3. `grep` / `Glob` — exact textual searches, or when the graph cannot reliably
      answer the question.
+- **Delegate the exploration, not the decision.** Graph results are large — a
+  single `index_status` or a broad `search_graph` can cost 3-5k tokens, and those
+  payloads are re-sent on EVERY subsequent request for the rest of the session.
+  Run them inside a subagent so the payload lands in the subagent's context and
+  only the conclusion returns. The three agents already exist in
+  `~/.claude/agents/` — use them as-is, never inline their prompts:
+  | Agent | When |
+  | --- | --- |
+  | `codebase-memory-scout` | Tier 1 — "where does X live", "what exists for Y". Fast, positive, provisional. The DEFAULT for any orientation question. |
+  | `codebase-memory` | Tier 2 — task-directed verification before writing code that touches existing symbols. |
+  | `codebase-memory-auditor` | Tier 3 — impact analysis, dead-code and any exhaustive/negative claim. |
+  Delegate when the question is "what is out there" and the answer is a short
+  list of files, symbols or relationships. Query the graph inline ONLY when you
+  already know the exact symbol and need one `get_code_snippet`, or when the
+  finalization pipeline calls `index_repository` (which no subagent profile
+  exposes). Never delegate the edit itself — subagents are read-only by design.
 - Never invent modules, files, classes, routes or architectural patterns. If the
   graph does not show it, verify in source before asserting that it exists.
 - Coverage is best-effort, never proof of completeness: `check_index_coverage`

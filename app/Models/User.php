@@ -32,9 +32,12 @@ use Modules\Campaigns\Infrastructure\Persistence\Eloquent\Models\CampaignEloquen
 use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
 use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSupportEloquentModel;
 use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
+use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
+use Modules\PaymentAccounts\Infrastructure\Persistence\Eloquent\Models\PaymentAccountEloquentModel;
 use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioEloquentModel;
 use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostAiGenerationEloquentModel;
 use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostEloquentModel;
+use Modules\Products\Infrastructure\Persistence\Eloquent\Models\ProductEloquentModel;
 use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
 use Modules\SocialMedia\Infrastructure\Persistence\Eloquent\Models\SocialMediaContentEloquentModel;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
@@ -100,6 +103,9 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, CampaignEloquentModel> $campaigns
  * @property-read int|null $campaigns_count
  * @property-read Collection<int, CvEloquentModel> $cvs
+ * @property-read Collection<int, ProductEloquentModel> $products
+ * @property-read Collection<int, InvoiceEloquentModel> $invoices
+ * @property-read Collection<int, PaymentAccountEloquentModel> $paymentAccounts
  * @property-read int|null $cvs_count
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
@@ -113,6 +119,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $roles_count
  * @property-read Collection<int, Permission> $teams
  * @property-read int|null $teams_count
+ *
  * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newQuery()
@@ -126,8 +133,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutRole($roles, ?string $guard = null)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutTeam($teams)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutTrashed()
+ *
  * @property-read Collection<int, PersonalAccessToken> $tokens
  * @property-read int|null $tokens_count
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAddress($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAddress2($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereCity($value)
@@ -162,6 +171,11 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUsername($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUuid($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereZipCode($value)
+ *
+ * @property-read int|null $invoices_count
+ * @property-read int|null $payment_accounts_count
+ * @property-read int|null $products_count
+ *
  * @mixin \Eloquent
  */
 #[Fillable([
@@ -374,6 +388,49 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function cvs(): HasMany
     {
         return $this->hasMany(CvEloquentModel::class);
+    }
+
+    /**
+     * The billable catalog products (courses, video courses) this user owns.
+     *
+     * Inverse of `ProductEloquentModel::user()` — declared here because
+     * `products.user_id` is a foreign key and every FK in this project carries
+     * both sides of the relation.
+     *
+     * @return HasMany<ProductEloquentModel, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(ProductEloquentModel::class);
+    }
+
+    /**
+     * The invoices this user issued.
+     *
+     * Inverse of `InvoiceEloquentModel::user()` — declared here because
+     * `invoices.user_id` is a foreign key and every FK in this project carries
+     * both sides of the relation.
+     *
+     * @return HasMany<InvoiceEloquentModel, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(InvoiceEloquentModel::class);
+    }
+
+    /**
+     * The settlement rails (Remitly USD, bank transfer EUR, …) this user can
+     * put on an invoice.
+     *
+     * Inverse of `PaymentAccountEloquentModel::user()` — declared here because
+     * `payment_accounts.user_id` is a foreign key and every FK in this project
+     * carries both sides of the relation.
+     *
+     * @return HasMany<PaymentAccountEloquentModel, $this>
+     */
+    public function paymentAccounts(): HasMany
+    {
+        return $this->hasMany(PaymentAccountEloquentModel::class);
     }
 
     /**

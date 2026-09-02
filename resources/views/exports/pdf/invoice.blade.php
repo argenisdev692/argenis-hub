@@ -135,7 +135,7 @@
         }
         table.items tbody td.num { text-align: right; white-space: nowrap; }
         .item-title { font-weight: bold; font-size: 11px; }
-        .item-desc { font-size: 10px; color: #555; margin-top: 3px; }
+        .item-desc { font-size: 10px; color: #555; margin-top: 3px; white-space: pre-line; }
         .totals {
             width: 300px;
             margin-left: auto;
@@ -209,7 +209,14 @@
         $labels = $pdf['labels'];
         $currency = strtoupper($invoice->currency ?: 'USD');
         $symbol = $pdf['currency_symbol'];
-        $fmt = static fn ($n) => $symbol.number_format((float) $n, 2).' '.$currency;
+        // Locale-aware: `$1,300.00 USD` for en, `1.300,00 €` for es/pt.
+        $money = $pdf['money'];
+        $fmt = static fn ($n) => $money->money($n);
+        $qty = static fn ($item) => $money->quantity(
+            $item->quantity,
+            $item->unit,
+            $pdf['unit_labels'][$item->unit->value] ?? '',
+        );
         $providerName = $company['legal_name'] ?: $company['name'];
         $providerNameUpper = mb_strtoupper((string) $providerName, 'UTF-8');
         $client = $invoice->client;
@@ -298,7 +305,7 @@
             <tr>
                 <th>{{ $labels['concept'] }}</th>
                 <th class="num">{{ $labels['quantity'] }}</th>
-                <th class="num">{{ $labels['unit_price'] }}</th>
+                <th class="num">{{ $pdf['unit_price_heading'] }}</th>
                 <th class="num">{{ $labels['amount'] }}</th>
             </tr>
         </thead>
@@ -308,10 +315,11 @@
                     <td>
                         <div class="item-title">{{ $item->title }}</div>
                         @if ($item->description)
+                            {{-- pre-line: training lines carry a bulleted session breakdown --}}
                             <div class="item-desc">{{ $item->description }}</div>
                         @endif
                     </td>
-                    <td class="num">{{ number_format((float) $item->quantity, 0) }}</td>
+                    <td class="num">{{ $qty($item) }}</td>
                     <td class="num">{{ $fmt($item->unit_price) }}</td>
                     <td class="num">{{ $fmt($item->amount) }}</td>
                 </tr>
@@ -363,10 +371,11 @@
         @php
             $received = $invoice->amount_received ?? $invoice->total;
         @endphp
+        {{-- Paid: what actually happened, from the snapshot taken at issue time. --}}
         <div class="pago-recibido">
             <h3>{{ $labels['payment_received'] }}</h3>
-            @if ($invoice->payment_method)
-                <p><strong>{{ $labels['payment_method'] }}:</strong> {{ $invoice->payment_method }}</p>
+            @if ($pdf['payment_method_label'])
+                <p><strong>{{ $labels['payment_method'] }}:</strong> {{ $pdf['payment_method_label'] }}</p>
             @endif
             @if ($invoice->transfer_number)
                 <p><strong>{{ $labels['transfer_number'] }}:</strong> {{ $invoice->transfer_number }}</p>
@@ -376,21 +385,17 @@
             @endif
             <p><strong>{{ $labels['amount_received'] }}:</strong> {{ $fmt($received) }}</p>
         </div>
-    @elseif (! empty($company['bank_iban']) || ! empty($company['bank_beneficiary']))
+    @elseif (! empty($pdf['payment_details']))
+        {{-- Unpaid: how to pay, resolved from the default account for this
+             invoice's currency — EUR shows the IBAN, USD shows the USD account. --}}
         <div class="bank">
             <h3>{{ $labels['bank_heading'] }}</h3>
-            @if (! empty($company['bank_beneficiary']))
-                <p><strong>{{ $labels['beneficiary'] }}:</strong> {{ $company['bank_beneficiary'] }}</p>
+            @if ($pdf['payment_method_label'])
+                <p><strong>{{ $labels['payment_method'] }}:</strong> {{ $pdf['payment_method_label'] }}</p>
             @endif
-            @if (! empty($company['bank_iban']))
-                <p><strong>IBAN:</strong> {{ $company['bank_iban'] }}</p>
-            @endif
-            @if (! empty($company['bank_bic']))
-                <p><strong>BIC/SWIFT:</strong> {{ $company['bank_bic'] }}</p>
-            @endif
-            @if (! empty($company['bank_name']))
-                <p><strong>{{ $labels['bank'] }}:</strong> {{ $company['bank_name'] }}</p>
-            @endif
+            @foreach ($pdf['payment_details'] as $detail)
+                <p><strong>{{ $detail['label'] }}:</strong> {{ $detail['value'] }}</p>
+            @endforeach
         </div>
     @endif
 
