@@ -6,6 +6,7 @@ namespace Modules\Invoices\Infrastructure\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Invoices\Application\DTOs\InvoiceDetailData;
 use Modules\Invoices\Application\DTOs\InvoiceFilterData;
 use Modules\Invoices\Application\Queries\GetInvoiceHandler;
 use Modules\Invoices\Application\Queries\ListInvoicesHandler;
@@ -33,10 +34,15 @@ final readonly class InvoiceApiController
     /**
      * Show an invoice.
      *
-     * Returns a single invoice by UUID, including line items.
+     * Returns a single invoice by UUID, including line items. The shape is the
+     * `InvoiceDetailData` allowlist — the raw model is never serialized, so the
+     * settlement snapshot leaves as a masked identifier and never as a full
+     * IBAN (OWASP API3 / §12, property-level authorization).
      */
     public function show(string $uuid, GetInvoiceHandler $get): JsonResponse
     {
-        return response()->json(['data' => $get->handle($uuid)]);
+        return response()->json([
+            'data' => InvoiceDetailData::fromModel($get->handle($uuid)),
+        ]);
     }
 }

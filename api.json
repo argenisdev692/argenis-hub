@@ -1060,7 +1060,7 @@
         "/invoices/{uuid}": {
             "get": {
                 "operationId": "invoices.show",
-                "description": "Returns a single invoice by UUID, including line items.",
+                "description": "Returns a single invoice by UUID, including line items. The shape is the\n`InvoiceDetailData` allowlist \u2014 the raw model is never serialized, so the\nsettlement snapshot leaves as a masked identifier and never as a full\nIBAN (OWASP API3 / \u00a712, property-level authorization).",
                 "summary": "Show an invoice",
                 "tags": [
                     "InvoiceApi"
@@ -1084,7 +1084,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/InvoiceEloquentModel"
+                                            "$ref": "#/components/schemas/InvoiceDetailData"
                                         }
                                     },
                                     "required": [
@@ -3662,23 +3662,11 @@
                 ],
                 "title": "GenerateSocialMediaContentData"
             },
-            "InvoiceEloquentModel": {
+            "InvoiceDetailData": {
                 "type": "object",
                 "properties": {
                     "uuid": {
                         "type": "string"
-                    },
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "client_id": {
-                        "type": "integer"
-                    },
-                    "product_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
                     },
                     "invoice_number": {
                         "type": "string"
@@ -3690,12 +3678,10 @@
                         "type": "integer"
                     },
                     "issue_date": {
-                        "type": "string",
-                        "format": "date-time"
+                        "type": "string"
                     },
                     "due_date": {
-                        "type": "string",
-                        "format": "date-time"
+                        "type": "string"
                     },
                     "currency": {
                         "type": "string"
@@ -3705,7 +3691,7 @@
                     },
                     "tax_rate": {
                         "type": [
-                            "string",
+                            "number",
                             "null"
                         ]
                     },
@@ -3713,39 +3699,40 @@
                         "type": "string"
                     },
                     "subtotal": {
-                        "type": "string"
+                        "type": "number"
                     },
                     "tax_amount": {
-                        "type": "string"
+                        "type": "number"
                     },
                     "total": {
-                        "type": "string"
+                        "type": "number"
                     },
                     "is_paid": {
                         "type": "boolean"
                     },
                     "payment_method": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/components/schemas/PaymentMethod"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ]
-                    },
-                    "payment_account_id": {
                         "type": [
-                            "integer",
+                            "string",
                             "null"
                         ]
                     },
-                    "payment_details_json": {
+                    "payment_account_uuid": {
                         "type": [
-                            "array",
+                            "string",
                             "null"
-                        ],
-                        "items": {}
+                        ]
+                    },
+                    "payment_account_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "payment_account_masked": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "transfer_number": {
                         "type": [
@@ -3757,12 +3744,11 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
+                        ]
                     },
                     "amount_received": {
                         "type": [
-                            "string",
+                            "number",
                             "null"
                         ]
                     },
@@ -3778,33 +3764,57 @@
                             "null"
                         ]
                     },
-                    "deleted_at": {
+                    "client_uuid": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
+                        ]
+                    },
+                    "client_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "product_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "product_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/InvoiceItemDetailData"
+                        }
                     },
                     "created_at": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
+                        ]
                     },
                     "updated_at": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
+                        ]
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
                     "uuid",
-                    "user_id",
-                    "client_id",
-                    "product_id",
                     "invoice_number",
                     "sequence",
                     "year",
@@ -3812,25 +3822,14 @@
                     "due_date",
                     "currency",
                     "tax_mode",
-                    "tax_rate",
                     "tax_label",
                     "subtotal",
                     "tax_amount",
                     "total",
                     "is_paid",
-                    "payment_method",
-                    "payment_account_id",
-                    "payment_details_json",
-                    "transfer_number",
-                    "payment_date",
-                    "amount_received",
-                    "notes",
-                    "additional_notes",
-                    "deleted_at",
-                    "created_at",
-                    "updated_at"
+                    "items"
                 ],
-                "title": "InvoiceEloquentModel"
+                "title": "InvoiceDetailData"
             },
             "LazyCollection": {
                 "type": "object",
@@ -3958,20 +3957,6 @@
                 "type": "object",
                 "additionalProperties": {},
                 "title": "PaginatedDataCollection"
-            },
-            "PaymentMethod": {
-                "type": "string",
-                "description": "How money moves. Deliberately independent of currency \u2014 Remitly/USD, bank transfer/EUR and bank transfer/USD are all valid combinations, so the currency lives on the account, never baked into the method.\n",
-                "enum": [
-                    "REMITLY",
-                    "BANK_TRANSFER",
-                    "WISE",
-                    "PAYPAL",
-                    "STRIPE",
-                    "CASH",
-                    "OTHER"
-                ],
-                "title": "PaymentMethod"
             },
             "Permission": {
                 "type": "object",

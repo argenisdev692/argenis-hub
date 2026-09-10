@@ -28,4 +28,20 @@ enum InvoiceItemKind: string
     {
         return $this === self::Course || $this === self::Video;
     }
+
+    /**
+     * The kinds that are meaningless without a catalog row behind them — the
+     * single source for the `required_if` guard on `items.*.product_uuid`, so
+     * the rule cannot drift from {@see self::requiresProduct()}.
+     *
+     * @return list<string>
+     */
+    #[\NoDiscard]
+    public static function productBackedValues(): array
+    {
+        return array_values(array_map(
+            static fn (self $kind): string => $kind->value,
+            array_filter(self::cases(), static fn (self $kind): bool => $kind->requiresProduct()),
+        ));
+    }
 }

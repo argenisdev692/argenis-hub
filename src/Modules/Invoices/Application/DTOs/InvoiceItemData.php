@@ -50,7 +50,13 @@ final class InvoiceItemData extends Data
             'quantity' => ['required', 'numeric', 'min:0.01', 'max:999999'],
             'unit_price' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
             'service_uuid' => ['nullable', 'uuid', 'exists:services,uuid'],
-            'product_uuid' => ['nullable', 'uuid', 'exists:products,uuid'],
+            // Mirrors the `items.*.product_uuid` guard in {@see InvoiceData}.
+            'product_uuid' => [
+                'nullable',
+                'required_if:kind,'.implode(',', InvoiceItemKind::productBackedValues()),
+                'uuid',
+                'exists:products,uuid',
+            ],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:65535'],
         ];
     }

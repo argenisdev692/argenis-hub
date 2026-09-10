@@ -17,7 +17,7 @@ use Modules\Products\Infrastructure\Persistence\Eloquent\Models\ProductEloquentM
 use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
 use Shared\Infrastructure\Persistence\Concerns\BulkSoftDeletesByUuid;
 
-final class EloquentInvoiceRepository implements InvoiceRepositoryPort
+final readonly class EloquentInvoiceRepository implements InvoiceRepositoryPort
 {
     use BulkSoftDeletesByUuid;
 
@@ -29,7 +29,6 @@ final class EloquentInvoiceRepository implements InvoiceRepositoryPort
     public function paginate(InvoiceFilterData $filters, int $perPage): LengthAwarePaginator
     {
         return InvoiceEloquentModel::query()
-            ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
             ->applyFilters($filters)
             ->with([
                 'client:id,uuid,client_name',

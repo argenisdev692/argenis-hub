@@ -709,6 +709,49 @@ final class InvoiceManagementTest extends TestCase
             ->assertOk();
     }
 
+    public function test_export_xlsx_streams_a_real_workbook(): void
+    {
+        $admin = $this->superAdmin();
+        InvoiceEloquentModel::factory()->create([
+            'user_id' => $admin->id,
+            'invoice_number' => '097/2026',
+            'sequence' => 97,
+            'year' => 2026,
+        ]);
+
+        $response = $this->actingAs($admin)->get('/data/admin/invoices/export?format=xlsx');
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            (string) $response->headers->get('content-type'),
+        );
+        // An XLSX is a zip container. Asserting the `PK` magic bytes proves the
+        // streamed callback actually ran and wrote a workbook rather than the
+        // CSV writer silently handling the request.
+        $this->assertStringStartsWith('PK', $response->streamedContent());
+    }
+
+    public function test_export_pdf_renders_the_invoice_report(): void
+    {
+        $admin = $this->superAdmin();
+        InvoiceEloquentModel::factory()->create([
+            'user_id' => $admin->id,
+            'invoice_number' => '098/2026',
+            'sequence' => 98,
+            'year' => 2026,
+        ]);
+
+        $response = $this->actingAs($admin)->get('/data/admin/invoices/export?format=pdf');
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'application/pdf',
+            (string) $response->headers->get('content-type'),
+        );
+        $this->assertStringStartsWith('%PDF', (string) $response->getContent());
+    }
+
     public function test_export_rejects_invalid_format(): void
     {
         $this->actingAs($this->superAdmin())

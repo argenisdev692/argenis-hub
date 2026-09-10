@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\PaymentAccounts\Domain\Enums;
 
-use Modules\Invoices\Application\Support\InvoicePdfViewAssembler;
-
 /**
  * How money moves. Deliberately independent of currency — Remitly/USD,
  * bank transfer/EUR and bank transfer/USD are all valid combinations, so the
@@ -40,7 +38,10 @@ enum PaymentMethod: string
 
     /**
      * Key into the locale label maps in
-     * {@see InvoicePdfViewAssembler}.
+     * `Modules\Invoices\Application\Support\InvoicePdfViewAssembler`.
+     *
+     * Referenced by name, not imported: Domain must not depend on another
+     * module's Application layer, and a docblock is no exception.
      */
     public function labelKey(): string
     {

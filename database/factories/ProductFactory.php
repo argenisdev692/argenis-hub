@@ -46,6 +46,20 @@ final class ProductFactory extends Factory
         ];
     }
 
+    /**
+     * Live instructor-led training — the counterpart of {@see self::videoCourse()}.
+     * Billed by the hour across a fixed number of sessions, which is what an
+     * invoice line renders as `25 horas x 52,00 EUR/hora`.
+     */
+    public function classroom(): self
+    {
+        return $this->state(fn (): array => [
+            'type' => ProductType::Course,
+            'default_unit' => BillingUnit::Hour,
+            'total_sessions' => 5,
+        ]);
+    }
+
     public function videoCourse(): self
     {
         return $this->state(fn (): array => [

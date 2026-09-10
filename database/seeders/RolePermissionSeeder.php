@@ -44,7 +44,6 @@ class RolePermissionSeeder extends Seeder
     /** @var list<string> */
     private const array SINGLETON_ACTIONS = ['VIEW', 'UPDATE', 'DELETE', 'RESTORE'];
 
-
     /**
      * Modules with the same CRUD shape as {@see self::MODULES} but no export
      * endpoint yet, so EXPORT is omitted here (seeding it would only create a

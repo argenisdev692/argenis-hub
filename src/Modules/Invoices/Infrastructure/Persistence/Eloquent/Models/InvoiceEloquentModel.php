@@ -162,12 +162,17 @@ final class InvoiceEloquentModel extends Model
     }
 
     /**
+     * The single source of truth for list AND export filtering (BACKEND-PHP
+     * §5.2) — including the soft-delete `status` branch, so the list endpoint
+     * and the exporter cannot drift apart on what "suspended" means.
+     *
      * @param  Builder<InvoiceEloquentModel>  $query
      * @return Builder<InvoiceEloquentModel>
      */
     public function scopeApplyFilters(Builder $query, InvoiceFilterData $filters): Builder
     {
         return $query
+            ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
             ->when($filters->search !== null, fn ($q) => $q->where(function ($w) use ($filters): void {
                 $term = "%{$filters->search}%";
                 $w->where('invoice_number', 'like', $term)

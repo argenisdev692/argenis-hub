@@ -89,7 +89,14 @@ final class InvoiceData extends Data
             'items.*.quantity' => ['required', 'numeric', 'min:0.01', 'max:999999'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
             'items.*.service_uuid' => ['nullable', 'uuid', 'exists:services,uuid'],
-            'items.*.product_uuid' => ['nullable', 'uuid', 'exists:products,uuid'],
+            // A COURSE / VIDEO line without a catalog row behind it is a lie:
+            // the PDF would bill training that the product catalog never sold.
+            'items.*.product_uuid' => [
+                'nullable',
+                'required_if:items.*.kind,'.implode(',', InvoiceItemKind::productBackedValues()),
+                'uuid',
+                'exists:products,uuid',
+            ],
             'items.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:65535'],
         ];
     }

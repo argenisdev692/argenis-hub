@@ -78,6 +78,41 @@ it('bills a course by the hour and links it to the product catalog', function ()
         ->and($item->description)->toContain('5 sesiones');
 });
 
+it('rejects a course or video line that is not backed by a catalog product', function (InvoiceItemKind $kind): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'ES']);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'items' => [[
+            'title' => 'Training with no catalog row behind it',
+            'kind' => $kind->value,
+            'unit' => BillingUnit::Hour->value,
+            'quantity' => 25,
+            'unit_price' => 52,
+        ]],
+    ]))->assertUnprocessable()->assertJsonValidationErrors('items.0.product_uuid');
+
+    expect(InvoiceEloquentModel::query()->count())->toBe(0);
+})->with([
+    'course' => InvoiceItemKind::Course,
+    'video' => InvoiceItemKind::Video,
+]);
+
+it('still accepts a custom line with no product', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'ES']);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'items' => [[
+            'title' => 'Web Development - Remote Service',
+            'kind' => InvoiceItemKind::Custom->value,
+            'unit' => BillingUnit::Unit->value,
+            'quantity' => 1,
+            'unit_price' => 35,
+        ]],
+    ]))->assertCreated();
+});
+
 it('bills a video course and a web service on the same invoice', function (): void {
     $admin = billingAdmin();
     $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'ES']);
@@ -115,12 +150,14 @@ it('bills a video course and a web service on the same invoice', function (): vo
 it('stores a fractional hour quantity without rounding it away', function (): void {
     $admin = billingAdmin();
     $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'ES']);
+    $course = ProductEloquentModel::factory()->classroom()->create(['user_id' => $admin->id]);
 
     $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
         'items' => [[
             'title' => 'Sesion 7 - Proyecto Final',
             'kind' => InvoiceItemKind::Course->value,
             'unit' => BillingUnit::Hour->value,
+            'product_uuid' => $course->uuid,
             'quantity' => 3.5,
             'unit_price' => 52,
         ]],
