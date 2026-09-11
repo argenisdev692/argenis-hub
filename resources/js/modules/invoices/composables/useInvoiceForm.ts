@@ -1,6 +1,7 @@
 import type { Ref } from 'vue';
 import { watch } from 'vue';
-import { useAppForm } from '@/common/form';
+import { applyServerErrors, useAppForm } from '@/common/form';
+import { HttpError } from '@/lib/http';
 import {
     emptyInvoiceFormValues,
     invoiceFormSchema,
@@ -27,13 +28,48 @@ export type InvoiceFormOptions = {
 };
 
 /**
+ * Turns Laravel's 422 `errors` bag into the one message per field
+ * `applyServerErrors` expects.
+ *
+ * Line errors (`items.2.product_uuid`) are folded onto the `items` field, which
+ * is the only line-level error surface the dialog renders — a message keyed to
+ * a nested path no `form.Field` is bound to would never be seen.
+ */
+function toFieldErrors(
+    errors: Record<string, string[]>,
+): Record<string, string> {
+    const fieldErrors: Record<string, string> = {};
+
+    for (const [name, messages] of Object.entries(errors)) {
+        const message = messages[0];
+
+        if (!message) {
+            continue;
+        }
+
+        const line = /^items\.(\d+)\./.exec(name);
+
+        if (line) {
+            fieldErrors.items ??= `Line ${Number(line[1]) + 1}: ${message}`;
+
+            continue;
+        }
+
+        fieldErrors[name] = message;
+    }
+
+    return fieldErrors;
+}
+
+/**
  * One form, two endpoints.
  *
  * Submits through Pinia Colada rather than `useAppForm`'s Inertia path because
  * `/data/admin/invoices` answers with JSON, not an Inertia response — the
  * `router` would treat a 201 body as a failed visit. The mutations already own
  * the toasts and the cache invalidation, so all this has to add is the mapping
- * from form values to payload and the create/edit branch.
+ * from form values to payload, the create/edit branch, and projecting a 422
+ * back onto the fields the server rejected.
  */
 export function useInvoiceForm({
     open,
@@ -58,11 +94,21 @@ export function useInvoiceForm({
                 } else {
                     await createInvoice.mutateAsync(payload);
                 }
-            } catch {
-                // The mutation's own `onError` already toasted the failure;
-                // swallow it here so it never reaches `handleSubmit`'s caller
-                // (`FormDialog` awaits it without a try/catch) and leaves the
-                // dialog open for another attempt.
+            } catch (error) {
+                // The mutation's own `onError` already toasted the failure.
+                // A 422 also names the offending fields — a payment account in
+                // another currency, a method the account does not settle, a
+                // suspended catalog product — so show each under its input.
+                // Swallowed either way so it never reaches `handleSubmit`'s
+                // caller and the dialog stays open for another attempt.
+                if (
+                    error instanceof HttpError &&
+                    error.status === 422 &&
+                    error.errors
+                ) {
+                    applyServerErrors(form, toFieldErrors(error.errors));
+                }
+
                 return;
             }
 

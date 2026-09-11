@@ -6,6 +6,7 @@ namespace Modules\Invoices\Domain\Ports;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Modules\Invoices\Application\DTOs\InvoiceFilterData;
+use Modules\Invoices\Domain\Enums\InvoiceItemKind;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
 
 interface InvoiceRepositoryPort
@@ -15,12 +16,16 @@ interface InvoiceRepositoryPort
     public function findByUuid(string $uuid): ?InvoiceEloquentModel;
 
     /**
+     * Header and lines are written atomically.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  list<array<string, mixed>>  $items
      */
     public function createWithItems(array $attributes, array $items): InvoiceEloquentModel;
 
     /**
+     * Header and lines are written atomically; the previous lines are replaced.
+     *
      * @param  array<string, mixed>  $attributes
      * @param  list<array<string, mixed>>  $items
      */
@@ -57,16 +62,25 @@ interface InvoiceRepositoryPort
     public function findNumberConflict(string $invoiceNumber, int $year, int $sequence, ?string $exceptUuid = null): ?array;
 
     /**
+     * Active (not soft-deleted) client only — an invoice is never issued to a
+     * suspended client.
+     */
+    public function findClientIdByUuid(string $clientUuid): ?int;
+
+    /**
      * @param  list<string>  $serviceUuids
      * @return array<string, int>
      */
     public function mapServiceIdsByUuid(array $serviceUuids): array;
 
     /**
+     * Each product's id plus the line kind its type bills as
+     * ({@see InvoiceItemKind::forProductType()}).
+     *
      * @param  list<string>  $productUuids
-     * @return array<string, int>
+     * @return array<string, array{id: int, kind: InvoiceItemKind}>
      */
-    public function mapProductIdsByUuid(array $productUuids): array;
+    public function mapProductLinesByUuid(array $productUuids): array;
 
     public function findProductIdByUuid(?string $productUuid): ?int;
 

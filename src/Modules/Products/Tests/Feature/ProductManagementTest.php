@@ -104,6 +104,12 @@ it('rejects an unknown product type', function (): void {
         ->assertJsonValidationErrors('type');
 });
 
+it('rejects a currency no invoice can bill in', function (): void {
+    $this->actingAs(productAdmin())
+        ->postJson('/data/admin/products', validProductPayload(['currency' => 'CHF']))
+        ->assertJsonValidationErrors('currency');
+});
+
 it('rejects an end date before the start date', function (): void {
     $this->actingAs(productAdmin())
         ->postJson('/data/admin/products', validProductPayload([

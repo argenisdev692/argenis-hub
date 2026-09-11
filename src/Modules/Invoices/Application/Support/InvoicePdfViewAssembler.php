@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
 use Modules\PaymentAccounts\Domain\Enums\PaymentMethod;
 use Shared\Domain\Enums\BillingUnit;
+use Shared\Domain\Enums\Currency;
 use Shared\Support\EuSchengenCountries;
 
 /**
@@ -32,6 +33,7 @@ final class InvoicePdfViewAssembler
      *     notes_body: string|null,
      *     additional_notes: string|null,
      *     currency_symbol: string,
+     *     tax_exempt: bool,
      *     unit_labels: array<string, string>,
      *     unit_price_heading: string,
      *     payment_method_label: string|null,
@@ -59,7 +61,6 @@ final class InvoicePdfViewAssembler
         $fiscalNotice = InvoiceCrossBorderVatNotice::forExemptInvoice(
             $invoice,
             $issuerName,
-            strtoupper((string) ($company['country_code'] ?? 'PT')),
             $client?->country,
             $client?->country_code,
         );
@@ -99,6 +100,8 @@ final class InvoicePdfViewAssembler
             'notes_body' => $notesBody,
             'additional_notes' => $additionalNotes,
             'currency_symbol' => $symbol,
+            // One definition of "exempt" for the totals row AND the fiscal notice.
+            'tax_exempt' => InvoiceCrossBorderVatNotice::isTaxExempt($invoice),
         ];
     }
 
@@ -433,12 +436,12 @@ final class InvoicePdfViewAssembler
         };
     }
 
+    /**
+     * A legacy row in a currency outside {@see Currency} prints its ISO code
+     * rather than borrowing another currency's symbol.
+     */
     private static function currencySymbol(string $currency): string
     {
-        return match (strtoupper($currency)) {
-            'EUR' => '€',
-            'USD' => '$',
-            default => '$',
-        };
+        return Currency::tryFrom(strtoupper($currency))?->symbol() ?? strtoupper($currency);
     }
 }

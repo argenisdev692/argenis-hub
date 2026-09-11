@@ -336,7 +336,7 @@
             <tr>
                 <td class="lbl">{{ $invoice->tax_label ?? 'IVA' }}:</td>
                 <td class="val">
-                    @if ($invoice->tax_mode === 'EXEMPT' || (float) ($invoice->tax_rate ?? 0) === 0.0)
+                    @if ($pdf['tax_exempt'])
                         {{ $labels['exempt'] }}
                     @else
                         {{ $fmt($invoice->tax_amount) }}

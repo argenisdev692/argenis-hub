@@ -6,6 +6,8 @@ namespace Modules\Invoices\Application\Support;
 
 use Modules\Invoices\Application\DTOs\InvoiceData;
 use Modules\Invoices\Application\DTOs\InvoiceItemData;
+use Modules\Invoices\Domain\Enums\InvoiceItemKind;
+use Modules\Invoices\Domain\Enums\TaxMode;
 
 /**
  * Shared totals / item mapping for create and update invoice handlers.
@@ -13,15 +15,19 @@ use Modules\Invoices\Application\DTOs\InvoiceItemData;
 final readonly class InvoiceTotalsCalculator
 {
     /**
+     * A line that bills a catalog product takes its kind from the product's
+     * type, never from the request: a `COURSE` line pointing at a video course
+     * would print a contradiction on a legal document.
+     *
      * @param  array<string, int>  $serviceIdsByUuid
-     * @param  array<string, int>  $productIdsByUuid
+     * @param  array<string, array{id: int, kind: InvoiceItemKind}>  $productLinesByUuid
      * @return array{subtotal: float, tax_amount: float, total: float, items: list<array<string, mixed>>}
      */
     #[\NoDiscard]
     public static function compute(
         InvoiceData $data,
         array $serviceIdsByUuid = [],
-        array $productIdsByUuid = [],
+        array $productLinesByUuid = [],
     ): array {
         $items = [];
         $subtotal = 0.0;
@@ -36,20 +42,12 @@ final readonly class InvoiceTotalsCalculator
             $amount = round($quantity * $unitPrice, 2);
             $subtotal += $amount;
 
-            $serviceId = null;
-            if ($item->serviceUuid !== null && isset($serviceIdsByUuid[$item->serviceUuid])) {
-                $serviceId = $serviceIdsByUuid[$item->serviceUuid];
-            }
-
-            $productId = null;
-            if ($item->productUuid !== null && isset($productIdsByUuid[$item->productUuid])) {
-                $productId = $productIdsByUuid[$item->productUuid];
-            }
+            $productLine = $item->productUuid !== null ? ($productLinesByUuid[$item->productUuid] ?? null) : null;
 
             $items[] = [
-                'service_id' => $serviceId,
-                'product_id' => $productId,
-                'kind' => $item->kind,
+                'service_id' => $item->serviceUuid !== null ? ($serviceIdsByUuid[$item->serviceUuid] ?? null) : null,
+                'product_id' => $productLine['id'] ?? null,
+                'kind' => $productLine['kind'] ?? $item->kind,
                 'unit' => $item->unit,
                 'sort_order' => $item->sortOrder > 0 ? $item->sortOrder : $index,
                 'title' => $item->title,
@@ -61,12 +59,9 @@ final readonly class InvoiceTotalsCalculator
         }
 
         $subtotal = round($subtotal, 2);
-        $taxAmount = 0.0;
-
-        if ($data->taxMode === 'PERCENT') {
-            $rate = $data->taxRate ?? 0.0;
-            $taxAmount = round($subtotal * ($rate / 100), 2);
-        }
+        $taxAmount = $data->taxMode === TaxMode::Percent
+            ? round($subtotal * (($data->taxRate ?? 0.0) / 100), 2)
+            : 0.0;
 
         return [
             'subtotal' => $subtotal,

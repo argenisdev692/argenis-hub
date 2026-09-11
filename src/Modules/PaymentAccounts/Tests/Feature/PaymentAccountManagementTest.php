@@ -121,6 +121,19 @@ it('rejects an unknown payment method', function (): void {
         ->assertJsonValidationErrors('method');
 });
 
+it('rejects a currency no invoice can be issued in', function (): void {
+    $this->actingAs(accountAdmin())
+        ->postJson('/data/admin/payment-accounts', validAccountPayload(['currency' => 'CHF']))
+        ->assertJsonValidationErrors('currency');
+});
+
+it('keeps accepting a currency-agnostic account', function (): void {
+    $this->actingAs(accountAdmin())
+        ->postJson('/data/admin/payment-accounts', validAccountPayload(['currency' => null]))
+        ->assertCreated()
+        ->assertJsonPath('currency', null);
+});
+
 it('lists accounts as a paginated envelope filtered by currency', function (): void {
     $admin = accountAdmin();
     PaymentAccountEloquentModel::factory()->create(['user_id' => $admin->id]);

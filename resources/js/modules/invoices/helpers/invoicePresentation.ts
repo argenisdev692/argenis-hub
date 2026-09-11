@@ -1,4 +1,10 @@
-import type { BillingUnit, InvoiceItemKind, PaymentMethod } from '../types';
+import type {
+    BillingUnit,
+    Currency,
+    InvoiceItemKind,
+    PaymentMethod,
+    ProductType,
+} from '../types';
 
 /**
  * Row-derived display values shared by the table, the detail dialog, the form's
@@ -28,11 +34,11 @@ export function formatDate(iso: string | null): string | null {
 /**
  * `1234.5` + `'EUR'` → `€1,234.50`.
  *
- * Falls back to a plain amount with the code appended when the currency is not
- * one `Intl` knows: `InvoiceData::rules()` only enforces three uppercase
- * letters, so an operator can legitimately save a code the browser's ICU data
- * has never heard of, and a thrown `RangeError` inside a table cell would blank
- * the whole row.
+ * Falls back to a plain amount with the code appended when `Intl` cannot format
+ * the currency: the server now only accepts EUR, USD and GBP, but a row saved
+ * before that rule — or the empty currency of a form still being filled in —
+ * must still render, because a thrown `RangeError` inside a table cell would
+ * blank the whole row.
  */
 export function formatMoney(amount: number, currency: string): string {
     try {
@@ -46,8 +52,22 @@ export function formatMoney(amount: number, currency: string): string {
         return `${new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-        }).format(amount)} ${currency}`;
+        }).format(amount)} ${currency}`.trim();
     }
+}
+
+const CURRENCY_LABELS: Record<Currency, string> = {
+    EUR: 'EUR — Euro (€)',
+    USD: 'USD — US dollar ($)',
+    GBP: 'GBP — Pound sterling (£)',
+};
+
+/**
+ * How the currency picker names a code. A `Record` over the generated union, so
+ * a currency added on the server fails the build here until it has a label.
+ */
+export function currencyLabel(currency: Currency): string {
+    return CURRENCY_LABELS[currency];
 }
 
 /**
@@ -92,6 +112,16 @@ export function itemKindLabel(kind: InvoiceItemKind): string {
  */
 export function kindRequiresProduct(kind: InvoiceItemKind): boolean {
     return kind === 'COURSE' || kind === 'VIDEO';
+}
+
+/**
+ * Mirrors `InvoiceItemKind::forProductType()`: recorded material bills as a
+ * VIDEO line, every live format — course, workshop, mentoring — as a COURSE
+ * line. The server derives a line's kind from its product whatever the request
+ * says, so the form uses this to show what will actually be saved.
+ */
+export function kindForProductType(type: ProductType): InvoiceItemKind {
+    return type === 'VIDEO_COURSE' ? 'VIDEO' : 'COURSE';
 }
 
 const UNIT_LABELS: Record<BillingUnit, string> = {

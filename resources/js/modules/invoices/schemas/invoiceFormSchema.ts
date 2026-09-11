@@ -2,10 +2,12 @@ import { z } from 'zod';
 import { isoPlusDays, todayIso } from '../helpers/invoicePresentation';
 import type {
     BillingUnit,
+    Currency,
     InvoiceDetail,
     InvoiceItemKind,
     InvoiceWritePayload,
     PaymentMethod,
+    TaxMode,
 } from '../types';
 
 /**
@@ -22,14 +24,15 @@ import type {
  * The enum vocabularies, in the order the pickers should offer them.
  *
  * `satisfies` rather than a type annotation: it keeps the literal tuple type
- * that `z.enum()` needs while still failing the build the moment the generated
- * union gains or loses a case, so a new `InvoiceItemKind` on the server cannot
- * quietly go missing from the form.
+ * that `z.enum()` needs while still failing the build the moment a value stops
+ * existing in the generated union, so a renamed case on the server cannot
+ * quietly survive in the form.
  *
- * `GET .../form-options` also returns these three lists. They are declared here
- * instead of read from that response because a `<Select>` cannot wait on a
- * fetch to know what it is allowed to hold — the schema needs them at module
- * load, and the round trip would buy nothing the generated types do not.
+ * `GET .../form-options` also returns the item kinds, units and methods. They
+ * are declared here instead of read from that response because a `<Select>`
+ * cannot wait on a fetch to know what it is allowed to hold — the schema needs
+ * them at module load, and the round trip would buy nothing the generated types
+ * do not.
  */
 export const INVOICE_ITEM_KIND_VALUES = [
     'SERVICE',
@@ -56,9 +59,17 @@ export const PAYMENT_METHOD_VALUES = [
     'OTHER',
 ] as const satisfies readonly PaymentMethod[];
 
-export const TAX_MODE_VALUES = ['EXEMPT', 'PERCENT'] as const;
+export const TAX_MODE_VALUES = [
+    'EXEMPT',
+    'PERCENT',
+] as const satisfies readonly TaxMode[];
 
-export type TaxMode = (typeof TAX_MODE_VALUES)[number];
+/** `Shared\Domain\Enums\Currency` — the only codes the invoice PDF can render. */
+export const CURRENCY_VALUES = [
+    'EUR',
+    'USD',
+    'GBP',
+] as const satisfies readonly Currency[];
 
 /**
  * Narrowing guards for the reka `Select` handlers.
@@ -92,6 +103,13 @@ export function isTaxMode(value: unknown): value is TaxMode {
     return (
         typeof value === 'string' &&
         (TAX_MODE_VALUES as readonly string[]).includes(value)
+    );
+}
+
+export function isCurrency(value: unknown): value is Currency {
+    return (
+        typeof value === 'string' &&
+        (CURRENCY_VALUES as readonly string[]).includes(value)
     );
 }
 
@@ -153,14 +171,19 @@ export const invoiceFormSchema = z
             .regex(/^\d{1,6}\/\d{4}$/, 'Use the form 014/2026.'),
         issue_date: z.iso.date('Choose an issue date.'),
         due_date: z.iso.date('Choose a due date.'),
-        // `size:3|alpha|uppercase` on the server, but accepted case-insensitively
-        // here: `toInvoiceWritePayload` uppercases it on the way out, so
-        // rejecting a typed "eur" would be the browser refusing input it is
-        // about to fix itself.
+        // `in:EUR,USD,GBP` on the server. `''` is admitted by the type only so
+        // an invoice saved in a currency outside that set opens with the field
+        // empty — the operator re-picks it explicitly instead of the form
+        // silently switching a legal document to another currency.
+        //
+        // `length > 0` rather than `!== ''` on purpose: TypeScript infers the
+        // latter as a type predicate, Zod narrows the output type with it, and
+        // the form could then no longer hold the empty value it is seeded with.
         currency: z
-            .string()
-            .trim()
-            .regex(/^[A-Za-z]{3}$/, 'Use a three-letter code such as EUR.'),
+            .union([z.enum(CURRENCY_VALUES), z.literal('')])
+            .refine((value) => value.length > 0, {
+                message: 'Choose the currency this invoice bills in.',
+            }),
         tax_mode: z.enum(TAX_MODE_VALUES),
         tax_rate: z
             .number()
@@ -285,8 +308,8 @@ export function toInvoiceFormValues(invoice: InvoiceDetail): InvoiceFormValues {
         invoice_number: invoice.invoice_number,
         issue_date: invoice.issue_date.slice(0, 10),
         due_date: invoice.due_date.slice(0, 10),
-        currency: invoice.currency,
-        tax_mode: invoice.tax_mode === 'PERCENT' ? 'PERCENT' : 'EXEMPT',
+        currency: isCurrency(invoice.currency) ? invoice.currency : '',
+        tax_mode: invoice.tax_mode,
         tax_rate: invoice.tax_rate,
         tax_label: invoice.tax_label,
         is_paid: invoice.is_paid,
@@ -342,7 +365,7 @@ export function toInvoiceWritePayload(
         invoice_number: values.invoice_number.trim(),
         issue_date: values.issue_date,
         due_date: values.due_date,
-        currency: values.currency.trim().toUpperCase(),
+        currency: values.currency,
         tax_mode: values.tax_mode,
         tax_rate: values.tax_mode === 'PERCENT' ? values.tax_rate : 0,
         tax_label: values.tax_label.trim(),

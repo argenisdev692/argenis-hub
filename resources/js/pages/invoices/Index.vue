@@ -40,6 +40,8 @@ import { useInvoice } from '@/modules/invoices/composables/useInvoice';
 import { useInvoiceMutations } from '@/modules/invoices/composables/useInvoiceMutations';
 import {
     defaultInvoiceFilters,
+    isInvoicePaymentFilter,
+    isInvoiceStatusFilter,
     useInvoices,
 } from '@/modules/invoices/composables/useInvoices';
 import { buildInvoiceQueryParams } from '@/modules/invoices/helpers/buildInvoiceQueryParams';
@@ -49,11 +51,7 @@ import {
     invoiceLabel,
     isOverdue,
 } from '@/modules/invoices/helpers/invoicePresentation';
-import type {
-    InvoiceListItem,
-    InvoicePaymentFilter,
-    InvoiceStatusFilter,
-} from '@/modules/invoices/types';
+import type { InvoiceListItem } from '@/modules/invoices/types';
 import { index as invoicesIndex } from '@/routes/invoices';
 import { exportMethod, pdf } from '@/routes/invoices/admin';
 
@@ -200,9 +198,7 @@ const statusOptions: FilterSelectOption[] = [
 function onStatusChange(
     value: FilterSelectOption['value'] | FilterSelectOption['value'][] | null,
 ): void {
-    filters.value.status = (
-        typeof value === 'string' ? value : 'all'
-    ) as InvoiceStatusFilter;
+    filters.value.status = isInvoiceStatusFilter(value) ? value : 'all';
     onFiltersChanged();
 }
 
@@ -222,9 +218,9 @@ const paymentOptions: FilterSelectOption[] = [
 function onPaymentStatusChange(
     value: FilterSelectOption['value'] | FilterSelectOption['value'][] | null,
 ): void {
-    filters.value.payment_status = (
-        typeof value === 'string' ? value : 'all'
-    ) as InvoicePaymentFilter;
+    filters.value.payment_status = isInvoicePaymentFilter(value)
+        ? value
+        : 'all';
     onFiltersChanged();
 }
 

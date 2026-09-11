@@ -22,11 +22,20 @@ export type InvoiceItemDetail =
 /** What a line is billing: a service, a course, a video, or free text. */
 export type InvoiceItemKind = Modules.Invoices.Domain.Enums.InvoiceItemKind;
 
+/** How VAT applies: exempt (reverse charge) or a percentage of the subtotal. */
+export type TaxMode = Modules.Invoices.Domain.Enums.TaxMode;
+
+/** The currencies an invoice can be issued in — the server rejects any other. */
+export type Currency = Shared.Domain.Enums.Currency;
+
 /** Unit a line is priced in — shared with the product catalog. */
 export type BillingUnit = Shared.Domain.Enums.BillingUnit;
 
 /** How the invoice was (or will be) settled. */
 export type PaymentMethod = Modules.PaymentAccounts.Domain.Enums.PaymentMethod;
+
+/** Kind of catalog product — decides the kind of the line that bills it. */
+export type ProductType = Modules.Products.Domain.Enums.ProductType;
 
 /**
  * One page of the admin list, exactly as `AdminInvoiceController::index()`
@@ -34,7 +43,8 @@ export type PaymentMethod = Modules.PaymentAccounts.Domain.Enums.PaymentMethod;
  *
  * Flat, not Inertia's `{ data, links, meta }`: `index()` calls
  * `response()->json($paginator)` directly, so Laravel's own
- * `LengthAwarePaginator::toArray()` shape is what arrives.
+ * `LengthAwarePaginator::toArray()` shape is what arrives — which is also why
+ * the generated `Illuminate.LengthAwarePaginator` (nested `meta`) does not fit.
  */
 export type InvoicePage = {
     data: InvoiceListItem[];
@@ -73,8 +83,9 @@ export type InvoicePaymentFilter = 'all' | 'paid' | 'unpaid';
 /**
  * The query params `GET /data/admin/invoices` accepts.
  *
- * Snake_case throughout: `InvoiceFilterData` carries
- * `#[MapInputName(SnakeCaseMapper::class)]`, so this is the exact wire shape.
+ * Client-side filter state rather than an alias of the generated
+ * `InvoiceFilterData`: the toolbar needs the neutral `'all'` values and the
+ * paging the DTO does not carry. Snake_case throughout, matching the wire.
  */
 export type InvoiceFilters = {
     search: string;
@@ -90,40 +101,12 @@ export type InvoiceFilters = {
     per_page: number;
 };
 
-/** One line as the create/edit form models it, before it goes over the wire. */
-export type InvoiceItemPayload = {
-    title: string;
-    description: string | null;
-    kind: InvoiceItemKind;
-    unit: BillingUnit;
-    quantity: number;
-    unit_price: number;
-    service_uuid: string | null;
-    product_uuid: string | null;
-    sort_order: number;
-};
+/** One line exactly as `InvoiceItemData` accepts it. */
+export type InvoiceItemPayload =
+    Modules.Invoices.Application.DTOs.InvoiceItemData;
 
-/** The exact body `POST` / `PUT /data/admin/invoices` accepts. */
-export type InvoiceWritePayload = {
-    client_uuid: string;
-    product_uuid: string | null;
-    invoice_number: string;
-    issue_date: string;
-    due_date: string;
-    currency: string;
-    tax_mode: 'EXEMPT' | 'PERCENT';
-    tax_rate: number | null;
-    tax_label: string;
-    is_paid: boolean;
-    payment_method: PaymentMethod | null;
-    payment_account_uuid: string | null;
-    transfer_number: string | null;
-    payment_date: string | null;
-    amount_received: number | null;
-    notes: string | null;
-    additional_notes: string | null;
-    items: InvoiceItemPayload[];
-};
+/** The exact body `POST` / `PUT /data/admin/invoices` accepts (`InvoiceData`). */
+export type InvoiceWritePayload = Modules.Invoices.Application.DTOs.InvoiceData;
 
 /** A client the invoice can be billed to, from `GET .../form-options`. */
 export type InvoiceClientOption = {
@@ -151,16 +134,17 @@ export type InvoiceProductOption = {
     description: string | null;
     price: number | string;
     currency: string;
-    type: string;
+    type: ProductType;
     default_unit: BillingUnit;
     total_hours: number | null;
 };
 
-/** A settlement rail the invoice can be paid through. */
+/** An active settlement rail the invoice can be paid through. */
 export type InvoicePaymentAccountOption = {
     uuid: string;
     method: PaymentMethod;
-    currency: string | null;
+    /** `null` settles any currency. */
+    currency: Currency | null;
     label: string;
     is_default: boolean;
 };
@@ -168,8 +152,8 @@ export type InvoicePaymentAccountOption = {
 /**
  * Everything the create/edit form needs, in one request.
  *
- * The form cannot render usefully without all of it, so five separate queries
- * would only mean five separate loading states for one screen.
+ * Hand-written because `GetInvoiceFormOptionsHandler` returns plain arrays, not
+ * a `Data` class — there is no generated counterpart to alias.
  */
 export type InvoiceFormOptions = {
     clients: InvoiceClientOption[];

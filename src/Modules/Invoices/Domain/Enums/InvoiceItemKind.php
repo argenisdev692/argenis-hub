@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Invoices\Domain\Enums;
 
+use Modules\Products\Domain\Enums\ProductType;
+
 /**
  * What a line item is billing. `Service` links to the freelance service
  * catalog, `Course` / `Video` link to the product catalog, `Custom` is
@@ -22,6 +24,19 @@ enum InvoiceItemKind: string
     public static function values(): array
     {
         return array_column(self::cases(), 'value');
+    }
+
+    /**
+     * The kind a line takes when it bills a catalog product. Recorded material
+     * is a `Video` line; every live format — course, workshop, mentoring — is
+     * instructor-led training and bills as a `Course` line.
+     */
+    public static function forProductType(ProductType $type): self
+    {
+        return match ($type) {
+            ProductType::VideoCourse => self::Video,
+            ProductType::Course, ProductType::Workshop, ProductType::Mentoring => self::Course,
+        };
     }
 
     public function requiresProduct(): bool

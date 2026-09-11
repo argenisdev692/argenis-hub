@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\PaymentAccounts\Application\DTOs;
 
 use Modules\PaymentAccounts\Domain\Enums\PaymentMethod;
+use Shared\Domain\Enums\Currency;
 use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
@@ -49,7 +50,7 @@ final class StorePaymentAccountData extends Data
         return [
             'method' => ['required', 'string', 'in:'.implode(',', PaymentMethod::values())],
             'label' => ['required', 'string', 'max:255'],
-            'currency' => ['nullable', 'string', 'size:3', 'alpha', 'uppercase'],
+            'currency' => ['nullable', 'string', 'in:'.implode(',', Currency::values())],
             'beneficiary' => ['nullable', 'string', 'max:255'],
             'bank_name' => ['nullable', 'string', 'max:255'],
             'iban' => [

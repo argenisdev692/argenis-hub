@@ -2,75 +2,61 @@
 
 declare(strict_types=1);
 
-namespace Modules\Invoices\Tests\Unit;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
 use Modules\Invoices\Application\Support\InvoicePdfViewAssembler;
+use Modules\Invoices\Domain\Enums\TaxMode;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
-use Tests\TestCase;
 
-final class InvoicePdfViewAssemblerTest extends TestCase
+uses(RefreshDatabase::class);
+
+/**
+ * @param  array<string, mixed>  $invoiceAttributes
+ * @return array<string, mixed>
+ */
+function assembledPdf(string $clientCountryCode, array $invoiceAttributes, ?string $clientCountry = null): array
 {
-    use RefreshDatabase;
+    $invoice = InvoiceEloquentModel::factory()->make($invoiceAttributes);
+    $invoice->setRelation('client', ClientEloquentModel::factory()->make([
+        'country' => $clientCountry,
+        'country_code' => $clientCountryCode,
+    ]));
 
-    public function test_spanish_labels_for_schengen_client_outside_portugal(): void
-    {
-        $client = ClientEloquentModel::factory()->make([
-            'country' => 'Germany',
-            'country_code' => 'DE',
-        ]);
-        $invoice = InvoiceEloquentModel::factory()->make([
-            'tax_mode' => 'EXEMPT',
-            'tax_rate' => 0,
-        ]);
-        $invoice->setRelation('client', $client);
-
-        $assembler = new InvoicePdfViewAssembler;
-        $pdf = $assembler->assemble($invoice, [
-            'country' => 'Portugal',
-            'country_code' => 'PT',
-        ]);
-
-        $this->assertSame('es', $pdf['html_lang']);
-        $this->assertSame('FACTURA', $pdf['labels']['document_title']);
-        $this->assertSame('Proveedor', $pdf['labels']['from']);
-        $this->assertStringContainsString('Inversión del sujeto pasivo', (string) $pdf['notes_body']);
-    }
-
-    public function test_english_labels_for_united_states_client(): void
-    {
-        $client = ClientEloquentModel::factory()->make(['country_code' => 'US']);
-        $invoice = InvoiceEloquentModel::factory()->make(['tax_mode' => 'EXEMPT']);
-        $invoice->setRelation('client', $client);
-
-        $assembler = new InvoicePdfViewAssembler;
-        $pdf = $assembler->assemble($invoice, ['country' => 'Portugal', 'country_code' => 'PT']);
-
-        $this->assertSame('en', $pdf['html_lang']);
-        $this->assertSame('INVOICE', $pdf['labels']['document_title']);
-        $this->assertStringContainsString('Reverse Charge', (string) $pdf['notes_body']);
-    }
-
-    public function test_currency_symbol_follows_invoice_currency(): void
-    {
-        $client = ClientEloquentModel::factory()->make(['country_code' => 'US']);
-        $usdInvoice = InvoiceEloquentModel::factory()->make([
-            'currency' => 'USD',
-            'tax_mode' => 'EXEMPT',
-        ]);
-        $usdInvoice->setRelation('client', $client);
-
-        $eurInvoice = InvoiceEloquentModel::factory()->make([
-            'currency' => 'EUR',
-            'tax_mode' => 'EXEMPT',
-        ]);
-        $eurInvoice->setRelation('client', $client);
-
-        $assembler = new InvoicePdfViewAssembler;
-        $company = ['country' => 'Portugal', 'country_code' => 'PT'];
-
-        $this->assertSame('$', $assembler->assemble($usdInvoice, $company)['currency_symbol']);
-        $this->assertSame('€', $assembler->assemble($eurInvoice, $company)['currency_symbol']);
-    }
+    return (new InvoicePdfViewAssembler)->assemble($invoice, ['country' => 'Portugal', 'country_code' => 'PT']);
 }
+
+it('uses spanish labels for a schengen client outside portugal', function (): void {
+    $pdf = assembledPdf('DE', ['tax_mode' => TaxMode::Exempt, 'tax_rate' => 0], 'Germany');
+
+    expect($pdf['html_lang'])->toBe('es')
+        ->and($pdf['labels']['document_title'])->toBe('FACTURA')
+        ->and($pdf['labels']['from'])->toBe('Proveedor')
+        ->and((string) $pdf['notes_body'])->toContain('Inversión del sujeto pasivo');
+});
+
+it('uses english labels for a united states client', function (): void {
+    $pdf = assembledPdf('US', ['tax_mode' => TaxMode::Exempt]);
+
+    expect($pdf['html_lang'])->toBe('en')
+        ->and($pdf['labels']['document_title'])->toBe('INVOICE')
+        ->and((string) $pdf['notes_body'])->toContain('Reverse Charge');
+});
+
+it('follows the invoice currency for the symbol', function (string $currency, string $symbol): void {
+    expect(assembledPdf('US', ['currency' => $currency, 'tax_mode' => TaxMode::Exempt])['currency_symbol'])
+        ->toBe($symbol);
+})->with([
+    'usd' => ['USD', '$'],
+    'eur' => ['EUR', '€'],
+    'gbp' => ['GBP', '£'],
+    // A legacy row outside the supported set prints its code, never `$`.
+    'legacy chf' => ['CHF', 'CHF'],
+]);
+
+it('tells the template whether to print the tax as exempt', function (TaxMode $mode, int $rate, bool $exempt): void {
+    expect(assembledPdf('US', ['tax_mode' => $mode, 'tax_rate' => $rate])['tax_exempt'])->toBe($exempt);
+})->with([
+    'exempt' => [TaxMode::Exempt, 0, true],
+    'zero percent' => [TaxMode::Percent, 0, true],
+    'twenty-three percent' => [TaxMode::Percent, 23, false],
+]);

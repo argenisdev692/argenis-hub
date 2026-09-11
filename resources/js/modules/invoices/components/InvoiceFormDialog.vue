@@ -27,11 +27,14 @@ import {
     useNextInvoiceNumber,
 } from '../composables/useInvoiceNumber';
 import {
+    currencyLabel,
     formatMoney,
     paymentMethodLabel,
 } from '../helpers/invoicePresentation';
 import { computeInvoiceTotals } from '../helpers/invoiceTotals';
 import {
+    CURRENCY_VALUES,
+    isCurrency,
     isPaymentMethod,
     isTaxMode,
     PAYMENT_METHOD_VALUES,
@@ -71,6 +74,7 @@ const form = useInvoiceForm({
 
 // Deferred to the first open — see the `enabled` note in the composable.
 const {
+    data: formOptions,
     clients,
     services,
     products,
@@ -91,6 +95,10 @@ const items = form.useStore((state) => state.values.items);
 const taxMode = form.useStore((state) => state.values.tax_mode);
 const taxRate = form.useStore((state) => state.values.tax_rate);
 const isPaid = form.useStore((state) => state.values.is_paid);
+const paymentMethod = form.useStore((state) => state.values.payment_method);
+const paymentAccountUuid = form.useStore(
+    (state) => state.values.payment_account_uuid,
+);
 const issueDate = form.useStore((state) => state.values.issue_date);
 const invoiceNumber = form.useStore((state) => state.values.invoice_number);
 const isSubmitting = form.useStore((state) => state.isSubmitting);
@@ -143,10 +151,58 @@ const { isAvailable, conflict } = useInvoiceNumberCheck(
     () => invoice?.uuid ?? null,
 );
 
-/** The rails that can settle the currency currently selected. */
+/**
+ * The rails that can settle this invoice: accepting its currency and — once a
+ * method is chosen — settling through that method. Those are exactly the two
+ * checks `InvoicePaymentResolver` answers with a 422, so the picker never
+ * offers an account the server would reject.
+ */
 const paymentAccounts = computed(() =>
-    accountsForCurrency(() => currency.value),
+    accountsForCurrency(() => currency.value).filter(
+        (account) =>
+            paymentMethod.value === null ||
+            account.method === paymentMethod.value,
+    ),
 );
+
+/**
+ * Drops a chosen account the moment it stops fitting — the currency or the
+ * method changed underneath it. Left in place it would be invisible in the
+ * picker yet still submitted.
+ *
+ * Skipped until the catalog has loaded: an empty list while that request is in
+ * flight would otherwise clear the account an edit form was just seeded with.
+ */
+watch([paymentAccounts, paymentAccountUuid], ([accounts, uuid]) => {
+    if (formOptions.value === undefined || uuid === null) {
+        return;
+    }
+
+    if (!accounts.some((account) => account.uuid === uuid)) {
+        form.setFieldValue('payment_account_uuid', null);
+    }
+});
+
+/** reka `Select` has no empty-string item, so "not set" gets a sentinel. */
+const NONE = '__none__';
+
+function toAccountUuid(value: unknown): string | null {
+    return value === NONE || value === null ? null : String(value);
+}
+
+/**
+ * Choosing an account settles the method too: the invoice stores both, and a
+ * method that disagrees with the account's snapshot is rejected on save.
+ */
+function adoptAccountMethod(uuid: string | null): void {
+    const account = paymentAccounts.value.find(
+        (option) => option.uuid === uuid,
+    );
+
+    if (account) {
+        form.setFieldValue('payment_method', account.method);
+    }
+}
 
 /**
  * Seed the notes from the company default, for a new invoice only.
@@ -165,9 +221,6 @@ watch([open, defaultNotes], ([isOpen, notes]) => {
         form.setFieldValue('notes', notes);
     }
 });
-
-/** reka `Select` has no empty-string item, so "not set" gets a sentinel. */
-const NONE = '__none__';
 </script>
 
 <template>
@@ -322,13 +375,36 @@ const NONE = '__none__';
                 </form.Field>
 
                 <form.Field name="currency" #default="{ field }">
-                    <TextField
+                    <AppField
                         :field="field"
                         label="Currency"
                         required
-                        placeholder="EUR"
-                        description="Three-letter code."
-                    />
+                        description="Payment accounts are narrowed to this currency."
+                        #default="{ control }"
+                    >
+                        <Select
+                            :model-value="field.state.value || NONE"
+                            @update:model-value="
+                                (value) =>
+                                    field.handleChange(
+                                        isCurrency(value) ? value : '',
+                                    )
+                            "
+                        >
+                            <SelectTrigger v-bind="control" class="w-full">
+                                <SelectValue placeholder="Choose a currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="code in CURRENCY_VALUES"
+                                    :key="code"
+                                    :value="code"
+                                >
+                                    {{ currencyLabel(code) }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </AppField>
                 </form.Field>
             </div>
 
@@ -349,9 +425,10 @@ const NONE = '__none__';
 
                     <!--
                         The array field's own errors — "needs at least one
-                        line", plus anything Zod reports against a specific
-                        line. `InvoiceLineItemsField` renders no error surface
-                        of its own, so this is where they land.
+                        line", anything Zod reports against a specific line, and
+                        the server's `items.N.*` 422s folded here by
+                        `useInvoiceForm`. `InvoiceLineItemsField` renders no
+                        error surface of its own, so this is where they land.
                     -->
                     <p
                         v-for="message in fieldErrorMessages(field)"
@@ -529,16 +606,16 @@ const NONE = '__none__';
                     <AppField
                         :field="field"
                         label="Settled into"
-                        :description="`Rails that accept ${currency}. Choosing one prints its real details instead of a bare method name.`"
+                        description="Only active accounts that accept this currency and method. Choosing one prints its real details and sets the method."
                         #default="{ control }"
                     >
                         <Select
                             :model-value="field.state.value ?? NONE"
                             @update:model-value="
-                                (value) =>
-                                    field.handleChange(
-                                        value === NONE ? null : String(value),
-                                    )
+                                (value) => {
+                                    field.handleChange(toAccountUuid(value));
+                                    adoptAccountMethod(toAccountUuid(value));
+                                }
                             "
                         >
                             <SelectTrigger v-bind="control" class="w-full">

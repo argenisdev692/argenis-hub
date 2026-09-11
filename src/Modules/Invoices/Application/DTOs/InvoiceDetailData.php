@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Invoices\Application\DTOs;
 
+use Modules\Invoices\Domain\Enums\TaxMode;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceItemEloquentModel;
 use Modules\PaymentAccounts\Domain\Enums\PaymentMethod;
@@ -35,7 +36,7 @@ final class InvoiceDetailData extends Data
         public readonly string $issueDate,
         public readonly string $dueDate,
         public readonly string $currency,
-        public readonly string $taxMode,
+        public readonly TaxMode $taxMode,
         public readonly ?float $taxRate,
         public readonly string $taxLabel,
         public readonly float $subtotal,

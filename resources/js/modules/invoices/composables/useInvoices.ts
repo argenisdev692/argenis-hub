@@ -4,7 +4,12 @@ import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/invoices/admin';
 import { buildInvoiceListQueryParams } from '../helpers/buildInvoiceQueryParams';
-import type { InvoiceFilters, InvoicePage } from '../types';
+import type {
+    InvoiceFilters,
+    InvoicePage,
+    InvoicePaymentFilter,
+    InvoiceStatusFilter,
+} from '../types';
 
 /** The key every invoice mutation invalidates. */
 export const INVOICES_KEY = ['invoices'];
@@ -21,6 +26,40 @@ export function defaultInvoiceFilters(): InvoiceFilters {
         page: 1,
         per_page: 15,
     };
+}
+
+const STATUS_FILTERS: readonly InvoiceStatusFilter[] = [
+    'all',
+    'active',
+    'suspended',
+];
+
+const PAYMENT_FILTERS: readonly InvoicePaymentFilter[] = [
+    'all',
+    'paid',
+    'unpaid',
+];
+
+/**
+ * Narrowing guards for the toolbar selects, which hand back the wide
+ * `FilterSelectValue` — a checked narrowing instead of an `as` cast (§13).
+ */
+export function isInvoiceStatusFilter(
+    value: unknown,
+): value is InvoiceStatusFilter {
+    return (
+        typeof value === 'string' &&
+        (STATUS_FILTERS as readonly string[]).includes(value)
+    );
+}
+
+export function isInvoicePaymentFilter(
+    value: unknown,
+): value is InvoicePaymentFilter {
+    return (
+        typeof value === 'string' &&
+        (PAYMENT_FILTERS as readonly string[]).includes(value)
+    );
 }
 
 /**

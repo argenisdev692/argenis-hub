@@ -712,7 +712,7 @@ declare namespace Modules {
                     items: Modules.Invoices.Application.DTOs.InvoiceItemData[];
                     product_uuid: string | null;
                     currency: string;
-                    tax_mode: string;
+                    tax_mode: Modules.Invoices.Domain.Enums.TaxMode;
                     tax_rate: number | null;
                     tax_label: string;
                     is_paid: boolean;
@@ -732,7 +732,7 @@ declare namespace Modules {
                     readonly issue_date: string;
                     readonly due_date: string;
                     readonly currency: string;
-                    readonly tax_mode: string;
+                    readonly tax_mode: Modules.Invoices.Domain.Enums.TaxMode;
                     readonly tax_rate: number | null;
                     readonly tax_label: string;
                     readonly subtotal: number;
@@ -814,6 +814,7 @@ declare namespace Modules {
             namespace Enums {
                 export type InvoiceItemKind =
                     'SERVICE' | 'COURSE' | 'VIDEO' | 'CUSTOM';
+                export type TaxMode = 'EXEMPT' | 'PERCENT';
             }
         }
     }
@@ -1463,6 +1464,7 @@ declare namespace Shared {
         namespace Enums {
             export type BillingUnit =
                 'UNIT' | 'HOUR' | 'SESSION' | 'DAY' | 'MONTH';
+            export type Currency = 'EUR' | 'USD' | 'GBP';
         }
     }
     namespace Infrastructure {

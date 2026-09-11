@@ -278,3 +278,123 @@ it('rejects an unknown payment method', function (): void {
         'amount_received' => 1300,
     ]))->assertJsonValidationErrors('payment_method');
 });
+
+it('derives the line kind from the linked product type', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'ES']);
+    $video = ProductEloquentModel::factory()->videoCourse()->create(['user_id' => $admin->id]);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'items' => [[
+            'title' => 'Pildoras de Video Microsoft 365 Copilot',
+            'kind' => InvoiceItemKind::Course->value,
+            'unit' => BillingUnit::Hour->value,
+            'product_uuid' => $video->uuid,
+            'quantity' => 6,
+            'unit_price' => 52,
+        ]],
+    ]))->assertCreated();
+
+    expect(InvoiceEloquentModel::query()->firstOrFail()->items->first()->kind)->toBe(InvoiceItemKind::Video);
+});
+
+it('rejects a line pointing at a suspended product', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'ES']);
+    $course = ProductEloquentModel::factory()->classroom()->create(['user_id' => $admin->id]);
+    $course->delete();
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'items' => [[
+            'title' => 'Tabnine AI para Desarrolladores',
+            'kind' => InvoiceItemKind::Course->value,
+            'unit' => BillingUnit::Hour->value,
+            'product_uuid' => $course->uuid,
+            'quantity' => 25,
+            'unit_price' => 52,
+        ]],
+    ]))->assertJsonValidationErrors('items.0.product_uuid');
+});
+
+it('rejects a currency the invoice document cannot render', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create();
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, ['currency' => 'CHF']))
+        ->assertJsonValidationErrors('currency');
+});
+
+it('bills a uk client in pound sterling', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'GB']);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, ['currency' => 'GBP']))
+        ->assertCreated();
+
+    expect(InvoiceEloquentModel::query()->firstOrFail()->currency)->toBe('GBP');
+});
+
+it('rejects a payment account pinned to another currency', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'US']);
+    $eurAccount = PaymentAccountEloquentModel::factory()->create(['user_id' => $admin->id]);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'currency' => 'USD',
+        'payment_account_uuid' => $eurAccount->uuid,
+    ]))->assertJsonValidationErrors('payment_account_uuid');
+
+    expect(InvoiceEloquentModel::query()->count())->toBe(0);
+});
+
+it('accepts a currency-agnostic payment account on any invoice currency', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'US']);
+    $anyCurrency = PaymentAccountEloquentModel::factory()->remitlyUsd()->create([
+        'user_id' => $admin->id,
+        'currency' => null,
+    ]);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'currency' => 'USD',
+        'payment_account_uuid' => $anyCurrency->uuid,
+    ]))->assertCreated();
+
+    expect(InvoiceEloquentModel::query()->firstOrFail()->payment_account_id)->toBe($anyCurrency->id);
+});
+
+it('rejects a payment method that contradicts the selected account', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create(['country_code' => 'US']);
+    $remitly = PaymentAccountEloquentModel::factory()->remitlyUsd()->create(['user_id' => $admin->id]);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'currency' => 'USD',
+        'is_paid' => true,
+        'payment_method' => PaymentMethod::BankTransfer->value,
+        'payment_account_uuid' => $remitly->uuid,
+        'payment_date' => '2026-03-12',
+        'amount_received' => 1300,
+    ]))->assertJsonValidationErrors('payment_method');
+});
+
+it('rejects an inactive payment account', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create();
+    $inactive = PaymentAccountEloquentModel::factory()->create(['user_id' => $admin->id, 'is_active' => false]);
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'payment_account_uuid' => $inactive->uuid,
+    ]))->assertJsonValidationErrors('payment_account_uuid');
+});
+
+it('rejects a suspended payment account', function (): void {
+    $admin = billingAdmin();
+    $client = ClientEloquentModel::factory()->active()->create();
+    $suspended = PaymentAccountEloquentModel::factory()->create(['user_id' => $admin->id]);
+    $suspended->delete();
+
+    $this->actingAs($admin)->postJson('/data/admin/invoices', invoicePayload($client, [
+        'payment_account_uuid' => $suspended->uuid,
+    ]))->assertJsonValidationErrors('payment_account_uuid');
+});

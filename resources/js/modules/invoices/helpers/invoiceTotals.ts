@@ -1,7 +1,5 @@
-import type {
-    InvoiceItemFormValues,
-    TaxMode,
-} from '../schemas/invoiceFormSchema';
+import type { InvoiceItemFormValues } from '../schemas/invoiceFormSchema';
+import type { TaxMode } from '../types';
 
 /**
  * The browser's copy of `InvoiceTotalsCalculator::compute()`.

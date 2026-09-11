@@ -7,6 +7,7 @@ namespace Modules\Products\Application\DTOs;
 use Modules\Products\Domain\Enums\ProductStatus;
 use Modules\Products\Domain\Enums\ProductType;
 use Shared\Domain\Enums\BillingUnit;
+use Shared\Domain\Enums\Currency;
 use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
@@ -51,7 +52,7 @@ final class StoreProductData extends Data
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
-            'currency' => ['required', 'string', 'size:3', 'alpha', 'uppercase'],
+            'currency' => ['required', 'string', 'in:'.implode(',', Currency::values())],
             'default_unit' => ['required', 'string', 'in:'.implode(',', BillingUnit::values())],
             'status' => ['required', 'string', 'in:'.implode(',', ProductStatus::values())],
             'level' => ['required', 'string', 'max:32'],

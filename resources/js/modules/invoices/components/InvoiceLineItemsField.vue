@@ -21,6 +21,7 @@ import {
     billingUnitLabel,
     formatMoney,
     itemKindLabel,
+    kindForProductType,
     kindRequiresProduct,
 } from '../helpers/invoicePresentation';
 import { lineAmount } from '../helpers/invoiceTotals';
@@ -183,12 +184,28 @@ function onProductChange(index: number, uuid: string | null): void {
 
     patch(index, {
         product_uuid: product.uuid,
+        // The server derives the kind from the product type on save; setting it
+        // here keeps the form showing what will actually be stored.
+        kind: kindForProductType(product.type),
         title: product.title,
         description: product.description ?? '',
         unit,
         unit_price: Number(product.price),
         quantity,
     });
+}
+
+/**
+ * The catalog rows a line of `kind` can bill.
+ *
+ * A video course on a COURSE line would be saved as a VIDEO line (the server
+ * derives the kind from the product type), so each picker only offers the
+ * products whose type matches the kind the operator chose.
+ */
+function productsFor(kind: InvoiceItemKind): InvoiceProductOption[] {
+    return products.filter(
+        (product) => kindForProductType(product.type) === kind,
+    );
 }
 
 function onUnitChange(index: number, value: unknown): void {
@@ -400,7 +417,7 @@ const units: readonly BillingUnit[] = BILLING_UNIT_VALUES;
                                     Choose a product
                                 </SelectItem>
                                 <SelectItem
-                                    v-for="product in products"
+                                    v-for="product in productsFor(item.kind)"
                                     :key="product.uuid"
                                     :value="product.uuid"
                                 >

@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
 use Modules\Invoices\Application\DTOs\InvoiceFilterData;
+use Modules\Invoices\Domain\Enums\TaxMode;
 use Modules\Invoices\Domain\Ports\InvoiceRepositoryPort;
 use Modules\PaymentAccounts\Domain\Enums\PaymentMethod;
 use Modules\PaymentAccounts\Infrastructure\Persistence\Eloquent\Models\PaymentAccountEloquentModel;
@@ -41,7 +42,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon $issue_date
  * @property Carbon $due_date
  * @property string $currency
- * @property string $tax_mode
+ * @property TaxMode $tax_mode
  * @property string|null $tax_rate
  * @property string $tax_label
  * @property string $subtotal
@@ -227,6 +228,7 @@ final class InvoiceEloquentModel extends Model
             'year' => 'integer',
             'issue_date' => 'date',
             'due_date' => 'date',
+            'tax_mode' => TaxMode::class,
             'tax_rate' => 'decimal:4',
             'subtotal' => 'decimal:2',
             'tax_amount' => 'decimal:2',

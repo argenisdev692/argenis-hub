@@ -6,9 +6,11 @@ namespace Modules\Invoices\Infrastructure\Persistence\Repositories;
 
 use App\Models\CompanyData;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentModel;
 use Modules\Invoices\Application\DTOs\InvoiceFilterData;
 use Modules\Invoices\Application\DTOs\InvoiceListItemData;
+use Modules\Invoices\Domain\Enums\InvoiceItemKind;
 use Modules\Invoices\Domain\Ports\InvoiceRepositoryPort;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
 use Modules\PaymentAccounts\Infrastructure\Persistence\Eloquent\Models\PaymentAccountEloquentModel;
@@ -84,19 +86,23 @@ final readonly class EloquentInvoiceRepository implements InvoiceRepositoryPort
 
     public function createWithItems(array $attributes, array $items): InvoiceEloquentModel
     {
-        $invoice = InvoiceEloquentModel::query()->create($attributes);
-        $invoice->items()->createMany($items);
+        return DB::transaction(static function () use ($attributes, $items): InvoiceEloquentModel {
+            $invoice = InvoiceEloquentModel::query()->create($attributes);
+            $invoice->items()->createMany($items);
 
-        return $invoice->load(['client:id,uuid,client_name', 'product:id,uuid,title,type', 'items']);
+            return $invoice->load(['client:id,uuid,client_name', 'product:id,uuid,title,type', 'items']);
+        });
     }
 
     public function updateWithItems(InvoiceEloquentModel $invoice, array $attributes, array $items): InvoiceEloquentModel
     {
-        $invoice->update($attributes);
-        $invoice->items()->delete();
-        $invoice->items()->createMany($items);
+        return DB::transaction(static function () use ($invoice, $attributes, $items): InvoiceEloquentModel {
+            $invoice->update($attributes);
+            $invoice->items()->delete();
+            $invoice->items()->createMany($items);
 
-        return $invoice->refresh()->load(['client:id,uuid,client_name', 'product:id,uuid,title,type', 'items']);
+            return $invoice->refresh()->load(['client:id,uuid,client_name', 'product:id,uuid,title,type', 'items']);
+        });
     }
 
     public function softDelete(string $uuid): bool
@@ -175,6 +181,15 @@ final readonly class EloquentInvoiceRepository implements InvoiceRepositoryPort
         ];
     }
 
+    public function findClientIdByUuid(string $clientUuid): ?int
+    {
+        $id = ClientEloquentModel::query()
+            ->where('uuid', $clientUuid)
+            ->value('id');
+
+        return $id !== null ? (int) $id : null;
+    }
+
     public function mapServiceIdsByUuid(array $serviceUuids): array
     {
         if ($serviceUuids === []) {
@@ -187,7 +202,7 @@ final readonly class EloquentInvoiceRepository implements InvoiceRepositoryPort
             ->all();
     }
 
-    public function mapProductIdsByUuid(array $productUuids): array
+    public function mapProductLinesByUuid(array $productUuids): array
     {
         if ($productUuids === []) {
             return [];
@@ -195,7 +210,14 @@ final readonly class EloquentInvoiceRepository implements InvoiceRepositoryPort
 
         return ProductEloquentModel::query()
             ->whereIn('uuid', array_values(array_unique($productUuids)))
-            ->pluck('id', 'uuid')
+            ->select(['id', 'uuid', 'type'])
+            ->get()
+            ->mapWithKeys(static fn (ProductEloquentModel $product): array => [
+                $product->uuid => [
+                    'id' => $product->id,
+                    'kind' => InvoiceItemKind::forProductType($product->type),
+                ],
+            ])
             ->all();
     }
 

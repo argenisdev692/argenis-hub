@@ -5,15 +5,10 @@ declare(strict_types=1);
 namespace Modules\Invoices\Application\Support;
 
 /**
- * Redis cache key helpers for invoice aggregate + generated PDF binaries.
+ * Redis cache key helper for generated invoice PDF binaries.
  */
 final readonly class InvoiceCacheKeys
 {
-    public static function invoice(string $uuid): string
-    {
-        return "invoice_{$uuid}";
-    }
-
     /**
      * PDF binary cache key. Pass `$version` (usually `updated_at` unix ts) so an
      * edit never re-serves a pre-edit PDF after Redis forget races.
