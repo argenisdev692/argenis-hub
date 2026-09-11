@@ -3,10 +3,7 @@ import { computed, toValue } from 'vue';
 import type { MaybeRefOrGetter } from 'vue';
 import { httpJson } from '@/lib/http';
 import { formOptions } from '@/routes/invoices/admin';
-import type {
-    InvoiceFormOptions,
-    InvoicePaymentAccountOption,
-} from '../types';
+import type { InvoiceFormOptions, InvoicePaymentAccountOption } from '../types';
 
 /**
  * The catalogs the create/edit form needs — clients, services, published
@@ -17,10 +14,20 @@ import type {
  * `useProductMutations` and `usePaymentAccountMutations` invalidate this key
  * when they change something it contains.
  */
-export function useInvoiceFormOptions() {
+export function useInvoiceFormOptions(
+    /**
+     * Gates the request. The form dialog stays mounted for the life of the
+     * index page so it can animate open, so without this the catalog would be
+     * fetched on every page load — including for the operators who only ever
+     * read the ledger. Passing `() => open.value` defers it to the first open;
+     * the long `gcTime` makes every open after that instant.
+     */
+    enabled: MaybeRefOrGetter<boolean> = true,
+) {
     const { data, ...query } = useQuery<InvoiceFormOptions>({
         key: () => ['invoice-form-options'],
         query: () => httpJson<InvoiceFormOptions>(formOptions.url()),
+        enabled: () => toValue(enabled),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 15,
     });
@@ -48,9 +55,7 @@ export function useInvoiceFormOptions() {
                 (account) =>
                     account.currency === null || account.currency === wanted,
             )
-            .sort(
-                (a, b) => Number(b.is_default) - Number(a.is_default),
-            );
+            .sort((a, b) => Number(b.is_default) - Number(a.is_default));
     }
 
     return {

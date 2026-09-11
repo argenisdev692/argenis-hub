@@ -23,12 +23,21 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 final class BlogCategoryFilterData extends SoftDeleteFilterData
 {
     /**
+     * The comments below are published as these query parameters' descriptions
+     * in `api.json` — write them for an API consumer, not for the next
+     * maintainer, whose notes belong in this docblock.
+     *
+     * `search` matches the category name or its description; the date window
+     * narrows on `created_at`.
+     *
      * @return array<string, mixed>
      */
     public static function rules(): array
     {
         return [
             ...self::baseRules(),
+            // Lifecycle. `active` (and omitting this) returns live categories;
+            // `suspended` returns only the soft-deleted ones.
             'status' => ['nullable', 'string', 'in:active,suspended'],
         ];
     }

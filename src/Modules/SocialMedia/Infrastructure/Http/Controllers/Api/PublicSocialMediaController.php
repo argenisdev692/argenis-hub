@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\SocialMedia\Infrastructure\Http\Controllers\Api;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\Request;
 use Modules\SocialMedia\Application\Queries\GetPublicSocialMediaContentHandler;
 use Modules\SocialMedia\Application\Queries\ListPublicSocialMediaContentHandler;
@@ -17,7 +18,8 @@ use Spatie\LaravelData\PaginatedDataCollection;
  * internet traffic, hence the tighter `throttle:landing-public` at the route
  * and no `auth`/`permission` middleware.
  *
- * Documented by Scramble from the return types — no manual annotations.
+ * Responses are documented by Scramble from the return types. The feed takes no
+ * filters — only paging — so there is no filter `Data` object to inject here.
  */
 final readonly class PublicSocialMediaController
 {
@@ -30,6 +32,12 @@ final readonly class PublicSocialMediaController
      *
      * @return PaginatedDataCollection<int, SocialMediaContentPublicReadModel>
      */
+    #[QueryParameter(
+        'per_page',
+        description: 'Rows per page, clamped to 1–100.',
+        type: 'int',
+        default: 15,
+    )]
     public function index(Request $request, ListPublicSocialMediaContentHandler $list): PaginatedDataCollection
     {
         return $list->handle(

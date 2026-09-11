@@ -60,8 +60,15 @@ export type InvoicePage = {
  */
 export type InvoiceStatusFilter = 'all' | 'active' | 'suspended';
 
-/** The paid/unpaid axis — orthogonal to the soft-delete one. */
-export type InvoicePaidFilter = 'all' | 'paid' | 'unpaid';
+/**
+ * The settlement axis — orthogonal to the soft-delete one, because a suspended
+ * invoice can perfectly well have been paid.
+ *
+ * Applied by the server (`InvoiceFilterData::$paymentStatus`), never in the
+ * browser: filtering the fifteen rows already on screen would report "3 unpaid"
+ * when there are forty, and the export would disagree with the table.
+ */
+export type InvoicePaymentFilter = 'all' | 'paid' | 'unpaid';
 
 /**
  * The query params `GET /data/admin/invoices` accepts.
@@ -72,6 +79,7 @@ export type InvoicePaidFilter = 'all' | 'paid' | 'unpaid';
 export type InvoiceFilters = {
     search: string;
     status: InvoiceStatusFilter;
+    payment_status: InvoicePaymentFilter;
     client_uuid: string | null;
     year: number | null;
     /** Inclusive `issue_date` lower bound, `YYYY-MM-DD`. */
@@ -180,4 +188,25 @@ export type NextInvoiceNumber = {
     invoice_number: string;
     sequence: number;
     year: number;
+};
+
+/**
+ * `GET .../check-number` — whether a number is still free.
+ *
+ * `invoice_number` echoes back the *normalised* form, so a typed `14` returns
+ * `014/2026` and the form can adopt the server's spelling rather than
+ * reimplementing `CheckInvoiceNumberHandler::normalize()` in the browser.
+ *
+ * `invoice` names the row holding the number when it is taken — including a
+ * suspended one, since a soft-deleted invoice still owns its sequence.
+ */
+export type InvoiceNumberCheck = {
+    available: boolean;
+    invoice_number: string;
+    invoice: {
+        uuid: string;
+        invoice_number: string;
+        client_name: string;
+        is_suspended: boolean;
+    } | null;
 };

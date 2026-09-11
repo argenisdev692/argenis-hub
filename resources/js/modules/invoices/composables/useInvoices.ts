@@ -3,12 +3,17 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/invoices/admin';
+import { buildInvoiceListQueryParams } from '../helpers/buildInvoiceQueryParams';
 import type { InvoiceFilters, InvoicePage } from '../types';
+
+/** The key every invoice mutation invalidates. */
+export const INVOICES_KEY = ['invoices'];
 
 export function defaultInvoiceFilters(): InvoiceFilters {
     return {
         search: '',
         status: 'all',
+        payment_status: 'all',
         client_uuid: null,
         year: null,
         date_from: null,
@@ -25,26 +30,20 @@ export function defaultInvoiceFilters(): InvoiceFilters {
  * `issue_date DESC, sequence DESC` and offers no alternative, because an
  * invoice ledger read in any other order stops being a ledger. Exposing a sort
  * control the API ignores would be worse than not having one.
+ *
+ * A plain composable, not `defineQuery`: `Index.vue` is the only caller, so
+ * there is nothing to de-synchronise by giving it its own local `filters` ref.
+ *
+ * The query string is built by `buildInvoiceListQueryParams`, the same helper
+ * the export menu calls — which is what stops an exported spreadsheet from
+ * showing a different set of rows than the table above it.
  */
 export function useInvoices() {
     const filters = ref<InvoiceFilters>(defaultInvoiceFilters());
 
-    /**
-     * `InvoiceFilterData::$status` only branches on `'active'` or
-     * `'suspended'`; "All" is sent as an omitted param rather than the literal
-     * string, and empty search / unset bounds are dropped the same way so the
-     * query key (and the URL, via `useUrlSyncedFilters`) stay clean.
-     */
-    const queryParams = computed(() => ({
-        ...filters.value,
-        status:
-            filters.value.status === 'all' ? undefined : filters.value.status,
-        search: filters.value.search || undefined,
-        client_uuid: filters.value.client_uuid ?? undefined,
-        year: filters.value.year ?? undefined,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
-    }));
+    const queryParams = computed(() =>
+        buildInvoiceListQueryParams(filters.value),
+    );
 
     const { data, ...query } = useQuery<InvoicePage>({
         key: () => ['invoices', { ...queryParams.value }],

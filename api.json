@@ -37,7 +37,7 @@
         "/activity-logs": {
             "get": {
                 "operationId": "activity-logs.index",
-                "description": "Returns a paginated, filtered list of audit-trail entries, newest first.\nAccepts `search`, `event`, `log_name`, `causer_id`, `date_from`, `date_to`,\n`sort_direction` and `per_page` (capped at 100 to bound resource\nconsumption \u2014 OWASP API4).",
+                "description": "Returns a paginated, filtered list of audit-trail entries, newest first.\nAccepts `search`, `event`, `log_name`, `causer_id`, `date_from`, `date_to`,\n`sort_direction` and `per_page` (capped at 100 to bound resource\nconsumption \u2014 OWASP API4).\n\n`search` matches the entry description, event, log name or subject type.",
                 "summary": "List activity log entries",
                 "tags": [
                     "ActivityLogApi"
@@ -46,6 +46,7 @@
                     {
                         "name": "search",
                         "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
                         "schema": {
                             "type": [
                                 "string",
@@ -57,6 +58,7 @@
                     {
                         "name": "date_from",
                         "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
                         "schema": {
                             "type": [
                                 "string",
@@ -68,6 +70,7 @@
                     {
                         "name": "date_to",
                         "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
                         "schema": {
                             "type": [
                                 "string",
@@ -79,6 +82,7 @@
                     {
                         "name": "event",
                         "in": "query",
+                        "description": "Exact match on the action recorded \u2014 `created`, `updated`,\n`deleted`. Use `search` for a partial match.",
                         "schema": {
                             "type": [
                                 "string",
@@ -90,6 +94,7 @@
                     {
                         "name": "log_name",
                         "in": "query",
+                        "description": "Exact match on the log channel the entry was written to.",
                         "schema": {
                             "type": [
                                 "string",
@@ -101,6 +106,7 @@
                     {
                         "name": "causer_id",
                         "in": "query",
+                        "description": "Restrict to the entries caused by one actor, by their id.",
                         "schema": {
                             "type": [
                                 "string",
@@ -112,6 +118,7 @@
                     {
                         "name": "sort_direction",
                         "in": "query",
+                        "description": "Order by recency: `desc` newest first (the default), `asc` oldest.",
                         "schema": {
                             "type": [
                                 "string",
@@ -127,6 +134,7 @@
                     {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": [
                                 "integer",
@@ -401,8 +409,77 @@
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match on the reason recorded for the exception.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "availability",
+                        "in": "query",
+                        "description": "Which kind of override: `open` for forced-open days, `closed` for\nclosures. Omit for both.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "open",
+                                "closed",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lifecycle. `active` (and omitting this) returns live exceptions;\n`suspended` returns only the soft-deleted ones.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive first day of the period to inspect, `YYYY-MM-DD`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive last day of the period. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date"
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -479,8 +556,54 @@
                 ],
                 "parameters": [
                     {
+                        "name": "day_of_week",
+                        "in": "query",
+                        "description": "Day of the week, 0 = Sunday through 6 = Saturday.",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 6
+                        }
+                    },
+                    {
+                        "name": "availability",
+                        "in": "query",
+                        "description": "Whether the rule opens or closes that day. Omit for both.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "available",
+                                "unavailable",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lifecycle. `active` (and omitting this) returns live rules;\n`suspended` returns only the soft-deleted ones.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -550,15 +673,68 @@
         "/blog-categories": {
             "get": {
                 "operationId": "blog-categories.index",
-                "description": "Returns a paginated list of blog categories. `per_page` is capped at 100 to\nbound resource consumption (OWASP API4).",
+                "description": "Returns a paginated list of blog categories. `per_page` is capped at 100 to\nbound resource consumption (OWASP API4).\n\n`search` matches the category name or its description.",
                 "summary": "List blog categories",
                 "tags": [
                     "BlogCategoryApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lifecycle. `active` (and omitting this) returns live categories;\n`suspended` returns only the soft-deleted ones.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -672,15 +848,73 @@
         "/campaigns": {
             "get": {
                 "operationId": "campaigns.index",
-                "description": "Returns a paginated list. `per_page` is capped at 100 to bound resource\nconsumption (OWASP API4).",
+                "description": "Returns a paginated list. `per_page` is capped at 100 to bound resource\nconsumption (OWASP API4).\n\n`search` matches the campaign topic or headline.",
                 "summary": "List campaigns",
                 "tags": [
                     "CampaignApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "One parameter, two axes. The six workflow values narrow to that\nstage of the campaign lifecycle, while `suspended` instead\nreturns the soft-deleted campaigns \u2014 which are excluded from\nevery other value. Omit it for all live campaigns.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "draft",
+                                "generating",
+                                "ready",
+                                "needs_review",
+                                "published",
+                                "scheduled",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -927,15 +1161,84 @@
         "/cvs": {
             "get": {
                 "operationId": "cvs.index",
-                "description": "Returns a paginated, filterable list of the authenticated user's own CVs.\n`per_page` is capped at 100 to bound resource consumption (OWASP API4).",
+                "description": "Returns a paginated, filterable list of the authenticated user's own CVs.\n`per_page` is capped at 100 to bound resource consumption (OWASP API4).\n\n`search` matches the CV title, its original filename or its niche.",
                 "summary": "List CVs",
                 "tags": [
                     "CvApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lifecycle. `active` (and omitting this) returns live CVs;\n`suspended` returns only the soft-deleted ones.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "niche",
+                        "in": "query",
+                        "description": "The specialisation a CV is written for. Omit for any niche.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "fullstack",
+                                "other",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -1025,15 +1328,110 @@
         "/invoices": {
             "get": {
                 "operationId": "invoices.index",
-                "description": "Returns a paginated, filterable invoice list. `per_page` is capped at\n100 to bound resource consumption (OWASP API4).",
+                "description": "Returns a paginated, filterable invoice list ordered by issue date then\nsequence, newest first. `per_page` is capped at 100 to bound resource\nconsumption (OWASP API4).\n\nThe filters compose: `status` and `payment_status` are orthogonal axes,\nso `?status=suspended&payment_status=paid` is a meaningful request.\n\n`search` matches the invoice number or the client name.",
                 "summary": "List invoices",
                 "tags": [
                     "InvoiceApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Soft-delete axis. `active` (and omitting this) hides suspended\ninvoices, `suspended` shows only those, `all` returns both side\nby side.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "active",
+                                "suspended",
+                                "all",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "description": "Restrict to one invoicing year. Invoice numbers are a per-year\nsequence, so this is the natural way to page through a ledger.",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 2000,
+                            "maximum": 2100
+                        }
+                    },
+                    {
+                        "name": "client_uuid",
+                        "in": "query",
+                        "description": "Restrict to the invoices billed to one client.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "payment_status",
+                        "in": "query",
+                        "description": "Settlement axis, independent of `status`: a suspended invoice can\nstill have been paid. Omit for both paid and unpaid.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "paid",
+                                "unpaid",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -1103,15 +1501,68 @@
         "/permissions": {
             "get": {
                 "operationId": "permissions.index",
-                "description": "Returns a paginated list of permissions. `per_page` is capped at 100 to\nbound resource consumption (OWASP API4).",
+                "description": "Returns a paginated list of permissions. `per_page` is capped at 100 to\nbound resource consumption (OWASP API4).\n\n`search` matches the permission name.",
                 "summary": "List permissions",
                 "tags": [
                     "PermissionApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lifecycle. `active` (and omitting this) returns live permissions;\n`suspended` returns only the soft-deleted ones.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -1225,15 +1676,117 @@
         "/posts": {
             "get": {
                 "operationId": "posts.index",
-                "description": "Returns a paginated list of posts. `per_page` is capped at 100 to bound\nresource consumption (OWASP API4).",
+                "description": "Returns a paginated list of posts. `per_page` is capped at 100 to bound\nresource consumption (OWASP API4).\n\n`search` matches the post title or excerpt.",
                 "summary": "List posts",
                 "tags": [
                     "PostApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "One parameter, two axes. `draft`, `published` and `scheduled`\nnarrow to that editorial state, while `suspended` instead returns\nthe soft-deleted posts \u2014 which are excluded from every other\nvalue. Omit it for all live posts.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "draft",
+                                "published",
+                                "scheduled",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "category_uuid",
+                        "in": "query",
+                        "description": "Restrict to the posts filed under one blog category.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "sort_field",
+                        "in": "query",
+                        "description": "Column to order by. Anything outside this list falls back to\n`created_at` rather than being rejected.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "created_at",
+                                "post_title",
+                                "post_status",
+                                "published_at",
+                                "seo_score",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Direction: `1` ascending, `-1` descending (the default).",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "enum": [
+                                "1",
+                                "-1",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -1812,6 +2365,22 @@
                 "tags": [
                     "PublicPortfolio"
                 ],
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "Output format. Anything else is rejected with a 422.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "csv",
+                                "xlsx",
+                                "pdf"
+                            ],
+                            "default": "xlsx"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "",
@@ -1886,9 +2455,19 @@
                     {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
+                        }
+                    },
+                    {
+                        "name": "category_uuid",
+                        "in": "query",
+                        "description": "Restrict the feed to one blog category.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -1977,6 +2556,7 @@
                     {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -2034,15 +2614,68 @@
         "/roles": {
             "get": {
                 "operationId": "roles.index",
-                "description": "Returns a paginated list of roles on the `web` guard. `per_page` is capped\nat 100 to bound resource consumption (OWASP API4).",
+                "description": "Returns a paginated list of roles on the `web` guard. `per_page` is capped\nat 100 to bound resource consumption (OWASP API4).\n\n`search` matches the role name.",
                 "summary": "List roles",
                 "tags": [
                     "RoleApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Lifecycle. `active` (and omitting this) returns live roles;\n`suspended` returns only the soft-deleted ones.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15
@@ -2156,15 +2789,73 @@
         "/social-media": {
             "get": {
                 "operationId": "social-media.index",
-                "description": "Returns a paginated list. `per_page` is capped at 100 to bound resource\nconsumption (OWASP API4).",
+                "description": "Returns a paginated list. `per_page` is capped at 100 to bound resource\nconsumption (OWASP API4).\n\n`search` matches the content topic or headline.",
                 "summary": "List content packages",
                 "tags": [
                     "SocialMediaApi"
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "One parameter, two axes. The six workflow values narrow to that\nstage of the content lifecycle, while `suspended` instead returns\nthe soft-deleted items \u2014 which are excluded from every other\nvalue. Omit it for all live content.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "draft",
+                                "generating",
+                                "ready",
+                                "needs_review",
+                                "published",
+                                "scheduled",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
+                        "description": "Rows per page, clamped to 1\u2013100.",
                         "schema": {
                             "type": "integer",
                             "default": 15

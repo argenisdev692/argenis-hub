@@ -33,15 +33,30 @@ final class AvailabilityExceptionFilterData extends Data
     ) {}
 
     /**
+     * The comments below are published as these query parameters' descriptions
+     * in `api.json` — write them for an API consumer, not for the next
+     * maintainer, whose notes belong in this docblock.
+     *
+     * Unlike the other list filters, the date window here narrows on the
+     * exception's own date, not on `created_at` — this endpoint answers "what
+     * is open in June", not "what was entered in June".
+     *
      * @return array<string, mixed>
      */
     public static function rules(): array
     {
         return [
+            // Free-text match on the reason recorded for the exception.
             'search' => ['nullable', 'string', 'max:255'],
+            // Which kind of override: `open` for forced-open days, `closed` for
+            // closures. Omit for both.
             'availability' => ['nullable', 'string', 'in:open,closed'],
+            // Lifecycle. `active` (and omitting this) returns live exceptions;
+            // `suspended` returns only the soft-deleted ones.
             'status' => ['nullable', 'string', 'in:active,suspended'],
+            // Inclusive first day of the period to inspect, `YYYY-MM-DD`.
             'date_from' => ['nullable', 'date_format:Y-m-d'],
+            // Inclusive last day of the period. May not fall before `date_from`.
             'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
         ];
     }

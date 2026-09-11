@@ -11,6 +11,15 @@ use Modules\ActivityLog\Infrastructure\Http\Controllers\Api\ActivityLogApiContro
 */
 
 Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('activity-logs')->name('api.activity-logs.')->group(function (): void {
-    Route::get('/', [ActivityLogApiController::class, 'index'])->name('index');
+    /*
+     * Load-bearing, not belt-and-braces with the controller's own
+     * `abort_unless`: the controller injects `ActivityLogFilterData`, and
+     * injection validates during method resolution — before the body runs. Only
+     * middleware answers 403 ahead of that; without it an unauthorized caller
+     * reads a 422 and learns the filter surface. See
+     * `tests/Feature/Api/ApiFilterAuthorizationTest.php`.
+     */
+    Route::get('/', [ActivityLogApiController::class, 'index'])
+        ->middleware('permission:VIEW_ANY_ACTIVITY_LOGS')->name('index');
     Route::get('/{id}', [ActivityLogApiController::class, 'show'])->whereNumber('id')->name('show');
 });

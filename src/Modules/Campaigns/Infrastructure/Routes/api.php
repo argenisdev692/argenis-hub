@@ -17,7 +17,17 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])
     ->prefix('campaigns')
     ->name('api.campaigns.')
     ->group(function (): void {
-        Route::get('/', [CampaignApiController::class, 'index'])->name('index');
+        /*
+         * Load-bearing, not belt-and-braces with the controller's own
+         * `abort_unless`: the controller injects its filter `Data` object so
+         * Scramble can document the query parameters, and injection validates
+         * during method resolution — before the body runs. Only middleware
+         * answers 403 ahead of that; without it an unauthorized caller reads a
+         * 422 and learns the filter surface. See
+         * `tests/Feature/Api/ApiFilterAuthorizationTest.php`.
+         */
+        Route::get('/', [CampaignApiController::class, 'index'])
+            ->middleware('permission:VIEW_ANY_CAMPAIGNS')->name('index');
 
         Route::post('/ai/suggest-topics', [CampaignApiController::class, 'suggestTopics'])
             ->middleware('throttle:10,1')->name('ai.suggest-topics');

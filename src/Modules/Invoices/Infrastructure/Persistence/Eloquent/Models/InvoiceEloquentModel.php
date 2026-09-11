@@ -173,6 +173,17 @@ final class InvoiceEloquentModel extends Model
     {
         return $query
             ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
+            // The only branch that lifts the SoftDeletes scope. Without it
+            // "All" would return exactly what "Active" returns, and the
+            // suspended badge the admin table renders would be unreachable.
+            ->when($filters->status === 'all', fn ($q) => $q->withTrashed())
+            // Orthogonal to the branches above — the settlement axis. Compared
+            // against the literal rather than cast to bool so an unrecognised
+            // value filters nothing instead of silently meaning "unpaid".
+            ->when(
+                $filters->paymentStatus !== null,
+                fn ($q) => $q->where('is_paid', $filters->paymentStatus === 'paid'),
+            )
             ->when($filters->search !== null, fn ($q) => $q->where(function ($w) use ($filters): void {
                 $term = "%{$filters->search}%";
                 $w->where('invoice_number', 'like', $term)

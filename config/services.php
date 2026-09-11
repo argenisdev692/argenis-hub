@@ -18,6 +18,18 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    /*
+     * Resend transactional email API (resend/resend-laravel v1.4) — read by the
+     * `resend` mailer in config/mail.php, which ResendMailAdapter targets when
+     * MAIL_ADAPTER=resend. A missing key does NOT degrade silently: the Resend
+     * transport throws on send, which is the intended behaviour for a
+     * misconfigured production environment. The sender lives in
+     * `mail.mailers.resend.from` (RESEND_FROM_EMAIL), not here.
+     */
+    'resend' => [
+        'key' => env('RESEND_API_KEY'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

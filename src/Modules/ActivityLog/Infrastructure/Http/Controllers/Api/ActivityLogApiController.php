@@ -27,6 +27,8 @@ final readonly class ActivityLogApiController
      * Accepts `search`, `event`, `log_name`, `causer_id`, `date_from`, `date_to`,
      * `sort_direction` and `per_page` (capped at 100 to bound resource
      * consumption — OWASP API4).
+     *
+     * `search` matches the entry description, event, log name or subject type.
      */
     public function index(Request $request, ActivityLogFilterData $filters, ListActivityLogsHandler $list): JsonResponse
     {

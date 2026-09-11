@@ -11,9 +11,11 @@ import {
     update,
 } from '@/routes/invoices/admin';
 import type { InvoiceDetail, InvoiceWritePayload } from '../types';
-
-/** Every mutation below touches the same list, so one key invalidates all of it. */
-const INVOICES_KEY = ['invoices'];
+// Every mutation below touches the same list, so one key invalidates all of it.
+// Imported rather than redeclared: two copies of a cache key drift silently —
+// the writes keep succeeding and the table simply stops refreshing.
+import { invoiceKey } from './useInvoice';
+import { INVOICES_KEY } from './useInvoices';
 
 function errorMessage(error: unknown, fallback: string): string {
     return error instanceof HttpError ? error.message : fallback;
@@ -21,6 +23,13 @@ function errorMessage(error: unknown, fallback: string): string {
 
 export function useInvoiceMutations() {
     const queryCache = useQueryCache();
+
+    /** Drops the cached detail of every row a bulk action just touched. */
+    function invalidateDetails(uuids: readonly string[]): void {
+        for (const uuid of uuids) {
+            queryCache.invalidateQueries({ key: invoiceKey(uuid) });
+        }
+    }
 
     const createInvoice = useMutation({
         mutation: (payload: InvoiceWritePayload) =>
@@ -49,9 +58,13 @@ export function useInvoiceMutations() {
                 method: 'PUT',
                 body: payload,
             }),
-        onSuccess() {
+        onSuccess(_data, { uuid }) {
             toast.success('Invoice updated.');
             queryCache.invalidateQueries({ key: INVOICES_KEY });
+            // The detail record is cached under its own key and outlives the
+            // list by design (`useInvoice`), so invalidating the list alone
+            // would leave the dialog showing the pre-edit line items.
+            queryCache.invalidateQueries({ key: invoiceKey(uuid) });
         },
         onError(error: unknown) {
             toast.error(errorMessage(error, 'Failed to update the invoice.'));
@@ -61,9 +74,10 @@ export function useInvoiceMutations() {
     const deleteInvoice = useMutation({
         mutation: (uuid: string) =>
             httpJson<void>(toUrl(destroy(uuid)), { method: 'DELETE' }),
-        onSuccess() {
+        onSuccess(_data, uuid) {
             toast.success('Invoice deleted.');
             queryCache.invalidateQueries({ key: INVOICES_KEY });
+            queryCache.invalidateQueries({ key: invoiceKey(uuid) });
         },
         onError(error: unknown) {
             toast.error(errorMessage(error, 'Failed to delete the invoice.'));
@@ -73,9 +87,10 @@ export function useInvoiceMutations() {
     const restoreInvoice = useMutation({
         mutation: (uuid: string) =>
             httpJson<InvoiceDetail>(toUrl(restore(uuid)), { method: 'PATCH' }),
-        onSuccess() {
+        onSuccess(_data, uuid) {
             toast.success('Invoice restored.');
             queryCache.invalidateQueries({ key: INVOICES_KEY });
+            queryCache.invalidateQueries({ key: invoiceKey(uuid) });
         },
         onError(error: unknown) {
             toast.error(errorMessage(error, 'Failed to restore the invoice.'));
@@ -88,11 +103,12 @@ export function useInvoiceMutations() {
                 method: 'POST',
                 body: { uuids },
             }),
-        onSuccess({ deleted }) {
+        onSuccess({ deleted }, uuids) {
             toast.success(
                 `${deleted} ${deleted === 1 ? 'invoice' : 'invoices'} deleted.`,
             );
             queryCache.invalidateQueries({ key: INVOICES_KEY });
+            invalidateDetails(uuids);
         },
         onError(error: unknown) {
             toast.error(
@@ -107,11 +123,12 @@ export function useInvoiceMutations() {
                 method: 'POST',
                 body: { uuids },
             }),
-        onSuccess({ restored }) {
+        onSuccess({ restored }, uuids) {
             toast.success(
                 `${restored} ${restored === 1 ? 'invoice' : 'invoices'} restored.`,
             );
             queryCache.invalidateQueries({ key: INVOICES_KEY });
+            invalidateDetails(uuids);
         },
         onError(error: unknown) {
             toast.error(

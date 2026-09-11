@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Campaigns\Infrastructure\Http\Controllers\Api;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Campaigns\Application\Commands\GenerateCampaignHandler;
@@ -20,8 +21,15 @@ use Modules\SocialMedia\Infrastructure\Http\Controllers\Api\SocialMediaApiContro
  * Sanctum-authenticated surface (mobile/external clients); the primary UI
  * remains Inertia/web — mirrors {@see SocialMediaApiController}.
  * Authorization is checked on the model (`hasPermissionTo`) so it is safe
- * under the `sanctum` guard. Documented by Scramble via return types +
- * `auth:sanctum` detection — no manual annotations.
+ * under the `sanctum` guard. Responses are documented by Scramble from the
+ * return types.
+ *
+ * Filters are documented from the injected {@see CampaignFilterData}: Scramble
+ * reads a `Data` parameter's rules directly, while the equivalent
+ * `CampaignFilterData::validateAndCreate($request)` call hides them — the rules
+ * live in a static method the analyser cannot follow, so this endpoint used to
+ * document `per_page` and nothing else. Injection validates identically and is
+ * what the web controllers already do.
  */
 final readonly class CampaignApiController
 {
@@ -30,12 +38,21 @@ final readonly class CampaignApiController
      *
      * Returns a paginated list. `per_page` is capped at 100 to bound resource
      * consumption (OWASP API4).
+     *
+     * `search` matches the campaign topic or headline.
      */
-    public function index(Request $request, ListCampaignsHandler $list): JsonResponse
-    {
+    #[QueryParameter(
+        'per_page',
+        description: 'Rows per page, clamped to 1–100.',
+        type: 'int',
+        default: 15,
+    )]
+    public function index(
+        Request $request,
+        CampaignFilterData $filters,
+        ListCampaignsHandler $list,
+    ): JsonResponse {
         abort_unless((bool) $request->user()?->hasPermissionTo('VIEW_ANY_CAMPAIGNS'), 403);
-
-        $filters = CampaignFilterData::validateAndCreate($request);
 
         return response()->json($list->handle($filters, min(max($request->integer('per_page', 15), 1), 100)));
     }

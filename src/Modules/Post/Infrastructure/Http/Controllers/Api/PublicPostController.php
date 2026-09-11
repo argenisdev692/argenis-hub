@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Post\Infrastructure\Http\Controllers\Api;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\Request;
 use Modules\Post\Application\Queries\GetPublicPostHandler;
 use Modules\Post\Application\Queries\ListPublicPostsHandler;
@@ -28,6 +29,21 @@ final readonly class PublicPostController
      *
      * @return PaginatedDataCollection<int, PostPublicReadModel>
      */
+    #[QueryParameter(
+        'per_page',
+        description: 'Rows per page, clamped to 1–100.',
+        type: 'int',
+        default: 15,
+    )]
+    #[QueryParameter(
+        'category_uuid',
+        // Annotated rather than injected: there is no filter `Data` object
+        // here to read rules from — the handler takes two scalars — and
+        // Scramble does not infer a `$request->string(...)` read.
+        description: 'Restrict the feed to one blog category.',
+        type: 'string',
+        format: 'uuid',
+    )]
     public function index(Request $request, ListPublicPostsHandler $list): PaginatedDataCollection
     {
         return $list->handle(

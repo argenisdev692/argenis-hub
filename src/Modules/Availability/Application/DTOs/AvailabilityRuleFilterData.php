@@ -26,13 +26,24 @@ final class AvailabilityRuleFilterData extends Data
     ) {}
 
     /**
+     * The comments below are published as these query parameters' descriptions
+     * in `api.json` — write them for an API consumer, not for the next
+     * maintainer, whose notes belong in this docblock.
+     *
+     * There is no `search` or date window here: these are the seven rows of a
+     * weekly template, not a growing list.
+     *
      * @return array<string, mixed>
      */
     public static function rules(): array
     {
         return [
+            // Day of the week, 0 = Sunday through 6 = Saturday.
             'day_of_week' => ['nullable', 'integer', 'between:0,6'],
+            // Whether the rule opens or closes that day. Omit for both.
             'availability' => ['nullable', 'string', 'in:available,unavailable'],
+            // Lifecycle. `active` (and omitting this) returns live rules;
+            // `suspended` returns only the soft-deleted ones.
             'status' => ['nullable', 'string', 'in:active,suspended'],
         ];
     }

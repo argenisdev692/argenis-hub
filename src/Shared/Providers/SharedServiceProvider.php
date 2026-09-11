@@ -25,6 +25,7 @@ use Shared\Infrastructure\Docs\Context7DocsAdapter;
 use Shared\Infrastructure\Export\SimpleExcelExportAdapter;
 use Shared\Infrastructure\Mail\BrevoMailAdapter;
 use Shared\Infrastructure\Mail\MailInterface;
+use Shared\Infrastructure\Mail\ResendMailAdapter;
 use Shared\Infrastructure\OpenApi\SpatieDataToSchema;
 use Shared\Infrastructure\Research\TavilyClientInterface;
 use Shared\Infrastructure\Research\TavilyResearchAdapter;
@@ -54,7 +55,13 @@ final class SharedServiceProvider extends ServiceProvider
         $this->app->bind(DocsVerificationPort::class, Context7DocsAdapter::class);
         $this->app->bind(Context7ClientInterface::class, Context7DocsAdapter::class);
         $this->app->bind(SpeechSynthesizerPort::class, ElevenLabsSpeechAdapter::class);
-        $this->app->bind(MailInterface::class, BrevoMailAdapter::class);
+        // Outbound mail provider is a config switch, not a code change — see the
+        // "adapter" key in config/mail.php. Unknown values fall back to Brevo so a
+        // typo in MAIL_ADAPTER degrades to the previous transport, not to no mail.
+        $this->app->bind(MailInterface::class, static fn ($app): MailInterface => match ((string) config('mail.adapter')) {
+            'resend' => $app->make(ResendMailAdapter::class),
+            default => $app->make(BrevoMailAdapter::class),
+        });
 
         // Per-request CSP nonce shared between the SecurityHeaders middleware
         // and the Blade root view (`{{ app('csp-nonce') }}`).

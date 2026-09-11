@@ -47,15 +47,30 @@ final class PostFilterData extends SoftDeleteFilterData
     }
 
     /**
+     * The comments below are published as these query parameters' descriptions
+     * in `api.json` — write them for an API consumer, not for the next
+     * maintainer, whose notes belong in this docblock.
+     *
+     * `search` matches the post title or excerpt; the date window narrows on
+     * `created_at`.
+     *
      * @return array<string, mixed>
      */
     public static function rules(): array
     {
         return [
             ...self::baseRules(),
+            // One parameter, two axes. `draft`, `published` and `scheduled`
+            // narrow to that editorial state, while `suspended` instead returns
+            // the soft-deleted posts — which are excluded from every other
+            // value. Omit it for all live posts.
             'status' => ['nullable', 'string', Rule::in(['draft', 'published', 'scheduled', 'suspended'])],
+            // Restrict to the posts filed under one blog category.
             'category_uuid' => ['nullable', 'uuid'],
+            // Column to order by. Anything outside this list falls back to
+            // `created_at` rather than being rejected.
             'sort_field' => ['nullable', 'string', Rule::in(self::SORTABLE)],
+            // Direction: `1` ascending, `-1` descending (the default).
             'sort_order' => ['nullable', 'integer', 'in:1,-1'],
         ];
     }

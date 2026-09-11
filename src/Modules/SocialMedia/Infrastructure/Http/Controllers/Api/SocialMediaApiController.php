@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\SocialMedia\Infrastructure\Http\Controllers\Api;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Post\Infrastructure\Http\Controllers\Api\PostApiController;
@@ -20,8 +21,15 @@ use Modules\SocialMedia\Application\Queries\ListSocialMediaContentHandler;
  * Sanctum-authenticated surface (mobile/external clients); the primary UI
  * remains Inertia/web — mirrors {@see PostApiController}.
  * Authorization is checked on the model (`hasPermissionTo`) so it is safe
- * under the `sanctum` guard. Documented by Scramble via return types +
- * `auth:sanctum` detection — no manual annotations.
+ * under the `sanctum` guard. Responses are documented by Scramble from the
+ * return types.
+ *
+ * Filters are documented from the injected {@see SocialMediaContentFilterData}:
+ * Scramble reads a `Data` parameter's rules directly, while the equivalent
+ * `SocialMediaContentFilterData::validateAndCreate($request)` call hides them —
+ * the rules live in a static method the analyser cannot follow, so this endpoint
+ * used to document `per_page` and nothing else. Injection validates identically
+ * and is what the web controllers already do.
  */
 final readonly class SocialMediaApiController
 {
@@ -30,12 +38,21 @@ final readonly class SocialMediaApiController
      *
      * Returns a paginated list. `per_page` is capped at 100 to bound resource
      * consumption (OWASP API4).
+     *
+     * `search` matches the content topic or headline.
      */
-    public function index(Request $request, ListSocialMediaContentHandler $list): JsonResponse
-    {
+    #[QueryParameter(
+        'per_page',
+        description: 'Rows per page, clamped to 1–100.',
+        type: 'int',
+        default: 15,
+    )]
+    public function index(
+        Request $request,
+        SocialMediaContentFilterData $filters,
+        ListSocialMediaContentHandler $list,
+    ): JsonResponse {
         abort_unless((bool) $request->user()?->hasPermissionTo('VIEW_ANY_SOCIAL_MEDIA'), 403);
-
-        $filters = SocialMediaContentFilterData::validateAndCreate($request);
 
         return response()->json($list->handle($filters, min(max($request->integer('per_page', 15), 1), 100)));
     }

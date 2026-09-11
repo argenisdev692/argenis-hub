@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Post\Infrastructure\Http\Controllers\Api;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Post\Application\Commands\GenerateReelPackageHandler;
@@ -24,8 +25,15 @@ use Modules\Post\Infrastructure\Http\Controllers\PostAiAssistController;
  * surface (mobile clients); the primary UI remains Inertia/web. AI-assist
  * methods reuse the same handlers as {@see PostAiAssistController}
  * — authorization is checked on the model (`hasPermissionTo`) so it is safe
- * under the `sanctum` guard. Documented by Scramble via return types +
- * `auth:sanctum` detection — no manual annotations.
+ * under the `sanctum` guard. Responses are documented by Scramble from the
+ * return types.
+ *
+ * Filters are documented from the injected {@see PostFilterData}: Scramble reads
+ * a `Data` parameter's rules directly, while the equivalent
+ * `PostFilterData::validateAndCreate($request)` call hides them — the rules live
+ * in a static method the analyser cannot follow, so this endpoint used to
+ * document `per_page` and nothing else. Injection validates identically and is
+ * what the web controllers already do.
  */
 final readonly class PostApiController
 {
@@ -34,12 +42,21 @@ final readonly class PostApiController
      *
      * Returns a paginated list of posts. `per_page` is capped at 100 to bound
      * resource consumption (OWASP API4).
+     *
+     * `search` matches the post title or excerpt.
      */
-    public function index(Request $request, ListPostsHandler $list): JsonResponse
-    {
+    #[QueryParameter(
+        'per_page',
+        description: 'Rows per page, clamped to 1–100.',
+        type: 'int',
+        default: 15,
+    )]
+    public function index(
+        Request $request,
+        PostFilterData $filters,
+        ListPostsHandler $list,
+    ): JsonResponse {
         abort_unless((bool) $request->user()?->hasPermissionTo('VIEW_ANY_POSTS'), 403);
-
-        $filters = PostFilterData::validateAndCreate($request);
 
         return response()->json($list->handle($filters, min(max($request->integer('per_page', 15), 1), 100)));
     }

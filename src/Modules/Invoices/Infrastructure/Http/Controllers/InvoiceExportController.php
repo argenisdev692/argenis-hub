@@ -7,6 +7,7 @@ namespace Modules\Invoices\Infrastructure\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\Invoices\Application\DTOs\InvoiceFilterData;
+use Modules\Invoices\Application\Support\InvoiceFilterSummary;
 use Modules\Invoices\Infrastructure\Http\Export\InvoiceExportTransformer;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
 use Shared\Domain\Ports\ExportPort;
@@ -41,6 +42,9 @@ final readonly class InvoiceExportController
                 [
                     'rows' => $rows->map(InvoiceExportTransformer::transformForPdf(...)),
                     'generatedAt' => now()->format('F j, Y H:i'),
+                    // A printed report is read away from the screen that
+                    // produced it, so it has to say which invoices it holds.
+                    'filterSummary' => InvoiceFilterSummary::describe($filters),
                 ],
             ),
             default => $this->export->tabular(

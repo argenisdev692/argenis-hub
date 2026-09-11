@@ -24,7 +24,17 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])
     ->prefix('posts')
     ->name('api.posts.')
     ->group(function (): void {
-        Route::get('/', [PostApiController::class, 'index'])->name('index');
+        /*
+         * Load-bearing, not belt-and-braces with the controller's own
+         * `abort_unless`: the controller injects its filter `Data` object so
+         * Scramble can document the query parameters, and injection validates
+         * during method resolution — before the body runs. Only middleware
+         * answers 403 ahead of that; without it an unauthorized caller reads a
+         * 422 and learns the filter surface. See
+         * `tests/Feature/Api/ApiFilterAuthorizationTest.php`.
+         */
+        Route::get('/', [PostApiController::class, 'index'])
+            ->middleware('permission:VIEW_ANY_POSTS')->name('index');
 
         Route::post('/ai/suggest-topics', [PostApiController::class, 'suggestTopics'])
             ->middleware('throttle:post-ai-assist')->name('ai.suggest-topics');

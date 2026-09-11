@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Portfolios\Infrastructure\Http\Controllers\Api;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -48,6 +49,15 @@ final readonly class PublicPortfolioController
      * columns than the admin export ({@see PublicPortfolioExportTransformer}) —
      * no owner, no lifecycle status. An unknown `format` is a 422.
      */
+    #[QueryParameter(
+        'format',
+        // The one input this endpoint has, and the one thing a caller must get
+        // right — an unknown value is a 422. Annotated because the check is an
+        // `in_array` guard, not a validator Scramble can read.
+        description: 'Output format. Anything else is rejected with a 422.',
+        type: "'csv'|'xlsx'|'pdf'",
+        default: 'xlsx',
+    )]
     public function export(Request $request): StreamedResponse|Response
     {
         $format = (string) $request->string('format', 'xlsx');

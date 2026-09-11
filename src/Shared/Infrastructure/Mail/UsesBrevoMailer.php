@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace Shared\Infrastructure\Mail;
 
 /**
- * Resolves the outbound Laravel mailer name the same way
- * {@see BrevoMailAdapter} does — Brevo in production, honor `array`/`log` in tests.
+ * Notification-side counterpart of {@see BrevoMailAdapter}: resolves the mailer
+ * name for `MailMessage::mailer()` — Brevo in production, `array`/`log` in tests.
  */
 trait UsesBrevoMailer
 {
+    use ResolvesOutboundMailer;
+
     protected function brevoMailer(): string
     {
-        $default = (string) config('mail.default');
-
-        return in_array($default, ['array', 'log'], true)
-            ? $default
-            : 'brevo';
+        return $this->resolveOutboundMailer('brevo');
     }
 }

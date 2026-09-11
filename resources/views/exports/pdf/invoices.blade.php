@@ -1,7 +1,9 @@
 @extends('exports.pdf.layout')
 
 @section('report_heading', 'Invoices')
-@section('report_subtitle', 'Issued invoices filtered by the current list criteria.')
+{{-- Names the criteria the export was run with, so a printed report is not
+     ambiguous about whether it holds every invoice or only the unpaid ones. --}}
+@section('report_subtitle', $filterSummary ?? 'Issued invoices filtered by the current list criteria.')
 
 @section('content')
     <table class="data-table">

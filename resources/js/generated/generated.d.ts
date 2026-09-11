@@ -760,6 +760,7 @@ declare namespace Modules {
                 export type InvoiceFilterData = {
                     year: number | null;
                     client_uuid: string | null;
+                    payment_status: string | null;
                     search: string | null;
                     status: string | null;
                     date_from: string | null;

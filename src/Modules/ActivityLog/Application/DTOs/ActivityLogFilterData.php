@@ -41,16 +41,31 @@ final class ActivityLogFilterData extends Data
     ) {}
 
     /**
+     * The comments below are published as these query parameters' descriptions
+     * in `api.json` — write them for an API consumer, not for the next
+     * maintainer, whose notes belong in this docblock.
+     *
+     * `search` matches the entry description, event, log name or subject type;
+     * the date window narrows on when the entry was recorded. Note that
+     * `search` is a partial match while `event` and `log_name` below are exact,
+     * so the two are complementary rather than redundant.
+     *
      * @return array<string, mixed>
      */
     public static function rules(): array
     {
         return [
             ...self::dateRangeRules(),
+            // Exact match on the action recorded — `created`, `updated`,
+            // `deleted`. Use `search` for a partial match.
             'event' => ['nullable', 'string', 'max:255'],
+            // Exact match on the log channel the entry was written to.
             'log_name' => ['nullable', 'string', 'max:255'],
+            // Restrict to the entries caused by one actor, by their id.
             'causer_id' => ['nullable', 'string', 'max:255'],
+            // Order by recency: `desc` newest first (the default), `asc` oldest.
             'sort_direction' => ['nullable', 'string', 'in:asc,desc'],
+            // Rows per page, clamped to 1–100.
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
     }

@@ -18,6 +18,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Outbound Provider Adapter
+    |--------------------------------------------------------------------------
+    |
+    | Selects which Shared\Infrastructure\Mail\MailInterface implementation the
+    | container binds: "brevo" => BrevoMailAdapter (SMTP relay, the default),
+    | "resend" => ResendMailAdapter (Resend HTTPS API). This is NOT the Laravel
+    | mailer name — "default" above still wins in tests (array) and local (log),
+    | which is what keeps the suite off both providers.
+    |
+    | Supported: "brevo", "resend"
+    |
+    */
+
+    'adapter' => env('MAIL_ADAPTER', 'brevo'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------
     |
@@ -76,6 +93,26 @@ return [
             'password' => env('BREVO_MAIL_PASSWORD'),
             'timeout' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
+        /*
+         * Resend transactional API — the alternative production transport
+         * (resend/resend-laravel v1.4). Resolved through
+         * Shared\Infrastructure\Mail\ResendMailAdapter and the UsesResendMailer
+         * trait, never referenced by name from a caller. This is an HTTPS API
+         * transport, so there is no host/port/credential pair here: the key is
+         * `services.resend.key` (RESEND_API_KEY).
+         *
+         * A per-mailer "from" overrides the global one for this transport only
+         * (Illuminate\Mail\MailManager::setGlobalAddress), which lets Resend send
+         * from its own verified domain while Brevo keeps MAIL_FROM_ADDRESS.
+         */
+        'resend' => [
+            'transport' => 'resend',
+            'from' => [
+                'address' => env('RESEND_FROM_EMAIL', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+            ],
         ],
 
         'sendmail' => [

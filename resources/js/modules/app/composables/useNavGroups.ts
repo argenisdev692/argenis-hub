@@ -34,6 +34,7 @@ import { index as campaignsIndex } from '@/routes/campaigns';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
 import { index as cvsIndex } from '@/routes/cvs';
+import { index as invoicesIndex } from '@/routes/invoices';
 import { index as permissionsIndex } from '@/routes/permissions';
 import { index as portfoliosIndex } from '@/routes/portfolios';
 import { index as postsIndex } from '@/routes/posts';
@@ -135,9 +136,9 @@ export function useNavGroups(): readonly NavGroup[] {
                 },
                 {
                     title: 'Invoices',
-                    href: dashboard(),
+                    href: invoicesIndex(),
                     icon: Banknote,
-                    comingSoon: true,
+                    permission: 'VIEW_ANY_INVOICES',
                 },
                 {
                     title: 'Reports',
