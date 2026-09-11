@@ -40,6 +40,7 @@ use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostEloquentModel;
 use Modules\Products\Infrastructure\Persistence\Eloquent\Models\ProductEloquentModel;
 use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentModel;
 use Modules\SocialMedia\Infrastructure\Persistence\Eloquent\Models\SocialMediaContentEloquentModel;
+use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
 use Spatie\OneTimePasswords\Models\Concerns\HasOneTimePasswords;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
 use Spatie\Permission\Traits\HasRoles;
@@ -106,6 +107,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, ProductEloquentModel> $products
  * @property-read Collection<int, InvoiceEloquentModel> $invoices
  * @property-read Collection<int, PaymentAccountEloquentModel> $paymentAccounts
+ * @property-read Collection<int, VideoEditEloquentModel> $videoEdits
+ * @property-read int|null $video_edits_count
  * @property-read int|null $cvs_count
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
@@ -431,6 +434,20 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function paymentAccounts(): HasMany
     {
         return $this->hasMany(PaymentAccountEloquentModel::class);
+    }
+
+    /**
+     * The video edits this user requested (spec 001-video-edit).
+     *
+     * Inverse of `VideoEditEloquentModel::user()` — declared because
+     * `video_edits.user_id` is a foreign key and every FK in this project
+     * carries both sides of the relation.
+     *
+     * @return HasMany<VideoEditEloquentModel, $this>
+     */
+    public function videoEdits(): HasMany
+    {
+        return $this->hasMany(VideoEditEloquentModel::class);
     }
 
     /**

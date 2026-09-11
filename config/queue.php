@@ -73,6 +73,18 @@ return [
             'after_commit' => false,
         ],
 
+        // Video Edits long-running renders (spec 001-video-edit, P3 / AD-15).
+        // retry_after must stay above the job's 3600 s timeout; block_for > 0
+        // keeps Upstash polling cheap without blocking SIGTERM.
+        'video-edits' => [
+            'driver' => 'redis',
+            'connection' => env('VIDEO_EDIT_REDIS_CONNECTION', 'queue'),
+            'queue' => env('VIDEO_EDIT_QUEUE', 'video-edits'),
+            'retry_after' => (int) env('VIDEO_EDIT_QUEUE_RETRY_AFTER', 3900),
+            'block_for' => 5,
+            'after_commit' => true,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],

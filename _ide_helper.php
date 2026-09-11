@@ -25564,6 +25564,37 @@ namespace Barryvdh\DomPDF\Facade {
             }
     }
 
+namespace ProtoneMedia\LaravelFFMpeg\Support {
+    /**
+     * @method static \ProtoneMedia\LaravelFFMpeg\MediaOpener fromDisk($disk)
+     * @method static \ProtoneMedia\LaravelFFMpeg\MediaOpener fromFilesystem(\Illuminate\Contracts\Filesystem\Filesystem $filesystem)
+     * @method static \ProtoneMedia\LaravelFFMpeg\MediaOpener open($path)
+     * @method static \ProtoneMedia\LaravelFFMpeg\MediaOpener openUrl($path, array $headers = [])
+     * @method static \ProtoneMedia\LaravelFFMpeg\MediaOpener cleanupTemporaryFiles()
+     * @see \ProtoneMedia\LaravelFFMpeg\MediaOpener
+     */
+    class FFMpeg {
+        /**
+         * @static
+         */
+        public static function new()
+        {
+            /** @var \ProtoneMedia\LaravelFFMpeg\Support\MediaOpenerFactory $instance */
+            return $instance->new();
+        }
+
+        /**
+         * @static
+         */
+        public static function dynamicHLSPlaylist()
+        {
+            /** @var \ProtoneMedia\LaravelFFMpeg\Support\MediaOpenerFactory $instance */
+            return $instance->dynamicHLSPlaylist();
+        }
+
+            }
+    }
+
 namespace Spatie\SignalAwareCommand\Facades {
     /**
      * @see \Spatie\SignalAwareCommand\Signal
@@ -31084,6 +31115,7 @@ namespace  {
     class Debugbar extends \Fruitcake\LaravelDebugbar\Facades\Debugbar {}
     class PDF extends \Barryvdh\DomPDF\Facade\Pdf {}
     class Pdf extends \Barryvdh\DomPDF\Facade\Pdf {}
+    class FFMpeg extends \ProtoneMedia\LaravelFFMpeg\Support\FFMpeg {}
     class Signal extends \Spatie\SignalAwareCommand\Facades\Signal {}
 }
 

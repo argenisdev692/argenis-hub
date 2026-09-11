@@ -1445,6 +1445,159 @@ declare namespace Modules {
             }
         }
     }
+    namespace VideoEdits {
+        namespace Application {
+            namespace DTOs {
+                export type AppliedCutData = {
+                    sequence: number;
+                    start_ms: number;
+                    end_ms: number;
+                    duration_ms: number;
+                    reasons: string[];
+                    origins: string[];
+                };
+                export type CreateVideoEditData = {
+                    mode: Modules.VideoEdits.Domain.Enums.VideoEditMode;
+                    sources: Modules.VideoEdits.Application.DTOs.SourceUploadData[];
+                    silence_removal: Modules.VideoEdits.Application.DTOs.SilenceRemovalData | null;
+                    manual_ranges: Modules.VideoEdits.Application.DTOs.ManualRangeData[];
+                    previous_edit_uuid: string | null;
+                };
+                export type CreatedVideoEditData = {
+                    edit: Modules.VideoEdits.Application.DTOs.VideoEditDetailData;
+                    uploads: Modules.VideoEdits.Application.DTOs.UploadTargetData[];
+                };
+                export type CutDecisionData = {
+                    producer: string;
+                    reason: Modules.VideoEdits.Domain.Enums.CutReason;
+                    origin: Modules.VideoEdits.Domain.Enums.DecisionOrigin;
+                    start_ms: number;
+                    end_ms: number;
+                    confidence: number | null;
+                    outcome: Modules.VideoEdits.Domain.Enums.DecisionOutcome;
+                    rejection_reason: string | null;
+                };
+                export type DownloadUrlData = {
+                    url: string;
+                    expires_at: string;
+                };
+                export type ManualRangeData = {
+                    start_ms: number;
+                    end_ms: number;
+                    note: string | null;
+                };
+                export type RetryVideoEditData = {
+                    manual_ranges:
+                        | Modules.VideoEdits.Application.DTOs.ManualRangeData[]
+                        | null;
+                };
+                export type SilenceRemovalData = {
+                    enabled: boolean;
+                    threshold_seconds: number | null;
+                };
+                export type SourceUploadData = {
+                    position: number;
+                    file_name: string;
+                    mime_type: string;
+                    size_bytes: number;
+                };
+                export type UploadTargetData = {
+                    source_uuid: string;
+                    position: number;
+                    upload_url: string;
+                    headers: Record<string, string>;
+                    expires_at: string;
+                };
+                export type VideoEditDetailData = {
+                    uuid: string;
+                    mode: Modules.VideoEdits.Domain.Enums.VideoEditMode;
+                    status: Modules.VideoEdits.Domain.Enums.VideoEditStatus;
+                    progress_percent: number;
+                    current_stage: Modules.VideoEdits.Domain.Enums.ProcessingStage | null;
+                    attempts: number;
+                    parameters: Record<string, any>;
+                    previous_edit_uuid: string | null;
+                    sources: Modules.VideoEdits.Application.DTOs.VideoEditSourceData[];
+                    summary: Modules.VideoEdits.Application.DTOs.VideoEditSummaryData;
+                    applied_cuts: Modules.VideoEdits.Application.DTOs.AppliedCutData[];
+                    decisions: Modules.VideoEdits.Application.DTOs.CutDecisionData[];
+                    warnings: string[];
+                    failure: Modules.VideoEdits.Application.DTOs.VideoEditFailureData | null;
+                    retry_available_until: string | null;
+                    can_retry: boolean;
+                    can_delete: boolean;
+                    can_download: boolean;
+                    created_at: string | null;
+                    queued_at: string | null;
+                    started_at: string | null;
+                    completed_at: string | null;
+                    failed_at: string | null;
+                };
+                export type VideoEditFailureData = {
+                    code: string;
+                    message: string;
+                    details: Record<string, any> | null;
+                };
+                export type VideoEditFilterData = {
+                    status: Modules.VideoEdits.Domain.Enums.VideoEditStatus | null;
+                    mode: Modules.VideoEdits.Domain.Enums.VideoEditMode | null;
+                    page: number;
+                    perPage: number;
+                };
+                export type VideoEditListItemData = {
+                    uuid: string;
+                    mode: Modules.VideoEdits.Domain.Enums.VideoEditMode;
+                    status: Modules.VideoEdits.Domain.Enums.VideoEditStatus;
+                    progress_percent: number;
+                    source_count: number;
+                    final_duration_ms: number | null;
+                    applied_cut_count: number;
+                    created_at: string | null;
+                    completed_at: string | null;
+                };
+                export type VideoEditSourceData = {
+                    uuid: string;
+                    position: number;
+                    original_name: string;
+                    duration_ms: number | null;
+                    width: number | null;
+                    height: number | null;
+                    has_audio: boolean | null;
+                    available: boolean;
+                };
+                export type VideoEditSummaryData = {
+                    original_duration_ms: number | null;
+                    final_duration_ms: number | null;
+                    removed_duration_ms: number | null;
+                    applied_cut_count: number;
+                    rejected_decision_count: number;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type CutReason = 'silence' | 'manual';
+                export type DecisionOrigin = 'system_detection' | 'user';
+                export type DecisionOutcome = 'applied' | 'rejected';
+                export type DecisionRejectionReason =
+                    | 'negative_start'
+                    | 'start_not_before_end'
+                    | 'end_beyond_duration'
+                    | 'confidence_out_of_range'
+                    | 'shorter_than_padding';
+                export type ProcessingStage =
+                    | 'download'
+                    | 'merge'
+                    | 'analysis'
+                    | 'plan_cuts'
+                    | 'render'
+                    | 'publish';
+                export type VideoEditMode = 'merge' | 'auto_edit' | 'ai_edit';
+                export type VideoEditStatus =
+                    'draft' | 'queued' | 'processing' | 'completed' | 'failed';
+            }
+        }
+    }
 }
 declare namespace Shared {
     namespace Application {

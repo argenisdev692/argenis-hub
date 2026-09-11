@@ -7,6 +7,8 @@ namespace Shared\Infrastructure\Storage;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\UnableToRetrieveMetadata;
+use Shared\Domain\Exceptions\StorageObjectNotFoundException;
 use Shared\Domain\Ports\StoragePort;
 
 /**
@@ -166,6 +168,17 @@ final readonly class R2StorageAdapter implements StoragePort
         }
 
         return $key;
+    }
+
+    public function size(string $path): int
+    {
+        $key = $this->normalizeObjectKey($path);
+
+        try {
+            return $this->disk->size($key);
+        } catch (UnableToRetrieveMetadata $exception) {
+            throw StorageObjectNotFoundException::forPath($key, $exception);
+        }
     }
 
     public function delete(string $path): bool

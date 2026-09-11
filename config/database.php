@@ -205,6 +205,34 @@ return [
             'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
         ],
 
+        /*
+        | Queue connection (spec 001-video-edit, P3). Each environment points
+        | REDIS_QUEUE_* at its OWN Upstash database so dev and prod jobs never
+        | mix; the env-scoped prefix is only a safety net if they ever share one.
+        | Upstash bills per command and an idle worker still polls — keep the
+        | queue `block_for` above 0 (0 blocks SIGTERM) and run dev workers only
+        | when needed.
+        */
+        'queue' => [
+            'url' => env('REDIS_QUEUE_URL', env('REDIS_URL')),
+            'host' => env('REDIS_QUEUE_HOST', env('REDIS_HOST', '127.0.0.1')),
+            'username' => env('REDIS_QUEUE_USERNAME', env('REDIS_USERNAME')),
+            'password' => env('REDIS_QUEUE_PASSWORD', env('REDIS_PASSWORD')),
+            'port' => env('REDIS_QUEUE_PORT', env('REDIS_PORT', '6379')),
+            // 0 — Upstash only has database 0.
+            'database' => env('REDIS_QUEUE_DB', '0'),
+            'max_retries' => env('REDIS_MAX_RETRIES', 3),
+            'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
+            'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
+            'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
+            'options' => [
+                'prefix' => env(
+                    'REDIS_QUEUE_PREFIX',
+                    Str::slug((string) env('APP_NAME', 'laravel')).'-'.env('APP_ENV', 'production').'-queue-',
+                ),
+            ],
+        ],
+
     ],
 
 ];

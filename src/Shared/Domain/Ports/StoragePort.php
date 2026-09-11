@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Shared\Domain\Ports;
 
+use Shared\Domain\Exceptions\StorageObjectNotFoundException;
+
 /**
  * Cloud storage contract (Cloudflare R2 by default).
  *
@@ -52,6 +54,14 @@ interface StoragePort
      * Stream a local file into cloud storage without loading it into PHP memory.
      */
     public function putFromPath(string $path, string $localPath, string $visibility = 'private'): string;
+
+    /**
+     * Size in bytes of a stored object — one metadata request, no download.
+     * Pre-signed uploads do not enforce a size, so callers verify it here.
+     *
+     * @throws StorageObjectNotFoundException when the object does not exist
+     */
+    public function size(string $path): int;
 
     public function delete(string $path): bool;
 

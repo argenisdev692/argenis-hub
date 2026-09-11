@@ -110,7 +110,7 @@ class RolePermissionSeeder extends Seeder
      *
      * @var list<string>
      */
-    private const array ADMIN_TOOL_MODULES = ['VIDEO_EXPORTS'];
+    private const array ADMIN_TOOL_MODULES = ['VIDEO_EDITS'];
 
     /**
      * CRM modules without an export endpoint yet (same shape as
@@ -230,11 +230,18 @@ class RolePermissionSeeder extends Seeder
     private const array BACKUP_ACTIONS = ['VIEW_ANY', 'VIEW', 'DOWNLOAD', 'CREATE', 'DELETE', 'BULK_DELETE', 'EXPORT'];
 
     /**
-     * Video export pipeline (no DB catalog): view panel, create jobs, download results.
+     * Video editing pipeline (spec 001-video-edit, P2): browse the history, view
+     * one edit, create + submit edits, download results, retry a failed edit and
+     * hard-delete an edit.
+     *
+     * No UPDATE — an edit is never modified in place (re-edit creates a new one).
+     * No RESTORE / BULK_* — deletion is permanent by decision and the UI has no
+     * row selection. No EXPORT — there is no spreadsheet of edits. Replaces the
+     * unused VIDEO_EXPORTS set.
      *
      * @var list<string>
      */
-    private const array VIDEO_EXPORT_ACTIONS = ['VIEW_ANY', 'CREATE', 'DOWNLOAD'];
+    private const array VIDEO_EDIT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'DOWNLOAD', 'RETRY', 'DELETE'];
 
     /**
      * Ops tooling dashboards (Horizon queue monitor, Telescope request/query
@@ -302,7 +309,7 @@ class RolePermissionSeeder extends Seeder
             ...$this->matrix(['PRODUCTS'], self::PRODUCTS_DOWNLOAD_ACTIONS),
             ...$this->matrix(self::READ_ONLY_MODULES, self::READ_ONLY_ACTIONS),
             ...$this->matrix(['BACKUPS'], self::BACKUP_ACTIONS),
-            ...$this->matrix(['VIDEO_EXPORTS'], self::VIDEO_EXPORT_ACTIONS),
+            ...$this->matrix(['VIDEO_EDITS'], self::VIDEO_EDIT_ACTIONS),
             ...$this->matrix(self::SYSTEM_MONITORING_MODULES, self::SYSTEM_MONITORING_ACTIONS),
             ...$this->matrix(self::SELF_SERVICE_MODULES, self::SELF_SERVICE_ACTIONS),
         ];
@@ -376,7 +383,7 @@ class RolePermissionSeeder extends Seeder
         $names = [
             ...$this->matrix(self::ADMIN_MODULES, self::MODULES_ACTIONS),
             ...$this->matrix(self::ADMIN_NO_EXPORT_MODULES, self::NO_EXPORT_ACTIONS),
-            ...$this->matrix(self::ADMIN_TOOL_MODULES, self::VIDEO_EXPORT_ACTIONS),
+            ...$this->matrix(self::ADMIN_TOOL_MODULES, self::VIDEO_EDIT_ACTIONS),
             ...$this->matrix(['RESUME_STUDIOS'], self::RESUME_STUDIOS_RUN_ACTIONS),
             ...$this->matrix(['PRODUCTS'], self::PRODUCTS_GENERATE_ACTIONS),
             ...$this->matrix(['PRODUCTS'], self::PRODUCTS_DOWNLOAD_ACTIONS),

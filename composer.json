@@ -24,6 +24,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
         "league/flysystem-aws-s3-v3": "^3.35",
+        "pbmedia/laravel-ffmpeg": "^8.9",
         "phpoffice/phpword": "^1.4",
         "propaganistas/laravel-phone": "^6.0",
         "ramsey/uuid": "^4.9",

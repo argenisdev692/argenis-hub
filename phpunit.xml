@@ -42,6 +42,8 @@
         <env name="TAVILY_API_KEY" value=""/>
         <env name="ELEVENLABS_API_KEY" value=""/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Video Edits dispatches on its own Redis (Upstash) connection; keep tests off the network. -->
+        <env name="VIDEO_EDIT_QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

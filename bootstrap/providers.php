@@ -21,6 +21,7 @@ use Modules\Post\Providers\PostServiceProvider;
 use Modules\Products\Providers\ProductsServiceProvider;
 use Modules\Services\Providers\ServicesServiceProvider;
 use Modules\SocialMedia\Providers\SocialMediaServiceProvider;
+use Modules\VideoEdits\Providers\VideoEditsServiceProvider;
 use Shared\Providers\SharedServiceProvider;
 
 return [
@@ -54,4 +55,6 @@ return [
     InvoicesServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
+    // Video editing pipeline (spec 001-video-edit) — depends on the Shared StoragePort / AuditPort.
+    VideoEditsServiceProvider::class,
 ];

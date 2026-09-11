@@ -99,6 +99,20 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Video Edits scratch space (spec 001-video-edit, AD-12) — ephemeral
+         * FFmpeg working files only, wiped after every job. Never served and
+         * never a final destination: results and sources live on `r2`.
+         * Point VIDEO_EDIT_WORKSPACE_ROOT at a mounted volume on the worker.
+         */
+        'video-edit-workspace' => [
+            'driver' => 'local',
+            'root' => env('VIDEO_EDIT_WORKSPACE_ROOT', storage_path('app/video-edit-workspace')),
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*

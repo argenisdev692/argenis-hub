@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\AuthSessionEloquentModel;
 use Modules\Backups\Infrastructure\Console\Commands\SyncBackupsCommand;
+use Modules\VideoEdits\Infrastructure\Console\Commands\PurgeExpiredVideoEditSourcesCommand;
+use Modules\VideoEdits\Infrastructure\Console\Commands\SweepStaleVideoEditsCommand;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
 
 Artisan::command('inspire', function () {
@@ -63,6 +65,23 @@ Schedule::command('model:prune', [
 */
 
 Schedule::command('social-media:publish-scheduled')->everyMinute()->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| Video edits maintenance (Modules\VideoEdits · spec 001-video-edit)
+|--------------------------------------------------------------------------
+|
+| `video-edits:purge-sources` deletes source recordings once they are no longer
+| needed — failed edits whose 24 h retry window has closed, and completed edits
+| whose sources could not be deleted at publish time (FR-9, FR-10).
+| `video-edits:sweep` fails edits that stopped reporting progress (a crashed
+| worker never reports its own failure, and PCNTL timeouts do not exist on
+| Windows) and deletes drafts that were never submitted (AD-14, D17).
+|
+*/
+
+Schedule::command(PurgeExpiredVideoEditSourcesCommand::class)->hourly()->withoutOverlapping();
+Schedule::command(SweepStaleVideoEditsCommand::class)->everyFiveMinutes()->withoutOverlapping();
 
 Schedule::command('backup:clean')->dailyAt('01:00');
 Schedule::command('backup:run --only-db')->dailyAt('02:00');
