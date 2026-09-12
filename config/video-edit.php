@@ -36,6 +36,93 @@ return [
         'padding_ms' => 150,                                   // D5
     ],
 
+    /*
+    |----------------------------------------------------------------------
+    | Speech cleanup (V2 · US-10)
+    |----------------------------------------------------------------------
+    |
+    | Dictionaries live here rather than in the detector so a new filler can be
+    | added without a deploy of new code, and so Spanish and English can be
+    | tuned independently (resolves R3 — the recordings are Spanish-first, but
+    | the English padding words show up constantly in tech tutorials).
+    |
+    */
+    'speech' => [
+        'default_language' => env('VIDEO_EDIT_SPEECH_LANGUAGE', 'es'),
+
+        // 16 kHz mono is what speech models resample to anyway; 32 kbps keeps
+        // the 90-minute maximum (D2) near 21 MB, under OpenAI's 25 MB cap.
+        'audio_sample_rate' => 16_000,
+        'audio_bitrate_kbps' => 32,
+        'max_audio_bytes' => 25 * 1024 * 1024,
+
+        // A word the provider is unsure about is a word we must not cut on.
+        'min_confidence' => 0.5,
+        // Longer than this and a prefix match is a real word, not a false start.
+        'max_stutter_fragment_ms' => 400,
+
+        'openai' => [
+            'api_key' => env('OPENAI_API_KEY'),
+            'model' => env('OPENAI_WHISPER_MODEL', 'whisper-1'),
+            'timeout_seconds' => (int) env('OPENAI_WHISPER_TIMEOUT', 600),
+        ],
+
+        'dictionaries' => [
+            // Non-lexical hesitations — transcribed as words, never meaningful.
+            'filler_sounds' => [
+                'eh', 'ehh', 'em', 'emm', 'mm', 'mmm', 'ah', 'ahh', 'uh', 'uhh',
+                'um', 'umm', 'er', 'err', 'este', 'esteee', 'hmm', 'hm',
+            ],
+            // Real words used as padding. Deliberately short: every entry here
+            // is a word that will be deleted from the user's speech, so it must
+            // be one that is padding essentially every time it appears.
+            'filler_words' => [
+                'bueno', 'entonces', 'digamos', 'basicamente', 'literalmente',
+                'like', 'basically', 'literally', 'actually', 'so',
+            ],
+            // Multi-word padding: "sea" alone is ordinary Spanish, "o sea" is not.
+            'filler_phrases' => [
+                'o sea', 'es decir', 'you know', 'i mean', 'kind of', 'sort of',
+            ],
+            // Doubling these is emphasis, not a stumble.
+            'repetition_allow_list' => [
+                'no', 'si', 'muy', 'ya', 'very', 'no-no',
+            ],
+        ],
+    ],
+
+    /*
+    |----------------------------------------------------------------------
+    | AI edit (V3 · US-12/13/14)
+    |----------------------------------------------------------------------
+    |
+    | Provider selection goes through config/ai.php via Shared AIClientInterface,
+    | so switching Gemini for OpenAI or Anthropic is a config change.
+    |
+    */
+    'ai' => [
+        'provider' => env('VIDEO_EDIT_AI_PROVIDER', 'gemini'),
+
+        // Flash, not Pro: the job is reading a transcript and returning
+        // structured decisions, which is squarely the Flash tier's workhorse
+        // case, at a fraction of the cost over a 20-minute recording.
+        'model' => env('VIDEO_EDIT_AI_MODEL', 'gemini-3.7-flash'),
+        'timeout_seconds' => (int) env('VIDEO_EDIT_AI_TIMEOUT', 300),
+
+        // Decision R6: pause markers and retakes apply automatically at or above
+        // this confidence. Anything less is discarded rather than guessed at.
+        'auto_apply_above_confidence' => (float) env('VIDEO_EDIT_AI_MIN_CONFIDENCE', 0.8),
+
+        // One runaway appendix must not blow the context window or the bill.
+        'max_script_characters' => 120_000,
+
+        'script' => [
+            'allowed_extensions' => ['md', 'pdf'],
+            'allowed_mime_types' => ['text/markdown', 'text/plain', 'application/pdf'],
+            'max_file_bytes' => 10 * 1024 * 1024,
+        ],
+    ],
+
     'cuts' => [
         'min_kept_fragment_ms' => 250,                         // D6
         'min_output_ms' => 1000,                               // D6

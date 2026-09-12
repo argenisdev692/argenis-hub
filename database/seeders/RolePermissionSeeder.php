@@ -241,7 +241,18 @@ class RolePermissionSeeder extends Seeder
      *
      * @var list<string>
      */
-    private const array VIDEO_EDIT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'DOWNLOAD', 'RETRY', 'DELETE'];
+    private const array VIDEO_EDIT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'DOWNLOAD', 'RETRY', 'DELETE', 'EXPORT'];
+
+    /**
+     * Course Scripts pipeline (spec 002-course-scripts). A separate set from
+     * {@see self::VIDEO_EDIT_ACTIONS} rather than a reuse: this module edits
+     * briefs (UPDATE) and spends money on provider calls (GENERATE), and
+     * GENERATE is deliberately its own permission so "may read a course" and
+     * "may run a 700-call course generation" are never the same grant.
+     *
+     * @var list<string>
+     */
+    private const array COURSE_SCRIPT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'UPDATE', 'GENERATE', 'DOWNLOAD', 'DELETE', 'EXPORT'];
 
     /**
      * Ops tooling dashboards (Horizon queue monitor, Telescope request/query
@@ -310,6 +321,7 @@ class RolePermissionSeeder extends Seeder
             ...$this->matrix(self::READ_ONLY_MODULES, self::READ_ONLY_ACTIONS),
             ...$this->matrix(['BACKUPS'], self::BACKUP_ACTIONS),
             ...$this->matrix(['VIDEO_EDITS'], self::VIDEO_EDIT_ACTIONS),
+            ...$this->matrix(['COURSE_SCRIPTS'], self::COURSE_SCRIPT_ACTIONS),
             ...$this->matrix(self::SYSTEM_MONITORING_MODULES, self::SYSTEM_MONITORING_ACTIONS),
             ...$this->matrix(self::SELF_SERVICE_MODULES, self::SELF_SERVICE_ACTIONS),
         ];
@@ -384,6 +396,7 @@ class RolePermissionSeeder extends Seeder
             ...$this->matrix(self::ADMIN_MODULES, self::MODULES_ACTIONS),
             ...$this->matrix(self::ADMIN_NO_EXPORT_MODULES, self::NO_EXPORT_ACTIONS),
             ...$this->matrix(self::ADMIN_TOOL_MODULES, self::VIDEO_EDIT_ACTIONS),
+            ...$this->matrix(['COURSE_SCRIPTS'], self::COURSE_SCRIPT_ACTIONS),
             ...$this->matrix(['RESUME_STUDIOS'], self::RESUME_STUDIOS_RUN_ACTIONS),
             ...$this->matrix(['PRODUCTS'], self::PRODUCTS_GENERATE_ACTIONS),
             ...$this->matrix(['PRODUCTS'], self::PRODUCTS_DOWNLOAD_ACTIONS),

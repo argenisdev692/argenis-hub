@@ -66,6 +66,10 @@ it('seeds the video edit permissions and not the obsolete export ones', function
         'CREATE_VIDEO_EDITS',
         'DELETE_VIDEO_EDITS',
         'DOWNLOAD_VIDEO_EDITS',
+        // Guards the CSV/XLSX/PDF history report. Distinct from DOWNLOAD_*,
+        // which releases a rendered video: one hands over the media, the other
+        // hands over the metadata of every edit at once.
+        'EXPORT_VIDEO_EDITS',
         'RETRY_VIDEO_EDITS',
         'VIEW_ANY_VIDEO_EDITS',
         'VIEW_VIDEO_EDITS',

@@ -39,6 +39,22 @@ final class InvalidMediaException extends DomainException implements PermanentVi
         );
     }
 
+    /**
+     * V2 — the extracted audio is past what the transcription provider accepts.
+     * Permanent: a retry re-extracts exactly the same bytes.
+     */
+    public static function audioTooLargeToTranscribe(int $sizeBytes, int $maximumBytes): self
+    {
+        return new self(
+            sprintf(
+                'The recording is too long to transcribe (%d MB of audio, limit %d MB). Split it into shorter videos.',
+                intdiv($sizeBytes, 1024 * 1024),
+                intdiv($maximumBytes, 1024 * 1024),
+            ),
+            ['audio_size_bytes' => $sizeBytes, 'maximum_bytes' => $maximumBytes],
+        );
+    }
+
     public function failureCode(): string
     {
         return self::FAILURE_CODE;

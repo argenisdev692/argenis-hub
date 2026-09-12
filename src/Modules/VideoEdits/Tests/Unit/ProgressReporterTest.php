@@ -48,9 +48,13 @@ it('maps in-stage progress onto the overall bar', function (): void {
     $now = 10.0;
     $reporter->advanceStage(ProcessingStage::Render, 50);
 
+    // Derived, not hard-coded: the weight table is owned by
+    // ProcessingStageTest and is rebalanced whenever a version adds stages.
+    $base = ProcessingStage::Render->startPercent();
+
     expect($writes)->toBe([
-        [35, ProcessingStage::Render],
-        [65, ProcessingStage::Render],
+        [$base, ProcessingStage::Render],
+        [$base + intdiv(ProcessingStage::Render->weight(), 2), ProcessingStage::Render],
     ]);
 });
 
@@ -59,14 +63,19 @@ it('throttles in-stage writes by step and by interval', function (): void {
     $now = 0.0;
     $reporter = progressReporter($writes, $now);
 
-    $reporter->startStage(ProcessingStage::Render);   // 35 %
+    $base = ProcessingStage::Render->startPercent();
+
+    $reporter->startStage(ProcessingStage::Render);       // base
     $now = 1.0;
     $reporter->advanceStage(ProcessingStage::Render, 50); // too soon
     $now = 10.0;
-    $reporter->advanceStage(ProcessingStage::Render, 1);  // 35 % → step too small
-    $reporter->advanceStage(ProcessingStage::Render, 10); // 41 % → written
+    $reporter->advanceStage(ProcessingStage::Render, 1);  // step too small
+    $reporter->advanceStage(ProcessingStage::Render, 10); // written
 
-    expect(array_column($writes, 0))->toBe([35, 41]);
+    expect(array_column($writes, 0))->toBe([
+        $base,
+        $base + intdiv(ProcessingStage::Render->weight() * 10, 100),
+    ]);
 });
 
 it('never moves the bar backwards', function (): void {
@@ -79,5 +88,5 @@ it('never moves the bar backwards', function (): void {
     $reporter->advanceStage(ProcessingStage::Render, 100);
     $reporter->startStage(ProcessingStage::PlanCuts);
 
-    expect(array_column($writes, 0))->toBe([35, 95, 95]);
+    expect(array_column($writes, 0))->toBe([ProcessingStage::Render->startPercent(), 95, 95]);
 });

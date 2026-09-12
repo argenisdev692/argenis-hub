@@ -5,16 +5,20 @@ declare(strict_types=1);
 namespace Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Database\Factories\VideoEditFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Modules\VideoEdits\Application\DTOs\VideoEditFilterData;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
@@ -48,6 +52,8 @@ use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
  * @property list<string>|null $warnings
  * @property string|null $result_path
  * @property int|null $result_size_bytes
+ * @property Carbon|null $ai_consent_at
+ * @property array<string, mixed>|null $ai_report
  * @property Carbon|null $sources_expire_at
  * @property Carbon|null $sources_purged_at
  * @property Carbon|null $queued_at
@@ -58,6 +64,8 @@ use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
  * @property Carbon|null $updated_at
  * @property-read User $user
  * @property-read VideoEditEloquentModel|null $previousEdit
+ * @property-read VideoEditScriptEloquentModel|null $script
+ * @property-read VideoEditTranscriptEloquentModel|null $transcript
  * @property-read Collection<int, VideoEditSourceEloquentModel> $sources
  * @property-read int|null $sources_count
  * @property-read Collection<int, VideoEditCutDecisionEloquentModel> $cutDecisions
@@ -90,6 +98,8 @@ use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
     'warnings',
     'result_path',
     'result_size_bytes',
+    'ai_consent_at',
+    'ai_report',
     'sources_expire_at',
     'sources_purged_at',
     'queued_at',
@@ -159,6 +169,24 @@ final class VideoEditEloquentModel extends Model
     }
 
     /**
+     * The optional `.md` / `.pdf` script an AI edit was run against (EX-9).
+     *
+     * @return HasOne<VideoEditScriptEloquentModel, $this>
+     */
+    public function script(): HasOne
+    {
+        return $this->hasOne(VideoEditScriptEloquentModel::class, 'video_edit_id');
+    }
+
+    /**
+     * @return HasOne<VideoEditTranscriptEloquentModel, $this>
+     */
+    public function transcript(): HasOne
+    {
+        return $this->hasOne(VideoEditTranscriptEloquentModel::class, 'video_edit_id');
+    }
+
+    /**
      * @return HasMany<VideoEditCutDecisionEloquentModel, $this>
      */
     public function cutDecisions(): HasMany
@@ -172,6 +200,72 @@ final class VideoEditEloquentModel extends Model
     public function appliedCuts(): HasMany
     {
         return $this->hasMany(VideoEditAppliedCutEloquentModel::class, 'video_edit_id');
+    }
+
+    /**
+     * The single filter source for the history list AND the CSV/XLSX/PDF
+     * exports (BACKEND-PHP §5.2). Duplicating this `when()` chain in the export
+     * is how a report silently starts disagreeing with the table it came from.
+     *
+     * Owner scoping is NOT here on purpose: it is a security boundary (FR-21),
+     * and a caller that forgets `->where('user_id', …)` must not be silently
+     * rescued by a filter scope — {@see scopeOwnedBy} states it explicitly.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeApplyFilters(Builder $query, VideoEditFilterData $filters): Builder
+    {
+        return $query
+            ->where('status', '!=', VideoEditStatus::Draft->value)
+            ->when(
+                $filters->search,
+                static fn (Builder $query, string $search): Builder => $query->where('uuid', 'like', $search.'%'),
+            )
+            ->when(
+                $filters->status,
+                static fn (Builder $query, VideoEditStatus $status): Builder => $query->where('status', $status->value),
+            )
+            ->when(
+                $filters->mode,
+                static fn (Builder $query, VideoEditMode $mode): Builder => $query->where('mode', $mode->value),
+            )
+            ->when(
+                $filters->dateFrom !== null && $filters->dateTo !== null,
+                static fn (Builder $query): Builder => $query->whereBetween('created_at', [
+                    CarbonImmutable::parse($filters->dateFrom)->startOfDay(),
+                    CarbonImmutable::parse($filters->dateTo)->endOfDay(),
+                ]),
+            )
+            ->when(
+                $filters->dateFrom !== null && $filters->dateTo === null,
+                static fn (Builder $query): Builder => $query->where(
+                    'created_at',
+                    '>=',
+                    CarbonImmutable::parse($filters->dateFrom)->startOfDay(),
+                ),
+            )
+            ->when(
+                $filters->dateFrom === null && $filters->dateTo !== null,
+                static fn (Builder $query): Builder => $query->where(
+                    'created_at',
+                    '<=',
+                    CarbonImmutable::parse($filters->dateTo)->endOfDay(),
+                ),
+            )
+            ->orderBy($filters->safeSortField(), $filters->sortDirection())
+            // A stable tiebreaker: without it two edits created in the same
+            // second can swap places between a page and its export.
+            ->orderByDesc('id');
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('user_id', $userId);
     }
 
     /**
@@ -196,6 +290,8 @@ final class VideoEditEloquentModel extends Model
             'applied_cut_count' => 'integer',
             'rejected_decision_count' => 'integer',
             'warnings' => 'array',
+            'ai_report' => 'array',
+            'ai_consent_at' => 'datetime',
             'result_size_bytes' => 'integer',
             'sources_expire_at' => 'datetime',
             'sources_purged_at' => 'datetime',

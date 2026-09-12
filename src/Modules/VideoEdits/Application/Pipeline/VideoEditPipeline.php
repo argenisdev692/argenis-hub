@@ -10,6 +10,7 @@ use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
+use Modules\VideoEdits\Domain\Ports\ScriptTextExtractorPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
@@ -47,6 +48,7 @@ final readonly class VideoEditPipeline
         private DecisionProducerRegistry $producers,
         private CutDecisionValidator $validator,
         private CutPlanner $planner,
+        private ScriptTextExtractorPort $scriptExtractor,
         private Config $config,
     ) {}
 
@@ -89,10 +91,31 @@ final readonly class VideoEditPipeline
         $progress->startStage(ProcessingStage::Merge);
         [$workingPath, $workingProbe] = $this->merge($edit, $inputPaths, $inputProbes, $profile, $progress);
 
+        // ── Script extraction (V3) ──────────────────────────────────────────
+        $this->extractScript($edit, $progress);
+
         // ── Analysis ────────────────────────────────────────────────────────
+        // Covers the V2 speech stages too (audio extraction, transcription,
+        // detection): they run inside their producer, so the stages exist for
+        // progress reporting and the producer registry stays the only seam.
         $progress->startStage(ProcessingStage::Analysis);
         $decisions = $this->produceDecisions(
-            new DecisionContext($edit->mode, $edit->parameters, $workingPath, $workingProbe),
+            new DecisionContext(
+                mode: $edit->mode,
+                parameters: $edit->parameters,
+                workingPath: $workingPath,
+                workingProbe: $workingProbe,
+                videoEditId: $edit->id,
+                videoEditUuid: $edit->uuid,
+                ownerId: $edit->user_id,
+                sourceFingerprints: array_values(array_map(
+                    static fn (VideoEditSourceEloquentModel $source): string => (string) $source->sha256,
+                    $sources,
+                )),
+                // A producer owning stages of its own reports them here, so a
+                // long transcription moves the bar instead of looking hung.
+                onStageStart: static fn (ProcessingStage $stage) => $progress->startStage($stage),
+            ),
             $sourcesDurationMs,
         );
 
@@ -177,6 +200,33 @@ final readonly class VideoEditPipeline
         }
 
         return [$paths, $probes];
+    }
+
+    /**
+     * Turns an attached `.md` / `.pdf` script into text before the AI producer
+     * runs (US-12, EX-9).
+     *
+     * It happens here rather than at submit time because extraction is real
+     * work on a file that has to be downloaded first — doing it in the request
+     * would put a PDF parse on the "under 1 second" submit path. Already-
+     * extracted scripts are skipped so a retry does not redo it.
+     */
+    private function extractScript(VideoEditEloquentModel $edit, ProgressReporter $progress): void
+    {
+        $script = $edit->script;
+
+        if ($script === null || (bool) $script->has_extracted_text) {
+            return;
+        }
+
+        $progress->startStage(ProcessingStage::ScriptExtraction);
+
+        $localPath = $this->workspace->path($edit->uuid, "script.{$script->extension}");
+        $this->storage->copyToLocal($script->storage_path, $localPath);
+
+        $document = $this->scriptExtractor->extract($localPath, $script->original_name);
+
+        $this->edits->recordScriptText($script->uuid, $document->text);
     }
 
     /**

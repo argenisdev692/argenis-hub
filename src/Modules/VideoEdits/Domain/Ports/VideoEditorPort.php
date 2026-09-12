@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\VideoEdits\Domain\Ports;
 
 use Closure;
+use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
 use Modules\VideoEdits\Domain\ValueObjects\SilenceThreshold;
@@ -35,6 +36,16 @@ interface VideoEditorPort
         bool $intermediate,
         Closure $onProgress,
     ): void;
+
+    /**
+     * Extract the audio track as a compact speech-optimized file for
+     * transcription (V2). Mono, low sample rate and low bitrate on purpose:
+     * speech recognition gains nothing from stereo 48 kHz, and providers cap
+     * the upload size.
+     *
+     * @throws InvalidMediaException when the result exceeds the provider limit
+     */
+    public function extractAudio(string $inputPath, string $outputPath, int $maxBytes): void;
 
     /**
      * @return list<TimeRange>

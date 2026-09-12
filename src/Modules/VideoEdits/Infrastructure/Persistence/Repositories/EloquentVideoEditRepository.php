@@ -28,6 +28,7 @@ use Modules\VideoEdits\Domain\ValueObjects\ValidatedDecision;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditAppliedCutEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditCutDecisionEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
+use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditScriptEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditSourceEloquentModel;
 
 final readonly class EloquentVideoEditRepository implements VideoEditRepositoryPort
@@ -80,12 +81,8 @@ final readonly class EloquentVideoEditRepository implements VideoEditRepositoryP
         return VideoEditEloquentModel::query()
             ->select(self::LIST_COLUMNS)
             ->withCount('sources')
-            ->where('user_id', $userId)
-            ->where('status', '!=', VideoEditStatus::Draft->value)
-            ->when($filters->status, static fn (Builder $query, VideoEditStatus $status) => $query->where('status', $status->value))
-            ->when($filters->mode, static fn (Builder $query, VideoEditMode $mode) => $query->where('mode', $mode->value))
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->ownedBy($userId)
+            ->applyFilters($filters)
             ->paginate(perPage: $filters->perPage, page: $filters->page)
             ->through(static fn (VideoEditEloquentModel $edit): VideoEditListItemData => VideoEditListItemData::fromModel($edit));
     }
@@ -97,8 +94,10 @@ final readonly class EloquentVideoEditRepository implements VideoEditRepositoryP
         VideoEditMode $mode,
         array $parameters,
         array $sources,
+        ?array $script = null,
+        ?DateTimeInterface $consentedAt = null,
     ): VideoEditEloquentModel {
-        return DB::transaction(function () use ($uuid, $userId, $previousEditId, $mode, $parameters, $sources): VideoEditEloquentModel {
+        return DB::transaction(function () use ($uuid, $userId, $previousEditId, $mode, $parameters, $sources, $script, $consentedAt): VideoEditEloquentModel {
             $edit = VideoEditEloquentModel::query()->create([
                 'uuid' => $uuid,
                 'user_id' => $userId,
@@ -106,9 +105,14 @@ final readonly class EloquentVideoEditRepository implements VideoEditRepositoryP
                 'mode' => $mode,
                 'status' => VideoEditStatus::Draft,
                 'parameters' => $parameters,
+                'ai_consent_at' => $consentedAt,
             ]);
 
             $edit->sources()->createMany($sources);
+
+            if ($script !== null) {
+                $edit->script()->create($script);
+            }
 
             return $edit->load(self::detailRelations());
         });
@@ -121,6 +125,13 @@ final readonly class EloquentVideoEditRepository implements VideoEditRepositoryP
                 ->where('uuid', $sourceUuid)
                 ->update(['size_bytes' => $sizeBytes, 'updated_at' => now()]);
         }
+    }
+
+    public function recordScriptText(string $scriptUuid, string $text): void
+    {
+        VideoEditScriptEloquentModel::query()
+            ->where('uuid', $scriptUuid)
+            ->update(['extracted_text' => $text, 'updated_at' => now()]);
     }
 
     public function recordSourceProbe(string $sourceUuid, MediaProbe $probe, ContentFingerprint $fingerprint): void
@@ -371,6 +382,16 @@ final readonly class EloquentVideoEditRepository implements VideoEditRepositoryP
     {
         return [
             'sources' => static fn (Builder $query) => $query->select(self::SOURCE_COLUMNS)->orderBy('position'),
+            // Without the text: it can be 120 000 characters, and the only
+            // consumer that wants it reads it through ScriptProviderPort. The
+            // derived flag is what the pipeline needs — "has this been parsed
+            // already" — without dragging the payload into every detail read.
+            'script' => static fn (Builder $query) => $query
+                ->select([
+                    'id', 'video_edit_id', 'uuid', 'original_name', 'extension', 'declared_mime',
+                    'declared_size_bytes', 'storage_path',
+                ])
+                ->selectRaw('(extracted_text IS NOT NULL) as has_extracted_text'),
             'appliedCuts' => static fn (Builder $query) => $query
                 ->select(['id', 'video_edit_id', 'sequence', 'start_ms', 'end_ms', 'reasons', 'origins'])
                 ->orderBy('sequence'),

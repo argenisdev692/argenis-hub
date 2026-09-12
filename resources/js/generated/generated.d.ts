@@ -1448,6 +1448,13 @@ declare namespace Modules {
     namespace VideoEdits {
         namespace Application {
             namespace DTOs {
+                export type AiEditData = {
+                    enabled: boolean;
+                    consented: boolean;
+                    script: Modules.VideoEdits.Application.DTOs.ScriptUploadData | null;
+                    instructions: string | null;
+                    target_duration_minutes: number | null;
+                };
                 export type AppliedCutData = {
                     sequence: number;
                     start_ms: number;
@@ -1460,12 +1467,15 @@ declare namespace Modules {
                     mode: Modules.VideoEdits.Domain.Enums.VideoEditMode;
                     sources: Modules.VideoEdits.Application.DTOs.SourceUploadData[];
                     silence_removal: Modules.VideoEdits.Application.DTOs.SilenceRemovalData | null;
+                    speech_cleanup: Modules.VideoEdits.Application.DTOs.SpeechCleanupData | null;
+                    ai_edit: Modules.VideoEdits.Application.DTOs.AiEditData | null;
                     manual_ranges: Modules.VideoEdits.Application.DTOs.ManualRangeData[];
                     previous_edit_uuid: string | null;
                 };
                 export type CreatedVideoEditData = {
                     edit: Modules.VideoEdits.Application.DTOs.VideoEditDetailData;
                     uploads: Modules.VideoEdits.Application.DTOs.UploadTargetData[];
+                    script_upload: Modules.VideoEdits.Application.DTOs.UploadTargetData | null;
                 };
                 export type CutDecisionData = {
                     producer: string;
@@ -1491,6 +1501,11 @@ declare namespace Modules {
                         | Modules.VideoEdits.Application.DTOs.ManualRangeData[]
                         | null;
                 };
+                export type ScriptUploadData = {
+                    file_name: string;
+                    mime_type: string;
+                    size_bytes: number;
+                };
                 export type SilenceRemovalData = {
                     enabled: boolean;
                     threshold_seconds: number | null;
@@ -1500,6 +1515,13 @@ declare namespace Modules {
                     file_name: string;
                     mime_type: string;
                     size_bytes: number;
+                };
+                export type SpeechCleanupData = {
+                    enabled: boolean;
+                    categories: (
+                        Modules.VideoEdits.Domain.Enums.SpeechCategory | string
+                    )[];
+                    language: string | null;
                 };
                 export type UploadTargetData = {
                     source_uuid: string;
@@ -1539,8 +1561,13 @@ declare namespace Modules {
                     details: Record<string, any> | null;
                 };
                 export type VideoEditFilterData = {
+                    search: string | null;
                     status: Modules.VideoEdits.Domain.Enums.VideoEditStatus | null;
                     mode: Modules.VideoEdits.Domain.Enums.VideoEditMode | null;
+                    dateFrom: string | null;
+                    dateTo: string | null;
+                    sortField: string;
+                    sortOrder: number;
                     page: number;
                     perPage: number;
                 };
@@ -1576,8 +1603,20 @@ declare namespace Modules {
         }
         namespace Domain {
             namespace Enums {
-                export type CutReason = 'silence' | 'manual';
-                export type DecisionOrigin = 'system_detection' | 'user';
+                export type AiRecommendationKind =
+                    'reduce' | 'off_script' | 'script_coverage' | 'pacing';
+                export type CutReason =
+                    | 'silence'
+                    | 'manual'
+                    | 'filler'
+                    | 'filler_word'
+                    | 'stutter'
+                    | 'repetition'
+                    | 'vocal_sound'
+                    | 'pause_marker'
+                    | 'retake';
+                export type DecisionOrigin =
+                    'system_detection' | 'user' | 'transcription' | 'ai';
                 export type DecisionOutcome = 'applied' | 'rejected';
                 export type DecisionRejectionReason =
                     | 'negative_start'
@@ -1589,9 +1628,20 @@ declare namespace Modules {
                     | 'download'
                     | 'merge'
                     | 'analysis'
+                    | 'audio_extraction'
+                    | 'transcription'
+                    | 'speech_detection'
+                    | 'script_extraction'
+                    | 'ai_analysis'
                     | 'plan_cuts'
                     | 'render'
                     | 'publish';
+                export type SpeechCategory =
+                    | 'filler'
+                    | 'filler_word'
+                    | 'stutter'
+                    | 'repetition'
+                    | 'vocal_sound';
                 export type VideoEditMode = 'merge' | 'auto_edit' | 'ai_edit';
                 export type VideoEditStatus =
                     'draft' | 'queued' | 'processing' | 'completed' | 'failed';

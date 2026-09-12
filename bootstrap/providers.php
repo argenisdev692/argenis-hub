@@ -13,6 +13,7 @@ use Modules\Campaigns\Providers\CampaignServiceProvider;
 use Modules\Clients\Providers\ClientsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
 use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
+use Modules\CourseScripts\Providers\CourseScriptsServiceProvider;
 use Modules\Cvs\Providers\CvsServiceProvider;
 use Modules\Invoices\Providers\InvoicesServiceProvider;
 use Modules\PaymentAccounts\Providers\PaymentAccountsServiceProvider;
@@ -57,4 +58,7 @@ return [
     BackupsServiceProvider::class,
     // Video editing pipeline (spec 001-video-edit) — depends on the Shared StoragePort / AuditPort.
     VideoEditsServiceProvider::class,
+    // Course script generation (spec 002-course-scripts) — depends on the Shared
+    // AIClientInterface / ExportPort / StoragePort / AuditPort.
+    CourseScriptsServiceProvider::class,
 ];

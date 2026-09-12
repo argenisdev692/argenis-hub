@@ -50,10 +50,13 @@ interface VideoEditRepositoryPort
     public function paginateOwned(int $userId, VideoEditFilterData $filters): LengthAwarePaginator;
 
     /**
-     * Creates a draft edit and its source rows in one transaction, returned with details loaded.
+     * Creates a draft edit with its source rows — and, for a V3 AI edit, its
+     * script row and consent timestamp — in one transaction, returned with
+     * details loaded.
      *
      * @param  array<string, mixed>  $parameters
      * @param  list<array<string, mixed>>  $sources  source column values
+     * @param  array<string, mixed>|null  $script  script column values (EX-9)
      */
     public function createDraft(
         string $uuid,
@@ -62,6 +65,8 @@ interface VideoEditRepositoryPort
         VideoEditMode $mode,
         array $parameters,
         array $sources,
+        ?array $script = null,
+        ?DateTimeInterface $consentedAt = null,
     ): VideoEditEloquentModel;
 
     /**
@@ -70,6 +75,12 @@ interface VideoEditRepositoryPort
     public function recordVerifiedSourceSizes(array $sizesBySourceUuid): void;
 
     public function recordSourceProbe(string $sourceUuid, MediaProbe $probe, ContentFingerprint $fingerprint): void;
+
+    /**
+     * Stores the text pulled out of an attached script (V3 · US-12), so a retry
+     * does not parse the same PDF twice.
+     */
+    public function recordScriptText(string $scriptUuid, string $text): void;
 
     /**
      * Atomic compare-and-set on `status` (AD-9): succeeds only when the row is

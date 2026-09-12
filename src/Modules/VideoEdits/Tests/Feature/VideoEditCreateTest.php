@@ -92,7 +92,9 @@ it('rejects invalid requests before creating anything', function (array $overrid
 
     expect(VideoEditEloquentModel::query()->count())->toBe(0);
 })->with([
-    'AI edit is not available yet' => [['mode' => 'ai_edit'], 'mode'],
+    // AI edit is selectable since V3, but it cannot run on the auto-edit
+    // payload alone — it needs its own block and consent (AiEditRequestTest).
+    'AI edit without its own block' => [['mode' => 'ai_edit'], 'ai_edit'],
     'unknown mode' => [['mode' => 'transcode'], 'mode'],
     'merge needs two clips' => [['mode' => 'merge', 'silence_removal' => null, 'manual_ranges' => [], 'sources' => [
         ['position' => 1, 'file_name' => 'a.mp4', 'mime_type' => 'video/mp4', 'size_bytes' => 10],

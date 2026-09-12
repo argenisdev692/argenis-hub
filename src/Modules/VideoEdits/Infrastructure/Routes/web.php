@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditController;
+use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditExportController;
+use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,12 +27,21 @@ Route::middleware(['auth', 'verified'])
         Route::middleware(['permission:CREATE_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/', [VideoEditController::class, 'store'])->name('store');
 
+        // Declared before `/{uuid}` so `export` is never read as an identifier.
+        Route::middleware(['permission:EXPORT_VIDEO_EDITS', 'throttle:10,1'])
+            ->get('/export', VideoEditExportController::class)->name('export');
+
         Route::middleware(['permission:DOWNLOAD_VIDEO_EDITS', 'throttle:30,1'])
             ->get('/{uuid}/download-url', [VideoEditController::class, 'downloadUrl'])->whereUuid('uuid')->name('download-url');
         Route::middleware(['permission:CREATE_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/{uuid}/submit', [VideoEditController::class, 'submit'])->whereUuid('uuid')->name('submit');
         Route::middleware(['permission:RETRY_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/{uuid}/retry', [VideoEditController::class, 'retry'])->whereUuid('uuid')->name('retry');
+
+        // V3 AI decision report (US-14), on screen and as a PDF. Declared
+        // before `/{uuid}` so the static segment is never read as an id.
+        Route::middleware(['permission:VIEW_VIDEO_EDITS', 'throttle:30,1'])
+            ->get('/{uuid}/report', VideoEditReportController::class)->whereUuid('uuid')->name('report');
 
         Route::middleware('permission:VIEW_VIDEO_EDITS')
             ->get('/{uuid}', [VideoEditController::class, 'show'])->whereUuid('uuid')->name('show');

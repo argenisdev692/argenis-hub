@@ -16,9 +16,14 @@ enum VideoEditMode: string
     case AutoEdit = 'auto_edit';
     case AiEdit = 'ai_edit';
 
+    /**
+     * All three modes ship as of V3 (2026-09-12). The method stays because it
+     * is the seam a future mode enters through, and because the request
+     * validation and the frontend both read it rather than hard-coding a list.
+     */
     public function isAvailable(): bool
     {
-        return $this !== self::AiEdit;
+        return true;
     }
 
     public function minimumSources(): int

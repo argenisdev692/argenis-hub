@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 
-it('keeps AI edit on the roadmap but unavailable in V1', function (): void {
-    expect(VideoEditMode::AiEdit->isAvailable())->toBeFalse()
-        ->and(VideoEditMode::availableValues())->toBe(['merge', 'auto_edit']);
+it('offers all three modes now that V3 has shipped', function (): void {
+    // AI edit existed as a mode from V1 so the roadmap was first-class in the
+    // data model (EX-4); it became selectable when its producer shipped.
+    expect(VideoEditMode::AiEdit->isAvailable())->toBeTrue()
+        ->and(VideoEditMode::availableValues())->toBe(['merge', 'auto_edit', 'ai_edit']);
 });
 
 it('requires two clips to merge and one to auto edit', function (VideoEditMode $mode, int $minimum): void {

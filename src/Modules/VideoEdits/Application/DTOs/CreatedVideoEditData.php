@@ -10,7 +10,8 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 /**
- * Create-draft response (E2): the draft plus one upload target per source.
+ * Create-draft response (E2): the draft plus one upload target per source,
+ * and one more for the optional V3 script (EX-9).
  */
 #[MapOutputName(SnakeCaseMapper::class)]
 final class CreatedVideoEditData extends Data
@@ -22,5 +23,6 @@ final class CreatedVideoEditData extends Data
         public VideoEditDetailData $edit,
         #[DataCollectionOf(UploadTargetData::class)]
         public array $uploads,
+        public ?UploadTargetData $scriptUpload = null,
     ) {}
 }
