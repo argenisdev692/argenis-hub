@@ -65,7 +65,7 @@ it('persists a course with blocks and videos in course order', function (): void
     expect($course->uuid)->toMatch('/^[0-9a-f-]{36}$/')
         ->and($course->videos()->orderBy('number')->pluck('number')->all())->toBe([1, 2, 3])
         ->and($course->blocks)->toHaveCount(1)
-        ->and($course->user->scriptCourses()->count())->toBe(1);
+        ->and($course->user->courses()->count())->toBe(1);
 });
 
 it('allows only one active run per course', function (): void {

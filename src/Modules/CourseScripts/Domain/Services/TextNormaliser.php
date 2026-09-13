@@ -10,7 +10,7 @@ namespace Modules\CourseScripts\Domain\Services;
  * so decomposition via intl is used when available, with an explicit map as
  * the fallback.
  */
-final class TextNormaliser
+final readonly class TextNormaliser
 {
     private const array MAP = [
         'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a', 'ã' => 'a', 'Á' => 'A', 'À' => 'A', 'Ä' => 'A', 'Â' => 'A', 'Ã' => 'A',

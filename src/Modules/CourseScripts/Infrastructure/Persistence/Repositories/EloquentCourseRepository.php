@@ -217,6 +217,50 @@ final readonly class EloquentCourseRepository implements CourseRepositoryPort
         $course->delete();
     }
 
+    public function findOwnedTrashed(string $uuid, int $userId): ?CourseEloquentModel
+    {
+        return CourseEloquentModel::onlyTrashed()->ownedBy($userId)->where('uuid', $uuid)->first();
+    }
+
+    public function restore(CourseEloquentModel $course): void
+    {
+        $course->restore();
+    }
+
+    /**
+     * Model by model, not a mass `delete()`: mass soft deletes dispatch no
+     * model events, so the activity log would miss every course (the UUID
+     * list is capped at 500 by `BulkUuidsData`).
+     */
+    public function bulkSoftDeleteOwned(array $uuids, int $userId): array
+    {
+        return DB::transaction(static function () use ($uuids, $userId): array {
+            $courses = CourseEloquentModel::query()->ownedBy($userId)->whereIn('uuid', $uuids)->lockForUpdate()->get()->all();
+
+            foreach ($courses as $course) {
+                $course->delete();
+            }
+
+            return array_values($courses);
+        });
+    }
+
+    /**
+     * Model by model for the same audit reason as {@see self::bulkSoftDeleteOwned()}.
+     */
+    public function bulkRestoreOwned(array $uuids, int $userId): array
+    {
+        return DB::transaction(static function () use ($uuids, $userId): array {
+            $courses = CourseEloquentModel::onlyTrashed()->ownedBy($userId)->whereIn('uuid', $uuids)->lockForUpdate()->get()->all();
+
+            foreach ($courses as $course) {
+                $course->restore();
+            }
+
+            return array_values($courses);
+        });
+    }
+
     public function saveBible(CourseEloquentModel $course, array $bible, BibleOrigin $origin): CourseEloquentModel
     {
         $course->bible = $bible;

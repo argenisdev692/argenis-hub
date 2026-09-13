@@ -44,7 +44,7 @@ use Modules\CourseScripts\Domain\ValueObjects\ParsedPoint;
  * substance (FR-4a), which is why a title-only point is valid input rather than
  * an error.
  */
-final class MarkdownIndexParser implements IndexDocumentParserPort
+final readonly class MarkdownIndexParser implements IndexDocumentParserPort
 {
     /** @var list<string> */
     private const array SUPPORTED_MIME_TYPES = [

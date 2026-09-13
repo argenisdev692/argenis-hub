@@ -161,6 +161,8 @@ final class CourseEloquentModel extends Model
     public function scopeApplyFilters(Builder $query, CourseFilterData $filters): Builder
     {
         return $query
+            ->when($filters->trashed === 'only', static fn (Builder $query): Builder => $query->onlyTrashed())
+            ->when($filters->trashed === 'with', static fn (Builder $query): Builder => $query->withTrashed())
             ->when(
                 $filters->search,
                 static fn (Builder $query, string $search): Builder => $query->where('title', 'like', '%'.$search.'%'),

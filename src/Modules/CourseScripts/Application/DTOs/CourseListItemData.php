@@ -25,6 +25,7 @@ final class CourseListItemData extends Data
         public int $generatedVideosCount,
         public string $createdAt,
         public string $updatedAt,
+        public ?string $deletedAt,
     ) {}
 
     public static function fromModel(CourseEloquentModel $course): self
@@ -38,6 +39,7 @@ final class CourseListItemData extends Data
             generatedVideosCount: (int) ($course->getAttribute('generated_videos_count') ?? 0),
             createdAt: $course->created_at?->toIso8601String() ?? '',
             updatedAt: $course->updated_at?->toIso8601String() ?? '',
+            deletedAt: $course->deleted_at?->toIso8601String(),
         );
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\CourseScripts\Infrastructure\Http\Controllers\CourseBibleController;
 use Modules\CourseScripts\Infrastructure\Http\Controllers\CourseContentController;
 use Modules\CourseScripts\Infrastructure\Http\Controllers\CourseController;
+use Modules\CourseScripts\Infrastructure\Http\Controllers\CourseExportController;
 use Modules\CourseScripts\Infrastructure\Http\Controllers\DeliverableController;
 use Modules\CourseScripts\Infrastructure\Http\Controllers\GenerationRunController;
 use Modules\CourseScripts\Infrastructure\Http\Controllers\ScriptVersionController;
@@ -32,10 +33,20 @@ Route::middleware(['auth', 'verified'])
         Route::middleware(['permission:CREATE_COURSE_SCRIPTS', 'throttle:course-scripts-upload'])
             ->post('/', [CourseController::class, 'store'])->name('store');
 
+        // Static segments before `/{uuid}` so they are never read as identifiers.
+        Route::middleware(['permission:EXPORT_COURSE_SCRIPTS', 'throttle:course-scripts-export'])
+            ->get('/export', CourseExportController::class)->name('export');
+        Route::middleware(['permission:DELETE_COURSE_SCRIPTS', 'throttle:course-scripts-generate'])
+            ->post('/bulk-delete', [CourseController::class, 'bulkDelete'])->name('bulk-delete');
+        Route::middleware(['permission:RESTORE_COURSE_SCRIPTS', 'throttle:course-scripts-generate'])
+            ->post('/bulk-restore', [CourseController::class, 'bulkRestore'])->name('bulk-restore');
+
         Route::middleware('permission:VIEW_COURSE_SCRIPTS')
             ->get('/{uuid}', [CourseController::class, 'show'])->whereUuid('uuid')->name('show');
         Route::middleware(['permission:DELETE_COURSE_SCRIPTS', 'throttle:course-scripts-generate'])
             ->delete('/{uuid}', [CourseController::class, 'destroy'])->whereUuid('uuid')->name('destroy');
+        Route::middleware(['permission:RESTORE_COURSE_SCRIPTS', 'throttle:course-scripts-generate'])
+            ->post('/{uuid}/restore', [CourseController::class, 'restore'])->whereUuid('uuid')->name('restore');
 
         Route::middleware('permission:UPDATE_COURSE_SCRIPTS')
             ->put('/{uuid}/videos/{videoUuid}', [CourseContentController::class, 'updateVideo'])

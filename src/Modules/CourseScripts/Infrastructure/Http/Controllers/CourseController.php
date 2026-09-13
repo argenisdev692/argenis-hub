@@ -10,12 +10,16 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Modules\CourseScripts\Application\Commands\BulkDeleteCoursesHandler;
+use Modules\CourseScripts\Application\Commands\BulkRestoreCoursesHandler;
 use Modules\CourseScripts\Application\Commands\DeleteCourseHandler;
+use Modules\CourseScripts\Application\Commands\RestoreCourseHandler;
 use Modules\CourseScripts\Application\Commands\StoreCourseHandler;
 use Modules\CourseScripts\Application\DTOs\CourseFilterData;
 use Modules\CourseScripts\Application\Queries\GetCourseHandler;
 use Modules\CourseScripts\Application\Queries\ListCoursesHandler;
 use Modules\CourseScripts\Infrastructure\Http\Requests\StoreCourseRequest;
+use Shared\Application\DTOs\BulkUuidsData;
 
 /**
  * Course resource over HTTP (US-1, US-10, US-11). Serves Inertia pages and JSON
@@ -81,6 +85,39 @@ final readonly class CourseController
         return match ($request->expectsJson()) {
             true => response()->json(status: 204),
             false => redirect()->route('course-scripts.index')->with('success', 'Course deleted.'),
+        };
+    }
+
+    public function restore(Request $request, string $uuid, RestoreCourseHandler $restore): RedirectResponse|JsonResponse
+    {
+        $user = $this->user($request);
+        $restore->handle($uuid, $user->id, $user);
+
+        return match ($request->expectsJson()) {
+            true => response()->json(status: 204),
+            false => back()->with('success', 'Course restored.'),
+        };
+    }
+
+    public function bulkDelete(Request $request, BulkUuidsData $data, BulkDeleteCoursesHandler $bulkDelete): RedirectResponse|JsonResponse
+    {
+        $user = $this->user($request);
+        $count = $bulkDelete->handle($data, $user->id, $user);
+
+        return match ($request->expectsJson()) {
+            true => response()->json(['data' => ['affected' => $count]]),
+            false => back()->with('success', $count.' courses deleted.'),
+        };
+    }
+
+    public function bulkRestore(Request $request, BulkUuidsData $data, BulkRestoreCoursesHandler $bulkRestore): RedirectResponse|JsonResponse
+    {
+        $user = $this->user($request);
+        $count = $bulkRestore->handle($data, $user->id, $user);
+
+        return match ($request->expectsJson()) {
+            true => response()->json(['data' => ['affected' => $count]]),
+            false => back()->with('success', $count.' courses restored.'),
         };
     }
 

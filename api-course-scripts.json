@@ -1,0 +1,2458 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "ArgenisHub",
+        "version": "1.0.0",
+        "description": "Course Scripts endpoints (session auth, spec 002-course-scripts)."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/course-scripts"
+        }
+    ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
+    "paths": {
+        "/": {
+            "get": {
+                "operationId": "course-scripts.index",
+                "tags": [
+                    "Course"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "course-scripts.store",
+                "tags": [
+                    "Course"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreCourseRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/create": {
+            "get": {
+                "operationId": "course-scripts.create",
+                "tags": [
+                    "Course"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/bulk-delete": {
+            "post": {
+                "operationId": "course-scripts.bulk-delete",
+                "tags": [
+                    "Course"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkUuidsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "affected": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "affected"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/bulk-restore": {
+            "post": {
+                "operationId": "course-scripts.bulk-restore",
+                "tags": [
+                    "Course"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkUuidsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "affected": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "affected"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}": {
+            "get": {
+                "operationId": "course-scripts.show",
+                "tags": [
+                    "Course"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CourseDetailData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "course-scripts.destroy",
+                "tags": [
+                    "Course"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/restore": {
+            "post": {
+                "operationId": "course-scripts.restore",
+                "tags": [
+                    "Course"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {}
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/bible": {
+            "put": {
+                "operationId": "course-scripts.bible.update",
+                "tags": [
+                    "CourseBible"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Modules.CourseScripts.Application.DTOs.CourseBibleData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "bible": {
+                                                    "$ref": "#/components/schemas/CourseBibleData"
+                                                },
+                                                "bible_revision": {
+                                                    "type": "integer"
+                                                },
+                                                "stale_script_count": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "bible",
+                                                "bible_revision",
+                                                "stale_script_count"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/prepare": {
+            "post": {
+                "operationId": "course-scripts.prepare",
+                "summary": "Queues the bible proposal (when there is none) and subject research",
+                "tags": [
+                    "CourseBible"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PrepareCourseData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "queued": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "queued"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/videos/{videoUuid}": {
+            "put": {
+                "operationId": "course-scripts.videos.update",
+                "tags": [
+                    "CourseContent"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateVideoBriefData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/VideoBriefData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/course-notes": {
+            "put": {
+                "operationId": "course-scripts.course-notes.update",
+                "tags": [
+                    "CourseContent"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {}
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/contents": {
+            "post": {
+                "operationId": "course-scripts.contents.store",
+                "tags": [
+                    "CourseContent"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AttachSourceDocumentRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SourceDocumentData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/style-references": {
+            "post": {
+                "operationId": "course-scripts.style-references.store",
+                "tags": [
+                    "CourseContent"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AttachSourceDocumentRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SourceDocumentData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/documents/{documentUuid}": {
+            "delete": {
+                "operationId": "course-scripts.documents.destroy",
+                "tags": [
+                    "CourseContent"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "documentUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {}
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/export": {
+            "get": {
+                "operationId": "course-scripts.export",
+                "tags": [
+                    "CourseExport"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "draft",
+                                "ready",
+                                "generating",
+                                "partially_generated",
+                                "completed",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "trashed",
+                        "in": "query",
+                        "description": "`without` (default) lists live courses, `only` the soft-deleted\nones still recoverable, `with` both.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "without",
+                                "only",
+                                "with"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "sort_field",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created_at",
+                                "updated_at",
+                                "title",
+                                "status"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                "1",
+                                "-1"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "Export file format: `csv`, `xlsx` or `pdf`.",
+                        "schema": {
+                            "type": "string",
+                            "default": "csv"
+                        },
+                        "example": "xlsx"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/deliverables/{deliverableUuid}/download": {
+            "get": {
+                "operationId": "course-scripts.deliverables.download",
+                "tags": [
+                    "Deliverable"
+                ],
+                "parameters": [
+                    {
+                        "name": "deliverableUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/videos/{videoUuid}/bundle": {
+            "get": {
+                "operationId": "course-scripts.videos.bundle",
+                "tags": [
+                    "Deliverable"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/zip": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Content-Disposition": {
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "attachment"
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/bundle": {
+            "get": {
+                "operationId": "course-scripts.bundle",
+                "tags": [
+                    "Deliverable"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/zip": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Content-Disposition": {
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "attachment"
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/runs/estimate": {
+            "post": {
+                "operationId": "course-scripts.runs.estimate",
+                "tags": [
+                    "GenerationRun"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EstimateRunData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "ai_write_calls": {
+                                                    "type": "integer"
+                                                },
+                                                "ai_review_calls": {
+                                                    "type": "integer"
+                                                },
+                                                "research_calls": {
+                                                    "type": "integer"
+                                                },
+                                                "ai_calls": {
+                                                    "type": "integer"
+                                                },
+                                                "ai_ceiling": {
+                                                    "type": "integer"
+                                                },
+                                                "research_ceiling": {
+                                                    "type": "integer"
+                                                },
+                                                "fits": {
+                                                    "type": "boolean"
+                                                },
+                                                "with_review": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "ai_write_calls",
+                                                "ai_review_calls",
+                                                "research_calls",
+                                                "ai_calls",
+                                                "ai_ceiling",
+                                                "research_ceiling",
+                                                "fits",
+                                                "with_review"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/runs": {
+            "post": {
+                "operationId": "course-scripts.runs.store",
+                "tags": [
+                    "GenerationRun"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartGenerationRunData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/GenerationRunData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/runs/{runUuid}": {
+            "get": {
+                "operationId": "course-scripts.runs.show",
+                "tags": [
+                    "GenerationRun"
+                ],
+                "parameters": [
+                    {
+                        "name": "runUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/GenerationRunData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/runs/{runUuid}/cancel": {
+            "post": {
+                "operationId": "course-scripts.runs.cancel",
+                "tags": [
+                    "GenerationRun"
+                ],
+                "parameters": [
+                    {
+                        "name": "runUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/GenerationRunData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/runs/{runUuid}/retry-failed": {
+            "post": {
+                "operationId": "course-scripts.runs.retry-failed",
+                "tags": [
+                    "GenerationRun"
+                ],
+                "parameters": [
+                    {
+                        "name": "runUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/GenerationRunData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/videos/{videoUuid}/script": {
+            "get": {
+                "operationId": "course-scripts.videos.script",
+                "tags": [
+                    "ScriptVersion"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "version",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ScriptVersionData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/videos/{videoUuid}/versions": {
+            "get": {
+                "operationId": "course-scripts.videos.versions",
+                "tags": [
+                    "ScriptVersion"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/videos/{videoUuid}/regenerate": {
+            "post": {
+                "operationId": "course-scripts.videos.regenerate",
+                "tags": [
+                    "ScriptVersion"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegenerateScriptData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/GenerationRunData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/videos/{videoUuid}/practice": {
+            "post": {
+                "operationId": "course-scripts.videos.practice",
+                "tags": [
+                    "ScriptVersion"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegenerateScriptData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/GenerationRunData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/videos/{videoUuid}/versions/{versionUuid}/accept": {
+            "put": {
+                "operationId": "course-scripts.videos.versions.accept",
+                "tags": [
+                    "ScriptVersion"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "versionUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ScriptVersionData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "AttachSourceDocumentRequest": {
+                "type": "object",
+                "description": "One content file or style reference for an existing course (FR-1b, FR-10).",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "description": "Maximum file size: 10240 kilobytes."
+                    },
+                    "video_number": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "file"
+                ],
+                "title": "AttachSourceDocumentRequest"
+            },
+            "BulkUuidsData": {
+                "type": "object",
+                "description": "Reusable contract for bulk soft-delete / soft-restore over a UUID array.\n\nEvery module's `BulkDelete{Entity}Request` / `BulkRestore{Entity}Request`\nreuses this DTO instead of re-declaring the same rules (DRY). Authorization\nand domain events stay per-module \u2014 this only validates the payload shape.\n\nThe 500 cap bounds the `whereIn` so a bulk action cannot be turned into an\nunbounded query (OWASP \u2014 unrestricted resource consumption).",
+                "properties": {
+                    "uuids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "minItems": 1,
+                        "maxItems": 500,
+                        "uniqueItems": true
+                    }
+                },
+                "required": [
+                    "uuids"
+                ],
+                "title": "BulkUuidsData"
+            },
+            "CourseBibleData": {
+                "type": "object",
+                "properties": {
+                    "organisations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BibleOrganisationData"
+                        }
+                    },
+                    "characters": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BibleCharacterData"
+                        }
+                    },
+                    "audience": {
+                        "type": "string"
+                    },
+                    "tone": {
+                        "type": "string"
+                    },
+                    "taught_tool": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "forbidden_phrasings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "organisations",
+                    "characters",
+                    "audience",
+                    "tone",
+                    "forbidden_phrasings"
+                ],
+                "title": "CourseBibleData"
+            },
+            "CourseDetailData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "declared_duration_minutes": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "default_video_minutes": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "course_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "bible": {
+                        "$ref": "#/components/schemas/Modules.CourseScripts.Application.DTOs.CourseBibleData"
+                    },
+                    "bible_origin": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "bible_revision": {
+                        "type": "integer"
+                    },
+                    "prepared": {
+                        "type": "boolean"
+                    },
+                    "videos_needing_review": {
+                        "type": "integer"
+                    },
+                    "blocks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BlockData"
+                        }
+                    },
+                    "videos": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Modules.CourseScripts.Application.DTOs.VideoBriefData"
+                        }
+                    },
+                    "documents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Modules.CourseScripts.Application.DTOs.SourceDocumentData"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "title",
+                    "language",
+                    "default_video_minutes",
+                    "status",
+                    "bible_revision",
+                    "prepared",
+                    "videos_needing_review",
+                    "blocks",
+                    "videos",
+                    "documents",
+                    "created_at"
+                ],
+                "title": "CourseDetailData"
+            },
+            "EstimateRunData": {
+                "type": "object",
+                "description": "What a run would cover and whether it uses the second review (US-9, US-12).",
+                "properties": {
+                    "scope": {
+                        "type": "string",
+                        "enum": [
+                            "course",
+                            "block",
+                            "selection"
+                        ]
+                    },
+                    "block_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "video_uuids": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "minItems": 1,
+                        "maxItems": 200
+                    },
+                    "with_review": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "scope"
+                ],
+                "title": "EstimateRunData"
+            },
+            "GenerationRunData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "course_uuid": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "writer_provider": {
+                        "type": "string"
+                    },
+                    "with_review": {
+                        "type": "boolean"
+                    },
+                    "reviewer_provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reviewer_not_independent": {
+                        "type": "boolean"
+                    },
+                    "videos_total": {
+                        "type": "integer"
+                    },
+                    "videos_completed": {
+                        "type": "integer"
+                    },
+                    "videos_failed": {
+                        "type": "integer"
+                    },
+                    "current_video": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "progress": {
+                        "type": "integer"
+                    },
+                    "estimated_ai_write_calls": {
+                        "type": "integer"
+                    },
+                    "estimated_ai_review_calls": {
+                        "type": "integer"
+                    },
+                    "estimated_research_calls": {
+                        "type": "integer"
+                    },
+                    "ai_write_calls_consumed": {
+                        "type": "integer"
+                    },
+                    "ai_review_calls_consumed": {
+                        "type": "integer"
+                    },
+                    "research_calls_consumed": {
+                        "type": "integer"
+                    },
+                    "ai_call_ceiling": {
+                        "type": "integer"
+                    },
+                    "research_call_ceiling": {
+                        "type": "integer"
+                    },
+                    "stop_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "outcomes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "started_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "finished_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "course_uuid",
+                    "kind",
+                    "scope",
+                    "status",
+                    "writer_provider",
+                    "with_review",
+                    "reviewer_not_independent",
+                    "videos_total",
+                    "videos_completed",
+                    "videos_failed",
+                    "progress",
+                    "estimated_ai_write_calls",
+                    "estimated_ai_review_calls",
+                    "estimated_research_calls",
+                    "ai_write_calls_consumed",
+                    "ai_review_calls_consumed",
+                    "research_calls_consumed",
+                    "ai_call_ceiling",
+                    "research_call_ceiling",
+                    "outcomes"
+                ],
+                "title": "GenerationRunData"
+            },
+            "Modules.CourseScripts.Application.DTOs.CourseBibleData": {
+                "type": "object",
+                "description": "The course bible: the recurring fiction and voice every script and practice\npack must respect (US-3 \u00b7 FR-9, D18).",
+                "properties": {
+                    "organisations": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "maxItems": 30
+                    },
+                    "characters": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "maxItems": 40
+                    },
+                    "forbidden_phrasings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 200
+                        },
+                        "maxItems": 50
+                    }
+                },
+                "title": "Modules.CourseScripts.Application.DTOs.CourseBibleData"
+            },
+            "PrepareCourseData": {
+                "type": "object",
+                "description": "The writer picked for the bible proposal. Model names are never accepted\nfrom the request (A2/D2).",
+                "properties": {
+                    "writer_provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    }
+                },
+                "required": [
+                    "writer_provider"
+                ],
+                "title": "PrepareCourseData"
+            },
+            "RegenerateScriptData": {
+                "type": "object",
+                "description": "Regenerate one video with the author's feedback, or force its practice pack\n(US-14, US-7 \u00b7 FR-38). `with_review` applies to this single-video run too.",
+                "properties": {
+                    "writer_provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "feedback_note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 4000
+                    },
+                    "with_review": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "writer_provider"
+                ],
+                "title": "RegenerateScriptData"
+            },
+            "ScriptVersionData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "is_accepted": {
+                        "type": "boolean"
+                    },
+                    "writer_provider": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "technical_header": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "learning_objectives": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "continuity_note": {
+                        "type": "string"
+                    },
+                    "continuity_is_provisional": {
+                        "type": "boolean"
+                    },
+                    "continuity_stale": {
+                        "type": "boolean"
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "uses_tool": {
+                        "type": "boolean"
+                    },
+                    "summary_points": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "next_video": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "recording_notes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "verification_checklist": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "errors_check": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "is_grounded": {
+                        "type": "boolean"
+                    },
+                    "prompts_sheet_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "practice_warranted": {
+                        "type": "boolean"
+                    },
+                    "practice_decision_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reviewed": {
+                        "type": "boolean"
+                    },
+                    "reviewer_provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "review_scores": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "review_objections": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "review_iterations": {
+                        "type": "integer"
+                    },
+                    "passed_review": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "feedback_note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "practice": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "deliverables": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "version",
+                    "is_accepted",
+                    "writer_provider",
+                    "created_at",
+                    "technical_header",
+                    "learning_objectives",
+                    "continuity_note",
+                    "continuity_is_provisional",
+                    "continuity_stale",
+                    "sections",
+                    "uses_tool",
+                    "summary_points",
+                    "recording_notes",
+                    "verification_checklist",
+                    "is_grounded",
+                    "practice_warranted",
+                    "reviewed",
+                    "review_iterations",
+                    "sources",
+                    "deliverables"
+                ],
+                "title": "ScriptVersionData"
+            },
+            "SourceDocumentData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "mime": {
+                        "type": "string"
+                    },
+                    "size_bytes": {
+                        "type": "integer"
+                    },
+                    "video_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "kind",
+                    "original_name",
+                    "mime",
+                    "size_bytes"
+                ],
+                "title": "SourceDocumentData"
+            },
+            "StartGenerationRunData": {
+                "type": "object",
+                "description": "A confirmed run request (US-9 \u00b7 FR-14, FR-14a). The writer is chosen from an\nallow-list; the model is never a request parameter (A2/D2). `with_review` is\nthe author's per-run choice of the independent second review (DEC-10).",
+                "properties": {
+                    "scope": {
+                        "type": "string",
+                        "enum": [
+                            "course",
+                            "block",
+                            "selection"
+                        ]
+                    },
+                    "block_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "video_uuids": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "minItems": 1,
+                        "maxItems": 200
+                    },
+                    "with_review": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "writer_provider": {
+                        "type": "string",
+                        "enum": [
+                            "openai",
+                            "anthropic",
+                            "gemini"
+                        ]
+                    },
+                    "confirmed_estimate": {
+                        "type": "object",
+                        "properties": {
+                            "ai_write_calls": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "ai_review_calls": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "research_calls": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "ai_write_calls",
+                            "ai_review_calls",
+                            "research_calls"
+                        ]
+                    }
+                },
+                "required": [
+                    "scope",
+                    "writer_provider",
+                    "confirmed_estimate"
+                ],
+                "title": "StartGenerationRunData"
+            },
+            "StoreCourseRequest": {
+                "type": "object",
+                "description": "Title + index + optional content files (US-1 \u00b7 FR-1, FR-1b, FR-58).\n\n`mimetypes` checks the real bytes via fileinfo; `extensions` checks the\nclient name. Both must pass.",
+                "properties": {
+                    "title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "index": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application/octet-stream",
+                        "description": "Maximum file size: 10240 kilobytes."
+                    },
+                    "contents": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "format": "binary",
+                            "contentMediaType": "application/octet-stream",
+                            "description": "Maximum file size: 10240 kilobytes."
+                        },
+                        "maxItems": 10
+                    },
+                    "content_video_numbers": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    }
+                },
+                "required": [
+                    "index"
+                ],
+                "title": "StoreCourseRequest"
+            },
+            "UpdateVideoBriefData": {
+                "type": "object",
+                "description": "An author's edit of a video's brief and notes (US-2 \u00b7 FR-6). Every field is\nsent; the stored brief becomes exactly this.",
+                "properties": {
+                    "learning_areas": {
+                        "type": "object"
+                    },
+                    "audience_objectives": {
+                        "type": "object"
+                    },
+                    "mandatory_content": {
+                        "type": "object"
+                    },
+                    "errors_to_avoid": {
+                        "type": "object"
+                    }
+                },
+                "title": "UpdateVideoBriefData"
+            },
+            "VideoBriefData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "block_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "number": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "topic": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "declared_duration_minutes": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "effective_duration_minutes": {
+                        "type": "integer"
+                    },
+                    "objective": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "learning_areas": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "audience_objectives": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "mandatory_content": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "errors_to_avoid": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "expected_result": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "needs_review": {
+                        "type": "boolean"
+                    },
+                    "brief_revision": {
+                        "type": "integer"
+                    },
+                    "script_status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "number",
+                    "title",
+                    "effective_duration_minutes",
+                    "learning_areas",
+                    "audience_objectives",
+                    "mandatory_content",
+                    "errors_to_avoid",
+                    "needs_review",
+                    "brief_revision",
+                    "script_status"
+                ],
+                "title": "VideoBriefData"
+            }
+        },
+        "responses": {
+            "AuthenticationException": {
+                "description": "Unauthenticated",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

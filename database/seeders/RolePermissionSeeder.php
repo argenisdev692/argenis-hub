@@ -249,10 +249,12 @@ class RolePermissionSeeder extends Seeder
      * briefs (UPDATE) and spends money on provider calls (GENERATE), and
      * GENERATE is deliberately its own permission so "may read a course" and
      * "may run a 700-call course generation" are never the same grant.
+     * RESTORE pairs with DELETE: a soft-deleted course stays recoverable, singly
+     * or in bulk, until it is pruned.
      *
      * @var list<string>
      */
-    private const array COURSE_SCRIPT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'UPDATE', 'GENERATE', 'DOWNLOAD', 'DELETE', 'EXPORT'];
+    private const array COURSE_SCRIPT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'UPDATE', 'GENERATE', 'DOWNLOAD', 'DELETE', 'RESTORE', 'EXPORT'];
 
     /**
      * Ops tooling dashboards (Horizon queue monitor, Telescope request/query

@@ -12,7 +12,7 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
  * delimiter syntax inside the content is neutralised first, so an index that
  * contains "<<<END" cannot close its own block and speak as the system.
  */
-final class UntrustedContentBlock
+final readonly class UntrustedContentBlock
 {
     /**
      * Appended to every agent's instructions.

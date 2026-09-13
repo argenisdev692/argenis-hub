@@ -22,7 +22,7 @@ namespace Modules\CourseScripts\Infrastructure\Parsing;
  * {@see MarkdownIndexParser} falls back to structural extraction — headings,
  * numbered lists, table rows — when no keyword appears at all.
  */
-final class IndexVocabulary
+final readonly class IndexVocabulary
 {
     /**
      * Words that introduce a GROUPING of points (a block, module, section).

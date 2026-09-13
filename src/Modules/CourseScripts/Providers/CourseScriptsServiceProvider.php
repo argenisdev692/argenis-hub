@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\CourseScripts\Providers;
 
+use Dedoc\Scramble\Scramble;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Exceptions\Handler;
@@ -92,7 +93,26 @@ final class CourseScriptsServiceProvider extends ServiceProvider
     {
         $this->registerRateLimiters();
         $this->registerWebRoutes();
+        $this->registerApiDocumentation();
         $this->registerExceptionRendering();
+    }
+
+    /**
+     * The default Scramble document only covers `api/*` and this module has no
+     * Sanctum routes, so its session JSON surface gets its own OpenAPI
+     * document: `php artisan scramble:export --api=course-scripts`. Export-only
+     * (VideoEdits precedent) — no extra public docs route is exposed.
+     */
+    private function registerApiDocumentation(): void
+    {
+        Scramble::registerApi('course-scripts', [
+            'api_path' => 'course-scripts',
+            'export_path' => 'api-course-scripts.json',
+            'info' => [
+                'version' => '1.0.0',
+                'description' => 'Course Scripts endpoints (session auth, spec 002-course-scripts).',
+            ],
+        ])->expose(false);
     }
 
     /**

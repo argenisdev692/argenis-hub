@@ -713,6 +713,7 @@ declare namespace Modules {
                 export type CourseFilterData = {
                     search: string | null;
                     status: Modules.CourseScripts.Domain.Enums.CourseStatus | null;
+                    trashed: string;
                     dateFrom: string | null;
                     dateTo: string | null;
                     sortField: string;
@@ -729,6 +730,7 @@ declare namespace Modules {
                     generated_videos_count: number;
                     created_at: string;
                     updated_at: string;
+                    deleted_at: string | null;
                 };
                 export type EstimateRunData = {
                     scope: Modules.CourseScripts.Domain.Enums.GenerationScope;
@@ -830,6 +832,19 @@ declare namespace Modules {
                         format: string;
                         size_bytes: number;
                     }[];
+                };
+                export type ScriptVersionSummaryData = {
+                    uuid: string;
+                    version: number;
+                    is_accepted: boolean;
+                    writer_provider: string;
+                    reviewed: boolean;
+                    passed_review: boolean | null;
+                    review_scores: Record<string, any> | null;
+                    is_grounded: boolean;
+                    continuity_stale: boolean;
+                    feedback_note: string | null;
+                    created_at: string | null;
                 };
                 export type SourceDocumentData = {
                     uuid: string;

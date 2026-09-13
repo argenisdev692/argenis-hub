@@ -11,7 +11,7 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
  * Shared by the writer and reviewer agents as part of their constant
  * instructions, so it sits in the cached prefix of every call.
  */
-final class ScriptFormatGuide
+final readonly class ScriptFormatGuide
 {
     public const string SCRIPT = <<<'GUIDE'
         REFERENCE FORMAT OF A RECORDING SCRIPT ("GUIÓN")

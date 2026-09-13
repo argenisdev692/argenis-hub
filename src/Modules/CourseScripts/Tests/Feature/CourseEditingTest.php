@@ -6,6 +6,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseEloquentModel;
+use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseScriptVersionEloquentModel;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseSourceDocumentEloquentModel;
 use Modules\CourseScripts\Tests\Support\CourseScriptTestUsers;
 use Modules\CourseScripts\Tests\Support\FakeStorage;
@@ -128,4 +129,38 @@ it('soft deletes a course', function (): void {
 
     expect(CourseEloquentModel::query()->count())->toBe(0)
         ->and(CourseEloquentModel::withTrashed()->count())->toBe(1);
+});
+
+it('lists a video\'s version history as metadata only', function (): void {
+    $version = CourseScriptVersionEloquentModel::query()->create([
+        'course_video_id' => $this->video->id,
+        'version' => 1,
+        'writer_provider' => 'openai',
+        'brief_revision' => 1,
+        'bible_revision' => 0,
+        'technical_header' => [],
+        'learning_objectives' => [],
+        'continuity_note' => '',
+        'continuity_source_video_ids' => [],
+        'sections' => [['number' => '1', 'title' => 'Secreto']],
+        'taught_summary' => '',
+        'summary_points' => [],
+        'recording_notes' => [],
+        'verification_checklist' => [],
+        'coverage_map' => [],
+        'errors_check' => [],
+        'notes_excerpt_ids' => [],
+        'feedback_note' => 'Más ejemplos',
+    ]);
+
+    $response = $this->actingAs($this->author)
+        ->getJson(route('course-scripts.videos.versions', [$this->course->uuid, $this->video->uuid]))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.uuid', $version->uuid)
+        ->assertJsonPath('data.0.writer_provider', 'openai')
+        ->assertJsonPath('data.0.feedback_note', 'Más ejemplos')
+        ->assertJsonPath('data.0.is_accepted', false);
+
+    expect($response->json('data.0'))->not->toHaveKeys(['id', 'sections', 'course_video_id']);
 });

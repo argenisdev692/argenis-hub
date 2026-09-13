@@ -7,14 +7,15 @@ namespace Modules\CourseScripts\Infrastructure\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Modules\CourseScripts\Application\Commands\ScriptVersionCommandsHandler;
 use Modules\CourseScripts\Application\DTOs\GenerationRunData;
 use Modules\CourseScripts\Application\DTOs\RegenerateScriptData;
 use Modules\CourseScripts\Application\DTOs\ScriptVersionData;
+use Modules\CourseScripts\Application\DTOs\ScriptVersionSummaryData;
 use Modules\CourseScripts\Domain\Exceptions\CourseNotFoundException;
 use Modules\CourseScripts\Domain\Ports\CourseRepositoryPort;
 use Modules\CourseScripts\Domain\Ports\ScriptVersionRepositoryPort;
-use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseScriptVersionEloquentModel;
 
 /**
  * A video's script: preview, versions, regenerate with feedback, force a
@@ -25,7 +26,7 @@ final readonly class ScriptVersionController
     public function show(Request $request, string $uuid, string $videoUuid, ScriptVersionRepositoryPort $versions): JsonResponse
     {
         $versionUuid = $request->query('version');
-        $version = $versions->findOwned($uuid, $videoUuid, $this->user($request)->id, is_string($versionUuid) && preg_match('/^[0-9a-f-]{36}$/i', $versionUuid) === 1 ? $versionUuid : null)
+        $version = $versions->findOwned($uuid, $videoUuid, $this->user($request)->id, is_string($versionUuid) && Str::isUuid($versionUuid) ? $versionUuid : null)
             ?? throw new CourseNotFoundException;
 
         return response()->json(['data' => ScriptVersionData::fromModel($version)]);
@@ -35,19 +36,10 @@ final readonly class ScriptVersionController
     {
         $video = $courses->findOwnedVideo($uuid, $videoUuid, $this->user($request)->id) ?? throw new CourseNotFoundException;
 
-        return response()->json(['data' => array_map(static fn (CourseScriptVersionEloquentModel $version): array => [
-            'uuid' => $version->uuid,
-            'version' => $version->version,
-            'is_accepted' => $version->is_accepted,
-            'writer_provider' => $version->writer_provider,
-            'reviewed' => $version->reviewed,
-            'passed_review' => $version->passed_review,
-            'review_scores' => $version->review_scores,
-            'is_grounded' => $version->is_grounded,
-            'continuity_stale' => $version->continuity_stale,
-            'feedback_note' => $version->feedback_note,
-            'created_at' => $version->created_at?->toIso8601String(),
-        ], $versions->listForVideo($video->id))]);
+        return response()->json(['data' => array_map(
+            ScriptVersionSummaryData::fromModel(...),
+            $versions->listForVideo($video->id),
+        )]);
     }
 
     public function regenerate(Request $request, string $uuid, string $videoUuid, RegenerateScriptData $data, ScriptVersionCommandsHandler $commands): JsonResponse

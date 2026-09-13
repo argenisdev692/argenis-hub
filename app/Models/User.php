@@ -111,8 +111,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, PaymentAccountEloquentModel> $paymentAccounts
  * @property-read Collection<int, VideoEditEloquentModel> $videoEdits
  * @property-read int|null $video_edits_count
- * @property-read Collection<int, CourseEloquentModel> $scriptCourses
- * @property-read int|null $script_courses_count
+ * @property-read Collection<int, CourseEloquentModel> $courses
+ * @property-read int|null $courses_count
  * @property-read Collection<int, CourseGenerationRunEloquentModel> $courseGenerationRuns
  * @property-read int|null $course_generation_runs_count
  * @property-read int|null $cvs_count
@@ -461,7 +461,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      *
      * @return HasMany<CourseEloquentModel, $this>
      */
-    public function scriptCourses(): HasMany
+    public function courses(): HasMany
     {
         return $this->hasMany(CourseEloquentModel::class);
     }

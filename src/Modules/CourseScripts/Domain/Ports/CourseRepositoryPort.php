@@ -80,6 +80,31 @@ interface CourseRepositoryPort
     public function softDelete(CourseEloquentModel $course): void;
 
     /**
+     * A soft-deleted course of the owner, still inside the recovery window.
+     */
+    public function findOwnedTrashed(string $uuid, int $userId): ?CourseEloquentModel;
+
+    public function restore(CourseEloquentModel $course): void;
+
+    /**
+     * Soft-deletes the owner's live courses among `$uuids`; other users'
+     * UUIDs are silently ignored (FR-53). Returns the affected courses.
+     *
+     * @param  list<string>  $uuids
+     * @return list<CourseEloquentModel>
+     */
+    public function bulkSoftDeleteOwned(array $uuids, int $userId): array;
+
+    /**
+     * Restores the owner's soft-deleted courses among `$uuids`. Returns the
+     * affected courses.
+     *
+     * @param  list<string>  $uuids
+     * @return list<CourseEloquentModel>
+     */
+    public function bulkRestoreOwned(array $uuids, int $userId): array;
+
+    /**
      * Stores the bible and bumps its revision (FR-13 anchor).
      *
      * @param  array<string, mixed>  $bible

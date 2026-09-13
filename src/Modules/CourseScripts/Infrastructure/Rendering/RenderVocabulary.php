@@ -8,7 +8,7 @@ namespace Modules\CourseScripts\Infrastructure\Rendering;
  * Deliverable headings in the course language, reusing the author's own
  * wording from GUIDE/MODULE-VIDEOS for Spanish.
  */
-final class RenderVocabulary
+final readonly class RenderVocabulary
 {
     private const array LABELS = [
         'es' => [
