@@ -120,6 +120,8 @@ final readonly class VideoEditExportTransformer
      */
     private static function label(string $enumValue): string
     {
-        return ucfirst(str_replace('_', ' ', $enumValue));
+        return $enumValue
+            |> (static fn (string $value): string => str_replace('_', ' ', $value))
+            |> ucfirst(...);
     }
 }

@@ -15,6 +15,7 @@ use Modules\VideoEdits\Domain\ValueObjects\SilenceThreshold;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -46,7 +47,15 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
 
     public function probe(string $path): MediaProbe
     {
-        $process = $this->run($this->commands->probe($path));
+        try {
+            $process = $this->run($this->commands->probe($path), $this->probeTimeoutSeconds());
+        } catch (ProcessTimedOutException) {
+            // A header read that stalls is the file, not the worker: retrying it
+            // would only burn two more timeouts before the same verdict.
+            $this->logger->error('video-edit.ffmpeg_failed', ['operation' => 'probe', 'reason' => 'timeout']);
+
+            return new MediaProbe(0, '', hasVideo: false, hasAudio: false);
+        }
 
         if (! $process->isSuccessful()) {
             // An unreadable file is not an infrastructure fault — it is a clip
@@ -237,10 +246,14 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
     }
 
     /**
+     * The timeout is required: Symfony reads a `null` timeout as "never", and
+     * every command here runs against a user-uploaded file that can be crafted
+     * to stall the binary and pin a queue worker (OWASP A10 · API4).
+     *
      * @param  list<string>  $command
      * @param  (Closure(string, string): void)|null  $onOutput
      */
-    private function run(array $command, ?int $timeoutSeconds = null, ?Closure $onOutput = null): Process
+    private function run(array $command, int $timeoutSeconds, ?Closure $onOutput = null): Process
     {
         $process = new Process($command, timeout: $timeoutSeconds);
         $process->run($onOutput);
@@ -251,6 +264,15 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
     private function timeoutSeconds(): int
     {
         return (int) $this->config->get('laravel-ffmpeg.timeout', 3_600);
+    }
+
+    /**
+     * Probing reads container headers only, so it gets seconds, not the hour a
+     * full render is allowed.
+     */
+    private function probeTimeoutSeconds(): int
+    {
+        return (int) $this->config->get('video-edit.limits.probe_timeout_seconds', 120);
     }
 
     /**

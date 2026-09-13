@@ -16,6 +16,7 @@ use Modules\VideoEdits\Domain\Exceptions\VideoEditStateConflictException;
 use Modules\VideoEdits\Domain\Ports\VideoEditProcessingDispatcherPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
+use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditSourceEloquentModel;
 use Shared\Domain\Ports\AuditPort;
 
 /**
@@ -38,6 +39,7 @@ final readonly class RetryVideoEditHandler
      * @throws VideoEditStateConflictException
      * @throws ManualRangesNotCorrectableException
      */
+    #[\NoDiscard]
     public function handle(string $uuid, Authenticatable $user, RetryVideoEditData $data): VideoEditEloquentModel
     {
         $userId = (int) $user->getAuthIdentifier();
@@ -98,6 +100,6 @@ final readonly class RetryVideoEditHandler
         return $edit->status === VideoEditStatus::Failed
             && $edit->sources_purged_at === null
             && $edit->sources_expire_at?->isAfter($now) === true
-            && $edit->sources->every(static fn ($source): bool => $source->storage_path !== null);
+            && $edit->sources->every(static fn (VideoEditSourceEloquentModel $source): bool => $source->storage_path !== null);
     }
 }

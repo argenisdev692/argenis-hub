@@ -40,6 +40,7 @@ final readonly class SubmitVideoEditHandler
      * @throws VideoEditStateConflictException
      * @throws SourceUploadInvalidException
      */
+    #[\NoDiscard]
     public function handle(string $uuid, Authenticatable $user): VideoEditEloquentModel
     {
         $userId = (int) $user->getAuthIdentifier();

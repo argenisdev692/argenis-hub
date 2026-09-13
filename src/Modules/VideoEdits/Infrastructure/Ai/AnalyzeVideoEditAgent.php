@@ -104,7 +104,7 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
     {
         return [
             'cuts' => $schema->array()
-                ->items($schema->object(fn ($schema): array => [
+                ->items($schema->object(static fn (JsonSchema $schema): array => [
                     'reason' => $schema->string()->required(),
                     'start_word_index' => $schema->integer()->min(0)->required(),
                     'end_word_index' => $schema->integer()->min(0)->required(),
@@ -114,7 +114,7 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
                 ->required(),
 
             'recommendations' => $schema->array()
-                ->items($schema->object(fn ($schema): array => [
+                ->items($schema->object(static fn (JsonSchema $schema): array => [
                     'kind' => $schema->string()->required(),
                     'title' => $schema->string()->required(),
                     'detail' => $schema->string()->required(),

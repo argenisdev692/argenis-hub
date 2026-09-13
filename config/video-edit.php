@@ -26,6 +26,8 @@ return [
         'allowed_mime_types' => ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska'],
         // FFprobe `format_name` tokens accepted after upload (OWASP §8 content check).
         'allowed_containers' => ['mov', 'mp4', 'webm', 'matroska'],
+        // Bounds ffprobe on an uploaded file; a crafted one must not stall a worker.
+        'probe_timeout_seconds' => (int) env('VIDEO_EDIT_PROBE_TIMEOUT', 120),
     ],
 
     'silence' => [
