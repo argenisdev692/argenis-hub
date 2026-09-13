@@ -25,14 +25,11 @@ final readonly class CvTextExtractor implements CvTextExtractorPort
 
     private function readMarkdown(\SplFileInfo $file): string
     {
-        $path = $file->getRealPath() ?: $file->getPathname();
-        $contents = @file_get_contents($path);
-
-        if ($contents === false) {
+        if (! $file->isFile() || ! $file->isReadable()) {
             return '';
         }
 
-        return $contents
+        return (string) file_get_contents($file->getRealPath() ?: $file->getPathname())
             |> trim(...)
             |> (fn (string $text): string => mb_substr($text, 0, self::MAX_LENGTH));
     }

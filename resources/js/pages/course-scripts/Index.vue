@@ -12,6 +12,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -20,8 +21,10 @@ import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
 import CourseStatusBadge from '@/modules/course-scripts/components/CourseStatusBadge.vue';
+import CourseTitleList from '@/modules/course-scripts/components/CourseTitleList.vue';
 import { useCourseMutations } from '@/modules/course-scripts/composables/useCourseMutations';
 import {
+    COURSE_SEARCH_MAX_LENGTH,
     defaultCourseFilters,
     useCourses,
 } from '@/modules/course-scripts/composables/useCourses';
@@ -60,6 +63,12 @@ useUrlSyncedFilters(filters, {
 });
 
 const selection = ref<CourseListItem[]>([]);
+
+const recordCounter = computed(() => {
+    const total = meta.value.total;
+
+    return `${total} ${total === 1 ? 'record' : 'records'} found`;
+});
 
 /**
  * Any change to what the list shows resets paging and the selection — a uuid
@@ -161,6 +170,7 @@ function onTrashedChange(value: FilterSelectModel): void {
     );
 }
 
+/** Same helper as the list query — the export always matches the table. */
 const exportParams = computed(() => buildCourseQueryParams(filters.value));
 const exportEndpoint = exportMethod.url();
 
@@ -201,50 +211,78 @@ const selectedDeleted = computed(() =>
     selection.value.filter((course) => course.deleted_at !== null),
 );
 
+/**
+ * The modals await these handlers (`ConfirmModal` stays busy until they
+ * settle) and close only on success. Rejections are swallowed here because
+ * each mutation's `onError` has already toasted; the open dialog lets the user
+ * retry.
+ */
+async function succeeded(work: Promise<unknown>): Promise<boolean> {
+    try {
+        await work;
+    } catch {
+        return false;
+    }
+
+    return true;
+}
+
+function deselect(uuids: readonly string[]): void {
+    selection.value = selection.value.filter(
+        (course) => !uuids.includes(course.uuid),
+    );
+}
+
+// ---- single delete / restore ----------------------------------------------
 const pendingDelete = ref<CourseListItem | null>(null);
 const confirmDeleteOpen = ref(false);
-const confirmBulkDeleteOpen = ref(false);
-const confirmBulkRestoreOpen = ref(false);
+
+const pendingRestore = ref<CourseListItem | null>(null);
+const confirmRestoreOpen = ref(false);
 
 function requestDelete(course: CourseListItem): void {
     pendingDelete.value = course;
     confirmDeleteOpen.value = true;
 }
 
-/**
- * The handlers swallow rejections: each mutation's `onError` already toasts,
- * and the modals keep their dialog open on failure so the user can retry.
- */
+function requestRestore(course: CourseListItem): void {
+    pendingRestore.value = course;
+    confirmRestoreOpen.value = true;
+}
+
 async function confirmDelete(): Promise<void> {
-    if (!pendingDelete.value) {
-        return;
-    }
+    const target = pendingDelete.value;
 
-    try {
-        await deleteCourse.mutateAsync(pendingDelete.value.uuid);
-    } catch {
-        return;
+    if (target && (await succeeded(deleteCourse.mutateAsync(target.uuid)))) {
+        deselect([target.uuid]);
+        confirmDeleteOpen.value = false;
     }
-
-    confirmDeleteOpen.value = false;
-    pendingDelete.value = null;
 }
 
-async function onRestoreRow(course: CourseListItem): Promise<void> {
-    await restoreCourse.mutateAsync(course.uuid).catch(() => undefined);
+async function confirmRestore(): Promise<void> {
+    const target = pendingRestore.value;
+
+    if (target && (await succeeded(restoreCourse.mutateAsync(target.uuid)))) {
+        deselect([target.uuid]);
+        confirmRestoreOpen.value = false;
+    }
 }
+
+// ---- bulk delete / restore ------------------------------------------------
+const confirmBulkDeleteOpen = ref(false);
+const confirmBulkRestoreOpen = ref(false);
 
 async function runBulk(
     mutation: typeof bulkDeleteCourses,
-    rows: CourseListItem[],
+    rows: readonly CourseListItem[],
 ): Promise<boolean> {
-    try {
-        await mutation.mutateAsync(rows.map((course) => course.uuid));
-    } catch {
+    const uuids = rows.map((course) => course.uuid);
+
+    if (!(await succeeded(mutation.mutateAsync(uuids)))) {
         return false;
     }
 
-    selection.value = [];
+    deselect(uuids);
 
     return true;
 }
@@ -271,8 +309,7 @@ async function confirmBulkRestore(): Promise<void> {
                 Course scripts
             </h1>
             <p class="text-sm text-muted-foreground" aria-live="polite">
-                {{ meta.total }}
-                {{ meta.total === 1 ? 'record' : 'records' }} found.
+                {{ recordCounter }}
             </p>
         </header>
 
@@ -283,8 +320,9 @@ async function confirmBulkRestore(): Promise<void> {
             <template #search>
                 <DataTableSearch
                     v-model="searchTerm"
-                    placeholder="Search courses…"
-                    aria-label="Search courses"
+                    placeholder="Search by title…"
+                    :max-length="COURSE_SEARCH_MAX_LENGTH"
+                    aria-label="Search courses by title"
                 />
             </template>
 
@@ -292,6 +330,8 @@ async function confirmBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -381,50 +421,40 @@ async function confirmBulkRestore(): Promise<void> {
                     />
                 </template>
 
+                <!--
+                    No Edit action: a course has no single edit form — its notes,
+                    bible and video briefs are edited in place on the course page.
+                    No View on a deleted row: `show` resolves live courses only.
+                -->
                 <template #actions="{ row }">
-                    <PermissionGuard
-                        v-if="!row.deleted_at"
-                        permission="VIEW_COURSE_SCRIPTS"
-                    >
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon"
-                            :aria-label="`View ${row.title}`"
-                        >
-                            <Link :href="show(row.uuid)">
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
-                    </PermissionGuard>
-
-                    <PermissionGuard
-                        v-if="!row.deleted_at"
-                        permission="DELETE_COURSE_SCRIPTS"
-                    >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            :aria-label="`Delete ${row.title}`"
-                            @click="requestDelete(row)"
-                        >
-                            <Trash2Icon
-                                class="size-4 text-destructive"
-                                aria-hidden="true"
+                    <template v-if="row.deleted_at === null">
+                        <PermissionGuard permission="VIEW_COURSE_SCRIPTS">
+                            <DataTableRowAction
+                                :icon="EyeIcon"
+                                :label="`View ${row.title}`"
+                                tooltip="View"
+                                :href="show.url(row.uuid)"
                             />
-                        </Button>
-                    </PermissionGuard>
+                        </PermissionGuard>
+
+                        <PermissionGuard permission="DELETE_COURSE_SCRIPTS">
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Delete ${row.title}`"
+                                tooltip="Delete"
+                                destructive
+                                @click="requestDelete(row)"
+                            />
+                        </PermissionGuard>
+                    </template>
 
                     <PermissionGuard v-else permission="RESTORE_COURSE_SCRIPTS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            :aria-label="`Restore ${row.title}`"
-                            :disabled="restoreCourse.isLoading.value"
-                            @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${row.title}`"
+                            tooltip="Restore"
+                            @click="requestRestore(row)"
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>
@@ -447,12 +477,17 @@ async function confirmBulkRestore(): Promise<void> {
         confirm-label="Delete"
         @confirm="confirmDelete"
     >
-        <p
-            v-if="pendingDelete"
-            class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium"
-        >
-            {{ pendingDelete.title }}
-        </p>
+        <CourseTitleList v-if="pendingDelete" :courses="[pendingDelete]" />
+    </ConfirmModal>
+
+    <ConfirmModal
+        v-model:open="confirmRestoreOpen"
+        title="Restore this course?"
+        description="It returns to the active list with its scripts intact."
+        confirm-label="Restore"
+        @confirm="confirmRestore"
+    >
+        <CourseTitleList v-if="pendingRestore" :courses="[pendingRestore]" />
     </ConfirmModal>
 
     <ConfirmModal
@@ -463,17 +498,7 @@ async function confirmBulkRestore(): Promise<void> {
         confirm-label="Delete"
         @confirm="confirmBulkDelete"
     >
-        <ul
-            class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
-        >
-            <li
-                v-for="course in selectedActive"
-                :key="course.uuid"
-                class="truncate font-medium"
-            >
-                {{ course.title }}
-            </li>
-        </ul>
+        <CourseTitleList :courses="selectedActive" />
     </ConfirmModal>
 
     <ConfirmModal
@@ -483,16 +508,6 @@ async function confirmBulkRestore(): Promise<void> {
         confirm-label="Restore"
         @confirm="confirmBulkRestore"
     >
-        <ul
-            class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
-        >
-            <li
-                v-for="course in selectedDeleted"
-                :key="course.uuid"
-                class="truncate font-medium"
-            >
-                {{ course.title }}
-            </li>
-        </ul>
+        <CourseTitleList :courses="selectedDeleted" />
     </ConfirmModal>
 </template>

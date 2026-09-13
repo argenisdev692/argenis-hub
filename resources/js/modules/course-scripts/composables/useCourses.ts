@@ -9,6 +9,9 @@ import type { CourseFilters, CoursePage } from '../types';
 /** The key every course mutation invalidates. */
 export const COURSES_KEY = ['course-scripts'];
 
+/** `CourseFilterData` rule `search: max:100` — longer input would 422 the list. */
+export const COURSE_SEARCH_MAX_LENGTH = 100;
+
 export function defaultCourseFilters(): CourseFilters {
     return {
         search: '',

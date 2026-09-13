@@ -18,6 +18,7 @@ const {
     confirmLabel = 'Confirm',
     cancelLabel = 'Cancel',
     destructive = false,
+    onConfirm,
 } = defineProps<{
     title: string;
     description?: string;
@@ -25,11 +26,12 @@ const {
     cancelLabel?: string;
     /** Styles the confirm button as destructive. Use for delete, not restore. */
     destructive?: boolean;
-}>();
-
-const emit = defineEmits<{
-    /** Await-able: the dialog stays open and busy until the handler resolves. */
-    confirm: [];
+    /**
+     * Bound as `@confirm`. Declared as a prop rather than an emit because
+     * `emit()` returns `void` — only a prop lets the dialog await the handler,
+     * stay busy until it settles and swallow a second click meanwhile.
+     */
+    onConfirm?: () => unknown;
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -47,7 +49,7 @@ const isPending = ref(false);
  * anything happened. The click is intercepted so the dialog owns its own
  * lifetime: it closes when the parent flips `open`, after the work is done.
  */
-async function onConfirm(event: Event): Promise<void> {
+async function handleConfirm(event: Event): Promise<void> {
     event.preventDefault();
 
     if (isPending.value) {
@@ -57,7 +59,7 @@ async function onConfirm(event: Event): Promise<void> {
     isPending.value = true;
 
     try {
-        emit('confirm');
+        await onConfirm?.();
     } finally {
         isPending.value = false;
     }
@@ -84,7 +86,7 @@ async function onConfirm(event: Event): Promise<void> {
                     autofocus
                     :variant="destructive ? 'destructive' : 'default'"
                     :disabled="isPending"
-                    @click="onConfirm"
+                    @click="handleConfirm"
                 >
                     <Loader2Icon v-if="isPending" class="animate-spin" />
                     {{ confirmLabel }}

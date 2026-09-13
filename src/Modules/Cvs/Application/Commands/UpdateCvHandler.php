@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace Modules\Cvs\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
 use Modules\Cvs\Application\DTOs\UploadCvData;
 use Modules\Cvs\Domain\Enums\CvFileType;
 use Modules\Cvs\Domain\Ports\CvRepositoryPort;
 use Modules\Cvs\Domain\Ports\CvTextExtractorPort;
 use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 use Shared\Domain\Ports\StoragePort;
+use Throwable;
 
 /**
  * Updates CV metadata and optionally replaces the stored file on R2.
+ *
+ * The previous object is deleted only after the row points at the new one; if
+ * the write fails, the freshly uploaded object is deleted instead — either way
+ * exactly one file per CV remains in the bucket.
  */
 final readonly class UpdateCvHandler
 {
@@ -32,26 +36,29 @@ final readonly class UpdateCvHandler
             'is_primary' => $data->isPrimary,
         ];
 
-        $previousPath = null;
+        $previousPath = $cv->file_path;
+        $newPath = null;
 
         if ($data->file !== null) {
             $fileType = CvFileType::fromExtension($data->file->getClientOriginalExtension());
-            $previousPath = $cv->file_path;
-            $attributes['file_path'] = $this->storage->putFile('cvs', $data->file, 'private');
+            $attributes['raw_text'] = $this->extractor->extract($fileType, $data->file);
             $attributes['file_type'] = $fileType;
             $attributes['original_filename'] = $data->file->getClientOriginalName();
-            $attributes['raw_text'] = $this->extractor->extract($fileType, $data->file);
+            $newPath = $this->storage->putFile('cvs', $data->file, 'private');
+            $attributes['file_path'] = $newPath;
         }
 
-        $updated = DB::transaction(function () use ($cv, $data, $attributes): CvEloquentModel {
-            if ($data->isPrimary) {
-                $this->cvs->clearPrimaryForUser($cv->user_id, $cv->uuid);
+        try {
+            $updated = $this->cvs->update($cv, $attributes);
+        } catch (Throwable $exception) {
+            if ($newPath !== null) {
+                $this->storage->delete($newPath);
             }
 
-            return $this->cvs->update($cv, $attributes);
-        });
+            throw $exception;
+        }
 
-        if (is_string($previousPath) && $previousPath !== '' && $previousPath !== $updated->file_path) {
+        if ($newPath !== null && $previousPath !== '' && $previousPath !== $newPath) {
             $this->storage->delete($previousPath);
         }
 

@@ -13,6 +13,7 @@ export { default as DataTable } from './DataTable.vue';
 export { default as DataTableBulkActions } from './DataTableBulkActions.vue';
 export { default as DataTableDateRangeFilter } from './DataTableDateRangeFilter.vue';
 export { default as DataTableExportMenu } from './DataTableExportMenu.vue';
+export { default as DataTableRowAction } from './DataTableRowAction.vue';
 export { default as DataTableSearch } from './DataTableSearch.vue';
 export { default as DataTableToolbar } from './DataTableToolbar.vue';
 export { default as Paginator } from './Paginator.vue';

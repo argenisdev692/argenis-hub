@@ -87,8 +87,9 @@ final class CvEloquentModel extends Model
     }
 
     /**
-     * Shared list/export filter (BACKEND-PHP §5.2). Soft-delete `suspended` is
-     * applied at the repository via `onlyTrashed()`.
+     * Shared list/export filter (BACKEND-PHP §5.2) — the ONLY place the filter
+     * chain lives, lifecycle `status` included, so the list and the export can
+     * never disagree on which rows a filter selects.
      *
      * @param  Builder<CvEloquentModel>  $query
      * @return Builder<CvEloquentModel>
@@ -96,6 +97,7 @@ final class CvEloquentModel extends Model
     public function scopeApplyFilters(Builder $query, CvFilterData $filters): Builder
     {
         return $query
+            ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
             ->when($filters->search !== null, fn ($q) => $q->where(function ($w) use ($filters): void {
                 $term = "%{$filters->search}%";
                 $w->where('title', 'like', $term)

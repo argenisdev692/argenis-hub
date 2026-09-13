@@ -32,9 +32,8 @@ final readonly class CvController
 {
     private const int DOWNLOAD_URL_TTL_MINUTES = 15;
 
-    public function index(Request $request, ListCvsHandler $list): InertiaResponse|JsonResponse
+    public function index(Request $request, CvFilterData $filters, ListCvsHandler $list): InertiaResponse|JsonResponse
     {
-        $filters = CvFilterData::validateAndCreate($request);
         $cvs = $list->handle(
             $filters,
             $this->ownerId($request),

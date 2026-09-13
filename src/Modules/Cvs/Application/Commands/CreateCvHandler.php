@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Cvs\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Cvs\Application\DTOs\UploadCvData;
 use Modules\Cvs\Domain\Enums\CvFileType;
@@ -12,9 +11,12 @@ use Modules\Cvs\Domain\Ports\CvRepositoryPort;
 use Modules\Cvs\Domain\Ports\CvTextExtractorPort;
 use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 use Shared\Domain\Ports\StoragePort;
+use Throwable;
 
 /**
- * Persists a new CV. File is uploaded to private R2 before the DB transaction.
+ * Persists a new CV. The file is uploaded to private R2 first; if the database
+ * write then fails, the object is deleted again so no orphaned résumé (PII)
+ * lingers in the bucket (OWASP §10).
  */
 final readonly class CreateCvHandler
 {
@@ -27,33 +29,29 @@ final readonly class CreateCvHandler
     #[\NoDiscard]
     public function handle(UploadCvData $data, int $userId): CvEloquentModel
     {
-        if ($data->file === null) {
-            throw ValidationException::withMessages([
-                'file' => __('A CV file (PDF or Markdown) is required.'),
-            ]);
-        }
+        $file = $data->file ?? throw ValidationException::withMessages([
+            'file' => __('A CV file (PDF or Markdown) is required.'),
+        ]);
 
-        $file = $data->file;
         $fileType = CvFileType::fromExtension($file->getClientOriginalExtension());
-        $originalFilename = $file->getClientOriginalName();
         $rawText = $this->extractor->extract($fileType, $file);
         $filePath = $this->storage->putFile('cvs', $file, 'private');
 
-        return DB::transaction(function () use ($data, $userId, $filePath, $fileType, $rawText, $originalFilename): CvEloquentModel {
-            if ($data->isPrimary) {
-                $this->cvs->clearPrimaryForUser($userId);
-            }
-
+        try {
             return $this->cvs->create([
                 'title' => $data->normalizedTitle(),
                 'niche' => $data->niche,
                 'is_primary' => $data->isPrimary,
                 'file_path' => $filePath,
                 'file_type' => $fileType,
-                'original_filename' => $originalFilename,
+                'original_filename' => $file->getClientOriginalName(),
                 'raw_text' => $rawText,
                 'user_id' => $userId,
             ]);
-        });
+        } catch (Throwable $exception) {
+            $this->storage->delete($filePath);
+
+            throw $exception;
+        }
     }
 }

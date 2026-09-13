@@ -15,6 +15,12 @@ import {
 } from '@/components/ui/popover';
 import { RangeCalendar } from '@/components/ui/range-calendar';
 import { cn } from '@/lib/utils';
+import type { DateRangePreset } from './dateRangePresets';
+import {
+    DATE_RANGE_PRESETS,
+    matchingPreset,
+    todayInLocalZone,
+} from './dateRangePresets';
 import type { DateRange } from './types';
 
 /**
@@ -30,6 +36,8 @@ const {
     disabled = false,
     clearable = true,
     numberOfMonths = 2,
+    presets = false,
+    disableFuture = false,
     class: className,
 } = defineProps<{
     placeholder?: string;
@@ -37,6 +45,10 @@ const {
     disabled?: boolean;
     clearable?: boolean;
     numberOfMonths?: number;
+    /** Show the Today / Last 7 days / This month… shortcuts beside the calendar. */
+    presets?: boolean;
+    /** Block days after today — a `created_at` window has nothing in the future. */
+    disableFuture?: boolean;
     class?: string;
 }>();
 
@@ -85,8 +97,22 @@ const displayValue = computed(() => {
         return '';
     }
 
-    return `${label(model.value.from)} – ${label(model.value.to)}`;
+    const preset = presets ? matchingPreset(model.value) : undefined;
+
+    return (
+        preset?.label ?? `${label(model.value.from)} – ${label(model.value.to)}`
+    );
 });
+
+/** Read on open, so a tab left open past midnight still caps at the real today. */
+const maxValue = computed(() =>
+    disableFuture && open.value ? todayInLocalZone() : undefined,
+);
+
+function applyPreset(preset: DateRangePreset): void {
+    model.value = preset.resolve(todayInLocalZone());
+    open.value = false;
+}
 
 function onSelect(value: CalendarRange | null | undefined): void {
     model.value = {
@@ -141,11 +167,33 @@ function clear(event: Event): void {
             </Button>
         </PopoverTrigger>
 
-        <PopoverContent class="w-auto p-0" align="start">
+        <PopoverContent
+            class="flex w-auto flex-col p-0 sm:flex-row"
+            align="start"
+        >
+            <div
+                v-if="presets"
+                role="group"
+                aria-label="Date range presets"
+                class="flex flex-wrap gap-1 border-b border-border p-2 sm:w-36 sm:flex-col sm:flex-nowrap sm:border-r sm:border-b-0"
+            >
+                <Button
+                    v-for="preset in DATE_RANGE_PRESETS"
+                    :key="preset.label"
+                    variant="ghost"
+                    size="sm"
+                    class="justify-start"
+                    @click="applyPreset(preset)"
+                >
+                    {{ preset.label }}
+                </Button>
+            </div>
+
             <RangeCalendar
                 :model-value="calendarValue"
                 :number-of-months="numberOfMonths"
                 :locale="locale"
+                :max-value="maxValue"
                 initial-focus
                 @update:model-value="onSelect"
             />

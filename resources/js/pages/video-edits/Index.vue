@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { DownloadIcon, EyeIcon, PlusIcon, Trash2Icon } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
@@ -16,6 +16,7 @@ import {
     DataTable,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -54,7 +55,20 @@ defineOptions({
     },
 });
 
-const { videoEdits, meta: queryMeta, filters, isLoading } = useVideoEdits();
+const {
+    videoEdits,
+    meta: queryMeta,
+    filters,
+    isPending,
+    isPlaceholderData,
+} = useVideoEdits();
+
+/**
+ * First load or a page/filter change still showing the previous rows. NOT
+ * `isLoading`: the 4 s progress poll would dim the table and lock its row
+ * actions and paginator on every tick while an edit renders.
+ */
+const isTableBusy = computed(() => isPending.value || isPlaceholderData.value);
 const { deleteVideoEdit, bulkDeleteVideoEdits, downloadVideoEdit } =
     useVideoEditMutations();
 
@@ -277,6 +291,7 @@ async function confirmBulkDelete(): Promise<void> {
                 <DataTableSearch
                     v-model="searchTerm"
                     placeholder="Search by reference…"
+                    :max-length="100"
                     aria-label="Search video edits by reference"
                 />
             </template>
@@ -285,6 +300,8 @@ async function confirmBulkDelete(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -358,7 +375,7 @@ async function confirmBulkDelete(): Promise<void> {
                 v-model:selection="selection"
                 :rows="videoEdits"
                 :columns="columns"
-                :loading="isLoading"
+                :loading="isTableBusy"
                 selectable
                 caption="Your video edit history"
                 empty-title="No video edits yet"
@@ -382,46 +399,42 @@ async function confirmBulkDelete(): Promise<void> {
                     />
                 </template>
 
+                <!--
+                    No Edit / Restore: an edit is an immutable job and deletion is
+                    permanent by decision (spec 001-video-edit Q2/Q5). Download
+                    takes the Edit slot for completed rows.
+                -->
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_VIDEO_EDITS">
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View edit"
-                        >
-                            <Link :href="show(row.uuid)" prefetch>
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View edit ${videoEditReference(row.uuid)}`"
+                            tooltip="View"
+                            :href="show.url(row.uuid)"
+                            prefetch
+                        />
                     </PermissionGuard>
 
                     <PermissionGuard permission="DOWNLOAD_VIDEO_EDITS">
-                        <Button
+                        <DataTableRowAction
                             v-if="row.status === 'completed'"
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Download result"
+                            :icon="DownloadIcon"
+                            :label="`Download edit ${videoEditReference(row.uuid)}`"
+                            tooltip="Download"
                             :disabled="downloadVideoEdit.isLoading.value"
                             @click="downloadVideoEdit.mutate(row.uuid)"
-                        >
-                            <DownloadIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
 
                     <PermissionGuard permission="DELETE_VIDEO_EDITS">
-                        <Button
+                        <DataTableRowAction
                             v-if="row.status !== 'processing'"
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Delete edit"
+                            :icon="Trash2Icon"
+                            :label="`Delete edit ${videoEditReference(row.uuid)}`"
+                            tooltip="Delete"
+                            destructive
                             @click="requestDelete(row)"
-                        >
-                            <Trash2Icon
-                                class="size-4 text-destructive"
-                                aria-hidden="true"
-                            />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>
@@ -429,7 +442,7 @@ async function confirmBulkDelete(): Promise<void> {
             <Paginator
                 v-model:page="page"
                 :meta="meta"
-                :disabled="isLoading"
+                :disabled="isTableBusy"
                 label="video edits"
                 class="rounded-b-xl border border-border bg-card"
             />

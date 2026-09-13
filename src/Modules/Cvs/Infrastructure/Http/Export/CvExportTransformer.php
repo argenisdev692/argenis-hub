@@ -15,7 +15,7 @@ final readonly class CvExportTransformer
      * @return array{Title: string, Niche: string, Primary: string, Type: string, Filename: string, Owner: string, Created: string, Status: string}
      */
     #[\NoDiscard]
-    public static function transformForTable(CvEloquentModel $cv): array
+    public static function transformForExcel(CvEloquentModel $cv): array
     {
         return $cv
             |> self::extractBaseData(...)
@@ -29,7 +29,7 @@ final readonly class CvExportTransformer
     #[\NoDiscard]
     public static function transformForPdf(CvEloquentModel $cv): array
     {
-        return self::transformForTable($cv);
+        return self::transformForExcel($cv);
     }
 
     /**

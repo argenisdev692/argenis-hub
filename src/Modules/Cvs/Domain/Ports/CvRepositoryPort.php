@@ -15,6 +15,9 @@ use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
  * ownership — not merely holding `VIEW_CVS` — is what grants access (OWASP §11,
  * BOLA). The owner is a required parameter rather than an ambient `auth()` call
  * so the check cannot be forgotten at a call site.
+ *
+ * Transactions live behind this port, not in the handlers: the Application
+ * layer may not reach for the `DB` facade (BACKEND-PHP §5).
  */
 interface CvRepositoryPort
 {
@@ -23,15 +26,24 @@ interface CvRepositoryPort
     public function findByUuidForUser(string $uuid, int $userId): ?CvEloquentModel;
 
     /**
-     * @param  array<string, mixed>  $attributes
+     * Persists a CV. When `is_primary` is true, the owner's other CVs are
+     * demoted in the same transaction so a user never holds two primaries.
+     *
+     * @param  array<string, mixed>  $attributes  must include `user_id`
      */
     public function create(array $attributes): CvEloquentModel;
 
     /**
+     * Same single-primary guarantee as {@see self::create()}.
+     *
      * @param  array<string, mixed>  $attributes
      */
     public function update(CvEloquentModel $cv, array $attributes): CvEloquentModel;
 
+    /**
+     * Soft deletes through the model so the activity log records it — a
+     * query-builder `delete()` dispatches no model events.
+     */
     public function softDelete(string $uuid, int $userId): bool;
 
     public function restore(string $uuid, int $userId): bool;
@@ -45,9 +57,4 @@ interface CvRepositoryPort
      * @param  array<int, string>  $uuids
      */
     public function bulkRestoreForUser(array $uuids, int $userId): int;
-
-    /**
-     * Clears is_primary for every CV owned by $userId except an optional UUID.
-     */
-    public function clearPrimaryForUser(int $userId, ?string $exceptUuid = null): void;
 }

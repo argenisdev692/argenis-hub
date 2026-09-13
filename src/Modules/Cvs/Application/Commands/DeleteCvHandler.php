@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Cvs\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
 use Modules\Cvs\Domain\Ports\CvRepositoryPort;
 
 final readonly class DeleteCvHandler
@@ -13,6 +12,6 @@ final readonly class DeleteCvHandler
 
     public function handle(string $uuid, int $userId): bool
     {
-        return DB::transaction(fn (): bool => $this->cvs->softDelete($uuid, $userId));
+        return $this->cvs->softDelete($uuid, $userId);
     }
 }

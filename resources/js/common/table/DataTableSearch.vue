@@ -15,6 +15,7 @@ const {
     ariaLabel = 'Search',
     debounce = 300,
     disabled = false,
+    maxLength,
     class: className,
 } = defineProps<{
     placeholder?: string;
@@ -22,6 +23,8 @@ const {
     /** Milliseconds to wait after the last keystroke before committing. */
     debounce?: number;
     disabled?: boolean;
+    /** Mirror of the endpoint's `search` max rule, so a long paste cannot 422 the list. */
+    maxLength?: number;
     class?: string;
 }>();
 
@@ -65,6 +68,7 @@ function clear(): void {
             :placeholder="placeholder"
             :aria-label="ariaLabel"
             :disabled="disabled"
+            :maxlength="maxLength"
             :class="
                 cn(
                     'pl-9 [&::-webkit-search-cancel-button]:appearance-none',

@@ -180,5 +180,8 @@ it('streams a csv export', function (): void {
 });
 
 it('rejects an unsupported export format', function (): void {
-    $this->actingAs(superAdmin())->get('/cvs/export?format=exe')->assertStatus(422);
+    $this->actingAs(superAdmin())
+        ->getJson('/cvs/export?format=exe')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('format');
 });
