@@ -52,6 +52,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Provider prompt caching (Shared\Infrastructure\AI\PromptCache)
+    |--------------------------------------------------------------------------
+    |
+    | laravel/ai has no prompt-caching API of its own: it reports cache usage
+    | (`cache_read_input_tokens`, `cache_creation_input_tokens`) and forwards
+    | per-provider request fields through `HasProviderOptions`. The shared
+    | PromptCache layer uses that hook so any module can cache the stable
+    | prefix of repeated calls:
+    |
+    | - Anthropic: explicit `cache_control` breakpoints on system blocks.
+    | - OpenAI: automatic prefix caching plus a stable `prompt_cache_key`.
+    | - Gemini: implicit prefix caching (identical prefix, nothing to send).
+    |
+    | `long_ttl` applies to layers marked long-lived (Anthropic '5m' | '1h').
+    |
+    */
+
+    'prompt_cache' => [
+        'enabled' => (bool) env('AI_PROMPT_CACHE', true),
+        'long_ttl' => env('AI_PROMPT_CACHE_LONG_TTL', '1h'),
+        'log_usage' => (bool) env('AI_PROMPT_CACHE_LOG_USAGE', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | AI Providers
     |--------------------------------------------------------------------------
     |

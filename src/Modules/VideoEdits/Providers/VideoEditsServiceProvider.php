@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Providers;
 
+use Dedoc\Scramble\Scramble;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Exceptions\Handler;
@@ -85,6 +86,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
     {
         $this->registerWebRoutes();
         $this->registerExceptionRendering();
+        $this->registerApiDocumentation();
 
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -154,6 +156,24 @@ final class VideoEditsServiceProvider extends ServiceProvider
     private function registerWebRoutes(): void
     {
         Route::middleware('web')->group(__DIR__.'/../Infrastructure/Routes/web.php');
+    }
+
+    /**
+     * The default Scramble document only covers `api/*`, and this module has no
+     * Sanctum routes (P4), so its session JSON surface gets its own OpenAPI
+     * document: `php artisan scramble:export --api=video-edits`. Export-only —
+     * no extra public docs route is exposed.
+     */
+    private function registerApiDocumentation(): void
+    {
+        Scramble::registerApi('video-edits', [
+            'api_path' => 'data/admin/video-edits',
+            'export_path' => 'api-video-edits.json',
+            'info' => [
+                'version' => '1.0.0',
+                'description' => 'Video Edits JSON endpoints (session auth, spec 001-video-edit).',
+            ],
+        ])->expose(false);
     }
 
     /**

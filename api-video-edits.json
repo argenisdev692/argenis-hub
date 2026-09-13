@@ -1,0 +1,1022 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "ArgenisHub",
+        "version": "1.0.0",
+        "description": "Video Edits JSON endpoints (session auth, spec 001-video-edit)."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/data/admin/video-edits"
+        }
+    ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
+    "paths": {
+        "/": {
+            "get": {
+                "operationId": "video-edits.admin.index",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "queued",
+                                "processing",
+                                "completed",
+                                "failed",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "mode",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "merge",
+                                "auto_edit",
+                                "ai_edit",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "sort_field",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created_at",
+                                "completed_at",
+                                "status",
+                                "mode",
+                                "final_duration_ms",
+                                "applied_cut_count"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                "1",
+                                "-1"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "video-edits.admin.store",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateVideoEditData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`CreatedVideoEditData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CreatedVideoEditData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/download-url": {
+            "get": {
+                "operationId": "video-edits.admin.download-url",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`DownloadUrlData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DownloadUrlData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/submit": {
+            "post": {
+                "operationId": "video-edits.admin.submit",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "`VideoEditDetailData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VideoEditDetailData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/retry": {
+            "post": {
+                "operationId": "video-edits.admin.retry",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RetryVideoEditData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "`VideoEditDetailData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VideoEditDetailData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}": {
+            "get": {
+                "operationId": "video-edits.admin.show",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VideoEditDetailData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VideoEditDetailData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "video-edits.admin.destroy",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {}
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/export": {
+            "get": {
+                "operationId": "video-edits.admin.export",
+                "tags": [
+                    "VideoEditExport"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "queued",
+                                "processing",
+                                "completed",
+                                "failed",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "mode",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "merge",
+                                "auto_edit",
+                                "ai_edit",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "sort_field",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created_at",
+                                "completed_at",
+                                "status",
+                                "mode",
+                                "final_duration_ms",
+                                "applied_cut_count"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                "1",
+                                "-1"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "examples": [
+                                                ""
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/{uuid}/report": {
+            "get": {
+                "operationId": "video-edits.admin.report",
+                "tags": [
+                    "VideoEditReport"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`VideoEditReportData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/VideoEditReportData"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "CreateVideoEditData": {
+                "type": "object",
+                "description": "Create-draft request (E2 \u00b7 US-1/2/3/7). Validates structure only; everything\nthat depends on the real media happens after upload (AD-2, AD-16).",
+                "properties": {
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "merge",
+                            "auto_edit",
+                            "ai_edit"
+                        ]
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "position": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 10
+                                },
+                                "file_name": {
+                                    "type": "string",
+                                    "pattern": "\\.(mp4|mov|webm|mkv)$",
+                                    "maxLength": 255
+                                },
+                                "mime_type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "video/mp4",
+                                        "video/quicktime",
+                                        "video/webm",
+                                        "video/x-matroska"
+                                    ]
+                                },
+                                "size_bytes": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 2147483648
+                                }
+                            },
+                            "required": [
+                                "position",
+                                "file_name",
+                                "mime_type",
+                                "size_bytes"
+                            ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 10,
+                        "uniqueItems": true
+                    },
+                    "silence_removal": {
+                        "type": "object",
+                        "properties": {
+                            "enabled": {
+                                "type": "boolean"
+                            },
+                            "threshold_seconds": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0.3,
+                                "maximum": 10
+                            }
+                        }
+                    },
+                    "ai_edit": {
+                        "type": "object",
+                        "description": "V3 \u2014 AI edit. Only valid for the ai_edit mode, and only with\nexplicit consent to send the transcript and script out (R9).",
+                        "properties": {
+                            "enabled": {
+                                "type": "boolean"
+                            },
+                            "consented": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ],
+                                "description": "`accepted` alone would also reject a MISSING value, which would\nfail every non-AI request; it only applies once the mode asks for it."
+                            },
+                            "instructions": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 20000
+                            },
+                            "target_duration_minutes": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "minimum": 1,
+                                "maximum": 180
+                            },
+                            "script": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "file_name": {
+                                        "type": "string",
+                                        "pattern": "\\.(md|pdf)$",
+                                        "maxLength": 255
+                                    },
+                                    "mime_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "text/markdown",
+                                            "text/plain",
+                                            "application/pdf"
+                                        ]
+                                    },
+                                    "size_bytes": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 10485760
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "speech_cleanup": {
+                        "type": "object",
+                        "description": "V2 \u2014 one boolean turns Whisper on; categories narrow it (US-10).\nRequired for an AI edit: V3 reasons over the V2 transcript, so\nwithout speech cleanup there would be nothing for it to read and\nthe edit would quietly do nothing.",
+                        "properties": {
+                            "enabled": {
+                                "type": "boolean"
+                            },
+                            "categories": {
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "filler",
+                                        "filler_word",
+                                        "stutter",
+                                        "repetition",
+                                        "vocal_sound"
+                                    ]
+                                }
+                            },
+                            "language": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "minLength": 2,
+                                "maxLength": 2
+                            }
+                        }
+                    },
+                    "manual_ranges": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "start_ms": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                },
+                                "end_ms": {
+                                    "type": "integer"
+                                },
+                                "note": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 120
+                                }
+                            },
+                            "required": [
+                                "start_ms",
+                                "end_ms"
+                            ]
+                        },
+                        "maxItems": 500
+                    },
+                    "previous_edit_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "mode",
+                    "sources"
+                ],
+                "title": "CreateVideoEditData"
+            },
+            "CreatedVideoEditData": {
+                "type": "object",
+                "properties": {
+                    "edit": {
+                        "$ref": "#/components/schemas/Modules.VideoEdits.Application.DTOs.VideoEditDetailData"
+                    },
+                    "uploads": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UploadTargetData"
+                        }
+                    },
+                    "script_upload": {
+                        "$ref": "#/components/schemas/UploadTargetData"
+                    }
+                },
+                "required": [
+                    "edit",
+                    "uploads"
+                ],
+                "title": "CreatedVideoEditData"
+            },
+            "DownloadUrlData": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "url",
+                    "expires_at"
+                ],
+                "title": "DownloadUrlData"
+            },
+            "RetryVideoEditData": {
+                "type": "object",
+                "description": "Retry request (E6). Corrected ranges are accepted only when the edit failed\nwith `invalid_cut_ranges` (P1) \u2014 enforced by the retry handler.",
+                "properties": {
+                    "manual_ranges": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "start_ms": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                },
+                                "end_ms": {
+                                    "type": "integer"
+                                },
+                                "note": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 120
+                                }
+                            },
+                            "required": [
+                                "start_ms",
+                                "end_ms"
+                            ]
+                        },
+                        "maxItems": 500
+                    }
+                },
+                "title": "RetryVideoEditData"
+            },
+            "VideoEditDetailData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "mode": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "progress_percent": {
+                        "type": "integer"
+                    },
+                    "current_stage": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "attempts": {
+                        "type": "integer"
+                    },
+                    "parameters": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "previous_edit_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/VideoEditSourceData"
+                        }
+                    },
+                    "summary": {
+                        "$ref": "#/components/schemas/VideoEditSummaryData"
+                    },
+                    "applied_cuts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AppliedCutData"
+                        }
+                    },
+                    "decisions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CutDecisionData"
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "failure": {
+                        "$ref": "#/components/schemas/VideoEditFailureData"
+                    },
+                    "retry_available_until": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "can_retry": {
+                        "type": "boolean"
+                    },
+                    "can_delete": {
+                        "type": "boolean"
+                    },
+                    "can_download": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "queued_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "started_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "completed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "failed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "mode",
+                    "status",
+                    "progress_percent",
+                    "attempts",
+                    "parameters",
+                    "sources",
+                    "summary",
+                    "applied_cuts",
+                    "decisions",
+                    "warnings",
+                    "can_retry",
+                    "can_delete",
+                    "can_download"
+                ],
+                "title": "VideoEditDetailData"
+            },
+            "VideoEditReportData": {
+                "type": "object",
+                "properties": {
+                    "edit": {
+                        "$ref": "#/components/schemas/AiReportEditData"
+                    },
+                    "decisions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AiReportDecisionData"
+                        }
+                    },
+                    "recommendations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AiRecommendationData"
+                        }
+                    },
+                    "conclusion": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "edit",
+                    "decisions",
+                    "recommendations"
+                ],
+                "title": "VideoEditReportData"
+            }
+        },
+        "responses": {
+            "AuthenticationException": {
+                "description": "Unauthenticated",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

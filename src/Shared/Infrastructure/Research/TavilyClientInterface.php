@@ -17,8 +17,12 @@ interface TavilyClientInterface
      * to an empty array (never throws) so a research outage never blocks
      * generation — callers simply fall back to the model's own knowledge.
      *
+     * `$timeRange` (`day`|`week`|`month`|`year`) biases results toward recent
+     * sources; omitted, the request is exactly what it always was, so existing
+     * callers are unaffected.
+     *
      * @param  list<string>  $queries
      * @return list<array{title: string, url: string, content: string, score: float}>
      */
-    public function search(array $queries): array;
+    public function search(array $queries, ?string $timeRange = null): array;
 }

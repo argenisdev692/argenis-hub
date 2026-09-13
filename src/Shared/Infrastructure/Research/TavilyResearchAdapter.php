@@ -21,7 +21,10 @@ final readonly class TavilyResearchAdapter implements TavilyClientInterface
 
     public function __construct(private CircuitBreakerInterface $breaker) {}
 
-    public function search(array $queries): array
+    /** @var list<string> */
+    private const array TIME_RANGES = ['day', 'week', 'month', 'year'];
+
+    public function search(array $queries, ?string $timeRange = null): array
     {
         $apiKey = (string) config('services.tavily.api_key');
 
@@ -29,10 +32,11 @@ final readonly class TavilyResearchAdapter implements TavilyClientInterface
             return [];
         }
 
+        $timeRange = in_array($timeRange, self::TIME_RANGES, true) ? $timeRange : null;
         $results = [];
 
         foreach (array_slice($queries, 0, self::MAX_QUERIES) as $query) {
-            foreach ($this->searchOne($apiKey, $query) as $result) {
+            foreach ($this->searchOne($apiKey, $query, $timeRange) as $result) {
                 $results[] = $result;
             }
         }
@@ -43,19 +47,25 @@ final readonly class TavilyResearchAdapter implements TavilyClientInterface
     /**
      * @return list<array{title: string, url: string, content: string, score: float}>
      */
-    private function searchOne(string $apiKey, string $query): array
+    private function searchOne(string $apiKey, string $query, ?string $timeRange): array
     {
         return $this->breaker->call(
             'tavily',
-            function () use ($apiKey, $query): array {
+            function () use ($apiKey, $query, $timeRange): array {
+                $payload = [
+                    'query' => $query,
+                    'search_depth' => (string) config('services.tavily.search_depth', 'advanced'),
+                    'max_results' => (int) config('services.tavily.max_results', 5),
+                ];
+
+                if ($timeRange !== null) {
+                    $payload['time_range'] = $timeRange;
+                }
+
                 $response = Http::withToken($apiKey)
                     ->timeout(self::TIMEOUT_SECONDS)
                     ->retry(1, 500)
-                    ->post((string) config('services.tavily.url'), [
-                        'query' => $query,
-                        'search_depth' => (string) config('services.tavily.search_depth', 'advanced'),
-                        'max_results' => (int) config('services.tavily.max_results', 5),
-                    ]);
+                    ->post((string) config('services.tavily.url'), $payload);
 
                 if ($response->failed()) {
                     throw new RuntimeException("Tavily search failed with status {$response->status()}.");

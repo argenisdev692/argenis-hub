@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\CourseScripts\Domain\ValueObjects\ParsedPoint;
 use Modules\CourseScripts\Infrastructure\Parsing\MarkdownIndexParser;
 use Modules\CourseScripts\Tests\Support\IndexFixtures;
 
@@ -244,4 +245,74 @@ it('accepts a de-marked index the way a typeset PDF delivers it', function () us
         ->and($index->points[0]->declaredDurationMinutes)->toBe(9)
         ->and($index->points[0]->objective)->toContain('Demostrar algo')
         ->and($index->points[0]->mandatoryContent)->toHaveCount(1);
+});
+
+// ---------------------------------------------------------------------------
+// Author notes (FR-4b, FR-4c)
+// ---------------------------------------------------------------------------
+
+it('keeps the free text under a point as that point\'s notes', function (): void {
+    $index = IndexFixtures::parsed('index-with-notes.md');
+    $points = collect($index->points)->keyBy('position');
+
+    expect($index->pointCount())->toBe(4)
+        ->and($points[1]->notes)->toContain('1.240 filas')
+        ->and($points[1]->notes)->toContain('se amplía sola')
+        ->and($points[2]->notes)->toContain('FECHANUMERO')
+        ->and($points[3]->notes)->toStartWith('Apuntes del autor: comparar la zona Norte')
+        ->and($points[4]->notes)->toBeNull();
+});
+
+it('never duplicates brief fields into the notes', function (): void {
+    $point = collect(IndexFixtures::parsed('index-with-notes.md')->points)->firstWhere('position', 1);
+
+    expect($point->objective)->toBe('Enseñar a convertir la hoja de pedidos en una tabla estructurada.')
+        ->and($point->mandatoryContent)->toHaveCount(2)
+        ->and($point->errorsToAvoid)->toBe(['Explicar tablas sin abrir Excel'])
+        ->and($point->expectedResult)->toBe('El alumno convierte su hoja en tabla y entiende las referencias estructuradas.')
+        ->and($point->notes)->not->toContain('Objetivo')
+        ->and($point->notes)->not->toContain('Ctrl+T')
+        ->and($point->notes)->not->toContain('Resultado esperado');
+});
+
+it('keeps the preamble as course notes and drops the structure around it', function (): void {
+    $notes = IndexFixtures::parsed('index-with-notes.md')->courseNotes;
+
+    expect($notes)->toContain('Lumitec Distribución S.L.')
+        ->and($notes)->toContain('funciones dinámicas')
+        ->and($notes)->not->toContain('TABLA DE CONTENIDOS')
+        ->and($notes)->not->toContain('BLOQUE')
+        ->and($notes)->not->toContain('Duración total')
+        ->and($notes)->not->toContain('|');
+});
+
+it('does not invent notes for an index that has none', function (): void {
+    $index = IndexFixtures::parsedSample();
+
+    expect($index->courseNotes)->toBeNull()
+        ->and(collect($index->points)->filter(fn ($point) => $point->notes !== null))->toBeEmpty();
+});
+
+it('captures notes under plain heading points', function () use ($parse): void {
+    $index = $parse(<<<'MD'
+        # Copilot quick wins
+
+        ## 1. Summarise a long email thread
+        Use the thread with the supplier about late deliveries.
+
+        ## 2. Draft a reply in Outlook
+        MD);
+
+    expect($index->points[0]->notes)->toBe('Use the thread with the supplier about late deliveries.')
+        ->and($index->points[1]->notes)->toBeNull()
+        ->and($index->courseNotes)->toBeNull();
+});
+
+it('does not flag a thin point for review when its notes carry substance', function (): void {
+    $withNotes = new ParsedPoint(position: 1, title: 'Tema', notes: str_repeat('Apunte sustancial. ', 20));
+    $withoutNotes = new ParsedPoint(position: 2, title: 'Tema', notes: 'Breve.');
+
+    expect($withNotes->isThin())->toBeTrue()
+        ->and($withNotes->needsReview())->toBeFalse()
+        ->and($withoutNotes->needsReview())->toBeTrue();
 });

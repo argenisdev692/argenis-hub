@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\AuthSessionEloquentModel;
 use Modules\Backups\Infrastructure\Console\Commands\SyncBackupsCommand;
+use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseEloquentModel;
 use Modules\VideoEdits\Infrastructure\Console\Commands\PurgeExpiredVideoEditSourcesCommand;
 use Modules\VideoEdits\Infrastructure\Console\Commands\SweepStaleVideoEditsCommand;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
@@ -35,6 +36,8 @@ Schedule::command('model:prune', [
     '--model' => [
         AuthSessionEloquentModel::class,
         OneTimePassword::class,
+        // Deleted courses past their recovery window, with their private files (002 A6).
+        CourseEloquentModel::class,
     ],
 ])->dailyAt('03:15');
 

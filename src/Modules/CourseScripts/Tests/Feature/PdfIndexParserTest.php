@@ -100,3 +100,31 @@ it('routes markdown and pdf mime types to a supporting parser', function (): voi
         ->and($parser->supports('image/png'))->toBeFalse()
         ->and($parser->supports('application/zip'))->toBeFalse();
 });
+
+it('recovers the same author notes from a PDF as from its markdown twin', function (): void {
+    $parser = app(IndexDocumentParserPort::class);
+    $pdfPath = IndexFixtures::pdfTwinOf('index-with-notes.md');
+
+    try {
+        $fromPdf = $parser->parse($pdfPath, 'application/pdf');
+    } finally {
+        @unlink($pdfPath);
+    }
+
+    $fromMarkdown = IndexFixtures::parsed('index-with-notes.md');
+    $normalise = static fn (?string $text): ?string => $text === null ? null : preg_replace('/\s+/u', ' ', trim($text));
+
+    expect($fromPdf->pointCount())->toBe($fromMarkdown->pointCount())
+        ->and($normalise($fromPdf->courseNotes))->toBe($normalise($fromMarkdown->courseNotes));
+
+    foreach ($fromMarkdown->points as $index => $expected) {
+        expect($normalise($fromPdf->points[$index]->notes))->toBe($normalise($expected->notes), "notes of point {$expected->position}");
+    }
+});
+
+it('finds no notes in the reference PDF, which carries none', function (): void {
+    $index = app(IndexDocumentParserPort::class)->parse(IndexFixtures::pdfPath(), 'application/pdf');
+
+    expect($index->courseNotes)->toBeNull()
+        ->and(collect($index->points)->filter(fn ($point) => $point->notes !== null)->count())->toBe(0);
+});

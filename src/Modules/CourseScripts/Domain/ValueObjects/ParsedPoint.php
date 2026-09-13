@@ -38,7 +38,36 @@ final readonly class ParsedPoint
         public array $mandatoryContent = [],
         public array $errorsToAvoid = [],
         public ?string $expectedResult = null,
+        /**
+         * The author's free notes for this point: everything under the point
+         * that is not a recognised brief field (FR-4b). The author's own words
+         * outrank the brief and research as a writing source (DEC-6).
+         */
+        public ?string $notes = null,
     ) {}
+
+    public function hasNotes(): bool
+    {
+        return $this->notes !== null && trim($this->notes) !== '';
+    }
+
+    /**
+     * Whether the author should be nudged to enrich this point (FR-5): the
+     * brief is thin AND the notes do not carry substance of their own.
+     */
+    public function needsReview(int $substantialNotesChars = 200): bool
+    {
+        return $this->isThin() && mb_strlen(trim((string) $this->notes)) < $substantialNotesChars;
+    }
+
+    /**
+     * A copy re-assigned to another group, used when the parser synthesises the
+     * implicit group for an index without one.
+     */
+    public function inGroup(int $groupNumber): self
+    {
+        return clone ($this, ['groupNumber' => $groupNumber]);
+    }
 
     /**
      * The index gave this point little beyond its title.

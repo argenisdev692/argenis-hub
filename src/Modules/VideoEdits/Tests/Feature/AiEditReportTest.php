@@ -8,6 +8,7 @@ use Modules\VideoEdits\Domain\Enums\AiRecommendationKind;
 use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\DecisionOutcome;
+use Modules\VideoEdits\Domain\Enums\DecisionRejectionReason;
 use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
 use Modules\VideoEdits\Domain\ValueObjects\AiRecommendation;
@@ -63,6 +64,29 @@ it('returns only the AI decisions, never the silence cuts', function (): void {
         ->and($response->json('decisions.0.evidence'))->toBe('PAUSA')
         ->and($response->json('recommendations.0.kind'))->toBe('reduce')
         ->and($response->json('conclusion'))->toBe('Objectives met.');
+});
+
+it('reports a rejected AI decision with its reason and a numeric confidence', function (): void {
+    VideoEditCutDecisionEloquentModel::query()->create([
+        'video_edit_id' => $this->edit->id,
+        'producer' => 'ai_analyzer',
+        'reason' => CutReason::Retake,
+        'origin' => DecisionOrigin::Ai,
+        'start_ms' => 9_000,
+        'end_ms' => 99_000_000,
+        'confidence' => 0.85,
+        'outcome' => DecisionOutcome::Rejected,
+        'rejection_reason' => DecisionRejectionReason::EndBeyondDuration->value,
+    ]);
+
+    $this->actingAs($this->user)
+        ->getJson("/data/admin/video-edits/{$this->edit->uuid}/report")
+        ->assertOk()
+        ->assertJsonCount(2, 'decisions')
+        ->assertJsonPath('decisions.0.confidence', 0.99)
+        ->assertJsonPath('decisions.1.outcome', 'rejected')
+        ->assertJsonPath('decisions.1.rejection_reason', 'end_beyond_duration')
+        ->assertJsonPath('decisions.1.evidence', null);
 });
 
 it('builds the report from stored data alone', function (): void {

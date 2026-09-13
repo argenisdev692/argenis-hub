@@ -663,6 +663,298 @@ declare namespace Modules {
             }
         }
     }
+    namespace CourseScripts {
+        namespace Application {
+            namespace DTOs {
+                export type BibleCharacterData = {
+                    name: string;
+                    role: string;
+                    organisation_key: string | null;
+                };
+                export type BibleOrganisationData = {
+                    key: string;
+                    name: string;
+                    role: string;
+                    sector: string;
+                    is_primary: boolean;
+                };
+                export type BlockData = {
+                    uuid: string;
+                    number: number;
+                    title: string;
+                    declared_duration_minutes: number | null;
+                };
+                export type CourseBibleData = {
+                    organisations: Modules.CourseScripts.Application.DTOs.BibleOrganisationData[];
+                    characters: Modules.CourseScripts.Application.DTOs.BibleCharacterData[];
+                    audience: string;
+                    tone: string;
+                    taught_tool: string | null;
+                    forbidden_phrasings: string[];
+                };
+                export type CourseDetailData = {
+                    uuid: string;
+                    title: string;
+                    language: string;
+                    declared_duration_minutes: number | null;
+                    default_video_minutes: number;
+                    status: Modules.CourseScripts.Domain.Enums.CourseStatus;
+                    course_notes: string | null;
+                    bible: Modules.CourseScripts.Application.DTOs.CourseBibleData | null;
+                    bible_origin: Modules.CourseScripts.Domain.Enums.BibleOrigin | null;
+                    bible_revision: number;
+                    prepared: boolean;
+                    videos_needing_review: number;
+                    blocks: Modules.CourseScripts.Application.DTOs.BlockData[];
+                    videos: Modules.CourseScripts.Application.DTOs.VideoBriefData[];
+                    documents: Modules.CourseScripts.Application.DTOs.SourceDocumentData[];
+                    created_at: string;
+                };
+                export type CourseFilterData = {
+                    search: string | null;
+                    status: Modules.CourseScripts.Domain.Enums.CourseStatus | null;
+                    dateFrom: string | null;
+                    dateTo: string | null;
+                    sortField: string;
+                    sortOrder: number;
+                    page: number;
+                    perPage: number;
+                };
+                export type CourseListItemData = {
+                    uuid: string;
+                    title: string;
+                    language: string;
+                    status: Modules.CourseScripts.Domain.Enums.CourseStatus;
+                    videos_count: number;
+                    generated_videos_count: number;
+                    created_at: string;
+                    updated_at: string;
+                };
+                export type EstimateRunData = {
+                    scope: Modules.CourseScripts.Domain.Enums.GenerationScope;
+                    blockUuid: string | null;
+                    videoUuids: string[] | null;
+                    withReview: boolean | null;
+                };
+                export type GenerationRunData = {
+                    uuid: string;
+                    course_uuid: string;
+                    kind: Modules.CourseScripts.Domain.Enums.GenerationRunKind;
+                    scope: Modules.CourseScripts.Domain.Enums.GenerationScope;
+                    status: Modules.CourseScripts.Domain.Enums.GenerationRunStatus;
+                    writer_provider: string;
+                    with_review: boolean;
+                    reviewer_provider: string | null;
+                    reviewer_not_independent: boolean;
+                    videos_total: number;
+                    videos_completed: number;
+                    videos_failed: number;
+                    current_video: {
+                        number: number;
+                        title: string;
+                    } | null;
+                    progress: number;
+                    estimated_ai_write_calls: number;
+                    estimated_ai_review_calls: number;
+                    estimated_research_calls: number;
+                    ai_write_calls_consumed: number;
+                    ai_review_calls_consumed: number;
+                    research_calls_consumed: number;
+                    ai_call_ceiling: number;
+                    research_call_ceiling: number;
+                    stop_reason: string | null;
+                    outcomes: {
+                        video_uuid: string;
+                        number: number;
+                        title: string;
+                        status: string;
+                        failure_reason: string | null;
+                        review_iterations: number;
+                    }[];
+                    started_at: string | null;
+                    finished_at: string | null;
+                };
+                export type PrepareCourseData = {
+                    writerProvider: string;
+                };
+                export type RegenerateScriptData = {
+                    writerProvider: string;
+                    feedbackNote: string | null;
+                    withReview: boolean | null;
+                };
+                export type ScriptVersionData = {
+                    uuid: string;
+                    version: number;
+                    is_accepted: boolean;
+                    writer_provider: string;
+                    created_at: string;
+                    technical_header: Record<string, any>;
+                    learning_objectives: string[];
+                    continuity_note: string;
+                    continuity_is_provisional: boolean;
+                    continuity_stale: boolean;
+                    sections: Record<string, any>[];
+                    uses_tool: boolean;
+                    summary_points: string[];
+                    next_video: Record<string, any> | null;
+                    recording_notes: Record<string, any>;
+                    verification_checklist: string[];
+                    errors_check: Record<string, any> | null;
+                    is_grounded: boolean;
+                    prompts_sheet_reason: string | null;
+                    practice_warranted: boolean;
+                    practice_decision_reason: string | null;
+                    reviewed: boolean;
+                    reviewer_provider: string | null;
+                    review_scores: Record<string, number> | null;
+                    review_objections:
+                        | {
+                              target: string;
+                              text: string;
+                          }[]
+                        | null;
+                    review_iterations: number;
+                    passed_review: boolean | null;
+                    feedback_note: string | null;
+                    practice: Record<string, any> | null;
+                    sources: {
+                        title: string;
+                        url: string;
+                        provider: string;
+                        full_page_fetched: boolean;
+                    }[];
+                    deliverables: {
+                        uuid: string;
+                        document_type: string;
+                        artifact_file_name: string;
+                        format: string;
+                        size_bytes: number;
+                    }[];
+                };
+                export type SourceDocumentData = {
+                    uuid: string;
+                    kind: Modules.CourseScripts.Domain.Enums.SourceDocumentKind;
+                    original_name: string;
+                    mime: string;
+                    size_bytes: number;
+                    video_uuid: string | null;
+                };
+                export type StartGenerationRunData = {
+                    writerProvider: string;
+                    confirmedEstimate: {
+                        ai_write_calls: number;
+                        ai_review_calls: number;
+                        research_calls: number;
+                    };
+                    scope: Modules.CourseScripts.Domain.Enums.GenerationScope;
+                    blockUuid: string | null;
+                    videoUuids: string[] | null;
+                    withReview: boolean | null;
+                };
+                export type UpdateCourseNotesData = {
+                    courseNotes: string | null;
+                };
+                export type UpdateVideoBriefData = {
+                    title: string;
+                    topic: string | null;
+                    declaredDurationMinutes: number | null;
+                    objective: string | null;
+                    learningAreas: (string | null)[] | null;
+                    audienceObjectives: (string | null)[] | null;
+                    mandatoryContent: (string | null)[] | null;
+                    errorsToAvoid: (string | null)[] | null;
+                    expectedResult: string | null;
+                    notes: string | null;
+                };
+                export type VideoBriefData = {
+                    uuid: string;
+                    block_uuid: string | null;
+                    number: number;
+                    title: string;
+                    topic: string | null;
+                    declared_duration_minutes: number | null;
+                    effective_duration_minutes: number;
+                    objective: string | null;
+                    learning_areas: string[];
+                    audience_objectives: string[];
+                    mandatory_content: string[];
+                    errors_to_avoid: string[];
+                    expected_result: string | null;
+                    notes: string | null;
+                    needs_review: boolean;
+                    brief_revision: number;
+                    script_status: Modules.CourseScripts.Domain.Enums.VideoScriptStatus;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type ArtifactGenre =
+                    | 'proposal'
+                    | 'report'
+                    | 'email'
+                    | 'email_thread'
+                    | 'meeting_notes'
+                    | 'dataset'
+                    | 'policy'
+                    | 'contract'
+                    | 'chat_transcript'
+                    | 'context_brief'
+                    | 'comparison_case'
+                    | 'other';
+                export type BibleOrigin = 'proposed' | 'author';
+                export type ContentBlockType =
+                    | 'heading'
+                    | 'paragraph'
+                    | 'list'
+                    | 'table'
+                    | 'key_values'
+                    | 'footer';
+                export type CourseStatus =
+                    | 'draft'
+                    | 'ready'
+                    | 'generating'
+                    | 'partially_generated'
+                    | 'completed';
+                export type DeliverableDocumentType =
+                    'script' | 'prompts' | 'practice' | 'practice_file';
+                export type DeliverableFormat = 'md' | 'pdf';
+                export type GenerationRunKind =
+                    'generation' | 'regeneration' | 'force_practice';
+                export type GenerationRunStatus =
+                    | 'queued'
+                    | 'running'
+                    | 'completed'
+                    | 'partially_failed'
+                    | 'cancelled'
+                    | 'stopped_at_ceiling'
+                    | 'failed';
+                export type GenerationScope = 'course' | 'block' | 'selection';
+                export type PracticeDecisionOrigin = 'system' | 'author_forced';
+                export type SectionKind =
+                    | 'intro'
+                    | 'concept'
+                    | 'demo'
+                    | 'comparison'
+                    | 'table'
+                    | 'closing';
+                export type SegmentType =
+                    | 'narration'
+                    | 'on_screen_prompt'
+                    | 'expected_result'
+                    | 'on_screen_actions'
+                    | 'show_on_screen'
+                    | 'on_screen_table'
+                    | 'presenter_note';
+                export type SourceDocumentKind =
+                    'index' | 'content' | 'style_reference';
+                export type VideoOutcomeStatus =
+                    'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+                export type VideoScriptStatus =
+                    'not_started' | 'generating' | 'generated' | 'failed';
+            }
+        }
+    }
     namespace Cvs {
         namespace Application {
             namespace DTOs {
@@ -1455,6 +1747,35 @@ declare namespace Modules {
                     instructions: string | null;
                     target_duration_minutes: number | null;
                 };
+                export type AiRecommendationData = {
+                    kind: Modules.VideoEdits.Domain.Enums.AiRecommendationKind;
+                    title: string;
+                    detail: string;
+                    start_ms: number | null;
+                    end_ms: number | null;
+                };
+                export type AiReportDecisionData = {
+                    reason: Modules.VideoEdits.Domain.Enums.CutReason;
+                    start_ms: number;
+                    end_ms: number;
+                    duration_ms: number;
+                    confidence: number | null;
+                    outcome: Modules.VideoEdits.Domain.Enums.DecisionOutcome;
+                    rejection_reason: string | null;
+                    evidence: string | null;
+                };
+                export type AiReportEditData = {
+                    uuid: string;
+                    mode: Modules.VideoEdits.Domain.Enums.VideoEditMode;
+                    status: Modules.VideoEdits.Domain.Enums.VideoEditStatus;
+                    original_duration_ms: number | null;
+                    final_duration_ms: number | null;
+                    removed_duration_ms: number | null;
+                    applied_cut_count: number;
+                    rejected_decision_count: number;
+                    script_name: string | null;
+                    completed_at: string | null;
+                };
                 export type AppliedCutData = {
                     sequence: number;
                     start_ms: number;
@@ -1581,6 +1902,12 @@ declare namespace Modules {
                     applied_cut_count: number;
                     created_at: string | null;
                     completed_at: string | null;
+                };
+                export type VideoEditReportData = {
+                    edit: Modules.VideoEdits.Application.DTOs.AiReportEditData;
+                    decisions: Modules.VideoEdits.Application.DTOs.AiReportDecisionData[];
+                    recommendations: Modules.VideoEdits.Application.DTOs.AiRecommendationData[];
+                    conclusion: string | null;
                 };
                 export type VideoEditSourceData = {
                     uuid: string;

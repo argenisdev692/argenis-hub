@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Infrastructure\Http\Controllers;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -24,6 +25,7 @@ final readonly class VideoEditReportController
         private ExportPort $export,
     ) {}
 
+    #[QueryParameter('format', description: '`json` for the report data, `pdf` to download it.', type: 'string', default: 'json', example: 'pdf')]
     public function __invoke(Request $request, string $uuid): JsonResponse|Response
     {
         $report = $this->report->handle($uuid, (int) $request->user()->id);
@@ -32,7 +34,7 @@ final readonly class VideoEditReportController
             'pdf' => $this->export->pdf(
                 "video-edit-report-{$uuid}.pdf",
                 'exports.pdf.video-edit-report',
-                [...$report, 'generatedAt' => now()->format('F j, Y H:i')],
+                [...$report->toArray(), 'generatedAt' => now()->format('F j, Y H:i')],
                 orientation: 'portrait',
             ),
             default => response()->json($report),

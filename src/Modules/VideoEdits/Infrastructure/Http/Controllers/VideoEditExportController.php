@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Infrastructure\Http\Controllers;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Modules\VideoEdits\Application\DTOs\VideoEditFilterData;
@@ -48,12 +49,11 @@ final readonly class VideoEditExportController
 
     public function __construct(private ExportPort $export) {}
 
-    public function __invoke(Request $request): StreamedResponse|Response
+    #[QueryParameter('format', description: 'Export file format: `csv`, `xlsx` or `pdf`.', type: 'string', default: 'csv', example: 'xlsx')]
+    public function __invoke(Request $request, VideoEditFilterData $filters): StreamedResponse|Response
     {
         $format = (string) $request->string('format', 'csv');
         abort_unless(in_array($format, self::FORMATS, true), 422);
-
-        $filters = VideoEditFilterData::validateAndCreate($request);
 
         $rows = VideoEditEloquentModel::query()
             ->select(self::EXPORT_COLUMNS)

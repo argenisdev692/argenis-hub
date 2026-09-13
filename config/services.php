@@ -73,6 +73,19 @@ return [
     ],
 
     /*
+     * Firecrawl — full-page retrieval when a Tavily snippet is too thin to
+     * write a course script from (Course Scripts FR-13c). Fail-soft like Tavily:
+     * an empty key makes `FirecrawlScrapeAdapter::scrape()` return null without
+     * a request. `max_age` (ms) lets repeat URLs inside one run hit Firecrawl's cache.
+     */
+    'firecrawl' => [
+        'api_key' => env('FIRECRAWL_API_KEY'),
+        'base_url' => env('FIRECRAWL_BASE_URL', 'https://api.firecrawl.dev/v1'),
+        'timeout' => env('FIRECRAWL_TIMEOUT', 30),
+        'max_age' => env('FIRECRAWL_MAX_AGE', 172800000),
+    ],
+
+    /*
      * ElevenLabs — text-to-speech for the TikTok / Instagram Reels voiceover
      * track. `ElevenLabsSpeechAdapter` returns null when either the key or the
      * voice id is empty, so a missing block degrades to "CapCut timeline with

@@ -110,6 +110,15 @@ it('removes every child row when the edit is hard-deleted', function (): void {
         ->and(VideoEditAppliedCutEloquentModel::query()->count())->toBe(0);
 });
 
+it('links an edit and its re-edits in both directions', function (): void {
+    $original = VideoEditEloquentModel::factory()->completed()->create();
+    $reEdit = VideoEditEloquentModel::factory()->for($original->user)->create(['previous_edit_id' => $original->id]);
+
+    expect($original->reEdits()->pluck('uuid')->all())->toBe([$reEdit->uuid])
+        ->and($reEdit->previousEdit?->uuid)->toBe($original->uuid)
+        ->and($original->user->videoEdits()->count())->toBe(2);
+});
+
 it('keeps a re-edit when its original is deleted', function (): void {
     $original = VideoEditEloquentModel::factory()->completed()->create();
     $reEdit = VideoEditEloquentModel::factory()->for($original->user)->create(['previous_edit_id' => $original->id]);

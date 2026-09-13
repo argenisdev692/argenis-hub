@@ -30,6 +30,11 @@ final readonly class ParsedIndex
         public ?int $declaredTotalMinutes,
         public array $groups,
         public array $points,
+        /**
+         * Free text that belongs to no point — a preamble, general guidance,
+         * the author's notes about the whole course (FR-4c).
+         */
+        public ?string $courseNotes = null,
     ) {}
 
     /**

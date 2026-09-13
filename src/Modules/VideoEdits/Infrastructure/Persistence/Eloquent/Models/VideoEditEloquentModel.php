@@ -158,6 +158,17 @@ final class VideoEditEloquentModel extends Model
     }
 
     /**
+     * Inverse of {@see previousEdit()}: the edits started from this one's
+     * settings (US-7).
+     *
+     * @return HasMany<VideoEditEloquentModel, $this>
+     */
+    public function reEdits(): HasMany
+    {
+        return $this->hasMany(self::class, 'previous_edit_id');
+    }
+
+    /**
      * Unordered on purpose: an ORDER BY here would leak into `withCount()`
      * subqueries, which PostgreSQL rejects. Ordering lives in the repository.
      *

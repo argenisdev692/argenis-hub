@@ -98,35 +98,24 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
         $lines = explode("\n", $text);
 
         $groups = $this->extractGroups($lines);
-        $points = $this->extractPoints($text, $lines, $groups);
+        $firstPointLine = null;
+        $points = $this->extractPoints($text, $lines, $groups, $firstPointLine);
 
         // A point always belongs to a group, even when the author used none.
         if ($points !== [] && $groups === []) {
             $groups = [ParsedGroup::implicit()];
-            $points = array_map(
-                static fn (ParsedPoint $p): ParsedPoint => new ParsedPoint(
-                    position: $p->position,
-                    title: $p->title,
-                    groupNumber: 1,
-                    topic: $p->topic,
-                    declaredDurationMinutes: $p->declaredDurationMinutes,
-                    objective: $p->objective,
-                    learningAreas: $p->learningAreas,
-                    audienceObjectives: $p->audienceObjectives,
-                    mandatoryContent: $p->mandatoryContent,
-                    errorsToAvoid: $p->errorsToAvoid,
-                    expectedResult: $p->expectedResult,
-                ),
-                $points,
-            );
+            $points = array_map(static fn (ParsedPoint $p): ParsedPoint => $p->inGroup(1), $points);
         }
 
+        $title = $this->extractTitle($lines);
+
         return new ParsedIndex(
-            title: $this->extractTitle($lines),
+            title: $title,
             language: $this->detectLanguage($text),
             declaredTotalMinutes: $this->extractTotalMinutes($text),
             groups: $groups,
             points: $points,
+            courseNotes: $points === [] ? null : $this->extractCourseNotes($lines, $firstPointLine ?? count($lines), $title),
         );
     }
 
@@ -237,11 +226,14 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
      * with whatever table-of-contents metadata and per-point brief the index
      * also contains.
      *
+     * `$firstPointLine` receives the line index where the first point starts,
+     * so everything above it can be read as course-level notes (FR-4c).
+     *
      * @param  list<string>  $lines
      * @param  list<ParsedGroup>  $groups
      * @return list<ParsedPoint>
      */
-    private function extractPoints(string $text, array $lines, array $groups): array
+    private function extractPoints(string $text, array $lines, array $groups, ?int &$firstPointLine): array
     {
         $tocRows = $this->extractTocRows($lines, $groups);
 
@@ -255,6 +247,7 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
         }
 
         $details = $this->extractDetailBodies($text);
+        $firstPointLine = $this->firstPointLine($lines, $candidates, $details, $tocRows);
 
         $points = [];
 
@@ -275,6 +268,7 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
                 mandatoryContent: $this->briefList($body, 'mandatoryContent'),
                 errorsToAvoid: $this->briefList($body, 'errorsToAvoid'),
                 expectedResult: $this->briefField($body, 'expectedResult'),
+                notes: $this->notesResidue($body),
             );
         }
 
@@ -356,13 +350,18 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
     private function headingPoints(array $lines): array
     {
         $byLevel = [];
+        $headingLines = [];
 
-        foreach ($lines as $line) {
-            if (preg_match('/^(#{2,6})\s+(.+?)\s*$/u', trim($line), $m) !== 1) {
+        foreach ($lines as $lineIndex => $line) {
+            if (preg_match('/^(#{1,6})\s+(.+?)\s*$/u', trim($line), $m) !== 1) {
                 continue;
             }
 
-            $byLevel[strlen($m[1])][] = trim($m[2]);
+            $headingLines[] = $lineIndex;
+
+            if (strlen($m[1]) >= 2) {
+                $byLevel[strlen($m[1])][] = ['title' => trim($m[2]), 'line' => $lineIndex];
+            }
         }
 
         krsort($byLevel);
@@ -375,19 +374,21 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
             $points = [];
 
             foreach ($headings as $index => $heading) {
-                if ($this->isGroupHeading($heading)) {
+                if ($this->isGroupHeading($heading['title'])) {
                     continue;
                 }
+
+                $body = $this->linesUntilNextHeading($lines, $heading['line'], $headingLines);
 
                 // "3. Multi-file edits" keeps the author's number; a plain
                 // heading is numbered by appearance.
-                if (preg_match('/^(\d+)\s*[-.):]\s*(.+)$/u', $heading, $m) === 1) {
-                    $points[] = ['number' => (int) $m[1], 'title' => trim($m[2])];
+                if (preg_match('/^(\d+)\s*[-.):]\s*(.+)$/u', $heading['title'], $m) === 1) {
+                    $points[] = ['number' => (int) $m[1], 'title' => trim($m[2]), 'body' => $body, 'line' => $heading['line']];
 
                     continue;
                 }
 
-                $points[] = ['number' => $index + 1, 'title' => $heading];
+                $points[] = ['number' => $index + 1, 'title' => $heading['title'], 'body' => $body, 'line' => $heading['line']];
             }
 
             if (count($points) >= self::MINIMUM_INFERRED_POINTS) {
@@ -410,17 +411,17 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
         $numbered = [];
         $bulleted = [];
 
-        foreach ($lines as $line) {
+        foreach ($lines as $lineIndex => $line) {
             $line = trim($line);
 
             if (preg_match('/^(\d+)\s*[-.):]\s+(.{3,})$/u', $line, $m) === 1) {
-                $numbered[] = ['number' => (int) $m[1], 'title' => trim($m[2])];
+                $numbered[] = ['number' => (int) $m[1], 'title' => trim($m[2]), 'line' => $lineIndex];
 
                 continue;
             }
 
             if (preg_match('/^[-*•]\s+(.{3,})$/u', $line, $m) === 1 && ! $this->isGroupHeading($m[1])) {
-                $bulleted[] = ['number' => count($bulleted) + 1, 'title' => trim($m[1])];
+                $bulleted[] = ['number' => count($bulleted) + 1, 'title' => trim($m[1]), 'line' => $lineIndex];
             }
         }
 
@@ -595,31 +596,101 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
      */
     private function briefField(string $body, string $field): ?string
     {
+        return $this->matchBriefField($body, $field)['value'] ?? null;
+    }
+
+    /**
+     * The value of a single-line field and the exact text it consumed, so the
+     * remainder of the body can be kept as the author's notes (FR-4b).
+     *
+     * A blank line followed by a line that does not start in lowercase also
+     * ends the value: that is a new paragraph (typically the author's notes),
+     * whereas a PDF's stray blank line inside a wrapped sentence is followed by
+     * its lowercase continuation.
+     *
+     * @return array{value: string, consumed: string}|null
+     */
+    private function matchBriefField(string $body, string $field): ?array
+    {
         if ($body === '') {
             return null;
         }
 
-        $terminators = IndexVocabulary::allBriefLabelsPattern()
-            .'|(?:'.IndexVocabulary::pointPattern().')\s+\d+'
-            .'|(?:'.IndexVocabulary::groupPattern().')\s+\d+';
+        $terminators = $this->briefTerminators();
 
         foreach (IndexVocabulary::labelsFor($field) as $label) {
-            $pattern = '/(?:^|\n)\s*'.$label.'\s*:\s*(.+?)(?=\n\s*(?:'.$terminators.')|\n\s*-{3,}|\z)/isu';
+            $pattern = '/(?:^|\n)\s*'.$label.'\s*:\s*(.+?)(?=\n\s*(?:'.$terminators.')|\n\s*-{3,}|\n[ \t]*\n(?=[ \t]*[^\p{Ll}\s])|\z)/isu';
 
             if (preg_match($pattern, $body, $m) !== 1) {
                 continue;
             }
 
-            $value = preg_replace('/\s*\n\s*/u', ' ', trim($m[1])) ?? trim($m[1]);
+            $keptLines = $this->linesOfOneParagraph($m[1]);
+            $keptText = implode("\n", $keptLines);
+
+            $value = preg_replace('/\s*\n\s*/u', ' ', trim($keptText)) ?? trim($keptText);
             $value = preg_replace('/\s*-{3,}\s*$/u', '', trim($value)) ?? $value;
             $value = trim($value);
 
             if ($value !== '') {
-                return $value;
+                $labelPart = substr($m[0], 0, strlen($m[0]) - strlen($m[1]));
+
+                return ['value' => $value, 'consumed' => $labelPart.$keptText];
             }
         }
 
         return null;
+    }
+
+    /**
+     * The leading lines of a captured value that still belong to it.
+     *
+     * PDF extraction drops blank lines, so paragraph ends must be inferred: a
+     * line that closes a sentence followed by one that opens a new sentence is
+     * a boundary; a line that does not close a sentence, or a lowercase
+     * continuation, is the same wrapped value.
+     *
+     * @return list<string>
+     */
+    private function linesOfOneParagraph(string $captured): array
+    {
+        $lines = explode("\n", $captured);
+        $kept = [array_shift($lines)];
+
+        foreach ($lines as $line) {
+            $previous = rtrim((string) end($kept));
+
+            if ($this->startsNewSentence($previous, $line)) {
+                break;
+            }
+
+            $kept[] = $line;
+        }
+
+        return $kept;
+    }
+
+    private function startsNewSentence(string $previousLine, string $line): bool
+    {
+        $trimmed = trim($line);
+
+        return $trimmed !== ''
+            && preg_match('/[.!?]$/u', $previousLine) === 1
+            && preg_match('/^\p{Ll}/u', $trimmed) !== 1
+            && preg_match('/^(?:[-*•]|\d+[.)])\s/u', $trimmed) !== 1;
+    }
+
+    /**
+     * A label only terminates a value when it really is a label — followed by
+     * a colon or the end of its line. Otherwise a wrapped PDF line that merely
+     * starts with the word ("resultado desde el minuto uno.") would cut the
+     * previous field short.
+     */
+    private function briefTerminators(): string
+    {
+        return '(?:'.IndexVocabulary::allBriefLabelsPattern().')(?=[ \t]*(?::|\n|\z))'
+            .'|(?:'.IndexVocabulary::pointPattern().')\s+\d+'
+            .'|(?:'.IndexVocabulary::groupPattern().')\s+\d+';
     }
 
     /**
@@ -630,13 +701,21 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
      */
     private function briefList(string $body, string $field): array
     {
+        return $this->matchBriefList($body, $field)['items'] ?? [];
+    }
+
+    /**
+     * A labelled list and the exact text it consumed (see {@see matchBriefField}).
+     *
+     * @return array{items: list<string>, consumed: string}|null
+     */
+    private function matchBriefList(string $body, string $field): ?array
+    {
         if ($body === '') {
-            return [];
+            return null;
         }
 
-        $terminators = IndexVocabulary::allBriefLabelsPattern()
-            .'|(?:'.IndexVocabulary::pointPattern().')\s+\d+'
-            .'|(?:'.IndexVocabulary::groupPattern().')\s+\d+';
+        $terminators = $this->briefTerminators();
 
         foreach (IndexVocabulary::labelsFor($field) as $label) {
             $pattern = '/(?:^|\n)\s*'.$label.'\s*:?\s*\n(.*?)(?=\n\s*(?:'.$terminators.')|\z)/isu';
@@ -645,28 +724,40 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
                 continue;
             }
 
-            $items = $this->parseListItems($m[1]);
+            ['items' => $items, 'consumedLines' => $consumedLines] = $this->parseListItems($m[1]);
 
             if ($items !== []) {
-                return $items;
+                $labelPart = substr($m[0], 0, strlen($m[0]) - strlen($m[1]));
+
+                return ['items' => $items, 'consumed' => $labelPart.implode("\n", $consumedLines)];
             }
         }
 
-        return [];
+        return null;
     }
 
     /**
-     * @return list<string>
+     * Items of a list block. The list ends at a blank line followed by a line
+     * that is neither an item nor a lowercase continuation — that is a new
+     * paragraph, usually the author's notes, and must not be glued onto the
+     * last item.
+     *
+     * @return array{items: list<string>, consumedLines: list<string>}
      */
     private function parseListItems(string $block): array
     {
         $items = [];
+        $consumed = [];
         $current = null;
+        $afterBlank = false;
 
-        foreach (explode("\n", $block) as $line) {
-            $line = trim($line);
+        foreach (explode("\n", $block) as $rawLine) {
+            $line = trim($rawLine);
 
             if ($line === '' || preg_match('/^-{3,}$/', $line) === 1) {
+                $afterBlank = $afterBlank || $line === '';
+                $consumed[] = $rawLine;
+
                 continue;
             }
 
@@ -676,13 +767,23 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
                 }
 
                 $current = trim($m[1]);
+                $afterBlank = false;
+                $consumed[] = $rawLine;
 
                 continue;
+            }
+
+            if ($current !== null && (
+                ($afterBlank && preg_match('/^\p{Ll}/u', $line) !== 1)
+                || $this->startsNewSentence($current, $line)
+            )) {
+                break;
             }
 
             // A wrapped continuation of the previous item, routine in PDF text.
             if ($current !== null) {
                 $current .= ' '.$line;
+                $consumed[] = $rawLine;
             }
         }
 
@@ -690,10 +791,154 @@ final class MarkdownIndexParser implements IndexDocumentParserPort
             $items[] = $current;
         }
 
-        return array_values(array_filter(
-            array_map(trim(...), $items),
-            static fn (string $item): bool => $item !== '',
-        ));
+        return [
+            'items' => array_values(array_filter(
+                array_map(trim(...), $items),
+                static fn (string $item): bool => $item !== '',
+            )),
+            'consumedLines' => $consumed,
+        ];
+    }
+
+    /**
+     * What remains of a point's body once every recognised brief field is
+     * removed: the author's own notes for that point (FR-4b).
+     */
+    private function notesResidue(string $body): ?string
+    {
+        if (trim($body) === '') {
+            return null;
+        }
+
+        $residue = $body;
+
+        foreach (array_keys(IndexVocabulary::BRIEF_LABELS) as $field) {
+            $match = in_array($field, ['objective', 'expectedResult'], true)
+                ? $this->matchBriefField($residue, $field)
+                : $this->matchBriefList($residue, $field);
+
+            if ($match === null) {
+                continue;
+            }
+
+            $position = strpos($residue, $match['consumed']);
+
+            if ($position !== false) {
+                $residue = substr_replace($residue, "\n", $position, strlen($match['consumed']));
+            }
+        }
+
+        $labelOnly = '/^(?:'.IndexVocabulary::allBriefLabelsPattern().')\s*:?$/iu';
+        $kept = [];
+
+        foreach (explode("\n", $residue) as $line) {
+            $trimmed = trim($line);
+
+            $kept[] = preg_match('/^-{3,}$/', $trimmed) === 1 || preg_match($labelOnly, $trimmed) === 1
+                ? ''
+                : $trimmed;
+        }
+
+        return $this->collapseParagraphs($kept);
+    }
+
+    /**
+     * Text above the first point that is not the title, a total duration, a
+     * grouping, a table of contents or a heading (FR-4c).
+     *
+     * @param  list<string>  $lines
+     */
+    private function extractCourseNotes(array $lines, int $firstPointLine, ?string $title): ?string
+    {
+        $groupPattern = '/^#{0,6}\s*(?:'.IndexVocabulary::groupPattern().')\s*\d+/iu';
+        $kept = [];
+
+        foreach (array_slice($lines, 0, $firstPointLine) as $line) {
+            $trimmed = trim($line);
+
+            $isStructure = $trimmed === ''
+                || ($title !== null && ltrim($trimmed, '# ') === $title)
+                || preg_match('/^#{1,6}\s/u', $trimmed) === 1
+                || str_starts_with($trimmed, '|')
+                || preg_match('/^-{3,}$/', $trimmed) === 1
+                || preg_match($groupPattern, $trimmed) === 1
+                || $this->extractTotalMinutes($trimmed) !== null
+                || $this->matchTocRow($trimmed) !== null;
+
+            $kept[] = $isStructure ? '' : $trimmed;
+        }
+
+        return $this->collapseParagraphs($kept);
+    }
+
+    /**
+     * @param  list<string>  $lines
+     */
+    private function collapseParagraphs(array $lines): ?string
+    {
+        $text = trim(implode("\n", $lines));
+        $text = preg_replace("/\n{3,}/u", "\n\n", $text) ?? $text;
+
+        return $text === '' ? null : $text;
+    }
+
+    /**
+     * @param  list<string>  $lines
+     * @param  list<int>  $headingLines
+     */
+    private function linesUntilNextHeading(array $lines, int $headingLine, array $headingLines): string
+    {
+        $next = count($lines);
+
+        foreach ($headingLines as $candidate) {
+            if ($candidate > $headingLine) {
+                $next = $candidate;
+
+                break;
+            }
+        }
+
+        return implode("\n", array_slice($lines, $headingLine + 1, $next - $headingLine - 1));
+    }
+
+    /**
+     * Where the points begin: the first candidate's line when the rung knows
+     * it, otherwise the first labelled heading or table-of-contents row.
+     *
+     * @param  list<string>  $lines
+     * @param  list<array<string, mixed>>  $candidates
+     * @param  array<int, string>  $details
+     * @param  array<int, array<string, mixed>>  $tocRows
+     */
+    private function firstPointLine(array $lines, array $candidates, array $details, array $tocRows): int
+    {
+        $candidateLines = [];
+
+        foreach ($candidates as $candidate) {
+            if (isset($candidate['line'])) {
+                $candidateLines[] = (int) $candidate['line'];
+            }
+        }
+
+        if ($candidateLines !== []) {
+            return min($candidateLines);
+        }
+
+        $pattern = '/^#{0,6}\s*(?:'.IndexVocabulary::pointPattern().')\s+\d+\s*[-:.]/iu';
+
+        foreach ($lines as $index => $line) {
+            $trimmed = trim($line);
+
+            if (preg_match($pattern, $trimmed) === 1) {
+                return $index;
+            }
+
+            if ($details === [] && $tocRows !== [] && $this->matchTocRow($trimmed) !== null) {
+                return $index;
+            }
+        }
+
+        return count($lines);
     }
 
     /**

@@ -16,6 +16,7 @@ use Shared\Domain\Ports\SpeechSynthesizerPort;
 use Shared\Domain\Ports\StoragePort;
 use Shared\Infrastructure\AI\AIClientInterface;
 use Shared\Infrastructure\AI\LaravelAIAdapter;
+use Shared\Infrastructure\AI\PromptCache\PromptCacheScope;
 use Shared\Infrastructure\Audit\SpatieActivityLogAdapter;
 use Shared\Infrastructure\Company\CompanyProfile;
 use Shared\Infrastructure\Console\Commands\PingRedisCommand;
@@ -27,6 +28,8 @@ use Shared\Infrastructure\Mail\BrevoMailAdapter;
 use Shared\Infrastructure\Mail\MailInterface;
 use Shared\Infrastructure\Mail\ResendMailAdapter;
 use Shared\Infrastructure\OpenApi\SpatieDataToSchema;
+use Shared\Infrastructure\Research\FirecrawlClientInterface;
+use Shared\Infrastructure\Research\FirecrawlScrapeAdapter;
 use Shared\Infrastructure\Research\TavilyClientInterface;
 use Shared\Infrastructure\Research\TavilyResearchAdapter;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreaker;
@@ -47,7 +50,11 @@ final class SharedServiceProvider extends ServiceProvider
         // CSV/Excel handled here; PDF delegated to DomPdfExportAdapter (auto-resolved).
         $this->app->bind(ExportPort::class, SimpleExcelExportAdapter::class);
         $this->app->bind(AIClientInterface::class, LaravelAIAdapter::class);
+        // One scope per request/job: carries the active CacheablePrompt from
+        // PromptCachingAIClient to the agent's providerOptions().
+        $this->app->singleton(PromptCacheScope::class);
         $this->app->bind(TavilyClientInterface::class, TavilyResearchAdapter::class);
+        $this->app->bind(FirecrawlClientInterface::class, FirecrawlScrapeAdapter::class);
 
         // Both docs contracts resolve to the same adapter — the Domain port for
         // grounded snippets, the client interface for callers that need the

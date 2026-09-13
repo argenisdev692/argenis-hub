@@ -7,9 +7,11 @@ namespace Modules\VideoEdits\Infrastructure\Ai;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
+use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
 
 /**
@@ -33,10 +35,15 @@ use Stringable;
  * schema (`min`/`max`), which is how the rest of this codebase models a score;
  * a float 0–1 is not, and a model that returns 1.5 would otherwise reach the
  * confidence gate.
+ *
+ * **Prompt caching.** These instructions are identical for every analysis, and
+ * the script is shared by every take recorded against it, so both reach the
+ * provider as a cacheable prefix via {@see UsesPromptCache}.
  */
-final class AnalyzeVideoEditAgent implements Agent, HasStructuredOutput
+final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use UsesPromptCache;
 
     public function instructions(): Stringable|string
     {

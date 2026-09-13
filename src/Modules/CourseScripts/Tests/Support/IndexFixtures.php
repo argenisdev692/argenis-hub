@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\CourseScripts\Tests\Support;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use Modules\CourseScripts\Domain\ValueObjects\ParsedIndex;
 use Modules\CourseScripts\Infrastructure\Parsing\MarkdownIndexParser;
 
@@ -48,5 +49,30 @@ final class IndexFixtures
     public static function parsedSample(): ParsedIndex
     {
         return (new MarkdownIndexParser)->parse(self::markdownPath(), 'text/markdown');
+    }
+
+    public static function parsed(string $fixture): ParsedIndex
+    {
+        return (new MarkdownIndexParser)->parse(self::path($fixture), 'text/markdown');
+    }
+
+    /**
+     * A text-layer PDF twin of a Markdown fixture, rendered on the fly so the
+     * notes parity test does not depend on another committed binary. The
+     * caller deletes the file.
+     */
+    public static function pdfTwinOf(string $fixture): string
+    {
+        $markdown = (string) file_get_contents(self::path($fixture));
+        $path = tempnam(sys_get_temp_dir(), 'cs-twin-').'.pdf';
+
+        $html = '<html><head><meta charset="utf-8"></head><body>'
+            .'<pre style="font-family: DejaVu Sans, sans-serif; font-size: 9px; white-space: pre-wrap">'
+            .htmlspecialchars($markdown, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            .'</pre></body></html>';
+
+        file_put_contents($path, Pdf::loadHTML($html)->output());
+
+        return $path;
     }
 }

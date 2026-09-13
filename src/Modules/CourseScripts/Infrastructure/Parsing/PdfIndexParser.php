@@ -49,10 +49,13 @@ final readonly class PdfIndexParser implements IndexDocumentParserPort
     }
 
     /**
+     * Public so {@see DocumentTextExtractor} reuses it for content files
+     * without a second import of the PDF library.
+     *
      * @throws EncryptedPdfException
      * @throws NoTextLayerException
      */
-    private function extractText(string $absolutePath): string
+    public function extractText(string $absolutePath): string
     {
         try {
             $text = $this->parser->parseFile($absolutePath)->getText();
