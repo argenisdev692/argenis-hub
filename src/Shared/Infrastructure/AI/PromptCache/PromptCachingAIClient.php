@@ -35,8 +35,13 @@ final readonly class PromptCachingAIClient
     /**
      * @param  class-string  $agentClass
      */
-    public function generateStructured(string $agentClass, CacheablePrompt $prompt, string $provider): StructuredAgentResponse
-    {
+    public function generateStructured(
+        string $agentClass,
+        CacheablePrompt $prompt,
+        string $provider,
+        ?string $model = null,
+        ?int $timeoutSeconds = null,
+    ): StructuredAgentResponse {
         $enabled = (bool) $this->config->get('ai.prompt_cache.enabled', true);
 
         if ($enabled && ! is_subclass_of($agentClass, HasProviderOptions::class)) {
@@ -52,6 +57,8 @@ final readonly class PromptCachingAIClient
                 $agentClass,
                 $layersInSystem ? $prompt->tail : $prompt->asSingleMessage(),
                 $provider,
+                $model,
+                $timeoutSeconds,
             );
         } finally {
             $this->scope->clear();

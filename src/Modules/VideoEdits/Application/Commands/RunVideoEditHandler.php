@@ -34,20 +34,18 @@ final readonly class RunVideoEditHandler
             return;
         }
 
-        if ($edit->status === VideoEditStatus::Queued) {
-            $started = $this->edits->transitionStatus($uuid, [VideoEditStatus::Queued], VideoEditStatus::Processing, [
+        $isRunnable = match ($edit->status) {
+            VideoEditStatus::Queued => $this->edits->transitionStatus($uuid, [VideoEditStatus::Queued], VideoEditStatus::Processing, [
                 'started_at' => CarbonImmutable::now(),
                 'attempts' => $attempt,
                 'progress_percent' => 0,
                 'current_stage' => ProcessingStage::Download,
-            ]);
+            ]),
+            VideoEditStatus::Processing => $this->resumeAttempt($uuid, $attempt),
+            default => false,
+        };
 
-            if (! $started) {
-                return;
-            }
-        } elseif ($edit->status === VideoEditStatus::Processing) {
-            $this->edits->recordAttempt($uuid, $attempt);
-        } else {
+        if (! $isRunnable) {
             return;
         }
 
@@ -60,5 +58,16 @@ final readonly class RunVideoEditHandler
         } finally {
             $this->workspace->wipe($uuid);
         }
+    }
+
+    /**
+     * A job retried after a crash finds its edit still processing: it records
+     * the new attempt and carries on rather than restarting the transition.
+     */
+    private function resumeAttempt(string $uuid, int $attempt): bool
+    {
+        $this->edits->recordAttempt($uuid, $attempt);
+
+        return true;
     }
 }

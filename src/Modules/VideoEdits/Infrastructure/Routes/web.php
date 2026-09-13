@@ -22,7 +22,7 @@ Route::middleware(['auth', 'verified'])
     ->prefix('data/admin/video-edits')
     ->name('video-edits.admin.')
     ->group(function (): void {
-        Route::middleware('permission:VIEW_ANY_VIDEO_EDITS')
+        Route::middleware(['permission:VIEW_ANY_VIDEO_EDITS', 'throttle:60,1'])
             ->get('/', [VideoEditController::class, 'index'])->name('index');
         Route::middleware(['permission:CREATE_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/', [VideoEditController::class, 'store'])->name('store');
@@ -43,7 +43,7 @@ Route::middleware(['auth', 'verified'])
         Route::middleware(['permission:VIEW_VIDEO_EDITS', 'throttle:30,1'])
             ->get('/{uuid}/report', VideoEditReportController::class)->whereUuid('uuid')->name('report');
 
-        Route::middleware('permission:VIEW_VIDEO_EDITS')
+        Route::middleware(['permission:VIEW_VIDEO_EDITS', 'throttle:60,1'])
             ->get('/{uuid}', [VideoEditController::class, 'show'])->whereUuid('uuid')->name('show');
         Route::middleware(['permission:DELETE_VIDEO_EDITS', 'throttle:20,1'])
             ->delete('/{uuid}', [VideoEditController::class, 'destroy'])->whereUuid('uuid')->name('destroy');

@@ -114,8 +114,9 @@ it('renders a PDF report', function (): void {
 
 it('rejects an unknown export format', function (): void {
     $this->actingAs(VideoEditTestUsers::editor())
-        ->get('/data/admin/video-edits/export?format=exe')
-        ->assertStatus(422);
+        ->getJson('/data/admin/video-edits/export?format=exe')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('format');
 });
 
 it('rejects a sort field that is not on the allow-list', function (): void {

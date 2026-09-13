@@ -29,9 +29,18 @@ interface AIClientInterface
      * and return its schema-validated response. Access fields via
      * `$response['field']` (StructuredAgentResponse is array-accessible).
      *
+     * `$model` pins the model version (LLM03) and `$timeoutSeconds` overrides
+     * the adapter default for long inputs; `null` keeps the provider default.
+     *
      * @param  class-string  $agentClass
      */
-    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse;
+    public function generateStructured(
+        string $agentClass,
+        string $prompt,
+        ?string $provider = null,
+        ?string $model = null,
+        ?int $timeoutSeconds = null,
+    ): StructuredAgentResponse;
 
     /**
      * Generate a single image and return its raw bytes (never persisted here —

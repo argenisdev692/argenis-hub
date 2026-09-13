@@ -469,6 +469,16 @@
                             "minimum": 1,
                             "maximum": 100
                         }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "Export file format: `csv`, `xlsx` or `pdf`.",
+                        "schema": {
+                            "type": "string",
+                            "default": "csv"
+                        },
+                        "example": "xlsx"
                     }
                 ],
                 "responses": {
@@ -483,26 +493,7 @@
                         }
                     },
                     "422": {
-                        "description": "An error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "description": "Error overview.",
-                                            "examples": [
-                                                ""
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -524,6 +515,16 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "`json` for the report data, `pdf` to download it.",
+                        "schema": {
+                            "type": "string",
+                            "default": "json"
+                        },
+                        "example": "pdf"
                     }
                 ],
                 "responses": {
@@ -543,6 +544,9 @@
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -1012,6 +1016,36 @@
                             },
                             "required": [
                                 "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
                             ]
                         }
                     }

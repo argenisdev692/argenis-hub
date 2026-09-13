@@ -27,7 +27,7 @@ final class FakeAiClient implements AIClientInterface
      */
     public function __construct(private readonly ?array $payload, private readonly bool $shouldThrow = false) {}
 
-    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
+    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
     {
         $this->lastPrompt = $prompt;
 

@@ -64,7 +64,7 @@ function failPostAiCalls(): void
 
     app()->instance(AIClientInterface::class, new class implements AIClientInterface
     {
-        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
+        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
         {
             throw new RuntimeException('provider unavailable');
         }

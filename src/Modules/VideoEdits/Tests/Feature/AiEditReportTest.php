@@ -107,6 +107,13 @@ it('renders the report as a PDF from the same data', function (): void {
         ->assertHeader('content-type', 'application/pdf');
 });
 
+it('rejects an unknown report format instead of silently returning JSON', function (): void {
+    $this->actingAs($this->user)
+        ->getJson("/data/admin/video-edits/{$this->edit->uuid}/report?format=xlsx")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('format');
+});
+
 it('hides another user\'s report behind a 404', function (): void {
     $stranger = VideoEditTestUsers::editor();
 

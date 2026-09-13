@@ -64,6 +64,10 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
                 AnalyzeVideoEditAgent::class,
                 $this->prompt($transcript, $script, $instructions, $targetDurationMinutes),
                 (string) $this->config->get('video-edit.ai.provider', 'gemini'),
+                // Pinned model (LLM03) and a timeout sized for a long recording;
+                // the adapter's 60 s default would cut a 20-minute transcript off.
+                is_string($model = $this->config->get('video-edit.ai.model')) && $model !== '' ? $model : null,
+                (int) $this->config->get('video-edit.ai.timeout_seconds', 300),
             );
         } catch (Throwable $exception) {
             // A provider error can echo the prompt back, and the prompt carries

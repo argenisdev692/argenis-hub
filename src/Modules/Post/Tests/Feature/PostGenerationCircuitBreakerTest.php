@@ -61,7 +61,7 @@ function breakerAfter(int $successfulCalls): object
             private int $successfulCalls,
         ) {}
 
-        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
+        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
         {
             $this->spy->calls++;
 
@@ -174,7 +174,7 @@ it('treats a plain provider error as retryable, unlike an open breaker', functio
     {
         public function __construct(private AIClientInterface $inner, private object $spy) {}
 
-        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
+        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
         {
             $this->spy->calls++;
 

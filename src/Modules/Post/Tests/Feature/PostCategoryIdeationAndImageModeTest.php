@@ -162,7 +162,7 @@ function spyOnPostImageProvider(): object
     {
         public function __construct(private AIClientInterface $inner, private object $spy) {}
 
-        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
+        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
         {
             return $this->inner->generateStructured($agentClass, $prompt, $provider);
         }

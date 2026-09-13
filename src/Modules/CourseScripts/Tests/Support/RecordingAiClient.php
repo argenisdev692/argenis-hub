@@ -34,7 +34,7 @@ final class RecordingAiClient implements AIClientInterface
         return $client;
     }
 
-    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
+    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
     {
         $agent = app($agentClass);
 

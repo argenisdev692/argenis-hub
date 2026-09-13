@@ -20,15 +20,17 @@ use Shared\Infrastructure\AI\PromptCache\PromptCacheScope;
  */
 final class PromptCacheRecordingAiClient implements AIClientInterface
 {
-    /** @var list<array{prompt: string, options: array<string, mixed>}> */
+    /** @var list<array{prompt: string, model: string|null, timeout: int|null, options: array<string, mixed>}> */
     public array $calls = [];
 
-    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
+    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
     {
         $agent = app($agentClass);
 
         $this->calls[] = [
             'prompt' => $prompt,
+            'model' => $model,
+            'timeout' => $timeoutSeconds,
             'options' => $agent instanceof HasProviderOptions ? $agent->providerOptions((string) $provider) : [],
         ];
 
@@ -120,4 +122,14 @@ it('sends the whole prompt as one message when caching is switched off', functio
 
     expect($this->client->calls[0]['options'])->toBe([])
         ->and($this->client->calls[0]['prompt'])->toContain('Hablar de Excel');
+});
+
+it('pins the configured model and timeout on the provider call', function (): void {
+    config()->set('video-edit.ai.model', 'gemini-3.7-flash');
+    config()->set('video-edit.ai.timeout_seconds', 300);
+
+    ($this->analyze)('gemini');
+
+    expect($this->client->calls[0]['model'])->toBe('gemini-3.7-flash')
+        ->and($this->client->calls[0]['timeout'])->toBe(300);
 });

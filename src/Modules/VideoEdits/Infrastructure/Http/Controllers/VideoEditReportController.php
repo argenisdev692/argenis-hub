@@ -8,6 +8,7 @@ use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\Rule;
 use Modules\VideoEdits\Application\Queries\GetVideoEditReportHandler;
 use Shared\Domain\Ports\ExportPort;
 
@@ -28,9 +29,12 @@ final readonly class VideoEditReportController
     #[QueryParameter('format', description: '`json` for the report data, `pdf` to download it.', type: 'string', default: 'json', example: 'pdf')]
     public function __invoke(Request $request, string $uuid): JsonResponse|Response
     {
+        /** @var array{format?: string} $validated */
+        $validated = $request->validate(['format' => ['sometimes', 'string', Rule::in(['json', 'pdf'])]]);
+
         $report = $this->report->handle($uuid, (int) $request->user()->id);
 
-        return match ((string) $request->string('format', 'json')) {
+        return match ($validated['format'] ?? 'json') {
             'pdf' => $this->export->pdf(
                 "video-edit-report-{$uuid}.pdf",
                 'exports.pdf.video-edit-report',

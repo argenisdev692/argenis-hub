@@ -20,16 +20,22 @@ final readonly class LaravelAIAdapter implements AIClientInterface
 
     public function __construct(private CircuitBreakerInterface $breaker) {}
 
-    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null): StructuredAgentResponse
-    {
+    public function generateStructured(
+        string $agentClass,
+        string $prompt,
+        ?string $provider = null,
+        ?string $model = null,
+        ?int $timeoutSeconds = null,
+    ): StructuredAgentResponse {
         return $this->breaker->call(
             'ai:structured:'.($provider ?? 'default'),
-            function () use ($agentClass, $prompt, $provider) {
+            function () use ($agentClass, $prompt, $provider, $model, $timeoutSeconds) {
                 try {
                     $response = app($agentClass)->prompt(
                         $prompt,
                         provider: $provider,
-                        timeout: self::DEFAULT_TIMEOUT_SECONDS,
+                        model: $model,
+                        timeout: $timeoutSeconds ?? self::DEFAULT_TIMEOUT_SECONDS,
                     );
 
                     if (! $response instanceof StructuredAgentResponse) {
@@ -46,7 +52,9 @@ final readonly class LaravelAIAdapter implements AIClientInterface
                     Log::error('ai.structured_generation_failed', [
                         'agent' => $agentClass,
                         'provider' => $provider,
-                        'error' => $e->getMessage(),
+                        // Provider errors can echo the prompt back (user material,
+                        // LLM02), so only a bounded prefix reaches the log.
+                        'error' => mb_substr($e->getMessage(), 0, 500),
                     ]);
 
                     throw $e;
@@ -74,7 +82,9 @@ final readonly class LaravelAIAdapter implements AIClientInterface
                 } catch (FailoverableException|Throwable $e) {
                     Log::error('ai.image_generation_failed', [
                         'provider' => $provider,
-                        'error' => $e->getMessage(),
+                        // Provider errors can echo the prompt back (user material,
+                        // LLM02), so only a bounded prefix reaches the log.
+                        'error' => mb_substr($e->getMessage(), 0, 500),
                     ]);
 
                     throw $e;
