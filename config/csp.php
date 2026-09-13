@@ -1,5 +1,6 @@
 <?php
 
+use Shared\Infrastructure\Http\Csp\DirectUploadStoragePreset;
 use Shared\Infrastructure\Http\Csp\GoogleMapsPreset;
 use Spatie\Csp\Nonce\RandomString;
 use Spatie\Csp\Presets\Basic;
@@ -16,6 +17,7 @@ return [
     'presets' => [
         Basic::class,
         GoogleMapsPreset::class,
+        DirectUploadStoragePreset::class,
     ],
 
     /**

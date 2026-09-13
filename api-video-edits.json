@@ -181,6 +181,39 @@
                 }
             }
         },
+        "/bulk-delete": {
+            "post": {
+                "operationId": "video-edits.admin.bulk-delete",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkDeleteVideoEditsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`BulkDeletedVideoEditsData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BulkDeletedVideoEditsData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/{uuid}/download-url": {
             "get": {
                 "operationId": "video-edits.admin.download-url",
@@ -563,6 +596,42 @@
             }
         },
         "schemas": {
+            "BulkDeleteVideoEditsData": {
+                "type": "object",
+                "description": "The row selection the history table sends to `POST /bulk-delete`.",
+                "properties": {
+                    "uuids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "minItems": 1,
+                        "maxItems": 100,
+                        "uniqueItems": true
+                    }
+                },
+                "required": [
+                    "uuids"
+                ],
+                "title": "BulkDeleteVideoEditsData"
+            },
+            "BulkDeletedVideoEditsData": {
+                "type": "object",
+                "properties": {
+                    "deleted": {
+                        "type": "integer"
+                    },
+                    "skipped": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "deleted",
+                    "skipped"
+                ],
+                "title": "BulkDeletedVideoEditsData"
+            },
             "CreateVideoEditData": {
                 "type": "object",
                 "description": "Create-draft request (E2 \u00b7 US-1/2/3/7). Validates structure only; everything\nthat depends on the real media happens after upload (AD-2, AD-16).",

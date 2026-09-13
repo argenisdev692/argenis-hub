@@ -46,6 +46,8 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property-read Collection<int, CourseScriptVersionEloquentModel> $scriptVersions
  * @property-read CourseScriptVersionEloquentModel|null $acceptedVersion
  * @property-read Collection<int, CourseSourceDocumentEloquentModel> $assignedDocuments
+ * @property-read Collection<int, CourseVideoOutcomeEloquentModel> $outcomes
+ * @property-read Collection<int, CourseGenerationRunEloquentModel> $currentRuns
  *
  * @mixin \Eloquent
  */
@@ -128,6 +130,26 @@ final class CourseVideoEloquentModel extends Model
     public function researchFindings(): HasMany
     {
         return $this->hasMany(CourseResearchFindingEloquentModel::class, 'course_video_id');
+    }
+
+    /**
+     * Per-run outcomes of this video (inverse of `CourseVideoOutcomeEloquentModel::video()`).
+     *
+     * @return HasMany<CourseVideoOutcomeEloquentModel, $this>
+     */
+    public function outcomes(): HasMany
+    {
+        return $this->hasMany(CourseVideoOutcomeEloquentModel::class, 'course_video_id');
+    }
+
+    /**
+     * Runs currently writing this video (inverse of `CourseGenerationRunEloquentModel::currentVideo()`).
+     *
+     * @return HasMany<CourseGenerationRunEloquentModel, $this>
+     */
+    public function currentRuns(): HasMany
+    {
+        return $this->hasMany(CourseGenerationRunEloquentModel::class, 'current_video_id');
     }
 
     /**

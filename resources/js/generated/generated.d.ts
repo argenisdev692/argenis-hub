@@ -1799,6 +1799,13 @@ declare namespace Modules {
                     reasons: string[];
                     origins: string[];
                 };
+                export type BulkDeleteVideoEditsData = {
+                    uuids: string[];
+                };
+                export type BulkDeletedVideoEditsData = {
+                    deleted: number;
+                    skipped: number;
+                };
                 export type CreateVideoEditData = {
                     mode: Modules.VideoEdits.Domain.Enums.VideoEditMode;
                     sources: Modules.VideoEdits.Application.DTOs.SourceUploadData[];

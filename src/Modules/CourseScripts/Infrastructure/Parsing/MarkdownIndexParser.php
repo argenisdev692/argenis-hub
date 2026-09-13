@@ -658,7 +658,7 @@ final readonly class MarkdownIndexParser implements IndexDocumentParserPort
         $kept = [array_shift($lines)];
 
         foreach ($lines as $line) {
-            $previous = rtrim((string) end($kept));
+            $previous = rtrim((string) array_last($kept));
 
             if ($this->startsNewSentence($previous, $line)) {
                 break;

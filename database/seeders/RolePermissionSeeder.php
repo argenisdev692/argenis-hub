@@ -235,13 +235,13 @@ class RolePermissionSeeder extends Seeder
      * hard-delete an edit.
      *
      * No UPDATE — an edit is never modified in place (re-edit creates a new one).
-     * No RESTORE / BULK_* — deletion is permanent by decision and the UI has no
-     * row selection. No EXPORT — there is no spreadsheet of edits. Replaces the
-     * unused VIDEO_EXPORTS set.
+     * No RESTORE / BULK_RESTORE — deletion is permanent by decision. BULK_DELETE
+     * backs the history table's row selection. EXPORT streams the filtered
+     * history as CSV / XLSX / PDF. Replaces the unused VIDEO_EXPORTS set.
      *
      * @var list<string>
      */
-    private const array VIDEO_EDIT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'DOWNLOAD', 'RETRY', 'DELETE', 'EXPORT'];
+    private const array VIDEO_EDIT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'DOWNLOAD', 'RETRY', 'DELETE', 'BULK_DELETE', 'EXPORT'];
 
     /**
      * Course Scripts pipeline (spec 002-course-scripts). A separate set from

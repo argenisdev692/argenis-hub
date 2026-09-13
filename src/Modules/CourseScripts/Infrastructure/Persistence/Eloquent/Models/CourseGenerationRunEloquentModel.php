@@ -60,6 +60,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read CourseBlockEloquentModel|null $scopedBlock
  * @property-read CourseVideoEloquentModel|null $currentVideo
  * @property-read Collection<int, CourseVideoOutcomeEloquentModel> $outcomes
+ * @property-read Collection<int, CourseScriptVersionEloquentModel> $scriptVersions
  *
  * @mixin \Eloquent
  */
@@ -150,6 +151,16 @@ final class CourseGenerationRunEloquentModel extends Model
     public function outcomes(): HasMany
     {
         return $this->hasMany(CourseVideoOutcomeEloquentModel::class, 'course_generation_run_id');
+    }
+
+    /**
+     * Script versions this run wrote (inverse of `CourseScriptVersionEloquentModel::run()`).
+     *
+     * @return HasMany<CourseScriptVersionEloquentModel, $this>
+     */
+    public function scriptVersions(): HasMany
+    {
+        return $this->hasMany(CourseScriptVersionEloquentModel::class, 'course_generation_run_id');
     }
 
     public function aiCallsConsumed(): int

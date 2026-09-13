@@ -7,10 +7,12 @@ namespace Modules\VideoEdits\Infrastructure\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\VideoEdits\Application\Commands\BulkDeleteVideoEditsHandler;
 use Modules\VideoEdits\Application\Commands\CreateVideoEditHandler;
 use Modules\VideoEdits\Application\Commands\DeleteVideoEditHandler;
 use Modules\VideoEdits\Application\Commands\RetryVideoEditHandler;
 use Modules\VideoEdits\Application\Commands\SubmitVideoEditHandler;
+use Modules\VideoEdits\Application\DTOs\BulkDeleteVideoEditsData;
 use Modules\VideoEdits\Application\DTOs\CreateVideoEditData;
 use Modules\VideoEdits\Application\DTOs\RetryVideoEditData;
 use Modules\VideoEdits\Application\DTOs\VideoEditDetailData;
@@ -35,6 +37,7 @@ final readonly class VideoEditController
         private SubmitVideoEditHandler $submitVideoEdit,
         private RetryVideoEditHandler $retryVideoEdit,
         private DeleteVideoEditHandler $deleteVideoEdit,
+        private BulkDeleteVideoEditsHandler $bulkDeleteVideoEdits,
     ) {}
 
     public function index(Request $request, VideoEditFilterData $filters): JsonResponse
@@ -80,6 +83,11 @@ final readonly class VideoEditController
         $this->deleteVideoEdit->handle($uuid, $this->user($request));
 
         return response()->json(status: 204);
+    }
+
+    public function bulkDelete(Request $request, BulkDeleteVideoEditsData $data): JsonResponse
+    {
+        return response()->json($this->bulkDeleteVideoEdits->handle($data->uuids, $this->user($request)));
     }
 
     private function user(Request $request): User

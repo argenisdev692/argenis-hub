@@ -6,8 +6,10 @@ import {
     CalendarCog,
     CalendarDays,
     ChartLine,
+    Clapperboard,
     DatabaseBackup,
     FileText,
+    Film,
     GalleryVerticalEnd,
     Handshake,
     KeyRound,
@@ -33,6 +35,7 @@ import { index as blogCategoriesIndex } from '@/routes/blog-categories';
 import { index as campaignsIndex } from '@/routes/campaigns';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
+import { index as courseScriptsIndex } from '@/routes/course-scripts';
 import { index as cvsIndex } from '@/routes/cvs';
 import { index as invoicesIndex } from '@/routes/invoices';
 import { index as permissionsIndex } from '@/routes/permissions';
@@ -43,6 +46,7 @@ import { index as rolesIndex } from '@/routes/roles';
 import { edit as editSecurity } from '@/routes/security';
 import { index as servicesIndex } from '@/routes/services';
 import { index as socialMediaIndex } from '@/routes/social-media';
+import { index as videoEditsIndex } from '@/routes/video-edits';
 import type { NavItem } from '@/types';
 
 export type NavGroup = {
@@ -200,6 +204,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     permission: 'VIEW_ANY_POSTS',
                 },
                 {
+                    title: 'Course scripts',
+                    href: courseScriptsIndex(),
+                    icon: Clapperboard,
+                    permission: 'VIEW_ANY_COURSE_SCRIPTS',
+                },
+                {
                     title: 'Social media',
                     href: socialMediaIndex(),
                     icon: Share2,
@@ -210,6 +220,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: campaignsIndex(),
                     icon: Megaphone,
                     permission: 'VIEW_ANY_CAMPAIGNS',
+                },
+                {
+                    title: 'Video edits',
+                    href: videoEditsIndex(),
+                    icon: Film,
+                    permission: 'VIEW_ANY_VIDEO_EDITS',
                 },
             ],
         },

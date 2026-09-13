@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Modules\CourseScripts\Infrastructure\Rendering;
+namespace Modules\CourseScripts\Domain\Services;
 
 /**
  * Deliverable headings in the course language, reusing the author's own

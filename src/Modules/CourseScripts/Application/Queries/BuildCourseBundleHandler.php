@@ -12,11 +12,11 @@ use Modules\CourseScripts\Domain\Ports\CourseBundlePort;
 use Modules\CourseScripts\Domain\Ports\CourseRepositoryPort;
 use Modules\CourseScripts\Domain\Ports\ScriptVersionRepositoryPort;
 use Modules\CourseScripts\Domain\Services\DocumentNameFactory;
+use Modules\CourseScripts\Domain\Services\RenderVocabulary;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseDeliverableEloquentModel;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseEloquentModel;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseScriptVersionEloquentModel;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseVideoEloquentModel;
-use Modules\CourseScripts\Infrastructure\Rendering\RenderVocabulary;
 
 /**
  * The course ZIP (FR-48, D17) — or one video's (FR-48a):

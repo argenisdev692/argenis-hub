@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CourseScripts\Infrastructure\Rendering;
 
 use Modules\CourseScripts\Domain\Ports\DeliverableRendererPort;
+use Modules\CourseScripts\Domain\Services\RenderVocabulary;
 use Modules\CourseScripts\Domain\ValueObjects\PracticeDocument;
 use Modules\CourseScripts\Domain\ValueObjects\ScriptDocument;
 use Shared\Domain\Ports\ExportPort;

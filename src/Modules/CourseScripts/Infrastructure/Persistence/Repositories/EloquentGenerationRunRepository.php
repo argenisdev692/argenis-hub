@@ -88,10 +88,10 @@ final readonly class EloquentGenerationRunRepository implements GenerationRunRep
 
     public function addUsage(int $runId, CallUsage $usage): CourseGenerationRunEloquentModel
     {
-        CourseGenerationRunEloquentModel::query()->whereKey($runId)->update([
-            'ai_write_calls_consumed' => DB::raw('ai_write_calls_consumed + '.(int) $usage->aiWrite),
-            'ai_review_calls_consumed' => DB::raw('ai_review_calls_consumed + '.(int) $usage->aiReview),
-            'research_calls_consumed' => DB::raw('research_calls_consumed + '.(int) $usage->research),
+        CourseGenerationRunEloquentModel::query()->whereKey($runId)->incrementEach([
+            'ai_write_calls_consumed' => $usage->aiWrite,
+            'ai_review_calls_consumed' => $usage->aiReview,
+            'research_calls_consumed' => $usage->research,
         ]);
 
         return CourseGenerationRunEloquentModel::query()->findOrFail($runId);
@@ -103,12 +103,11 @@ final readonly class EloquentGenerationRunRepository implements GenerationRunRep
             CourseVideoOutcomeEloquentModel::query()
                 ->where('course_generation_run_id', $runId)
                 ->where('course_video_id', $videoId)
-                ->update([
+                ->increment('attempts', 1, [
                     'status' => VideoOutcomeStatus::Running->value,
                     'started_at' => now(),
                     'finished_at' => null,
                     'failure_reason' => null,
-                    'attempts' => DB::raw('attempts + 1'),
                 ]);
 
             CourseGenerationRunEloquentModel::query()->whereKey($runId)->update(['current_video_id' => $videoId]);
@@ -120,10 +119,7 @@ final readonly class EloquentGenerationRunRepository implements GenerationRunRep
         DB::transaction(function () use ($runId, $videoId, $usage, $reviewIterations): void {
             $this->closeOutcome($runId, $videoId, VideoOutcomeStatus::Completed, null, $usage, $reviewIterations);
 
-            CourseGenerationRunEloquentModel::query()->whereKey($runId)->update([
-                'videos_completed' => DB::raw('videos_completed + 1'),
-                'current_video_id' => null,
-            ]);
+            CourseGenerationRunEloquentModel::query()->whereKey($runId)->increment('videos_completed', 1, ['current_video_id' => null]);
         });
     }
 
@@ -132,10 +128,7 @@ final readonly class EloquentGenerationRunRepository implements GenerationRunRep
         DB::transaction(function () use ($runId, $videoId, $reasonCode, $usage): void {
             $this->closeOutcome($runId, $videoId, VideoOutcomeStatus::Failed, $reasonCode, $usage, 0);
 
-            CourseGenerationRunEloquentModel::query()->whereKey($runId)->update([
-                'videos_failed' => DB::raw('videos_failed + 1'),
-                'current_video_id' => null,
-            ]);
+            CourseGenerationRunEloquentModel::query()->whereKey($runId)->increment('videos_failed', 1, ['current_video_id' => null]);
         });
     }
 
@@ -187,13 +180,14 @@ final readonly class EloquentGenerationRunRepository implements GenerationRunRep
         CourseVideoOutcomeEloquentModel::query()
             ->where('course_generation_run_id', $runId)
             ->where('course_video_id', $videoId)
-            ->update([
+            ->incrementEach([
+                'ai_write_calls' => $usage->aiWrite,
+                'ai_review_calls' => $usage->aiReview,
+                'research_calls' => $usage->research,
+            ], [
                 'status' => $status->value,
                 'failure_reason' => $reason === null ? null : mb_substr($reason, 0, 500),
                 'review_iterations' => $reviewIterations,
-                'ai_write_calls' => DB::raw('ai_write_calls + '.(int) $usage->aiWrite),
-                'ai_review_calls' => DB::raw('ai_review_calls + '.(int) $usage->aiReview),
-                'research_calls' => DB::raw('research_calls + '.(int) $usage->research),
                 'finished_at' => now(),
             ]);
     }

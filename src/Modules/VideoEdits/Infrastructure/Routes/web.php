@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditController;
 use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditExportController;
+use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditPageController;
 use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditReportController;
 
 /*
@@ -12,11 +13,21 @@ use Modules\VideoEdits\Infrastructure\Http\Controllers\VideoEditReportController
 | Video Edits module — web routes (session + JSON data endpoints)
 |--------------------------------------------------------------------------
 |
-| JSON surface under `/data/admin/video-edits` (spec 001-video-edit, plan §5).
-| Every static segment is declared before `/{uuid}`. The Inertia page ships
-| with the frontend spec.
+| The history page lives at `/video-edits` (detail at `/video-edits/{uuid}`);
+| both fetch their data from the JSON surface under `/data/admin/video-edits`
+| (spec 001-video-edit, plan §5). Every static segment is declared before
+| `/{uuid}`.
 |
 */
+
+Route::middleware(['auth', 'verified', 'permission:VIEW_ANY_VIDEO_EDITS'])
+    ->get('/video-edits', [VideoEditPageController::class, 'index'])
+    ->name('video-edits.index');
+
+Route::middleware(['auth', 'verified', 'permission:VIEW_VIDEO_EDITS'])
+    ->get('/video-edits/{uuid}', [VideoEditPageController::class, 'show'])
+    ->whereUuid('uuid')
+    ->name('video-edits.show');
 
 Route::middleware(['auth', 'verified'])
     ->prefix('data/admin/video-edits')
@@ -26,6 +37,9 @@ Route::middleware(['auth', 'verified'])
             ->get('/', [VideoEditController::class, 'index'])->name('index');
         Route::middleware(['permission:CREATE_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/', [VideoEditController::class, 'store'])->name('store');
+
+        Route::middleware(['permission:BULK_DELETE_VIDEO_EDITS', 'throttle:10,1'])
+            ->post('/bulk-delete', [VideoEditController::class, 'bulkDelete'])->name('bulk-delete');
 
         // Declared before `/{uuid}` so `export` is never read as an identifier.
         Route::middleware(['permission:EXPORT_VIDEO_EDITS', 'throttle:10,1'])

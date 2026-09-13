@@ -26,6 +26,7 @@ dataset('video edit endpoints', function (): array {
         'submit (CREATE)' => ['post', "/data/admin/video-edits/{$uuid}/submit"],
         'retry (RETRY)' => ['post', "/data/admin/video-edits/{$uuid}/retry"],
         'delete (DELETE)' => ['delete', "/data/admin/video-edits/{$uuid}"],
+        'bulk delete (BULK_DELETE)' => ['post', '/data/admin/video-edits/bulk-delete'],
     ];
 });
 
@@ -51,7 +52,7 @@ it('rate-limits every endpoint that changes data (OWASP §14)', function (): voi
         ->filter(fn ($route): bool => str_starts_with($route->uri(), 'data/admin/video-edits')
             && array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE']) !== []);
 
-    expect($mutating)->toHaveCount(4);
+    expect($mutating)->toHaveCount(5);
 
     $mutating->each(function ($route): void {
         expect(collect($route->gatherMiddleware())->contains(fn ($middleware): bool => is_string($middleware) && str_starts_with($middleware, 'throttle:')))
@@ -63,6 +64,7 @@ it('seeds the video edit permissions and not the obsolete export ones', function
     $names = DB::table('permissions')->where('name', 'like', '%VIDEO%')->orderBy('name')->pluck('name')->all();
 
     expect($names)->toBe([
+        'BULK_DELETE_VIDEO_EDITS',
         'CREATE_VIDEO_EDITS',
         'DELETE_VIDEO_EDITS',
         'DOWNLOAD_VIDEO_EDITS',

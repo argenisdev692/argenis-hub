@@ -27,6 +27,7 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property Carbon|null $updated_at
  * @property-read CourseEloquentModel $course
  * @property-read Collection<int, CourseVideoEloquentModel> $videos
+ * @property-read Collection<int, CourseGenerationRunEloquentModel> $scopedRuns
  *
  * @mixin \Eloquent
  */
@@ -53,6 +54,16 @@ final class CourseBlockEloquentModel extends Model
     public function videos(): HasMany
     {
         return $this->hasMany(CourseVideoEloquentModel::class, 'course_block_id');
+    }
+
+    /**
+     * Runs scoped to this block (inverse of `CourseGenerationRunEloquentModel::scopedBlock()`).
+     *
+     * @return HasMany<CourseGenerationRunEloquentModel, $this>
+     */
+    public function scopedRuns(): HasMany
+    {
+        return $this->hasMany(CourseGenerationRunEloquentModel::class, 'scoped_block_id');
     }
 
     /**

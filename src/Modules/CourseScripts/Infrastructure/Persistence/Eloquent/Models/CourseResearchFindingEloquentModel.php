@@ -6,8 +6,10 @@ namespace Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 
@@ -33,6 +35,7 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property Carbon|null $updated_at
  * @property-read CourseEloquentModel $course
  * @property-read CourseVideoEloquentModel|null $video
+ * @property-read Collection<int, CourseScriptVersionEloquentModel> $scriptVersions
  *
  * @mixin \Eloquent
  */
@@ -59,6 +62,21 @@ final class CourseResearchFindingEloquentModel extends Model
     public function video(): BelongsTo
     {
         return $this->belongsTo(CourseVideoEloquentModel::class, 'course_video_id');
+    }
+
+    /**
+     * Script versions that cite this finding (inverse of `CourseScriptVersionEloquentModel::sources()`).
+     *
+     * @return BelongsToMany<CourseScriptVersionEloquentModel, $this>
+     */
+    public function scriptVersions(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            CourseScriptVersionEloquentModel::class,
+            'course_script_sources',
+            'course_research_finding_id',
+            'course_script_version_id',
+        );
     }
 
     /**
