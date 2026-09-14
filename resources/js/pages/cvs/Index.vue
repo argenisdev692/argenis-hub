@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import {
     EyeIcon,
     PencilIcon,
@@ -23,6 +23,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -33,17 +34,18 @@ import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
 import CvFormDialog from '@/modules/cvs/components/CvFormDialog.vue';
 import CvNicheBadge from '@/modules/cvs/components/CvNicheBadge.vue';
 import CvStatusBadge from '@/modules/cvs/components/CvStatusBadge.vue';
+import CvSummaryList from '@/modules/cvs/components/CvSummaryList.vue';
 import { useCvMutations } from '@/modules/cvs/composables/useCvMutations';
 import { defaultCvFilters, useCvs } from '@/modules/cvs/composables/useCvs';
 import { buildCvQueryParams } from '@/modules/cvs/helpers/buildCvQueryParams';
 import {
-    CV_NICHES,
+    CV_NICHE_OPTIONS,
     cvFileTypePresentation,
     cvLabel,
-    cvNichePresentation,
     formatDate,
+    isCvNiche,
 } from '@/modules/cvs/helpers/cvPresentation';
-import type { Cv, CvNicheFilter, CvStatusFilter } from '@/modules/cvs/types';
+import type { Cv, CvStatusFilter } from '@/modules/cvs/types';
 import { exportMethod, index, show } from '@/routes/cvs';
 
 defineOptions({
@@ -57,6 +59,8 @@ const { cvs, meta: queryMeta, filters, isLoading } = useCvs();
 const { deleteCv, restoreCv, bulkDeleteCvs, bulkRestoreCvs } = useCvMutations();
 
 const { can } = usePermissions();
+
+const selection = ref<Cv[]>([]);
 
 // Restore search / status / niche / date range / page from the URL on load, and
 // mirror every later change back with `history.replaceState`. `per_page` is
@@ -106,49 +110,40 @@ const exportParams = computed(() => buildCvQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
-/**
- * Two options, not the usual three.
- *
- * `EloquentCvRepository::paginate()` only branches on `suspended`
- * (→ `onlyTrashed()`); every other value leaves the `SoftDeletes` global scope
- * in place, and `CvFilterData::rules()` accepts nothing else. An "All" option
- * would therefore return exactly what "Active" returns, and a filter that
- * quietly does nothing is worse than one that is not offered.
- */
 const statusOptions: FilterSelectOption[] = [
     { value: 'active', label: 'Active' },
     { value: 'suspended', label: 'Suspended' },
+    { value: 'all', label: 'All' },
 ];
 
-/** The niche facet. Clearing it drops the param entirely — "any niche". */
-const nicheOptions = computed<FilterSelectOption[]>(() =>
-    CV_NICHES.map((niche) => ({
-        value: niche,
-        label: cvNichePresentation(niche).label,
-    })),
-);
+type FilterSelectModel =
+    FilterSelectOption['value'] | FilterSelectOption['value'][] | null;
 
-function onStatusChange(
-    value: FilterSelectOption['value'] | FilterSelectOption['value'][] | null,
-): void {
-    filters.value.status = (
-        typeof value === 'string' ? value : 'active'
-    ) as CvStatusFilter;
+function isCvStatusFilter(value: unknown): value is CvStatusFilter {
+    return statusOptions.some((option) => option.value === value);
+}
+
+/**
+ * Every facet change resets the page and clears the selection: a stale uuid
+ * left in it would arm a bulk action against a row that is no longer on screen.
+ */
+function applyFacet(apply: () => void): void {
+    apply();
     filters.value.page = 1;
-    // The two views never share a row, so a selection made in one is
-    // meaningless in the other — and a stale uuid in it would arm a bulk action
-    // against a row that is no longer on screen.
     selection.value = [];
 }
 
-function onNicheChange(
-    value: FilterSelectOption['value'] | FilterSelectOption['value'][] | null,
-): void {
-    filters.value.niche = (
-        typeof value === 'string' ? value : ''
-    ) as CvNicheFilter;
-    filters.value.page = 1;
-    selection.value = [];
+function onStatusChange(value: FilterSelectModel): void {
+    applyFacet(() => {
+        filters.value.status = isCvStatusFilter(value) ? value : 'active';
+    });
+}
+
+/** Clearing the niche drops the param entirely — "any niche". */
+function onNicheChange(value: FilterSelectModel): void {
+    applyFacet(() => {
+        filters.value.niche = isCvNiche(value) ? value : '';
+    });
 }
 
 const columns: DataTableColumn<Cv>[] = [
@@ -185,8 +180,6 @@ const page = computed<number>({
         filters.value.page = value;
     },
 });
-
-const selection = ref<Cv[]>([]);
 
 const selectedActive = computed(() =>
     selection.value.filter((cv) => cv.deleted_at === null),
@@ -241,8 +234,27 @@ async function confirmDelete(): Promise<void> {
     pendingDelete.value = null;
 }
 
-async function onRestoreRow(cv: Cv): Promise<void> {
-    await restoreCv.mutateAsync(cv.uuid).catch(() => undefined);
+const confirmRestoreOpen = ref(false);
+const pendingRestore = ref<Cv | null>(null);
+
+function requestRestore(cv: Cv): void {
+    pendingRestore.value = cv;
+    confirmRestoreOpen.value = true;
+}
+
+async function confirmRestore(): Promise<void> {
+    if (!pendingRestore.value) {
+        return;
+    }
+
+    try {
+        await restoreCv.mutateAsync(pendingRestore.value.uuid);
+    } catch {
+        return;
+    }
+
+    confirmRestoreOpen.value = false;
+    pendingRestore.value = null;
 }
 
 const confirmBulkDeleteOpen = ref(false);
@@ -308,7 +320,7 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <FilterSelect
                     class="w-40"
-                    :options="nicheOptions"
+                    :options="CV_NICHE_OPTIONS"
                     placeholder="Any niche"
                     :model-value="filters.niche || null"
                     @update:model-value="onNicheChange"
@@ -412,54 +424,43 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_CVS">
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View CV"
-                        >
-                            <Link :href="show(row.uuid)">
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${cvLabel(row)}`"
+                            tooltip="View"
+                            :href="show.url(row.uuid)"
+                            prefetch
+                        />
                     </PermissionGuard>
 
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_CVS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit CV"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${cvLabel(row)}`"
+                                tooltip="Edit"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_CVS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Suspend CV"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Suspend ${cvLabel(row)}`"
+                                tooltip="Suspend"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
                     <PermissionGuard v-else permission="RESTORE_CVS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore CV"
-                            @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${cvLabel(row)}`"
+                            tooltip="Restore"
+                            @click="requestRestore(row)"
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>
@@ -484,15 +485,17 @@ async function confirmBulkRestore(): Promise<void> {
         confirm-label="Suspend"
         @confirm="confirmDelete"
     >
-        <div
-            v-if="pendingDelete"
-            class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
-        >
-            <p class="font-medium">{{ cvLabel(pendingDelete) }}</p>
-            <p class="text-muted-foreground">
-                {{ pendingDelete.original_filename }}
-            </p>
-        </div>
+        <CvSummaryList v-if="pendingDelete" :cvs="[pendingDelete]" />
+    </ConfirmModal>
+
+    <ConfirmModal
+        v-model:open="confirmRestoreOpen"
+        title="Restore this CV?"
+        description="It returns to the active list."
+        confirm-label="Restore"
+        @confirm="confirmRestore"
+    >
+        <CvSummaryList v-if="pendingRestore" :cvs="[pendingRestore]" />
     </ConfirmModal>
 
     <ConfirmModal
@@ -503,20 +506,7 @@ async function confirmBulkRestore(): Promise<void> {
         confirm-label="Suspend"
         @confirm="confirmBulkDelete"
     >
-        <ul
-            class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
-        >
-            <li
-                v-for="cv in selectedActive"
-                :key="cv.uuid"
-                class="flex items-baseline justify-between gap-3"
-            >
-                <span class="truncate font-medium">{{ cvLabel(cv) }}</span>
-                <span class="shrink-0 text-muted-foreground">
-                    {{ formatDate(cv.created_at) }}
-                </span>
-            </li>
-        </ul>
+        <CvSummaryList :cvs="selectedActive" />
     </ConfirmModal>
 
     <ConfirmModal
@@ -526,19 +516,6 @@ async function confirmBulkRestore(): Promise<void> {
         confirm-label="Restore"
         @confirm="confirmBulkRestore"
     >
-        <ul
-            class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
-        >
-            <li
-                v-for="cv in selectedDeleted"
-                :key="cv.uuid"
-                class="flex items-baseline justify-between gap-3"
-            >
-                <span class="truncate font-medium">{{ cvLabel(cv) }}</span>
-                <span class="shrink-0 text-muted-foreground">
-                    {{ formatDate(cv.created_at) }}
-                </span>
-            </li>
-        </ul>
+        <CvSummaryList :cvs="selectedDeleted" />
     </ConfirmModal>
 </template>

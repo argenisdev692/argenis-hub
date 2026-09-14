@@ -6,6 +6,7 @@ import {
     TagIcon,
 } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
+import type { FilterSelectOption } from '@/common/form';
 import type { BadgeVariants } from '@/components/ui/badge';
 import type { Cv, CvFileType, CvNiche } from '../types';
 
@@ -62,8 +63,18 @@ export function cvNichePresentation(niche: CvNiche): Presentation {
     return NICHES[niche];
 }
 
-/** The niche facet as the filter select offers it, "Any niche" excluded. */
+/** Every niche, in display order. */
 export const CV_NICHES: readonly CvNiche[] = ['fullstack', 'other'];
+
+/** The niche select options shared by the list filter and the form dialog. */
+export const CV_NICHE_OPTIONS: FilterSelectOption[] = CV_NICHES.map(
+    (niche) => ({ value: niche, label: NICHES[niche].label }),
+);
+
+/** Narrows a select's `unknown` model value back to a niche. */
+export function isCvNiche(value: unknown): value is CvNiche {
+    return CV_NICHES.some((niche) => niche === value);
+}
 
 const FILE_TYPES: Record<CvFileType, { label: string; icon: LucideIcon }> = {
     pdf: { label: 'PDF', icon: FileTextIcon },
@@ -77,7 +88,7 @@ export function cvFileTypePresentation(fileType: CvFileType): {
     return FILE_TYPES[fileType];
 }
 
-/** ISO8601 → "3 Jun 2026", or `null` when there is no timestamp. */
+/** ISO8601 → "Jun 3, 2026", or `null` when there is no timestamp. */
 export function formatDate(iso: string | null): string | null {
     if (!iso) {
         return null;
@@ -90,7 +101,7 @@ export function formatDate(iso: string | null): string | null {
     }).format(new Date(iso));
 }
 
-/** ISO8601 → "3 Jun 2026, 14:05", or `null` when there is no timestamp. */
+/** ISO8601 → "Jun 3, 2026, 02:05 PM", or `null` when there is no timestamp. */
 export function formatDateTime(iso: string | null): string | null {
     if (!iso) {
         return null;

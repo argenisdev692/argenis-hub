@@ -43,13 +43,13 @@ export type CvFormOptions = {
  * The list, however, is Pinia Colada server state and does not re-render on an
  * Inertia visit, so the cache is invalidated by hand once the write lands.
  *
- * ## Why the edit mode POSTs
+ * ## Why the edit mode POSTs with `_method: 'put'`
  *
- * PHP does not populate `$_FILES` for a `PUT` body. The module registers an
- * explicit `POST /cvs/{uuid}` alias (`cvs.update.post`) behind the same
- * `permission:UPDATE_CVS` middleware for exactly this, so the upload rides a
- * real POST — no `_method` spoof needed, and no second interpretation of the
- * request for Laravel to get right.
+ * PHP does not populate `$_FILES` for a multipart `PUT`, and Inertia leaves
+ * method spoofing to the caller. The update goes out as a POST carrying
+ * `_method: 'put'`, which Laravel resolves to the single `PUT /cvs/{uuid}`
+ * route — the same pattern `usePostForm` uses. (A separate `POST /{uuid}` alias
+ * made Wayfinder emit a duplicate key for `CvController::update`.)
  */
 export function useCvForm({ open, cv }: CvFormOptions) {
     const queryCache = useQueryCache();
@@ -69,7 +69,7 @@ export function useCvForm({ open, cv }: CvFormOptions) {
                     ? { url: update.url(current.uuid), method: 'post' }
                     : store();
             },
-            transform: toCvWritePayload,
+            transform: (values) => toCvWritePayload(values, cv() !== null),
             // A `File` cannot ride a JSON body; Inertia needs the multipart path.
             forceFormData: true,
             // Silenced here so the toast can name what actually happened; the

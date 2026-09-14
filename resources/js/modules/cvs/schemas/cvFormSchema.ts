@@ -136,12 +136,18 @@ export function toCvFormValues(cv: Cv): CvFormValues {
  * `file` is omitted rather than sent empty, which is what decides the behaviour
  * on the server: `UpdateCvHandler` only uploads a new object, re-extracts
  * `raw_text` and deletes the previous R2 key when a file actually arrives.
+ *
+ * `isUpdate` adds the `_method: 'put'` spoof the multipart update needs.
  */
-export function toCvWritePayload(values: CvFormValues): CvWritePayload {
+export function toCvWritePayload(
+    values: CvFormValues,
+    isUpdate = false,
+): CvWritePayload {
     const payload: CvWritePayload = {
         title: values.title.trim(),
         niche: values.niche,
         is_primary: values.is_primary,
+        ...(isUpdate ? { _method: 'put' as const } : {}),
     };
 
     const [file] = values.file;

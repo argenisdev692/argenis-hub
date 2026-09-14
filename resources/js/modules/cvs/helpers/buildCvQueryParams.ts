@@ -17,9 +17,8 @@ export type CvQueryParams = Record<string, string | number | undefined>;
  * the query key — and the URL, via `useUrlSyncedFilters` — free of noise that
  * means nothing.
  *
- * `status` is always sent. Unlike the other modules there is no "all" option to
- * translate away here, because the backend cannot serve one (see
- * `CvStatusFilter`).
+ * `status` is always sent, `all` included: omitting it means `active` on the
+ * server, so `all` must travel explicitly to reach `withTrashed()`.
  */
 export function buildCvQueryParams(filters: CvFilters): CvQueryParams {
     return {

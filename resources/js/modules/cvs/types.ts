@@ -54,17 +54,12 @@ export type CvPage = {
 };
 
 /**
- * The two states the list can be viewed in.
+ * The soft-delete views `CvFilterData::rules()` accepts (`in:all,active,suspended`).
  *
- * There is deliberately no "all": `EloquentCvRepository::paginate()` only
- * branches on `'suspended'` (→ `onlyTrashed()`) and otherwise leaves the
- * `SoftDeletes` global scope in place, so active and trashed rows can never
- * share a page. `CvFilterData::rules()` backs this up with
- * `in:active,suspended`. Offering an "All" option would show exactly the
- * active-only result "Active" already shows — a filter that quietly does
- * nothing is worse than one that is not offered.
+ * `scopeApplyFilters` maps `suspended` → `onlyTrashed()` and `all` →
+ * `withTrashed()`; `active` keeps the `SoftDeletes` global scope.
  */
-export type CvStatusFilter = 'active' | 'suspended';
+export type CvStatusFilter = 'all' | 'active' | 'suspended';
 
 /** The niche facet, where the empty string means "no niche filter". */
 export type CvNicheFilter = '' | CvNiche;
@@ -95,8 +90,9 @@ export type CvFilters = {
 };
 
 /**
- * The exact multipart body `POST /cvs` and `POST /cvs/{uuid}` accept, as
- * `UploadCvData` validates it.
+ * The exact multipart body `POST /cvs` and `PUT /cvs/{uuid}` accept, as
+ * `UploadCvData` validates it. An update rides a POST carrying `_method: 'put'`
+ * because PHP does not populate `$_FILES` for a real PUT.
  *
  * `file` is omitted rather than sent empty when the operator is only renaming a
  * CV: `UpdateCvHandler` replaces the stored R2 object *only* when a file
@@ -108,4 +104,5 @@ export type CvWritePayload = {
     niche: CvNiche;
     is_primary: boolean;
     file?: File;
+    _method?: 'put';
 };

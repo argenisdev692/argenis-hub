@@ -1206,13 +1206,14 @@
                     {
                         "name": "status",
                         "in": "query",
-                        "description": "Lifecycle. `active` (and omitting this) returns live CVs;\n`suspended` returns only the soft-deleted ones.",
+                        "description": "Lifecycle. `active` (and omitting this) returns live CVs;\n`suspended` returns only the soft-deleted ones; `all` returns both.",
                         "schema": {
                             "type": [
                                 "string",
                                 "null"
                             ],
                             "enum": [
+                                "all",
                                 "active",
                                 "suspended",
                                 null

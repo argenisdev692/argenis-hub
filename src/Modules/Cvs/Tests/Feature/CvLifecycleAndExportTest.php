@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Modules\Cvs\Domain\Ports\CvRepositoryPort;
@@ -53,6 +54,27 @@ it('exports only suspended cvs when status is suspended', function (): void {
 
     expect($csv)->toContain('Archived CV')->toContain('Suspended')
         ->and($csv)->not->toContain('Live CV');
+});
+
+it('lists active and suspended cvs together when status is all', function (): void {
+    CvEloquentModel::factory()->create(['user_id' => $this->owner->id, 'title' => 'Live CV']);
+    CvEloquentModel::factory()->create(['user_id' => $this->owner->id, 'title' => 'Archived CV'])->delete();
+
+    $this->actingAs($this->owner)
+        ->getJson('/cvs?status=all')
+        ->assertOk()
+        ->assertJsonPath('total', 2);
+
+    $this->actingAs($this->owner)
+        ->getJson('/cvs?status=active')
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonPath('data.0.title', 'Live CV');
+});
+
+it('no longer registers a post alias for the update route', function (): void {
+    expect(Route::has('cvs.update.post'))->toBeFalse()
+        ->and(Route::has('cvs.update'))->toBeTrue();
 });
 
 it('rejects an inverted date range', function (): void {

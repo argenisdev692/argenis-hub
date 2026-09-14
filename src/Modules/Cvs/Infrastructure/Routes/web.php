@@ -10,7 +10,9 @@ use Modules\Cvs\Infrastructure\Http\Controllers\CvExportController;
 | Cvs module — web (session + Inertia).
 |
 | Static segments BEFORE `{uuid}` so bulk/export are never captured as UUIDs.
-| Update uses POST + _method spoof for multipart file uploads (Inertia limitation).
+| Update is a single PUT route. Multipart uploads reach it as POST + `_method=PUT`
+| (PHP does not populate `$_FILES` for a real PUT). A second `POST /{uuid}` alias
+| pointing at the same action makes Wayfinder emit a duplicate object key.
 */
 Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cvs')->name('cvs.')->group(function (): void {
     Route::get('/', [CvController::class, 'index'])
@@ -33,9 +35,6 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cvs')->name('cvs.')
 
     Route::put('/{uuid}', [CvController::class, 'update'])
         ->middleware('permission:UPDATE_CVS')->whereUuid('uuid')->name('update');
-
-    Route::post('/{uuid}', [CvController::class, 'update'])
-        ->middleware('permission:UPDATE_CVS')->whereUuid('uuid')->name('update.post');
 
     Route::delete('/{uuid}', [CvController::class, 'destroy'])
         ->middleware('permission:DELETE_CVS')->whereUuid('uuid')->name('destroy');

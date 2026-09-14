@@ -98,6 +98,7 @@ final class CvEloquentModel extends Model
     {
         return $query
             ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
+            ->when($filters->status === 'all', fn ($q) => $q->withTrashed())
             ->when($filters->search !== null, fn ($q) => $q->where(function ($w) use ($filters): void {
                 $term = "%{$filters->search}%";
                 $w->where('title', 'like', $term)

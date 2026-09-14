@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { FilterSelectOption } from '@/common/form';
 import {
     AppField,
     FileDropzone,
@@ -11,12 +10,12 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useCvForm } from '../composables/useCvForm';
 import {
-    CV_NICHES,
+    CV_NICHE_OPTIONS,
     cvFileTypePresentation,
-    cvNichePresentation,
+    isCvNiche,
 } from '../helpers/cvPresentation';
 import { ACCEPTED_CV_TYPES, MAX_CV_MB } from '../schemas/cvFormSchema';
-import type { Cv, CvNiche } from '../types';
+import type { Cv } from '../types';
 
 /**
  * One dialog for both create and edit.
@@ -33,18 +32,6 @@ const { cv = null } = defineProps<{
 const open = defineModel<boolean>('open', { default: false });
 
 const form = useCvForm({ open, cv: () => cv });
-
-const nicheOptions = computed<FilterSelectOption[]>(() =>
-    CV_NICHES.map((niche) => ({
-        value: niche,
-        label: cvNichePresentation(niche).label,
-    })),
-);
-
-/** reka's combobox models its value as `unknown`; narrow it back to a niche. */
-function toNiche(value: unknown): CvNiche {
-    return value === 'other' ? 'other' : 'fullstack';
-}
 
 const storedFile = computed(() =>
     cv
@@ -84,12 +71,13 @@ const storedFile = computed(() =>
                     <FilterSelect
                         v-bind="control"
                         class="w-full"
-                        :options="nicheOptions"
+                        :options="CV_NICHE_OPTIONS"
                         :clearable="false"
                         placeholder="Select a niche…"
                         :model-value="field.state.value"
                         @update:model-value="
-                            (value) => field.handleChange(toNiche(value))
+                            (value) =>
+                                isCvNiche(value) && field.handleChange(value)
                         "
                     />
                 </AppField>

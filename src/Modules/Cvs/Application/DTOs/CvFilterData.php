@@ -11,7 +11,7 @@ use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 /**
- * List/export filter. Soft-delete `status` is active|suspended; optional
+ * List/export filter. Soft-delete `status` is all|active|suspended; optional
  * `niche` filters the domain niche column.
  */
 #[MapInputName(SnakeCaseMapper::class)]
@@ -44,8 +44,8 @@ final class CvFilterData extends SoftDeleteFilterData
         return [
             ...self::baseRules(),
             // Lifecycle. `active` (and omitting this) returns live CVs;
-            // `suspended` returns only the soft-deleted ones.
-            'status' => ['nullable', 'string', 'in:active,suspended'],
+            // `suspended` returns only the soft-deleted ones; `all` returns both.
+            'status' => ['nullable', 'string', 'in:all,active,suspended'],
             // The specialisation a CV is written for. Omit for any niche.
             'niche' => ['nullable', 'string', 'in:'.implode(',', CvNiche::values())],
         ];
