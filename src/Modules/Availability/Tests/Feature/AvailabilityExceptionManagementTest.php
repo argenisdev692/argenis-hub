@@ -210,6 +210,17 @@ final class AvailabilityExceptionManagementTest extends TestCase
             ->assertOk();
     }
 
+    public function test_super_admin_can_export_exceptions_as_pdf(): void
+    {
+        AvailabilityExceptionEloquentModel::factory()->on('2026-05-20')->create();
+
+        $response = $this->actingAs($this->superAdmin())
+            ->get('/availability-exceptions/export?format=pdf');
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', $response->headers->get('content-type'));
+    }
+
     public function test_a_user_without_permission_cannot_export_exceptions(): void
     {
         $plain = User::factory()->create();

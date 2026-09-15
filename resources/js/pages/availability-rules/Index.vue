@@ -18,6 +18,7 @@ import {
     DataTable,
     DataTableBulkActions,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableToolbar,
     Paginator,
 } from '@/common/table';
@@ -304,7 +305,7 @@ async function confirmBulkRestore(): Promise<void> {
 
             <PermissionGuard permission="VIEW_ANY_AVAILABILITY_EXCEPTIONS">
                 <Button as-child variant="outline">
-                    <Link :href="exceptionsIndex()">
+                    <Link :href="exceptionsIndex()" prefetch>
                         <CalendarCogIcon class="size-4" aria-hidden="true" />
                         Date exceptions
                     </Link>
@@ -400,42 +401,33 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_AVAILABILITY_RULES">
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View availability rule"
-                        >
-                            <Link :href="show(row.uuid)">
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${availabilityRuleLabel(row)}`"
+                            tooltip="View"
+                            :href="show(row.uuid).url"
+                            prefetch
+                        />
                     </PermissionGuard>
 
                     <template v-if="row.deleted_at === null">
                         <PermissionGuard permission="UPDATE_AVAILABILITY_RULES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit availability rule"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${availabilityRuleLabel(row)}`"
+                                tooltip="Edit"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_AVAILABILITY_RULES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Suspend availability rule"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Suspend ${availabilityRuleLabel(row)}`"
+                                tooltip="Suspend"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
@@ -444,14 +436,12 @@ async function confirmBulkRestore(): Promise<void> {
                         v-else
                         permission="RESTORE_AVAILABILITY_RULES"
                     >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore availability rule"
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${availabilityRuleLabel(row)}`"
+                            tooltip="Restore"
                             @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

@@ -23,6 +23,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -317,7 +318,7 @@ async function confirmBulkRestore(): Promise<void> {
 
             <PermissionGuard permission="VIEW_ANY_AVAILABILITY_RULES">
                 <Button as-child variant="outline">
-                    <Link :href="rulesIndex()">
+                    <Link :href="rulesIndex()" prefetch>
                         <CalendarClockIcon class="size-4" aria-hidden="true" />
                         Weekly rules
                     </Link>
@@ -341,6 +342,7 @@ async function confirmBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Any date"
+                    presets
                 />
 
                 <FilterSelect
@@ -419,46 +421,37 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_AVAILABILITY_EXCEPTIONS">
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View date exception"
-                        >
-                            <Link :href="show(row.uuid)">
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${availabilityExceptionLabel(row)}`"
+                            tooltip="View"
+                            :href="show(row.uuid).url"
+                            prefetch
+                        />
                     </PermissionGuard>
 
                     <template v-if="row.deleted_at === null">
                         <PermissionGuard
                             permission="UPDATE_AVAILABILITY_EXCEPTIONS"
                         >
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit date exception"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${availabilityExceptionLabel(row)}`"
+                                tooltip="Edit"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard
                             permission="DELETE_AVAILABILITY_EXCEPTIONS"
                         >
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Suspend date exception"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Suspend ${availabilityExceptionLabel(row)}`"
+                                tooltip="Suspend"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
@@ -467,14 +460,12 @@ async function confirmBulkRestore(): Promise<void> {
                         v-else
                         permission="RESTORE_AVAILABILITY_EXCEPTIONS"
                     >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore date exception"
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${availabilityExceptionLabel(row)}`"
+                            tooltip="Restore"
                             @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

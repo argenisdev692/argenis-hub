@@ -171,6 +171,17 @@ final class AvailabilityRuleManagementTest extends TestCase
             ->assertOk();
     }
 
+    public function test_super_admin_can_export_rules_as_pdf(): void
+    {
+        AvailabilityRuleEloquentModel::factory()->forDay(1)->slot('09:00', '13:00')->create();
+
+        $response = $this->actingAs($this->superAdmin())
+            ->get('/availability-rules/export?format=pdf');
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', $response->headers->get('content-type'));
+    }
+
     public function test_a_user_without_permission_cannot_export_rules(): void
     {
         $plain = User::factory()->create();
