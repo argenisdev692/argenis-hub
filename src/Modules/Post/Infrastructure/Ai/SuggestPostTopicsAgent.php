@@ -8,9 +8,11 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
+use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
 
 /**
@@ -18,9 +20,10 @@ use Stringable;
  * prompt, which already embeds the company profile and Tavily research
  * summary — this class owns only the persona and the output contract.
  */
-final class SuggestPostTopicsAgent implements Agent, Conversational, HasStructuredOutput
+final class SuggestPostTopicsAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use UsesPromptCache;
 
     public function instructions(): Stringable|string
     {

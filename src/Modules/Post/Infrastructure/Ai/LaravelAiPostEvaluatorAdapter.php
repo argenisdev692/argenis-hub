@@ -13,7 +13,9 @@ use Modules\Post\Domain\Exceptions\PostGenerationUnavailableException;
 use Modules\Post\Domain\Ports\PostContentEvaluatorPort;
 use Modules\Post\Domain\Services\PostContentQualityEvaluator;
 use Modules\Post\Infrastructure\Broadcasting\PostGenerationProgressReporter;
-use Shared\Infrastructure\AI\AIClientInterface;
+use Shared\Infrastructure\AI\PromptCache\CacheablePrompt;
+use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
+use Shared\Infrastructure\AI\PromptCache\PromptLayer;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
 
 /**
@@ -21,14 +23,15 @@ use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
  * the provider configured as `ai.default_for_evaluation`, deliberately NOT on
  * the caller's writing provider.
  *
- * Never cached. Two drafts are never the same text, and a stale verdict would
- * let a rewrite inherit the score of the draft it replaced — the exact bug
- * caching is supposed to avoid.
+ * Verdicts are never cached. Two drafts are never the same text, and a stale
+ * verdict would let a rewrite inherit the score of the draft it replaced. Only
+ * the provider's PROMPT cache is used: instructions + brief are identical on
+ * every iteration, so they form the cached prefix and the draft is the tail.
  */
 final readonly class LaravelAiPostEvaluatorAdapter implements PostContentEvaluatorPort
 {
     public function __construct(
-        private AIClientInterface $ai,
+        private PromptCachingAIClient $ai,
         private PostContentQualityEvaluator $evaluator,
         private PostGenerationProgressReporter $reporter,
     ) {}
@@ -124,17 +127,24 @@ final readonly class LaravelAiPostEvaluatorAdapter implements PostContentEvaluat
      * its research notes — an argument for why the content is good is exactly
      * the influence an independent scorer must not receive.
      */
-    private function buildEvaluationPrompt(PostContentDraftData $draft, GeneratePostContentData $data): string
+    private function buildEvaluationPrompt(PostContentDraftData $draft, GeneratePostContentData $data): CacheablePrompt
     {
-        return implode("\n\n", array_filter([
+        $brief = implode("\n\n", array_filter([
             'BRIEF',
             "Topic: {$data->topic}",
             $data->angle !== null ? "Angle: {$data->angle}" : null,
             $data->keyTrend !== null ? "Key trend the draft was asked to reference: {$data->keyTrend}" : null,
-            'DRAFT TO SCORE',
-            $draft->toScorableText(),
-            'Score this draft against every dimension in your instructions.',
         ]));
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::short($brief)],
+            tail: implode("\n\n", [
+                'DRAFT TO SCORE',
+                $draft->toScorableText(),
+                'Score this draft against every dimension in your instructions.',
+            ]),
+            cacheKey: 'post-judge:'.md5($brief),
+        );
     }
 
     /**

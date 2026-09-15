@@ -1,0 +1,45 @@
+{
+  "mcp": {
+    "codebase-memory-mcp": {
+      "type": "local",
+      "command": [
+        "codebase-memory-mcp",
+        "--ui=true"
+      ]
+    },
+    "context7": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      }
+    },
+    "tavily": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "tavily-mcp"
+      ],
+      "environment": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      }
+    }
+  },
+  "instructions": [
+    "./.opencode/rules/rules.md"
+  ],
+  "permission": {
+    "codebase-memory-mcp_index_repository": "ask",
+    "codebase-memory-mcp_delete_project": "deny"
+  },
+  "$schema": "https://opencode.ai/config.json"
+}

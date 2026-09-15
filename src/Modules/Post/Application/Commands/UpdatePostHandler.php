@@ -11,6 +11,7 @@ use Modules\Post\Domain\Ports\PostPublicFeedCachePort;
 use Modules\Post\Domain\Ports\PostRepositoryPort;
 use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostEloquentModel;
 use Shared\Domain\Ports\StoragePort;
+use Uri\Rfc3986\Uri;
 
 /**
  * Updates an existing post. The slug is only re-derived when the title
@@ -104,7 +105,10 @@ final readonly class UpdatePostHandler
         }
 
         if (str_starts_with($path, 'https://') || str_starts_with($path, 'http://')) {
-            $key = ltrim(rawurldecode((string) parse_url($path, PHP_URL_PATH)), '/');
+            $key = $path
+                |> (static fn (string $url): string => (new Uri($url))->getPath())
+                |> rawurldecode(...)
+                |> (static fn (string $key): string => ltrim($key, '/'));
 
             return $key !== '' ? $key : null;
         }

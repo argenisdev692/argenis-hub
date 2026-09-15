@@ -27,7 +27,7 @@ use Throwable;
  * Serializing models + accessors across Redis caused sticky 500s after the
  * first warm (same class of bug as blog categories / portfolios).
  */
-final class PostPublicFeedCache implements PostPublicFeedCachePort
+final readonly class PostPublicFeedCache implements PostPublicFeedCachePort
 {
     public const string PUBLIC_TAG = 'posts_public';
 

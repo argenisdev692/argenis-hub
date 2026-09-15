@@ -8,9 +8,11 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
+use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
 
 /**
@@ -19,9 +21,10 @@ use Stringable;
  * company profile and research — this class owns only the persona, the
  * SAAEEF structure and the output contract.
  */
-final class GenerateSocialCopyAgent implements Agent, Conversational, HasStructuredOutput
+final class GenerateSocialCopyAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use UsesPromptCache;
 
     public function instructions(): Stringable|string
     {

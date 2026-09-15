@@ -14,6 +14,8 @@
         "lint:check": "eslint .",
         "syn": "node scripts/ai-config-sync.mjs",
         "syn:check": "node scripts/ai-config-sync.mjs --check",
+        "syn:opencode": "node scripts/ai-config-opencode-sync.mjs",
+        "syn:opencode:check": "node scripts/ai-config-opencode-sync.mjs --check",
         "types:check": "vue-tsc --noEmit"
     },
     "devDependencies": {

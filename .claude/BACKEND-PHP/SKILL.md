@@ -151,9 +151,13 @@ $first = reset($arr);  $last = end($arr);
 use Uri\Rfc3986\Uri;
 use Uri\WhatWg\Url;
 
-$uri = Uri::fromString('https://example.com:443/path?q=1#frag');
-$url = Url::fromString('https://example.com/api/../v2/users');
-$url->getPathname();  // "/v2/users" (normalized)
+$uri = new Uri('https://example.com:443/path?q=1#frag');
+$url = new Url('https://example.com/api/../v2/users');
+$url->getPath();  // "/v2/users" (normalized)
+
+// Verified 2026-09-15 on PHP 8.5.9 (ext-uri): there is NO Uri::fromString()
+// and NO getPathname() — construction is `new Uri($str)` / `new Url($str)`
+// and the path reader is `getPath()` on both classes.
 
 // ❌ FORBIDDEN
 $parts = parse_url($url); // NEVER
@@ -903,7 +907,7 @@ Cache::touch('user_session:123', 3600);                     // seconds also acce
 | --- | --- |
 | **Command Handlers** (`Create/Update/Delete/Restore/BulkDelete/BulkRestore`) | `final readonly class` + constructor property promotion. `#[\NoDiscard]` on `handle()` when it returns a UUID/ID/result object that callers must consume. `\|>` for any input normalization chain (trim → strtolower → validate). `match` for state branching. Explicit `: void` / `: Uuid` / `: ResultDTO` return type. |
 | **Query Handlers** (`List/Get`) | `final readonly class` + property promotion. Explicit return type (`: {Entity}ListReadModel` / `: LengthAwarePaginator`). `array_first()`/`array_last()` if peeking results. `match` over `if/elseif` for branching. NEVER mutate state. |
-| **Value Objects** (`Email`, `PhoneNumber`, `Url`, `Money`, etc.) | `final readonly class` with **property hooks** (PHP 8.4) for `get`/`set` invariants. `FILTER_THROW_ON_FAILURE` on every `filter_var()`. `Uri\Rfc3986\Uri::fromString()` for URL VOs (NEVER `parse_url()`). Wither methods use `clone($this, [...])` (NEVER manual `get_object_vars()` boilerplate). |
+| **Value Objects** (`Email`, `PhoneNumber`, `Url`, `Money`, etc.) | `final readonly class` with **property hooks** (PHP 8.4) for `get`/`set` invariants. `FILTER_THROW_ON_FAILURE` on every `filter_var()`. `new Uri\Rfc3986\Uri(...)` (constructor — no `::fromString()` on PHP 8.5.9) for URL VOs (NEVER `parse_url()`). Wither methods use `clone($this, [...])` (NEVER manual `get_object_vars()` boilerplate). |
 | **DTOs** (`Spatie\LaravelData\Data`) | NOT `readonly` (parent isn't). Constructor property promotion. `#[MapInputName(SnakeCaseMapper::class)]` + `#[MapOutputName(SnakeCaseMapper::class)]` mandatory. Validation attributes (`#[Required]`, `#[Email]`, `#[Max]`, `#[Rule]`). |
 | **Eloquent Models** | `final` class. `casts()` **method** (Laravel 11+, see §4.1 #8) instead of `$casts` array. Constructor property promotion in any factory helpers. PHP 8.5 attributes: `#[Table]`, `#[Fillable]`, `#[ObservedBy]`, `#[UsePolicy]` where they replace legacy properties (§4 table). |
 | **Controllers** | `final readonly` (stateless DI). Constructor property promotion for injected handlers. Explicit return types (`: RedirectResponse`, `: JsonResponse`, `: Response`). `match` for `$request->expectsJson()` branching when Controller-Fusion applies. |

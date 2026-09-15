@@ -18,7 +18,7 @@ use Shared\Infrastructure\Persistence\Concerns\BulkSoftDeletesByUuid;
  * `category_uuid` the Application layer works with is resolved to the internal
  * `category_id` FK here — the only layer allowed to touch Eloquent models.
  */
-final class EloquentPostRepository implements PostRepositoryPort
+final readonly class EloquentPostRepository implements PostRepositoryPort
 {
     use BulkSoftDeletesByUuid;
 

@@ -11,6 +11,7 @@ use Modules\Post\Domain\Ports\PostPublicFeedCachePort;
 use Modules\Post\Domain\Ports\PostRepositoryPort;
 use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostEloquentModel;
 use Shared\Domain\Ports\StoragePort;
+use Uri\Rfc3986\Uri;
 
 /**
  * Persists a new post. `post_title_slug` is always derived server-side from the
@@ -80,7 +81,10 @@ final readonly class CreatePostHandler
         }
 
         if (str_starts_with($path, 'https://') || str_starts_with($path, 'http://')) {
-            return ltrim(rawurldecode((string) parse_url($path, PHP_URL_PATH)), '/');
+            return $path
+                |> (static fn (string $url): string => (new Uri($url))->getPath())
+                |> rawurldecode(...)
+                |> (static fn (string $key): string => ltrim($key, '/'));
         }
 
         return ltrim($path, '/');

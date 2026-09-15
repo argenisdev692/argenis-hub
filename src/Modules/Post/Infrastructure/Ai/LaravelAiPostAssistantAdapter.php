@@ -29,7 +29,9 @@ use Modules\Post\Infrastructure\Broadcasting\PostGenerationProgressReporter;
 use Modules\Post\Infrastructure\Broadcasting\PostProgressNotifier;
 use Shared\Domain\Ports\SpeechSynthesizerPort;
 use Shared\Domain\Ports\StoragePort;
-use Shared\Infrastructure\AI\AIClientInterface;
+use Shared\Infrastructure\AI\PromptCache\CacheablePrompt;
+use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
+use Shared\Infrastructure\AI\PromptCache\PromptLayer;
 use Shared\Infrastructure\Company\CompanyProfile;
 use Shared\Infrastructure\Research\TavilyClientInterface;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
@@ -53,13 +55,18 @@ use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
  * attempt (iteration 1, no previous weaknesses) — from iteration 2 onward the
  * quality loop deliberately targets specific failing scores, so those attempts
  * are never safe to reuse from cache.
+ *
+ * Provider prompt caching is a separate, per-token layer on top of that: every
+ * prompt is a {@see CacheablePrompt} ordered company (long-lived) → brief
+ * (short-lived) → tail. Research and judge feedback change on every call, so
+ * they always travel in the tail and never break the cached prefix.
  */
 final readonly class LaravelAiPostAssistantAdapter implements PostContentGeneratorPort, PostTopicIdeatorPort, ReelPackageGeneratorPort, SocialCopyGeneratorPort
 {
     private const int CACHE_TTL_MINUTES = 15;
 
     public function __construct(
-        private AIClientInterface $ai,
+        private PromptCachingAIClient $ai,
         private TavilyClientInterface $research,
         private StoragePort $storage,
         private SpeechSynthesizerPort $speech,
@@ -229,6 +236,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                     $company,
                     $research,
                     'Write the LinkedIn post and the Instagram/Facebook caption exactly as specified in your instructions.',
+                    'social',
                 );
 
                 $this->progress->notify($causer, 'social', 'writing', 'Writing the social copy…', 70);
@@ -261,6 +269,7 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
                     $company,
                     $research,
                     'Write the complete Reel/TikTok package exactly as specified in your instructions.',
+                    'reel',
                 );
 
                 $this->progress->notify($causer, 'reel', 'writing', 'Writing the Reel/TikTok script…', 45);
@@ -376,19 +385,25 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
      * @param  array{name: string, description: ?string}  $company
      * @param  list<array{title: string, url: string, content: string, score: float}>  $research
      */
-    private function buildTopicsPrompt(SuggestPostTopicsData $data, array $category, array $company, array $research): string
+    private function buildTopicsPrompt(SuggestPostTopicsData $data, array $category, array $company, array $research): CacheablePrompt
     {
-        return implode("\n\n", array_filter([
-            "Company: {$company['name']}",
-            $company['description'] !== null ? "Company description: {$company['description']}" : null,
-            "Content category (the niche): {$category['name']}",
-            $category['description'] !== null ? "Category description: {$category['description']}" : null,
-            $data->topic !== null
-                ? "Narrow the ideas to this angle inside the category: {$data->topic}"
-                : 'No extra steer given — spread the ideas across the whole category.',
-            'Web research context:'."\n".$this->formatResearch($research),
-            "Generate exactly 10 viral blog topic ideas for the \"{$category['name']}\" category, as specified in your instructions.",
-        ]));
+        return new CacheablePrompt(
+            layers: [
+                PromptLayer::long($this->companyLayer($company)),
+                PromptLayer::short(implode("\n\n", array_filter([
+                    "Content category (the niche): {$category['name']}",
+                    $category['description'] !== null ? "Category description: {$category['description']}" : null,
+                ]))),
+            ],
+            tail: implode("\n\n", [
+                $data->topic !== null
+                    ? "Narrow the ideas to this angle inside the category: {$data->topic}"
+                    : 'No extra steer given — spread the ideas across the whole category.',
+                'Web research context:'."\n".$this->formatResearch($research),
+                "Generate exactly 10 viral blog topic ideas for the \"{$category['name']}\" category, as specified in your instructions.",
+            ]),
+            cacheKey: 'post-topics:'.$data->categoryUuid,
+        );
     }
 
     /**
@@ -402,17 +417,18 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
         array $research,
         int $iteration,
         array $previousWeaknesses,
-    ): string {
-        return implode("\n\n", array_filter([
-            "Company: {$company['name']}",
-            $company['description'] !== null ? "Company description: {$company['description']}" : null,
-            "Topic: {$data->topic}",
-            $data->angle !== null ? "Angle: {$data->angle}" : null,
-            $data->keyTrend !== null ? "Key trend to reference: {$data->keyTrend}" : null,
-            'Web research context:'."\n".$this->formatResearch($research),
-            $this->formatIterationFeedback($iteration, $previousWeaknesses),
-            'Write the complete blog post exactly as specified in your instructions.',
-        ]));
+    ): CacheablePrompt {
+        $brief = $this->briefLayer($data->topic, $data->angle, $data->keyTrend);
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::long($this->companyLayer($company)), PromptLayer::short($brief)],
+            tail: implode("\n\n", [
+                'Web research context:'."\n".$this->formatResearch($research),
+                $this->formatIterationFeedback($iteration, $previousWeaknesses),
+                'Write the complete blog post exactly as specified in your instructions.',
+            ]),
+            cacheKey: 'post-content:'.md5($brief),
+        );
     }
 
     /**
@@ -445,15 +461,43 @@ final readonly class LaravelAiPostAssistantAdapter implements PostContentGenerat
         array $company,
         array $research,
         string $instruction,
-    ): string {
+        string $operation,
+    ): CacheablePrompt {
+        $brief = $this->briefLayer($data->topic, $data->angle, $data->keyTrend);
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::long($this->companyLayer($company)), PromptLayer::short($brief)],
+            tail: implode("\n\n", [
+                'Web research context:'."\n".$this->formatResearch($research),
+                $instruction,
+            ]),
+            cacheKey: "post-{$operation}:".md5($brief),
+        );
+    }
+
+    /**
+     * Shared by every Post prompt and unchanged until the company profile is
+     * edited, so it is the long-lived head of the cached prefix.
+     *
+     * @param  array{name: string, description: ?string}  $company
+     */
+    private function companyLayer(array $company): string
+    {
         return implode("\n\n", array_filter([
             "Company: {$company['name']}",
             $company['description'] !== null ? "Company description: {$company['description']}" : null,
-            "Topic: {$data->topic}",
-            $data->angle !== null ? "Angle: {$data->angle}" : null,
-            $data->keyTrend !== null ? "Key trend to reference: {$data->keyTrend}" : null,
-            'Web research context:'."\n".$this->formatResearch($research),
-            $instruction,
+        ]));
+    }
+
+    /**
+     * Stable for one generation — every quality-loop iteration reuses it verbatim.
+     */
+    private function briefLayer(string $topic, ?string $angle, ?string $keyTrend): string
+    {
+        return implode("\n\n", array_filter([
+            "Topic: {$topic}",
+            $angle !== null ? "Angle: {$angle}" : null,
+            $keyTrend !== null ? "Key trend to reference: {$keyTrend}" : null,
         ]));
     }
 
