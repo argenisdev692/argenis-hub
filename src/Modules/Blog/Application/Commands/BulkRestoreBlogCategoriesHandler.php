@@ -20,6 +20,7 @@ final readonly class BulkRestoreBlogCategoriesHandler
         private BlogCategoryPublicFeedCachePort $feedCache,
     ) {}
 
+    #[\NoDiscard]
     public function handle(BulkUuidsData $data): int
     {
         $count = DB::transaction(fn () => $this->blogCategories->bulkRestoreByUuid($data->uuids));

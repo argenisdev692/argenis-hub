@@ -15,9 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Streams the filtered blog-category list as CSV / Excel / PDF. Thin: reuses the
  * SAME {@see BlogCategoryFilterData} + `scopeApplyFilters()` as the list query
- * (DRY) and the Shared {@see ExportPort} mechanism — this module ships only the
- * transformer. The `suspended` status maps to `onlyTrashed()`, mirroring the
- * repository's `paginate()`.
+ * (DRY — including the `suspended` → `onlyTrashed()` branch) and the Shared
+ * {@see ExportPort} mechanism — this module ships only the transformer.
  */
 final readonly class BlogCategoryExportController
 {
@@ -31,7 +30,6 @@ final readonly class BlogCategoryExportController
         $filters = BlogCategoryFilterData::validateAndCreate($request);
 
         $rows = BlogCategoryEloquentModel::query()
-            ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
             ->applyFilters($filters)
             ->with('user:id,first_name,last_name')
             ->orderByDesc('created_at')

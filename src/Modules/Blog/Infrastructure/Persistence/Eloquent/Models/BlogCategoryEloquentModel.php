@@ -101,8 +101,9 @@ final class BlogCategoryEloquentModel extends Model
 
     /**
      * Reusable list filter (BACKEND-PHP §4.1 — single scope shared by
-     * ListBlogCategoriesHandler, no duplicated `when()` chains). The `suspended`
-     * status is applied at the repository via `onlyTrashed()`.
+     * ListBlogCategoriesHandler AND the export controller, no duplicated
+     * `when()` chains). `suspended` resolves to `onlyTrashed()`; any other
+     * status (or none) keeps the SoftDeletes default of live rows only.
      *
      * @param  Builder<BlogCategoryEloquentModel>  $query
      * @return Builder<BlogCategoryEloquentModel>
@@ -110,6 +111,7 @@ final class BlogCategoryEloquentModel extends Model
     public function scopeApplyFilters(Builder $query, BlogCategoryFilterData $filters): Builder
     {
         return $query
+            ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
             ->when($filters->search !== null, fn ($q) => $q->where(function ($w) use ($filters): void {
                 $term = "%{$filters->search}%";
                 $w->where('blog_category_name', 'like', $term)

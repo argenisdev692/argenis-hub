@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/posts';
+import { buildPostQueryParams } from '../helpers/buildPostQueryParams';
 import type { PostFilters, PostPage } from '../types';
 
 export function defaultPostFilters(): PostFilters {
@@ -36,20 +37,13 @@ export function usePosts() {
     const filters = ref<PostFilters>(defaultPostFilters());
 
     /**
-     * `PostFilterData::status` only accepts `draft`, `published`, `scheduled`
-     * or `suspended` — there is no `'all'` case, so the UI's "All" option is
-     * sent as an omitted param. Empty search, unset category and unset date
-     * bounds drop the same way, keeping both the query key and the URL (via
-     * `useUrlSyncedFilters`) free of noise that means nothing.
+     * Filter half shared with the export menu — see `buildPostQueryParams` —
+     * plus pagination, which is query-only and must never reach an export URL.
      */
     const queryParams = computed(() => ({
-        ...filters.value,
-        status:
-            filters.value.status === 'all' ? undefined : filters.value.status,
-        search: filters.value.search || undefined,
-        category_uuid: filters.value.category_uuid ?? undefined,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
+        ...buildPostQueryParams(filters.value),
+        page: filters.value.page,
+        per_page: filters.value.per_page,
     }));
 
     const { data, ...query } = useQuery<PostPage>({

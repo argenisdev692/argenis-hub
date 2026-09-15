@@ -23,6 +23,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -38,6 +39,7 @@ import {
     defaultClientFilters,
     useClients,
 } from '@/modules/clients/composables/useClients';
+import { buildClientQueryParams } from '@/modules/clients/helpers/buildClientQueryParams';
 import {
     clientStatusLabel,
     clientStatusVariant,
@@ -101,14 +103,7 @@ const dateRange = computed<DateRange>({
 });
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+const exportParams = computed(() => buildClientQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
@@ -177,6 +172,9 @@ const sortModel = computed<DataTableSort | null>({
         filters.value.sort_field =
             value.field as typeof filters.value.sort_field;
         filters.value.sort_order = value.direction === 'asc' ? 1 : -1;
+        // A re-sort reshuffles every page, so the current page number is
+        // meaningless — restart from the first page like every other filter.
+        filters.value.page = 1;
     },
 });
 
@@ -316,6 +314,8 @@ async function onBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -389,52 +389,42 @@ async function onBulkRestore(): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_CLIENTS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View client"
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${row.client_name}`"
+                            tooltip="View"
                             @click="openDetail(row)"
-                        >
-                            <EyeIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
 
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_CLIENTS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit client"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${row.client_name}`"
+                                tooltip="Edit"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_CLIENTS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Delete client"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Delete ${row.client_name}`"
+                                tooltip="Delete"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
                     <PermissionGuard v-else permission="RESTORE_CLIENTS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore client"
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${row.client_name}`"
+                            tooltip="Restore"
                             @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

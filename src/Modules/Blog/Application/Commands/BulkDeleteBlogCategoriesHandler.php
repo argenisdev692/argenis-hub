@@ -21,6 +21,7 @@ final readonly class BulkDeleteBlogCategoriesHandler
         private BlogCategoryPublicFeedCachePort $feedCache,
     ) {}
 
+    #[\NoDiscard]
     public function handle(BulkUuidsData $data): int
     {
         $count = DB::transaction(fn () => $this->blogCategories->bulkSoftDeleteByUuid($data->uuids));

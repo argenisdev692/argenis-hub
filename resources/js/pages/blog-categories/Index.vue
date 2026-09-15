@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import {
     EyeIcon,
     ImageIcon,
@@ -23,6 +23,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -42,6 +43,7 @@ import {
     blogCategoryLabel,
     formatDate,
 } from '@/modules/blog-categories/helpers/blogCategoryPresentation';
+import { buildBlogCategoryQueryParams } from '@/modules/blog-categories/helpers/buildBlogCategoryQueryParams';
 import type {
     BlogCategory,
     BlogCategoryStatusFilter,
@@ -109,12 +111,9 @@ const dateRange = computed<DateRange>({
 });
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-}));
+const exportParams = computed(() =>
+    buildBlogCategoryQueryParams(filters.value),
+);
 
 const exportEndpoint = exportMethod.url();
 
@@ -302,6 +301,8 @@ async function confirmBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -382,42 +383,33 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_BLOG_CATEGORIES">
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View blog category"
-                        >
-                            <Link :href="show(row.uuid)">
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${blogCategoryLabel(row)}`"
+                            tooltip="View"
+                            :href="show(row.uuid).url"
+                            prefetch
+                        />
                     </PermissionGuard>
 
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_BLOG_CATEGORIES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit blog category"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${blogCategoryLabel(row)}`"
+                                tooltip="Edit"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_BLOG_CATEGORIES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Suspend blog category"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Suspend ${blogCategoryLabel(row)}`"
+                                tooltip="Suspend"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
@@ -425,14 +417,12 @@ async function confirmBulkRestore(): Promise<void> {
                         v-else
                         permission="RESTORE_BLOG_CATEGORIES"
                     >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore blog category"
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${blogCategoryLabel(row)}`"
+                            tooltip="Restore"
                             @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

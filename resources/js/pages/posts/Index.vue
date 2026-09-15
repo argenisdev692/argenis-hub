@@ -24,6 +24,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -39,6 +40,7 @@ import {
     defaultPostFilters,
     usePosts,
 } from '@/modules/posts/composables/usePosts';
+import { buildPostQueryParams } from '@/modules/posts/helpers/buildPostQueryParams';
 import {
     formatDate,
     postAuthorName,
@@ -143,15 +145,7 @@ function onCategoryChange(
 }
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    category_uuid: filters.value.category_uuid ?? undefined,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+const exportParams = computed(() => buildPostQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
@@ -200,6 +194,9 @@ const sortModel = computed<DataTableSort | null>({
 
         filters.value.sort_field = value.field as PostSortField;
         filters.value.sort_order = value.direction === 'asc' ? 1 : -1;
+        // A re-sort reshuffles every page, so the current page number is
+        // meaningless — restart from the first page like every other filter.
+        filters.value.page = 1;
     },
 });
 
@@ -289,6 +286,14 @@ async function onBulkRestore(uuids: string[]): Promise<void> {
                 Blog articles. Published posts feed the public feed; scheduled
                 ones go live on the next scheduler run.
             </p>
+            <p
+                class="text-sm text-muted-foreground"
+                role="status"
+                aria-live="polite"
+            >
+                {{ meta.total }} {{ meta.total === 1 ? 'record' : 'records' }}
+                found
+            </p>
         </header>
 
         <DataTableToolbar
@@ -307,6 +312,8 @@ async function onBulkRestore(uuids: string[]): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -440,60 +447,45 @@ async function onBulkRestore(uuids: string[]): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_POSTS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            as-child
-                            aria-label="View post"
-                        >
-                            <Link :href="show(row.uuid)">
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${row.post_title}`"
+                            tooltip="View"
+                            :href="show(row.uuid).url"
+                            prefetch
+                        />
                     </PermissionGuard>
 
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_POSTS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                as-child
-                                aria-label="Edit post"
-                            >
-                                <Link :href="edit(row.uuid)">
-                                    <PencilIcon
-                                        class="size-4"
-                                        aria-hidden="true"
-                                    />
-                                </Link>
-                            </Button>
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${row.post_title}`"
+                                tooltip="Edit"
+                                :href="edit(row.uuid).url"
+                                prefetch
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_POSTS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Suspend post"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Suspend ${row.post_title}`"
+                                tooltip="Suspend"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
                     <!-- Never Edit on a suspended row: restore it first. -->
                     <PermissionGuard v-else permission="RESTORE_POSTS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore post"
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${row.post_title}`"
+                            tooltip="Restore"
                             @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

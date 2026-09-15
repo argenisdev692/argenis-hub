@@ -39,7 +39,6 @@ final readonly class EloquentBlogCategoryRepository implements BlogCategoryRepos
     public function paginate(BlogCategoryFilterData $filters, int $perPage): LengthAwarePaginator
     {
         return BlogCategoryEloquentModel::query()
-            ->when($filters->status === 'suspended', fn ($q) => $q->onlyTrashed())
             ->applyFilters($filters)
             ->with('user:id,first_name,last_name')
             ->select([

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/clients/admin';
+import { buildClientQueryParams } from '../helpers/buildClientQueryParams';
 import type { ClientFilters, ClientPage } from '../types';
 
 export function defaultClientFilters(): ClientFilters {
@@ -30,19 +31,14 @@ export function useClients() {
     const filters = ref<ClientFilters>(defaultClientFilters());
 
     /**
-     * `ClientFilterData::status` only branches on `'active'`, `'deleted'` or
-     * empty/`null` (meaning "both") — there is no `'all'` case on the backend,
-     * so the UI's "All" option is sent as an omitted param instead of the
-     * literal string. Empty search / unset date bounds are dropped the same way
-     * so the query key (and the URL, via `useUrlSyncedFilters`) stay clean.
+     * Filter half shared with the export menu — see
+     * `buildClientQueryParams` — plus pagination, which is query-only and
+     * must never reach an export URL.
      */
     const queryParams = computed(() => ({
-        ...filters.value,
-        status:
-            filters.value.status === 'all' ? undefined : filters.value.status,
-        search: filters.value.search || undefined,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
+        ...buildClientQueryParams(filters.value),
+        page: filters.value.page,
+        per_page: filters.value.per_page,
     }));
 
     const { data, ...query } = useQuery<ClientPage>({

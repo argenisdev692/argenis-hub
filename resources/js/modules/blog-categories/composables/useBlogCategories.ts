@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/blog-categories';
+import { buildBlogCategoryQueryParams } from '../helpers/buildBlogCategoryQueryParams';
 import type { BlogCategoryFilters, BlogCategoryPage } from '../types';
 
 /** The key every blog-category mutation invalidates. */
@@ -37,20 +38,14 @@ export function useBlogCategories() {
     const filters = ref<BlogCategoryFilters>(defaultBlogCategoryFilters());
 
     /**
-     * An empty search or an unset date bound is dropped rather than sent as an
-     * empty string: `BlogCategoryFilterData` treats `null` as "no filter", and
-     * keeping the params out entirely also keeps the query key — and the URL,
-     * via `useUrlSyncedFilters` — free of noise that means nothing.
-     *
-     * `status` is always sent. Unlike the other modules there is no "all"
-     * option to translate away here, because the backend cannot serve one
-     * (see `BlogCategoryStatusFilter`).
+     * Filter half shared with the export menu — see
+     * `buildBlogCategoryQueryParams` — plus pagination, which is query-only
+     * and must never reach an export URL.
      */
     const queryParams = computed(() => ({
-        ...filters.value,
-        search: filters.value.search || undefined,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
+        ...buildBlogCategoryQueryParams(filters.value),
+        page: filters.value.page,
+        per_page: filters.value.per_page,
     }));
 
     const { data, ...query } = useQuery<BlogCategoryPage>({
