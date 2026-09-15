@@ -316,6 +316,8 @@ async function confirmBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Uploaded any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
