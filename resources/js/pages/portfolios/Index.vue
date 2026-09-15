@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { PencilIcon, PlusIcon, RotateCcwIcon, Trash2Icon } from '@lucide/vue';
+import {
+    EyeIcon,
+    PencilIcon,
+    PlusIcon,
+    RotateCcwIcon,
+    Trash2Icon,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import type { FilterSelectOption } from '@/common/form';
@@ -17,6 +23,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -31,12 +38,14 @@ import {
     defaultPortfolioFilters,
     usePortfolios,
 } from '@/modules/portfolios/composables/usePortfolios';
+import { buildPortfolioQueryParams } from '@/modules/portfolios/helpers/buildPortfolioQueryParams';
+import { formatDate } from '@/modules/portfolios/helpers/portfolioPresentation';
 import type {
     Portfolio,
     PortfolioSortField,
     PortfolioStatusFilter,
 } from '@/modules/portfolios/types';
-import { index } from '@/routes/portfolios';
+import { index, show } from '@/routes/portfolios';
 import { exportMethod } from '@/routes/portfolios/admin';
 
 defineOptions({
@@ -97,14 +106,7 @@ const dateRange = computed<DateRange>({
 });
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+const exportParams = computed(() => buildPortfolioQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
@@ -121,18 +123,6 @@ function onStatusChange(
         typeof value === 'string' ? value : 'all'
     ) as PortfolioStatusFilter;
     filters.value.page = 1;
-}
-
-function formatDate(iso: string | null): string | null {
-    if (!iso) {
-        return null;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(iso));
 }
 
 const columns: DataTableColumn<Portfolio>[] = [
@@ -212,7 +202,9 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: Portfolio): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at
+        ? 'bg-[var(--deleted-row-bg)] opacity-[var(--deleted-row-opacity)]'
+        : undefined;
 }
 
 const sheetOpen = ref(false);
@@ -317,6 +309,8 @@ async function onBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -410,42 +404,44 @@ async function onBulkRestore(): Promise<void> {
                 </template>
 
                 <template #actions="{ row }">
+                    <PermissionGuard permission="VIEW_PORTFOLIOS">
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View portfolio ${row.title}`"
+                            tooltip="View"
+                            :href="show.url(row.uuid)"
+                            prefetch
+                        />
+                    </PermissionGuard>
+
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_PORTFOLIOS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit portfolio"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit portfolio ${row.title}`"
+                                tooltip="Edit"
                                 @click="openEditSheet(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_PORTFOLIOS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Delete portfolio"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Delete portfolio ${row.title}`"
+                                tooltip="Delete"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
                     <PermissionGuard v-else permission="RESTORE_PORTFOLIOS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore portfolio"
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore portfolio ${row.title}`"
+                            tooltip="Restore"
                             @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

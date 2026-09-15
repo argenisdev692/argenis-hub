@@ -16,6 +16,7 @@ final readonly class BulkRestoreServiceHandler
      *
      * @param  list<string>  $uuids
      */
+    #[\NoDiscard('handle() returns the number of restored services.')]
     public function handle(array $uuids): int
     {
         $restored = ServiceEloquentModel::withTrashed()->whereIn('uuid', $uuids)->restore();

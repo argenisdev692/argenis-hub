@@ -62,7 +62,7 @@ describe('formats', function (): void {
             ->streamedContent();
 
         expect($content)
-            ->toContain('Name', 'Slug', 'Description', 'Status', 'Order', 'Created')
+            ->toContain('Name', 'Slug', 'Description', 'Status', 'Visibility', 'Order', 'Created')
             ->toContain('Business Website', 'business_website');
     });
 
@@ -106,7 +106,7 @@ describe('respects the active filters', function (): void {
             ->streamedContent();
 
         expect($content)
-            ->toContain('gone', 'Deleted')
+            ->toContain('gone', 'Suspended')
             ->not->toContain('kept');
     });
 

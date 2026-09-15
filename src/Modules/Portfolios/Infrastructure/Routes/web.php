@@ -21,6 +21,11 @@ Route::middleware(['auth', 'verified', 'permission:VIEW_ANY_PORTFOLIOS'])
     ->get('/portfolios', [AdminPortfolioController::class, 'page'])
     ->name('portfolios.index');
 
+Route::middleware(['auth', 'verified', 'permission:VIEW_PORTFOLIOS'])
+    ->get('/portfolios/{uuid}', [AdminPortfolioController::class, 'showPage'])
+    ->whereUuid('uuid')
+    ->name('portfolios.show');
+
 Route::middleware(['auth', 'verified'])
     ->prefix('data/admin/portfolios')
     ->name('portfolios.admin.')

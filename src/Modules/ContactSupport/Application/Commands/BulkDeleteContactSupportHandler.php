@@ -15,6 +15,7 @@ final readonly class BulkDeleteContactSupportHandler
      *
      * @param  list<string>  $uuids
      */
+    #[\NoDiscard('handle() returns the number of deleted requests.')]
     public function handle(array $uuids): int
     {
         return ContactSupportEloquentModel::query()->whereIn('uuid', $uuids)->delete();

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/roles';
+import { buildRoleListQueryParams } from '../helpers/buildRoleQueryParams';
 import type { RoleFilters, RolePage, RoleQueryParams } from '../types';
 
 /** The cache key every role write invalidates. */
@@ -36,22 +37,14 @@ export function useRoles() {
     const filters = ref<RoleFilters>(defaultRoleFilters());
 
     /**
-     * Empty search and unset date bounds are dropped rather than sent blank, so
-     * the query key (and the URL, via `useUrlSyncedFilters`) stay clean.
-     * `status` is always sent: unlike the other modules there is no "both" case
-     * to express by omitting it — the backend's default is `active`.
-     *
-     * Typed against the generated filter DTO, so a field renamed in
-     * `RoleFilterData` fails the build here instead of silently never applying.
+     * One builder for the list query AND the export URL (`roles/Index.vue`
+     * reuses the filter half), so the two can never drift apart. `page` /
+     * `per_page` ride along here; the export drops them by using the filter
+     * half only.
      */
-    const queryParams = computed<RoleQueryParams>(() => ({
-        search: filters.value.search || undefined,
-        status: filters.value.status,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
-        page: filters.value.page,
-        per_page: filters.value.per_page,
-    }));
+    const queryParams = computed<RoleQueryParams>(() =>
+        buildRoleListQueryParams(filters.value),
+    );
 
     const { data, ...query } = useQuery<RolePage>({
         key: () => [...ROLES_KEY, { ...queryParams.value }],

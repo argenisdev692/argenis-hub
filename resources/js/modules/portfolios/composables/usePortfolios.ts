@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/portfolios/admin';
+import { buildPortfolioListQueryParams } from '../helpers/buildPortfolioQueryParams';
 import type { PortfolioFilters, PortfolioPage } from '../types';
 
 export function defaultPortfolioFilters(): PortfolioFilters {
@@ -35,14 +36,14 @@ export function usePortfolios() {
      * date bounds are dropped the same way so the query key (and the URL, via
      * `useUrlSyncedFilters`) stay clean.
      */
-    const queryParams = computed(() => ({
-        ...filters.value,
-        status:
-            filters.value.status === 'all' ? undefined : filters.value.status,
-        search: filters.value.search || undefined,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
-    }));
+    /**
+     * One builder for the list query AND the export URL (`Index.vue` reuses
+     * the filter half), so the two can never drift apart. `page` / `per_page`
+     * ride along here; the export drops them by using the filter half only.
+     */
+    const queryParams = computed(() =>
+        buildPortfolioListQueryParams(filters.value),
+    );
 
     const { data, ...query } = useQuery<PortfolioPage>({
         key: () => ['portfolios', { ...queryParams.value }],

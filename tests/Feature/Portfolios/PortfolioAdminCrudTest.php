@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioEloquentModel;
 use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioMediaEloquentModel;
 
@@ -16,6 +17,8 @@ use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioMedia
 beforeEach(function (): void {
     Storage::fake('r2');
     $this->seed(RolePermissionSeeder::class);
+    // The show-page tests assert the Inertia component without a built manifest.
+    $this->withoutVite();
 });
 
 /**
@@ -290,5 +293,42 @@ describe('bulk operations', function (): void {
             ->postJson(route('portfolios.admin.bulk-delete'), ['uuids' => [$portfolio->uuid, 'not-a-uuid']])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('uuids.1');
+    });
+});
+
+describe('show page', function (): void {
+    it('renders the detail shell with the uuid for a viewer', function (): void {
+        $portfolio = PortfolioEloquentModel::factory()->create();
+
+        $this->actingAs(portfolioOperator(['VIEW_PORTFOLIOS']))
+            ->get(route('portfolios.show', $portfolio->uuid))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('portfolios/Show')
+                ->where('uuid', $portfolio->uuid));
+    });
+
+    it('renders a soft-deleted portfolio shell so it can be previewed before restore', function (): void {
+        $portfolio = PortfolioEloquentModel::factory()->create();
+        $portfolio->delete();
+
+        $this->actingAs(portfolioOperator(['VIEW_PORTFOLIOS']))
+            ->get(route('portfolios.show', $portfolio->uuid))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('portfolios/Show'));
+    });
+
+    it('returns 404 for an unknown uuid instead of an empty shell', function (): void {
+        $this->actingAs(portfolioOperator(['VIEW_PORTFOLIOS']))
+            ->get(route('portfolios.show', '0197f3e2-1234-7000-8000-000000000000'))
+            ->assertNotFound();
+    });
+
+    it('refuses a signed-in user without VIEW_PORTFOLIOS', function (): void {
+        $portfolio = PortfolioEloquentModel::factory()->create();
+
+        $this->actingAs(portfolioOperator(['VIEW_ANY_PORTFOLIOS']))
+            ->get(route('portfolios.show', $portfolio->uuid))
+            ->assertForbidden();
     });
 });

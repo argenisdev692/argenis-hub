@@ -14,6 +14,7 @@ final readonly class BulkRestoreContactSupportHandler
      *
      * @param  list<string>  $uuids
      */
+    #[\NoDiscard('handle() returns the number of restored requests.')]
     public function handle(array $uuids): int
     {
         return ContactSupportEloquentModel::withTrashed()->whereIn('uuid', $uuids)->restore();

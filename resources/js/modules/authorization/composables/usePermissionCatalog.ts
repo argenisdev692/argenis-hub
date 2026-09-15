@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/permissions';
+import { buildPermissionListQueryParams } from '../helpers/buildPermissionQueryParams';
 import type {
     PermissionFilters,
     PermissionPage,
@@ -42,14 +43,15 @@ export function defaultPermissionFilters(): PermissionFilters {
 export function usePermissionCatalog() {
     const filters = ref<PermissionFilters>(defaultPermissionFilters());
 
-    const queryParams = computed<PermissionQueryParams>(() => ({
-        search: filters.value.search || undefined,
-        status: filters.value.status,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
-        page: filters.value.page,
-        per_page: filters.value.per_page,
-    }));
+    /**
+     * One builder for the catalogue query AND the export URL
+     * (`permissions/Index.vue` reuses the filter half), so the two can never
+     * drift apart. `page` / `per_page` ride along here; the export drops them
+     * by using the filter half only.
+     */
+    const queryParams = computed<PermissionQueryParams>(() =>
+        buildPermissionListQueryParams(filters.value),
+    );
 
     const { data, ...query } = useQuery<PermissionPage>({
         key: () => [...PERMISSIONS_KEY, { ...queryParams.value }],

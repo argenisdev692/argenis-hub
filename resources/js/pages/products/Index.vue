@@ -39,6 +39,7 @@ import {
     defaultProductFilters,
     useProducts,
 } from '@/modules/products/composables/useProducts';
+import { buildProductQueryParams } from '@/modules/products/helpers/buildProductQueryParams';
 import {
     formatDate,
     formatUnitPrice,
@@ -115,16 +116,7 @@ const dateRange = computed<DateRange>({
 });
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    type: filters.value.type ?? undefined,
-    product_status: filters.value.product_status ?? undefined,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+const exportParams = computed(() => buildProductQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
@@ -155,7 +147,8 @@ function onRowStatusChange(
 function onTypeChange(
     value: FilterSelectOption['value'] | FilterSelectOption['value'][] | null,
 ): void {
-    filters.value.type = typeof value === 'string' ? (value as ProductType) : null;
+    filters.value.type =
+        typeof value === 'string' ? (value as ProductType) : null;
     filters.value.page = 1;
 }
 
@@ -187,7 +180,8 @@ const columns: DataTableColumn<Product>[] = [
     {
         key: 'total_hours',
         header: 'Hours',
-        value: (row) => (row.total_hours === null ? null : String(row.total_hours)),
+        value: (row) =>
+            row.total_hours === null ? null : String(row.total_hours),
         hideOnMobile: true,
     },
     { key: 'status', header: 'Catalog', sortable: true },

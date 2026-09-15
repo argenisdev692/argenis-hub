@@ -38,6 +38,7 @@ import {
     defaultPaymentAccountFilters,
     usePaymentAccounts,
 } from '@/modules/payment-accounts/composables/usePaymentAccounts';
+import { buildPaymentAccountQueryParams } from '@/modules/payment-accounts/helpers/buildPaymentAccountQueryParams';
 import {
     currencyLabel,
     formatDate,
@@ -106,16 +107,9 @@ const dateRange = computed<DateRange>({
 });
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    method: filters.value.method ?? undefined,
-    currency: filters.value.currency ?? undefined,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+const exportParams = computed(() =>
+    buildPaymentAccountQueryParams(filters.value),
+);
 
 const exportEndpoint = exportMethod.url();
 
@@ -445,7 +439,11 @@ async function onBulkRestore(): Promise<void> {
                 </template>
 
                 <template #[`cell:currency`]="{ row }">
-                    <span :class="row.currency ? undefined : 'text-muted-foreground'">
+                    <span
+                        :class="
+                            row.currency ? undefined : 'text-muted-foreground'
+                        "
+                    >
                         {{ currencyLabel(row.currency) }}
                     </span>
                 </template>
@@ -457,7 +455,9 @@ async function onBulkRestore(): Promise<void> {
                 </template>
 
                 <template #[`cell:flags`]="{ row }">
-                    <div class="flex flex-wrap items-center justify-center gap-1">
+                    <div
+                        class="flex flex-wrap items-center justify-center gap-1"
+                    >
                         <Badge v-if="row.is_default" variant="secondary">
                             Default
                         </Badge>

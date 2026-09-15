@@ -17,6 +17,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -31,6 +32,8 @@ import {
     defaultServiceFilters,
     useServices,
 } from '@/modules/services/composables/useServices';
+import { buildServiceQueryParams } from '@/modules/services/helpers/buildServiceQueryParams';
+import { formatDate } from '@/modules/services/helpers/servicePresentation';
 import type { Service, ServiceStatusFilter } from '@/modules/services/types';
 import { index } from '@/routes/services';
 import { exportMethod } from '@/routes/services/admin';
@@ -92,15 +95,11 @@ const dateRange = computed<DateRange>({
     },
 });
 
-/** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+/**
+ * The active filter set, as the export endpoint's query string wants it — the
+ * same builder the list query uses, so the export always matches the table.
+ */
+const exportParams = computed(() => buildServiceQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
@@ -117,18 +116,6 @@ function onStatusChange(
         typeof value === 'string' ? value : 'all'
     ) as ServiceStatusFilter;
     filters.value.page = 1;
-}
-
-function formatDate(iso: string | null): string | null {
-    if (!iso) {
-        return null;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(iso));
 }
 
 const columns: DataTableColumn<Service>[] = [
@@ -192,6 +179,12 @@ const page = computed<number>({
     },
 });
 
+const recordCounter = computed(() => {
+    const total = meta.value.total;
+
+    return `${total} ${total === 1 ? 'record' : 'records'} found`;
+});
+
 const selection = ref<Service[]>([]);
 
 const selectedActive = computed(() =>
@@ -202,7 +195,9 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: Service): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at
+        ? 'bg-[var(--deleted-row-bg)] opacity-[var(--deleted-row-opacity)]'
+        : undefined;
 }
 
 const dialogOpen = ref(false);
@@ -247,8 +242,27 @@ async function confirmDelete(): Promise<void> {
     pendingDelete.value = null;
 }
 
-async function onRestoreRow(service: Service): Promise<void> {
-    await restoreService.mutateAsync(service.uuid).catch(() => undefined);
+const confirmRestoreOpen = ref(false);
+const pendingRestore = ref<Service | null>(null);
+
+function requestRestore(service: Service): void {
+    pendingRestore.value = service;
+    confirmRestoreOpen.value = true;
+}
+
+async function confirmRestore(): Promise<void> {
+    if (!pendingRestore.value) {
+        return;
+    }
+
+    try {
+        await restoreService.mutateAsync(pendingRestore.value.uuid);
+    } catch {
+        return;
+    }
+
+    confirmRestoreOpen.value = false;
+    pendingRestore.value = null;
 }
 
 const confirmBulkDeleteOpen = ref(false);
@@ -266,7 +280,9 @@ async function confirmBulkDelete(): Promise<void> {
     confirmBulkDeleteOpen.value = false;
 }
 
-async function onBulkRestore(): Promise<void> {
+const confirmBulkRestoreOpen = ref(false);
+
+async function confirmBulkRestore(): Promise<void> {
     try {
         await bulkRestoreServices.mutateAsync(
             selectedDeleted.value.map((service) => service.uuid),
@@ -276,6 +292,7 @@ async function onBulkRestore(): Promise<void> {
     }
 
     selection.value = [];
+    confirmBulkRestoreOpen.value = false;
 }
 </script>
 
@@ -306,6 +323,8 @@ async function onBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -327,7 +346,7 @@ async function onBulkRestore(): Promise<void> {
                         bulkRestoreServices.isLoading.value
                     "
                     @bulk-delete="confirmBulkDeleteOpen = true"
-                    @bulk-restore="onBulkRestore"
+                    @bulk-restore="confirmBulkRestoreOpen = true"
                 />
             </template>
 
@@ -349,6 +368,14 @@ async function onBulkRestore(): Promise<void> {
         </DataTableToolbar>
 
         <div class="flex flex-col">
+            <p
+                class="px-1 pb-2 text-sm text-muted-foreground tabular-nums"
+                role="status"
+                aria-live="polite"
+            >
+                {{ recordCounter }}
+            </p>
+
             <DataTable
                 v-model:sort="sortModel"
                 v-model:selection="selection"
@@ -371,40 +398,32 @@ async function onBulkRestore(): Promise<void> {
                 <template #actions="{ row }">
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_SERVICES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit service"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${row.name}`"
+                                tooltip="Edit"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_SERVICES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Delete service"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Delete ${row.name}`"
+                                tooltip="Delete"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
                     <PermissionGuard v-else permission="RESTORE_SERVICES">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore service"
-                            @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${row.name}`"
+                            tooltip="Restore"
+                            @click="requestRestore(row)"
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>
@@ -439,6 +458,22 @@ async function onBulkRestore(): Promise<void> {
     </ConfirmModal>
 
     <ConfirmModal
+        v-model:open="confirmRestoreOpen"
+        title="Restore this service?"
+        description="It returns to the active catalog."
+        confirm-label="Restore"
+        @confirm="confirmRestore"
+    >
+        <div
+            v-if="pendingRestore"
+            class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
+        >
+            <p class="font-medium">{{ pendingRestore.name }}</p>
+            <p class="text-muted-foreground">{{ pendingRestore.slug }}</p>
+        </div>
+    </ConfirmModal>
+
+    <ConfirmModal
         v-model:open="confirmBulkDeleteOpen"
         destructive
         :title="`Delete ${selectedActive.length} ${selectedActive.length === 1 ? 'service' : 'services'}?`"
@@ -451,6 +486,29 @@ async function onBulkRestore(): Promise<void> {
         >
             <li
                 v-for="service in selectedActive"
+                :key="service.uuid"
+                class="flex items-baseline justify-between gap-3"
+            >
+                <span class="truncate font-medium">{{ service.name }}</span>
+                <span class="shrink-0 text-muted-foreground">
+                    {{ service.slug }}
+                </span>
+            </li>
+        </ul>
+    </ConfirmModal>
+
+    <ConfirmModal
+        v-model:open="confirmBulkRestoreOpen"
+        :title="`Restore ${selectedDeleted.length} ${selectedDeleted.length === 1 ? 'service' : 'services'}?`"
+        description="They return to the active catalog."
+        confirm-label="Restore"
+        @confirm="confirmBulkRestore"
+    >
+        <ul
+            class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
+        >
+            <li
+                v-for="service in selectedDeleted"
                 :key="service.uuid"
                 class="flex items-baseline justify-between gap-3"
             >

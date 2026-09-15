@@ -11,6 +11,7 @@
                 <th>Slug</th>
                 <th>Description</th>
                 <th>Status</th>
+                <th>Visibility</th>
                 <th class="num">Order</th>
                 <th>Created</th>
             </tr>
@@ -22,11 +23,12 @@
                     <td>{{ $row['Slug'] }}</td>
                     <td>{{ $row['Description'] }}</td>
                     <td>{{ $row['Status'] }}</td>
+                    <td>{{ $row['Visibility'] }}</td>
                     <td class="num">{{ $row['Order'] }}</td>
                     <td>{{ $row['Created'] }}</td>
                 </tr>
             @empty
-                <tr><td colspan="6"><div class="empty-state">No services to display.</div></td></tr>
+                <tr><td colspan="7"><div class="empty-state">No services to display.</div></td></tr>
             @endforelse
         </tbody>
     </table>

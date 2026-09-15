@@ -41,6 +41,15 @@ use Shared\Domain\Ports\StoragePort;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel withTrashed(bool $withTrashed = true)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel withoutTrashed()
  * @method static PortfolioMediaFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel wherePath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel wherePortfolioId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel whereSortOrder($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioMediaEloquentModel whereUuid($value)
  *
  * @mixin \Eloquent
  */

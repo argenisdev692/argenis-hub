@@ -15,6 +15,7 @@ final readonly class BulkDeletePortfolioHandler
      *
      * @param  list<string>  $uuids
      */
+    #[\NoDiscard('handle() returns the soft-deleted row count.')]
     public function handle(array $uuids): int
     {
         return PortfolioEloquentModel::query()->whereIn('uuid', $uuids)->delete();

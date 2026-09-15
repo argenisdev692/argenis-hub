@@ -42,6 +42,7 @@ import {
     suspensionLabel,
     suspensionVariant,
 } from '@/modules/authorization/helpers/authorizationPresentation';
+import { buildPermissionQueryParams } from '@/modules/authorization/helpers/buildPermissionQueryParams';
 import type {
     AuthorizationStatusFilter,
     Permission,
@@ -112,12 +113,7 @@ const dateRange = computed<DateRange>({
     },
 });
 
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-}));
+const exportParams = computed(() => buildPermissionQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 

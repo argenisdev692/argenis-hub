@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Portfolios\Infrastructure\Http\Controllers;
 
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -57,6 +58,20 @@ final readonly class AdminPortfolioController
         return Inertia::render('portfolios/Index');
     }
 
+    /**
+     * The detail shell carries no row data — `Show.vue` reads the JSON `show()`
+     * endpoint through Pinia Colada. Existence (including soft-deleted rows,
+     * which the detail view can preview before restoring) is checked here, so
+     * an unknown uuid 404s before rendering an empty shell that only fails
+     * after loading (same reason as `VideoEditPageController::show()`).
+     */
+    public function showPage(string $uuid): InertiaResponse
+    {
+        abort_unless(PortfolioEloquentModel::withTrashed()->where('uuid', $uuid)->exists(), 404);
+
+        return Inertia::render('portfolios/Show', ['uuid' => $uuid]);
+    }
+
     public function index(PortfolioFilterData $filters): JsonResponse
     {
         return response()->json($this->listPortfolios->handle($filters));
@@ -69,6 +84,12 @@ final readonly class AdminPortfolioController
      * date-range invariant (`date_from` ≤ `date_to`) is enforced by
      * {@see PortfolioFilterData}; an unknown `format` is a 422.
      */
+    #[QueryParameter(
+        'format',
+        description: 'Output format. Anything else is rejected with a 422.',
+        type: "'csv'|'xlsx'|'pdf'",
+        default: 'xlsx',
+    )]
     public function export(Request $request, PortfolioFilterData $filters): StreamedResponse|Response
     {
         $format = (string) $request->string('format', 'xlsx');

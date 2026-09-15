@@ -61,6 +61,23 @@ use Spatie\Activitylog\Support\LogOptions;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioEloquentModel withTrashed(bool $withTrashed = true)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PortfolioEloquentModel withoutTrashed()
  * @method static PortfolioFactory factory($count = null, $state = [])
+ * @method static Builder<static>|PortfolioEloquentModel whereClientName($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereCoverPath($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereDeletedAt($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereDescription($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereId($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereIsPublic($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereLiveUrl($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereProjectType($value)
+ * @method static Builder<static>|PortfolioEloquentModel wherePublishedAt($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereSortOrder($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereTechStack($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereTitle($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereUserId($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereUuid($value)
+ * @method static Builder<static>|PortfolioEloquentModel whereVideoPath($value)
  *
  * @mixin \Eloquent
  */

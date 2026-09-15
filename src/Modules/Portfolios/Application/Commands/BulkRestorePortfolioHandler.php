@@ -14,6 +14,7 @@ final readonly class BulkRestorePortfolioHandler
      *
      * @param  list<string>  $uuids
      */
+    #[\NoDiscard('handle() returns the restored row count.')]
     public function handle(array $uuids): int
     {
         return PortfolioEloquentModel::withTrashed()->whereIn('uuid', $uuids)->restore();

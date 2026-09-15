@@ -20,7 +20,7 @@ use Spatie\Honeypot\ProtectAgainstSpam;
  * Pure and I/O-free by design (unit-tested without a database). The container
  * binds {@see fromConfig()}; construct it directly with overrides in tests.
  */
-final class SpamGuard
+final readonly class SpamGuard
 {
     /** @var list<string> */
     private const array DEFAULT_BLOCKLIST = [

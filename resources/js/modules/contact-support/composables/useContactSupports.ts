@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/contact-supports/admin';
+import { buildContactSupportListQueryParams } from '../helpers/buildContactSupportQueryParams';
 import type { ContactSupportFilters, ContactSupportPage } from '../types';
 
 export function defaultContactSupportFilters(): ContactSupportFilters {
@@ -32,28 +33,13 @@ export function useContactSupports() {
     const filters = ref<ContactSupportFilters>(defaultContactSupportFilters());
 
     /**
-     * `ContactSupportFilterData` branches on `status` (`'active'` / `'deleted'`
-     * / empty for "both") and reads `readed` / `is_spam` only when they are a
-     * real boolean — so the UI's "All" options are sent as omitted params, not
-     * literal strings. Empty search / unset date bounds are dropped the same way
-     * so the query key (and the URL, via `useUrlSyncedFilters`) stay clean.
+     * One builder for the list query AND the export URL (`Index.vue` reuses
+     * the filter half), so the two can never drift apart. `page` / `per_page`
+     * ride along here; the export drops them by using the filter half only.
      */
-    const queryParams = computed(() => ({
-        ...filters.value,
-        status:
-            filters.value.status === 'all' ? undefined : filters.value.status,
-        search: filters.value.search || undefined,
-        readed:
-            filters.value.readed === 'all'
-                ? undefined
-                : filters.value.readed === 'read',
-        is_spam:
-            filters.value.is_spam === 'all'
-                ? undefined
-                : filters.value.is_spam === 'spam',
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
-    }));
+    const queryParams = computed(() =>
+        buildContactSupportListQueryParams(filters.value),
+    );
 
     const { data, ...query } = useQuery<ContactSupportPage>({
         key: () => ['contact-supports', { ...queryParams.value }],

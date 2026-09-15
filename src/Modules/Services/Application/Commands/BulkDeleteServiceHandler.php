@@ -16,6 +16,7 @@ final readonly class BulkDeleteServiceHandler
      *
      * @param  list<string>  $uuids
      */
+    #[\NoDiscard('handle() returns the number of soft-deleted services.')]
     public function handle(array $uuids): int
     {
         $deleted = ServiceEloquentModel::query()->whereIn('uuid', $uuids)->delete();

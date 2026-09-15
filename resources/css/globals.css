@@ -111,6 +111,17 @@
     --input: #848da5;
     --ring: #6d28d9;
 
+    /* Soft-deleted rows — token-backed so a DataTable `rowClass` never
+       hardcodes a wash. The translucent mix keeps the ambient glow readable
+       behind the row instead of boxing it in. */
+    --deleted-row-bg: color-mix(in srgb, var(--destructive) 6%, transparent);
+    --deleted-row-border: color-mix(
+        in srgb,
+        var(--destructive) 25%,
+        transparent
+    );
+    --deleted-row-opacity: 0.65;
+
     /* ---- form status roles ----
        --status-success / --status-danger above are tuned for the night bases
        and fail as text on white (#10b981 = 2.54:1). These are the light-mode
@@ -178,6 +189,15 @@
     /* #7c3aed was 3.52:1 — over the line but thin for a focus indicator.
        #8b5cf6 lifts it to 4.74:1 while staying inside the brand violet. */
     --ring: #8b5cf6;
+
+    /* Stronger wash for the night bases — the light 6% disappears on dark. */
+    --deleted-row-bg: color-mix(in srgb, var(--destructive) 12%, transparent);
+    --deleted-row-border: color-mix(
+        in srgb,
+        var(--destructive) 30%,
+        transparent
+    );
+    --deleted-row-opacity: 0.7;
 
     /* ---- form status roles (night bases) ---- */
     --success: #34d399;

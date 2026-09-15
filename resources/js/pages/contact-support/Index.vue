@@ -23,6 +23,7 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -38,6 +39,7 @@ import {
     defaultContactSupportFilters,
     useContactSupports,
 } from '@/modules/contact-support/composables/useContactSupports';
+import { buildContactSupportQueryParams } from '@/modules/contact-support/helpers/buildContactSupportQueryParams';
 import {
     contactName,
     formatDate,
@@ -113,23 +115,13 @@ const dateRange = computed<DateRange>({
     },
 });
 
-/** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    readed:
-        filters.value.readed === 'all'
-            ? undefined
-            : filters.value.readed === 'read',
-    is_spam:
-        filters.value.is_spam === 'all'
-            ? undefined
-            : filters.value.is_spam === 'spam',
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+/**
+ * The active filter set, as the export endpoint's query string wants it — the
+ * same builder the list query uses, so the export always matches the table.
+ */
+const exportParams = computed(() =>
+    buildContactSupportQueryParams(filters.value),
+);
 
 const exportEndpoint = exportMethod.url();
 
@@ -250,7 +242,9 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: ContactSupport): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at
+        ? 'bg-[var(--deleted-row-bg)] opacity-[var(--deleted-row-opacity)]'
+        : undefined;
 }
 
 const detailOpen = ref(false);
@@ -303,10 +297,27 @@ async function confirmDelete(): Promise<void> {
     pendingDelete.value = null;
 }
 
-async function onRestoreRow(support: ContactSupport): Promise<void> {
-    await restoreContactSupport
-        .mutateAsync(support.uuid)
-        .catch(() => undefined);
+const confirmRestoreOpen = ref(false);
+const pendingRestore = ref<ContactSupport | null>(null);
+
+function requestRestore(support: ContactSupport): void {
+    pendingRestore.value = support;
+    confirmRestoreOpen.value = true;
+}
+
+async function confirmRestore(): Promise<void> {
+    if (!pendingRestore.value) {
+        return;
+    }
+
+    try {
+        await restoreContactSupport.mutateAsync(pendingRestore.value.uuid);
+    } catch {
+        return;
+    }
+
+    confirmRestoreOpen.value = false;
+    pendingRestore.value = null;
 }
 
 const confirmBulkDeleteOpen = ref(false);
@@ -324,7 +335,9 @@ async function confirmBulkDelete(): Promise<void> {
     confirmBulkDeleteOpen.value = false;
 }
 
-async function onBulkRestore(): Promise<void> {
+const confirmBulkRestoreOpen = ref(false);
+
+async function confirmBulkRestore(): Promise<void> {
     try {
         await bulkRestoreContactSupports.mutateAsync(
             selectedDeleted.value.map((support) => support.uuid),
@@ -334,6 +347,7 @@ async function onBulkRestore(): Promise<void> {
     }
 
     selection.value = [];
+    confirmBulkRestoreOpen.value = false;
 }
 </script>
 
@@ -366,6 +380,8 @@ async function onBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Received any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -403,7 +419,7 @@ async function onBulkRestore(): Promise<void> {
                         bulkRestoreContactSupports.isLoading.value
                     "
                     @bulk-delete="confirmBulkDeleteOpen = true"
-                    @bulk-restore="onBulkRestore"
+                    @bulk-restore="confirmBulkRestoreOpen = true"
                 />
             </template>
 
@@ -461,40 +477,32 @@ async function onBulkRestore(): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_CONTACT_SUPPORTS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View support request"
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${contactName(row)}`"
+                            tooltip="View"
                             @click="openDetail(row)"
-                        >
-                            <EyeIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
 
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_CONTACT_SUPPORTS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit support request"
+                            <DataTableRowAction
+                                :icon="PencilIcon"
+                                :label="`Edit ${contactName(row)}`"
+                                tooltip="Edit"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_CONTACT_SUPPORTS">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Delete support request"
+                            <DataTableRowAction
+                                :icon="Trash2Icon"
+                                :label="`Delete ${contactName(row)}`"
+                                tooltip="Delete"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
@@ -502,14 +510,12 @@ async function onBulkRestore(): Promise<void> {
                         v-else
                         permission="RESTORE_CONTACT_SUPPORTS"
                     >
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore support request"
-                            @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        <DataTableRowAction
+                            :icon="RotateCcwIcon"
+                            :label="`Restore ${contactName(row)}`"
+                            tooltip="Restore"
+                            @click="requestRestore(row)"
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>
@@ -552,6 +558,22 @@ async function onBulkRestore(): Promise<void> {
     </ConfirmModal>
 
     <ConfirmModal
+        v-model:open="confirmRestoreOpen"
+        title="Restore this support request?"
+        description="It returns to the active inbox."
+        confirm-label="Restore"
+        @confirm="confirmRestore"
+    >
+        <div
+            v-if="pendingRestore"
+            class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
+        >
+            <p class="font-medium">{{ contactName(pendingRestore) }}</p>
+            <p class="text-muted-foreground">{{ pendingRestore.subject }}</p>
+        </div>
+    </ConfirmModal>
+
+    <ConfirmModal
         v-model:open="confirmBulkDeleteOpen"
         destructive
         :title="`Delete ${selectedActive.length} ${selectedActive.length === 1 ? 'request' : 'requests'}?`"
@@ -564,6 +586,31 @@ async function onBulkRestore(): Promise<void> {
         >
             <li
                 v-for="support in selectedActive"
+                :key="support.uuid"
+                class="flex items-baseline justify-between gap-3"
+            >
+                <span class="truncate font-medium">
+                    {{ contactName(support) }}
+                </span>
+                <span class="shrink-0 text-muted-foreground">
+                    {{ support.subject }}
+                </span>
+            </li>
+        </ul>
+    </ConfirmModal>
+
+    <ConfirmModal
+        v-model:open="confirmBulkRestoreOpen"
+        :title="`Restore ${selectedDeleted.length} ${selectedDeleted.length === 1 ? 'request' : 'requests'}?`"
+        description="They return to the active inbox."
+        confirm-label="Restore"
+        @confirm="confirmBulkRestore"
+    >
+        <ul
+            class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm"
+        >
+            <li
+                v-for="support in selectedDeleted"
                 :key="support.uuid"
                 class="flex items-baseline justify-between gap-3"
             >
