@@ -33,6 +33,7 @@ final class BackupFilterData extends Data
         public readonly ?string $dateFrom = null,
         #[Date, AfterOrEqual('date_from')]
         public readonly ?string $dateTo = null,
+        #[In(['created_at', 'filename', 'size_bytes'])]
         public readonly string $sortField = 'created_at',
         #[In([1, -1])]
         public readonly int $sortOrder = -1,

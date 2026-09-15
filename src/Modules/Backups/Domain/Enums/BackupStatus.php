@@ -18,6 +18,7 @@ enum BackupStatus: string
     case Completed = 'completed';
     case Failed = 'failed';
 
+    #[\NoDiscard]
     public function label(): string
     {
         return match ($this) {

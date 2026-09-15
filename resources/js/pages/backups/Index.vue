@@ -16,6 +16,7 @@ import {
     DataTable,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -30,6 +31,7 @@ import {
     defaultBackupFilters,
     useBackups,
 } from '@/modules/backups/composables/useBackups';
+import { buildBackupQueryParams } from '@/modules/backups/helpers/buildBackupQueryParams';
 import { formatBackupTimestamp } from '@/modules/backups/helpers/formatBackupTimestamp';
 import type { Backup, BackupStatusFilter } from '@/modules/backups/types';
 import { index } from '@/routes/backups';
@@ -83,14 +85,7 @@ const dateRange = computed<DateRange>({
 });
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    status: filters.value.status === 'all' ? undefined : filters.value.status,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_field: filters.value.sort_field,
-    sort_order: filters.value.sort_order,
-}));
+const exportParams = computed(() => buildBackupQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
@@ -290,6 +285,8 @@ async function confirmBulkDelete(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -363,40 +360,37 @@ async function confirmBulkDelete(): Promise<void> {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_BACKUPS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View backup"
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View ${row.filename}`"
+                            tooltip="View"
                             @click="openDetail(row)"
-                        >
-                            <EyeIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
 
-                    <PermissionGuard permission="DOWNLOAD_BACKUPS">
-                        <Button
-                            v-if="canDownloadRow(row)"
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Download backup"
+                    <!-- Failed runs have no archive on disk and running ones
+                         are not finished yet — no download to offer. -->
+                    <PermissionGuard
+                        v-if="canDownloadRow(row)"
+                        permission="DOWNLOAD_BACKUPS"
+                    >
+                        <DataTableRowAction
+                            :icon="DownloadIcon"
+                            :label="`Download ${row.filename}`"
+                            tooltip="Download"
                             @click="downloadRow(row)"
-                        >
-                            <DownloadIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
 
+                    <!-- Hard delete, no soft-delete: there is nothing to restore. -->
                     <PermissionGuard permission="DELETE_BACKUPS">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Delete backup"
+                        <DataTableRowAction
+                            :icon="Trash2Icon"
+                            :label="`Delete ${row.filename}`"
+                            tooltip="Delete"
+                            destructive
                             @click="requestDelete(row)"
-                        >
-                            <Trash2Icon
-                                class="size-4 text-destructive"
-                                aria-hidden="true"
-                            />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

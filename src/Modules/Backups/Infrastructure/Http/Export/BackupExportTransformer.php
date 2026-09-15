@@ -35,15 +35,56 @@ final readonly class BackupExportTransformer
     #[\NoDiscard]
     public static function toRow(BackupEloquentModel $backup): array
     {
+        return $backup
+            |> self::extractColumns(...)
+            |> self::formatDates(...)
+            |> self::sanitize(...);
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    private static function extractColumns(BackupEloquentModel $backup): array
+    {
         return [
             'Filename' => $backup->filename,
             'Disk' => $backup->disk,
             'Size' => HumanBytes::format($backup->size_bytes),
             'Status' => $backup->status->label(),
-            'Connection' => $backup->connection ?? '—',
-            'Started' => $backup->started_at?->format('F j, Y H:i') ?? '—',
-            'Finished' => $backup->finished_at?->format('F j, Y H:i') ?? '—',
-            'Created' => $backup->created_at?->format('F j, Y H:i') ?? '—',
+            'Connection' => $backup->connection,
+            'Started' => $backup->started_at?->toIso8601String(),
+            'Finished' => $backup->finished_at?->toIso8601String(),
+            'Created' => $backup->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * ISO8601 → "August 27, 2026 02:00" (BACKEND-PHP §8 export date rule).
+     *
+     * @param  array<string, string|null>  $row
+     * @return array<string, string|null>
+     */
+    private static function formatDates(array $row): array
+    {
+        foreach (['Started', 'Finished', 'Created'] as $field) {
+            if (is_string($row[$field]) && $row[$field] !== '') {
+                try {
+                    $row[$field] = (new \DateTimeImmutable($row[$field]))->format('F j, Y H:i');
+                } catch (\Exception) {
+                    // keep the original value when parsing fails
+                }
+            }
+        }
+
+        return $row;
+    }
+
+    /**
+     * @param  array<string, string|null>  $row
+     * @return array<string, string>
+     */
+    private static function sanitize(array $row): array
+    {
+        return array_map(static fn (?string $value): string => $value ?? '—', $row);
     }
 }

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/activity-logs';
+import { buildActivityLogQueryParams } from '../helpers/buildActivityLogQueryParams';
 import { defaultActivityLogFilters } from '../schemas/activityLogFilterSchema';
 import type {
     ActivityLogFilters,
@@ -28,16 +29,12 @@ export function useActivityLogs() {
     const filters = ref<ActivityLogFilters>(defaultActivityLogFilters());
 
     /**
-     * The wire params. Empty text axes are dropped so the backend
-     * `when(filled(...))` guards see an absent value, and so the query key
-     * (and the URL, via `useUrlSyncedFilters`) stay short.
+     * Filter half shared with the export menu — see
+     * `buildActivityLogQueryParams` — plus pagination, which is query-only
+     * and must never reach an export URL.
      */
     const queryParams = computed(() => ({
-        search: filters.value.search || undefined,
-        event: filters.value.event || undefined,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
-        sort_direction: filters.value.sort_direction,
+        ...buildActivityLogQueryParams(filters.value),
         page: filters.value.page,
         per_page: filters.value.per_page,
     }));

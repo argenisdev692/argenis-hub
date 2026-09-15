@@ -78,6 +78,26 @@ it('forbids users without permission from viewing the trail', function (): void 
         ->assertForbidden();
 });
 
+it('forbids users without permission from viewing a single entry', function (): void {
+    $activity = recordActivity('sensitive');
+
+    $this->actingAs(User::factory()->create())
+        ->getJson("/activity-logs/{$activity->id}")
+        ->assertForbidden();
+});
+
+it('forbids users without permission from exporting the trail', function (): void {
+    recordActivity('sensitive');
+
+    $this->actingAs(User::factory()->create())
+        ->get('/activity-logs/export?format=csv')
+        ->assertForbidden();
+});
+
+it('rejects guests on the trail', function (): void {
+    $this->getJson('/activity-logs')->assertUnauthorized();
+});
+
 it('filters the trail by an inclusive date range', function (): void {
     $inside = recordActivity('inside the window', now()->subDays(2));
     $outside = recordActivity('outside the window', now()->subDays(20));
@@ -146,6 +166,14 @@ it('denies sanctum clients without the permission', function (): void {
 
     $this->actingAs(User::factory()->create(), 'sanctum')
         ->getJson('/api/activity-logs')
+        ->assertForbidden();
+});
+
+it('denies sanctum clients without the permission on a single entry', function (): void {
+    $activity = recordActivity('api thing');
+
+    $this->actingAs(User::factory()->create(), 'sanctum')
+        ->getJson("/api/activity-logs/{$activity->id}")
         ->assertForbidden();
 });
 

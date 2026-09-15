@@ -21,16 +21,16 @@ use Modules\Backups\Infrastructure\Http\Controllers\AdminBackupController;
 |
 */
 
-Route::middleware(['auth', 'verified', 'permission:VIEW_ANY_BACKUPS'])
+Route::middleware(['auth', 'verified', 'throttle:60,1', 'permission:VIEW_ANY_BACKUPS'])
     ->get('/backups', [AdminBackupController::class, 'page'])
     ->name('backups.index');
 
-Route::middleware(['auth', 'verified'])
+Route::middleware(['auth', 'verified', 'throttle:60,1'])
     ->prefix('data/admin/backups')
     ->name('backups.admin.')
     ->group(function (): void {
         Route::middleware('permission:VIEW_ANY_BACKUPS')->get('/', [AdminBackupController::class, 'index'])->name('index');
-        Route::middleware('permission:CREATE_BACKUPS')->post('/', [AdminBackupController::class, 'store'])->name('store');
+        Route::middleware(['permission:CREATE_BACKUPS', 'throttle:10,1'])->post('/', [AdminBackupController::class, 'store'])->name('store');
         Route::middleware('permission:BULK_DELETE_BACKUPS')->post('/bulk-delete', [AdminBackupController::class, 'bulkDelete'])->name('bulk-delete');
         Route::middleware(['permission:EXPORT_BACKUPS', 'throttle:10,1'])->get('/export', [AdminBackupController::class, 'export'])->name('export');
         Route::middleware('permission:DOWNLOAD_BACKUPS')->get('/{uuid}/download', [AdminBackupController::class, 'download'])->whereUuid('uuid')->name('download');

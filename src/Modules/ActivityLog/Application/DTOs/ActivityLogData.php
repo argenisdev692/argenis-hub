@@ -34,6 +34,7 @@ final class ActivityLogData extends Data
         public readonly ?string $createdAt,
     ) {}
 
+    #[\NoDiscard]
     public static function fromActivity(Activity $activity): self
     {
         return new self(
@@ -49,6 +50,7 @@ final class ActivityLogData extends Data
         );
     }
 
+    #[\NoDiscard]
     public static function shortType(?string $type): ?string
     {
         return $type === null ? null : class_basename($type);
@@ -58,6 +60,7 @@ final class ActivityLogData extends Data
      * Human label for the actor. `causer` is polymorphic: Users expose
      * first/last name, other models may expose `name` or `email`.
      */
+    #[\NoDiscard]
     public static function causerLabel(Activity $activity): ?string
     {
         $causer = $activity->causer;

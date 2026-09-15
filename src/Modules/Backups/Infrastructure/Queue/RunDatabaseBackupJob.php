@@ -8,6 +8,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\Attributes\Timeout;
+use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
@@ -25,16 +27,14 @@ use Shared\Domain\Ports\AuditPort;
  * output so the panel can surface what went wrong. Either way the outcome is
  * audited.
  */
+#[Tries(1)]
+#[Timeout(1800)]
 final class RunDatabaseBackupJob implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
-
-    public int $tries = 1;
-
-    public int $timeout = 1800;
 
     public function handle(
         DatabaseBackupRunner $runner,

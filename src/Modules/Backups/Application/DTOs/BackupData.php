@@ -34,6 +34,7 @@ final class BackupData extends Data
         public readonly ?string $updatedAt,
     ) {}
 
+    #[\NoDiscard]
     public static function fromModel(BackupEloquentModel $backup): self
     {
         return new self(

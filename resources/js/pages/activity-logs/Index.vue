@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { EyeIcon } from '@lucide/vue';
 import { computed } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
@@ -15,18 +15,19 @@ import {
     DataTable,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
 } from '@/common/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
 import {
     defaultActivityLogFilters,
     useActivityLogs,
 } from '@/modules/activity-log/composables/useActivityLogs';
 import { activityLogEventPresentation } from '@/modules/activity-log/helpers/activityLogEvent';
+import { buildActivityLogQueryParams } from '@/modules/activity-log/helpers/buildActivityLogQueryParams';
 import { formatActivityAbsolute } from '@/modules/activity-log/helpers/formatActivityTimestamp';
 import type {
     ActivityLogFilters,
@@ -100,13 +101,7 @@ function onEventChange(
 }
 
 /** The active filter set, as the export endpoint's query string wants it. */
-const exportParams = computed(() => ({
-    search: filters.value.search || undefined,
-    event: filters.value.event || undefined,
-    date_from: filters.value.date_from ?? undefined,
-    date_to: filters.value.date_to ?? undefined,
-    sort_direction: filters.value.sort_direction,
-}));
+const exportParams = computed(() => buildActivityLogQueryParams(filters.value));
 
 const exportEndpoint = exportMethod.url();
 
@@ -198,6 +193,8 @@ const recordCounter = computed(() => {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Any date"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -264,16 +261,13 @@ const recordCounter = computed(() => {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_ACTIVITY_LOGS">
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View entry"
-                        >
-                            <Link :href="show(row.id)">
-                                <EyeIcon class="size-4" aria-hidden="true" />
-                            </Link>
-                        </Button>
+                        <DataTableRowAction
+                            :icon="EyeIcon"
+                            :label="`View entry #${row.id}`"
+                            tooltip="View"
+                            :href="show(row.id).url"
+                            prefetch
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>

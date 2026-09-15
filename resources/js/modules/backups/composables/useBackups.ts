@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/backups/admin';
+import { buildBackupQueryParams } from '../helpers/buildBackupQueryParams';
 import { defaultBackupFilters } from '../schemas/backupFilterSchema';
 import type { BackupFilters, BackupPage } from '../types';
 
@@ -24,19 +25,14 @@ export function useBackups() {
     const filters = ref<BackupFilters>(defaultBackupFilters());
 
     /**
-     * The wire params. `scopeApplyFilters` only branches on a concrete status
-     * (`running` / `completed` / `failed`) — there is no `'all'` case — so the
-     * UI's "All" option is sent as an omitted param. Empty search / unset date
-     * bounds are dropped the same way so the query key (and the URL, via
-     * `useUrlSyncedFilters`) stay short.
+     * Filter half shared with the export menu — see
+     * `buildBackupQueryParams` — plus pagination, which is query-only and
+     * must never reach an export URL.
      */
     const queryParams = computed(() => ({
-        ...filters.value,
-        status:
-            filters.value.status === 'all' ? undefined : filters.value.status,
-        search: filters.value.search || undefined,
-        date_from: filters.value.date_from ?? undefined,
-        date_to: filters.value.date_to ?? undefined,
+        ...buildBackupQueryParams(filters.value),
+        page: filters.value.page,
+        per_page: filters.value.per_page,
     }));
 
     const { data, ...query } = useQuery<BackupPage>({

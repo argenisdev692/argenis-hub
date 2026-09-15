@@ -17,6 +17,7 @@ final readonly class ArtisanDatabaseBackupRunner implements DatabaseBackupRunner
 {
     public function __construct(private Artisan $artisan) {}
 
+    #[\NoDiscard]
     public function run(): BackupRunOutcome
     {
         $exitCode = $this->artisan->call('backup:run', [
