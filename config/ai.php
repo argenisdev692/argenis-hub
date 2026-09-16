@@ -45,8 +45,9 @@ return [
 
     'caching' => [
         'embeddings' => [
-            'cache' => false,
-            'store' => env('CACHE_STORE', 'database'),
+            'cache' => (bool) env('AI_EMBEDDINGS_CACHE', true),
+            'store' => env('CACHE_STORE', 'redis'),
+            'individually' => true,
         ],
     ],
 

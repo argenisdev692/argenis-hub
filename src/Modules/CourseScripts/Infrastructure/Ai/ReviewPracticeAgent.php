@@ -6,10 +6,11 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
@@ -18,9 +19,10 @@ use Stringable;
  * Independent reviewer of a practice pack (US-13): realism, designed contrasts
  * actually present, figures, integrity with the script.
  */
-final class ReviewPracticeAgent implements Agent, HasProviderOptions, HasStructuredOutput
+final class ReviewPracticeAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use RemembersConversations;
     use UsesPromptCache;
 
     public function instructions(): Stringable|string
@@ -46,14 +48,6 @@ final class ReviewPracticeAgent implements Agent, HasProviderOptions, HasStructu
             problem inside one file, or "closing" for the header, setup, usage or
             instructor note. None when the pack is ready.
             INSTRUCTIONS."\n\n".UntrustedContentBlock::DIRECTIVE;
-    }
-
-    /**
-     * @return Message[]
-     */
-    public function messages(): iterable
-    {
-        return [];
     }
 
     /**

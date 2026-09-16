@@ -18,7 +18,7 @@ use Shared\Infrastructure\AI\AIClientInterface;
  */
 final class RecordingAiClient implements AIClientInterface
 {
-    /** @var list<array{agent: string, prompt: string, provider: ?string, options: array<string, mixed>}> */
+    /** @var list<array{agent: string, prompt: string, provider: ?string, model: ?string, timeout: ?int, options: array<string, mixed>}> */
     public array $calls = [];
 
     /**
@@ -42,6 +42,8 @@ final class RecordingAiClient implements AIClientInterface
             'agent' => $agentClass,
             'prompt' => $prompt,
             'provider' => $provider,
+            'model' => $model,
+            'timeout' => $timeoutSeconds,
             'options' => $agent instanceof HasProviderOptions ? $agent->providerOptions((string) $provider) : [],
         ];
 

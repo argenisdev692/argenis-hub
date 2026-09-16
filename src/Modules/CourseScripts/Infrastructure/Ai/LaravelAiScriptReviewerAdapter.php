@@ -23,6 +23,7 @@ final readonly class LaravelAiScriptReviewerAdapter implements ScriptReviewerPor
     public function __construct(
         private PromptCachingAIClient $generator,
         private WritingContextRenderer $renderer,
+        private GenerationRequestPolicy $policy,
         private LoggerInterface $logger,
     ) {}
 
@@ -59,11 +60,24 @@ final readonly class LaravelAiScriptReviewerAdapter implements ScriptReviewerPor
         $tail = UntrustedContentBlock::wrap('draft_under_review', (string) json_encode($material, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES))
             ."\n\nREQUEST: ".$request;
 
-        try {
-            $response = $this->generator->generateStructured($agent, $this->renderer->prompt($context, $tail), $provider);
-        } catch (Throwable $exception) {
-            $this->logger->error('course_scripts.review_failed', ['exception' => $exception::class]);
+        foreach ([$provider, ...$this->policy->fallbacksFor($provider)] as $attempt) {
+            try {
+                $response = $this->generator->generateStructured(
+                    $agent,
+                    $this->renderer->prompt($context, $tail),
+                    $attempt,
+                    $this->policy->modelFor('review'),
+                    $this->policy->timeoutFor('review'),
+                    'review',
+                );
 
+                break;
+            } catch (Throwable $exception) {
+                $this->logger->error('course_scripts.review_failed', ['provider' => $attempt, 'exception' => $exception::class]);
+            }
+        }
+
+        if (! isset($response)) {
             throw GenerationProviderException::providerFailed('review');
         }
 

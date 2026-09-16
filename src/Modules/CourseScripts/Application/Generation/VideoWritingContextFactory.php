@@ -11,6 +11,7 @@ use Modules\CourseScripts\Domain\Ports\ResearchPort;
 use Modules\CourseScripts\Domain\Ports\ScriptVersionRepositoryPort;
 use Modules\CourseScripts\Domain\Services\ContinuityContextBuilder;
 use Modules\CourseScripts\Domain\Services\NotesExcerptSelector;
+use Modules\CourseScripts\Domain\Services\RelatedPassageRanker;
 use Modules\CourseScripts\Domain\Services\ResearchQueryFactory;
 use Modules\CourseScripts\Domain\ValueObjects\ResearchFinding;
 use Modules\CourseScripts\Domain\ValueObjects\VideoWritingContext;
@@ -34,6 +35,7 @@ final readonly class VideoWritingContextFactory
         private ResearchPort $research,
         private ResearchFindingRepositoryPort $findings,
         private ScriptVersionRepositoryPort $versions,
+        private RelatedPassageRanker $ranker,
         private Config $config,
     ) {}
 
@@ -115,9 +117,54 @@ final readonly class VideoWritingContextFactory
                 styleExemplar: $styleExemplar === null ? null : mb_substr($styleExemplar, 0, (int) $this->config->get('course-scripts.style.exemplar_budget_chars', 6000)),
                 forcePractice: $forcePractice,
                 feedbackNote: $feedbackNote,
+                relatedContext: $this->relatedPassages($course, $video, $summaries),
             ),
             'research_calls' => $calls,
         ];
+    }
+
+    /**
+     * RAG-light: ranked background from accepted summaries beyond the
+     * continuity window. Reuses the summaries already loaded for continuity —
+     * no extra query — and stays empty when disabled or unmatched, so the
+     * prompt prefix is byte-identical to a context without knowledge.
+     *
+     * @param  array<int, string>  $summaries
+     * @return list<string>
+     */
+    private function relatedPassages(CourseEloquentModel $course, CourseVideoEloquentModel $video, array $summaries): array
+    {
+        if (! (bool) $this->config->get('course-scripts.knowledge.enabled', true)) {
+            return [];
+        }
+
+        $titles = $course->videos->mapWithKeys(
+            static fn (CourseVideoEloquentModel $candidate): array => [$candidate->id => 'video '.$candidate->number.' – '.$candidate->title],
+        )->all();
+
+        $candidates = [];
+
+        foreach ($summaries as $videoId => $summary) {
+            if ($videoId === $video->id || trim((string) $summary) === '') {
+                continue;
+            }
+
+            $candidates[] = ['label' => $titles[$videoId] ?? 'video '.$videoId, 'text' => (string) $summary];
+        }
+
+        $focus = implode(' ', array_filter([
+            $video->title,
+            $video->topic,
+            $video->objective,
+            ...((array) $video->mandatory_content),
+        ]));
+
+        return $this->ranker->rank(
+            $focus,
+            $candidates,
+            (int) $this->config->get('course-scripts.knowledge.top_k', 3),
+            (int) $this->config->get('course-scripts.knowledge.max_chars', 2000),
+        );
     }
 
     /**

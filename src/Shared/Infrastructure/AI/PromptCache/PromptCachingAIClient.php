@@ -6,6 +6,7 @@ namespace Shared\Infrastructure\AI\PromptCache;
 
 use Illuminate\Contracts\Config\Repository as Config;
 use Laravel\Ai\Contracts\HasProviderOptions;
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Psr\Log\LoggerInterface;
 use Shared\Infrastructure\AI\AIClientInterface;
@@ -41,6 +42,7 @@ final readonly class PromptCachingAIClient
         string $provider,
         ?string $model = null,
         ?int $timeoutSeconds = null,
+        ?string $step = null,
     ): StructuredAgentResponse {
         $enabled = (bool) $this->config->get('ai.prompt_cache.enabled', true);
 
@@ -64,12 +66,52 @@ final readonly class PromptCachingAIClient
             $this->scope->clear();
         }
 
-        $this->logUsage($agentClass, $provider, $response);
+        $this->logUsage($agentClass, $provider, $response, $model, $prompt->cacheKey, $step);
 
         return $response;
     }
 
-    private function logUsage(string $agentClass, string $provider, StructuredAgentResponse $response): void
+    /**
+     * Stream an agent with the same cacheable prefix as structured calls.
+     *
+     * The returned response is `Responsable`: return it directly from a
+     * controller for an SSE preview. Provider options are resolved eagerly by
+     * the SDK during `stream()`, so the scope is cleared before returning —
+     * same lifecycle as {@see generateStructured}.
+     *
+     * @param  class-string  $agentClass
+     */
+    public function streamStructured(
+        string $agentClass,
+        CacheablePrompt $prompt,
+        string $provider,
+        ?string $model = null,
+        ?int $timeoutSeconds = null,
+        ?string $step = null,
+    ): StreamableAgentResponse {
+        $enabled = (bool) $this->config->get('ai.prompt_cache.enabled', true);
+
+        if ($enabled && ! is_subclass_of($agentClass, HasProviderOptions::class)) {
+            throw new \LogicException(sprintf('%s must implement HasProviderOptions (use UsesPromptCache) to be called with a cacheable prompt.', $agentClass));
+        }
+
+        $layersInSystem = $enabled && strtolower($provider) === 'anthropic';
+
+        $this->scope->set($prompt);
+
+        try {
+            return app($agentClass)->stream(
+                $layersInSystem ? $prompt->tail : $prompt->asSingleMessage(),
+                provider: $provider,
+                model: $model,
+                timeout: $timeoutSeconds ?? 120,
+            );
+        } finally {
+            $this->scope->clear();
+        }
+    }
+
+    private function logUsage(string $agentClass, string $provider, StructuredAgentResponse $response, ?string $model = null, ?string $cacheKey = null, ?string $step = null): void
     {
         if (! (bool) $this->config->get('ai.prompt_cache.log_usage', true)) {
             return;
@@ -81,6 +123,9 @@ final readonly class PromptCachingAIClient
             $this->logger->info('ai.prompt_cache.usage', [
                 'agent' => class_basename($agentClass),
                 'provider' => $provider,
+                'model' => $model,
+                'step' => $step,
+                'cache_key' => $cacheKey,
                 'input_tokens' => $usage->promptTokens ?? null,
                 'cache_read_input_tokens' => $usage->cacheReadInputTokens ?? null,
                 'cache_write_input_tokens' => $usage->cacheWriteInputTokens ?? null,

@@ -6,10 +6,11 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
@@ -18,9 +19,10 @@ use Stringable;
  * Step 3 (plan §3.5 step 7, R11.4): the closing parts, written once every
  * section exists so the checklist can name what actually happens on screen.
  */
-final class GenerateScriptClosingAgent implements Agent, HasProviderOptions, HasStructuredOutput
+final class GenerateScriptClosingAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use RemembersConversations;
     use UsesPromptCache;
 
     public function instructions(): Stringable|string
@@ -49,14 +51,6 @@ final class GenerateScriptClosingAgent implements Agent, HasProviderOptions, Has
               demonstration, plus format checks.
             - Write in the course language. Fix every correction listed in the request.
             INSTRUCTIONS."\n\n".UntrustedContentBlock::DIRECTIVE;
-    }
-
-    /**
-     * @return Message[]
-     */
-    public function messages(): iterable
-    {
-        return [];
     }
 
     /**

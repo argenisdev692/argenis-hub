@@ -19,6 +19,7 @@ final readonly class VideoWritingContext
      * @param  list<NotesExcerpt>  $notes
      * @param  list<ResearchFinding>  $courseResearch
      * @param  list<ResearchFinding>  $videoResearch
+     * @param  list<string>  $relatedContext  ranked background passages from accepted scripts (RAG-light)
      */
     public function __construct(
         public string $courseUuid,
@@ -37,7 +38,17 @@ final readonly class VideoWritingContext
         public ?string $styleExemplar = null,
         public bool $forcePractice = false,
         public ?string $feedbackNote = null,
+        public array $relatedContext = [],
     ) {}
+
+    /**
+     * @param  list<string>  $passages
+     */
+    #[\NoDiscard]
+    public function withRelatedContext(array $passages): self
+    {
+        return clone ($this, ['relatedContext' => array_values($passages)]);
+    }
 
     public function taughtTool(): ?string
     {

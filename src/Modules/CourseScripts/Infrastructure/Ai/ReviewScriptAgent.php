@@ -6,10 +6,11 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
@@ -18,9 +19,10 @@ use Stringable;
  * Independent reviewer of a script draft (US-13 · FR-40). Scores and
  * objections only — it never rewrites.
  */
-final class ReviewScriptAgent implements Agent, HasProviderOptions, HasStructuredOutput
+final class ReviewScriptAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use RemembersConversations;
     use UsesPromptCache;
 
     public function instructions(): Stringable|string
@@ -50,14 +52,6 @@ final class ReviewScriptAgent implements Agent, HasProviderOptions, HasStructure
             or "closing" for summary, recording notes or checklist. Only objections
             that would raise a score; none when the draft is ready.
             INSTRUCTIONS."\n\n".UntrustedContentBlock::DIRECTIVE;
-    }
-
-    /**
-     * @return Message[]
-     */
-    public function messages(): iterable
-    {
-        return [];
     }
 
     /**

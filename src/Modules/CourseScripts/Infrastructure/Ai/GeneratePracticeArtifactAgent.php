@@ -6,10 +6,11 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
@@ -19,9 +20,10 @@ use Stringable;
  * one call per file so a pack of several long documents never crowds a single
  * structured response.
  */
-final class GeneratePracticeArtifactAgent implements Agent, HasProviderOptions, HasStructuredOutput
+final class GeneratePracticeArtifactAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use RemembersConversations;
     use UsesPromptCache;
 
     public function instructions(): Stringable|string
@@ -50,14 +52,6 @@ final class GeneratePracticeArtifactAgent implements Agent, HasProviderOptions, 
             - organisations and characters: every organisation and person that appears.
             - Write in the course language. Fix every correction listed in the request.
             INSTRUCTIONS."\n\n".UntrustedContentBlock::DIRECTIVE;
-    }
-
-    /**
-     * @return Message[]
-     */
-    public function messages(): iterable
-    {
-        return [];
     }
 
     /**

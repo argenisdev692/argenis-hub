@@ -152,6 +152,58 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Generation model policy (OWASP LLM03 — pin model versions)
+    |--------------------------------------------------------------------------
+    |
+    | The writer PROVIDER is picked per run from `selectable_writers`; the
+    | MODEL is never a request parameter. Null keeps the provider default so
+    | existing runs are untouched; set e.g. COURSE_SCRIPTS_MODEL_SECTION to
+    | pin a versioned model per step. Timeouts bound long inputs (OWASP A10).
+    |
+    */
+
+    'generation' => [
+        'models' => [
+            'outline' => env('COURSE_SCRIPTS_MODEL_OUTLINE'),
+            'section' => env('COURSE_SCRIPTS_MODEL_SECTION'),
+            'closing' => env('COURSE_SCRIPTS_MODEL_CLOSING'),
+            'artifact' => env('COURSE_SCRIPTS_MODEL_ARTIFACT'),
+            'review' => env('COURSE_SCRIPTS_MODEL_REVIEW'),
+            'bible' => env('COURSE_SCRIPTS_MODEL_BIBLE'),
+        ],
+        'timeouts' => [
+            'outline' => (int) env('COURSE_SCRIPTS_TIMEOUT_OUTLINE', 120),
+            'section' => (int) env('COURSE_SCRIPTS_TIMEOUT_SECTION', 180),
+            'closing' => (int) env('COURSE_SCRIPTS_TIMEOUT_CLOSING', 120),
+            'artifact' => (int) env('COURSE_SCRIPTS_TIMEOUT_ARTIFACT', 180),
+            'review' => (int) env('COURSE_SCRIPTS_TIMEOUT_REVIEW', 120),
+            'bible' => (int) env('COURSE_SCRIPTS_TIMEOUT_BIBLE', 120),
+        ],
+        // Ordered fallback providers per step (primary first, SDK failover
+        // inside each call). Comma-separated env, primary is skipped at runtime.
+        'failover_order' => env('COURSE_SCRIPTS_FAILOVER_ORDER', 'openai,anthropic,gemini'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Course knowledge (RAG-light, pgvector-ready)
+    |--------------------------------------------------------------------------
+    |
+    | Keyword-ranked passages from accepted summaries + course research enrich
+    | the prompt as an extra short-lived layer AFTER the stable course/video
+    | layers, so prefix caching of the stable prefix is preserved. `top_k`
+    | bounds the extra tokens per call (OWASP LLM10).
+    |
+    */
+
+    'knowledge' => [
+        'enabled' => (bool) env('COURSE_SCRIPTS_KNOWLEDGE_ENABLED', true),
+        'top_k' => (int) env('COURSE_SCRIPTS_KNOWLEDGE_TOP_K', 3),
+        'max_chars' => (int) env('COURSE_SCRIPTS_KNOWLEDGE_MAX_CHARS', 2000),
+    ],
+
     'providers' => [
         'selectable_writers' => ['openai', 'anthropic', 'gemini'],
     ],

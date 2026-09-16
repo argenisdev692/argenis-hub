@@ -35,6 +35,7 @@ final readonly class LaravelAiScriptWriterAdapter implements ScriptWriterPort
         private PromptCachingAIClient $generator,
         private WritingContextRenderer $renderer,
         private DocumentNameFactory $names,
+        private GenerationRequestPolicy $policy,
         private LoggerInterface $logger,
     ) {}
 
@@ -227,14 +228,20 @@ final readonly class LaravelAiScriptWriterAdapter implements ScriptWriterPort
      */
     private function call(string $agent, VideoWritingContext $context, string $provider, string $step, string $tail): StructuredAgentResponse
     {
-        try {
-            return $this->generator->generateStructured($agent, $this->renderer->prompt($context, $tail), $provider);
-        } catch (Throwable $exception) {
-            // Class name only: provider errors can echo the author's content (FR-55).
-            $this->logger->error('course_scripts.writer_failed', ['step' => $step, 'exception' => $exception::class]);
+        $prompt = $this->renderer->prompt($context, $tail);
+        $model = $this->policy->modelFor($step);
+        $timeout = $this->policy->timeoutFor($step);
 
-            throw GenerationProviderException::providerFailed($step);
+        foreach ([$provider, ...$this->policy->fallbacksFor($provider)] as $attempt) {
+            try {
+                return $this->generator->generateStructured($agent, $prompt, $attempt, $model, $timeout, $step);
+            } catch (Throwable $exception) {
+                // Class name only: provider errors can echo the author's content (FR-55).
+                $this->logger->error('course_scripts.writer_failed', ['step' => $step, 'provider' => $attempt, 'exception' => $exception::class]);
+            }
         }
+
+        throw GenerationProviderException::providerFailed($step);
     }
 
     /**

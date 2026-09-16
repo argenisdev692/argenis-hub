@@ -23,16 +23,29 @@ final readonly class LaravelAiBibleProposerAdapter implements BibleProposerPort
 {
     public function __construct(
         private AIClientInterface $ai,
+        private GenerationRequestPolicy $policy,
         private LoggerInterface $logger,
     ) {}
 
     public function propose(BibleProposalContext $context, string $provider): CourseBibleData
     {
-        try {
-            $response = $this->ai->generateStructured(ProposeCourseBibleAgent::class, $this->prompt($context), $provider);
-        } catch (Throwable $exception) {
-            $this->logger->error('course_scripts.bible_proposal_failed', ['exception' => $exception::class]);
+        foreach ([$provider, ...$this->policy->fallbacksFor($provider)] as $attempt) {
+            try {
+                $response = $this->ai->generateStructured(
+                    ProposeCourseBibleAgent::class,
+                    $this->prompt($context),
+                    $attempt,
+                    $this->policy->modelFor('bible'),
+                    $this->policy->timeoutFor('bible'),
+                );
 
+                break;
+            } catch (Throwable $exception) {
+                $this->logger->error('course_scripts.bible_proposal_failed', ['provider' => $attempt, 'exception' => $exception::class]);
+            }
+        }
+
+        if (! isset($response)) {
             throw GenerationProviderException::providerFailed('bible');
         }
 

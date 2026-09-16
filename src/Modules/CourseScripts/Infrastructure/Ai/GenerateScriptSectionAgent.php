@@ -6,10 +6,11 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
@@ -18,9 +19,10 @@ use Stringable;
  * Step 2 (plan §3.5 step 6): the recordable content of one top-level section
  * and its sub-sections, as typed segments (FR-30).
  */
-final class GenerateScriptSectionAgent implements Agent, HasProviderOptions, HasStructuredOutput
+final class GenerateScriptSectionAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
+    use RemembersConversations;
     use UsesPromptCache;
 
     public function instructions(): Stringable|string
@@ -53,14 +55,6 @@ final class GenerateScriptSectionAgent implements Agent, HasProviderOptions, Has
             - Use the practice file names exactly as the outline declares them.
             - When the request lists corrections, fix every one of them.
             INSTRUCTIONS."\n\n".UntrustedContentBlock::DIRECTIVE;
-    }
-
-    /**
-     * @return Message[]
-     */
-    public function messages(): iterable
-    {
-        return [];
     }
 
     /**

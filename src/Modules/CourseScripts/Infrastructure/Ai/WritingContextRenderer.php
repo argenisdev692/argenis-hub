@@ -22,11 +22,28 @@ final readonly class WritingContextRenderer
     #[\NoDiscard]
     public function prompt(VideoWritingContext $context, string $tail): CacheablePrompt
     {
+        $layers = [
+            PromptLayer::long($this->courseLayer($context)),
+            PromptLayer::short($this->videoLayer($context)),
+        ];
+
+        // RAG-light passages go LAST: the stable course/video prefix keeps its
+        // exact bytes, so provider prefix caching still hits on every step.
+        if ($context->relatedContext !== []) {
+            $sections = [];
+
+            foreach ($context->relatedContext as $index => $passage) {
+                $sections['related_passage_'.($index + 1)] = $passage;
+            }
+
+            $layers[] = PromptLayer::short(
+                "RELATED PASSAGES from accepted scripts of this course (background only — author notes and brief take precedence):\n\n"
+                .UntrustedContentBlock::wrapAll($sections),
+            );
+        }
+
         return new CacheablePrompt(
-            layers: [
-                PromptLayer::long($this->courseLayer($context)),
-                PromptLayer::short($this->videoLayer($context)),
-            ],
+            layers: $layers,
             tail: $tail,
             cacheKey: 'course-scripts:'.$context->courseUuid,
         );

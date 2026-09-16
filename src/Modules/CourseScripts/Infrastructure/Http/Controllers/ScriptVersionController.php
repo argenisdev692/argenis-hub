@@ -8,14 +8,20 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Modules\CourseScripts\Application\Commands\ScriptVersionCommandsHandler;
 use Modules\CourseScripts\Application\DTOs\GenerationRunData;
 use Modules\CourseScripts\Application\DTOs\RegenerateScriptData;
 use Modules\CourseScripts\Application\DTOs\ScriptVersionData;
 use Modules\CourseScripts\Application\DTOs\ScriptVersionSummaryData;
+use Modules\CourseScripts\Application\Generation\VideoWritingContextFactory;
 use Modules\CourseScripts\Domain\Exceptions\CourseNotFoundException;
 use Modules\CourseScripts\Domain\Ports\CourseRepositoryPort;
 use Modules\CourseScripts\Domain\Ports\ScriptVersionRepositoryPort;
+use Modules\CourseScripts\Infrastructure\Ai\GenerateScriptOutlineAgent;
+use Modules\CourseScripts\Infrastructure\Ai\GenerationRequestPolicy;
+use Modules\CourseScripts\Infrastructure\Ai\WritingContextRenderer;
+use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
 
 /**
  * A video's script: preview, versions, regenerate with feedback, force a
@@ -61,6 +67,46 @@ final readonly class ScriptVersionController
         $user = $this->user($request);
 
         return response()->json(['data' => ScriptVersionData::fromModel($commands->accept($uuid, $videoUuid, $versionUuid, $user->id, $user))]);
+    }
+
+    /**
+     * Live SSE preview of a video's outline (instructor draft screen).
+     *
+     * Builds the same cacheable context as the queued run, then streams the
+     * outline agent directly — no version is stored. Long research is reused
+     * from stored findings when present, so repeat previews start instantly.
+     */
+    public function previewOutline(
+        Request $request,
+        string $uuid,
+        string $videoUuid,
+        CourseRepositoryPort $courses,
+        VideoWritingContextFactory $contexts,
+        WritingContextRenderer $renderer,
+        PromptCachingAIClient $streaming,
+        GenerationRequestPolicy $policy,
+    ): StreamableAgentResponse {
+        $provider = strtolower((string) $request->query('provider', 'openai'));
+
+        abort_unless(
+            in_array($provider, (array) config('course-scripts.providers.selectable_writers', ['openai', 'anthropic', 'gemini']), true),
+            422,
+            'Unknown writer provider.',
+        );
+
+        $course = $courses->findOwnedWithStructure($uuid, $this->user($request)->id) ?? throw new CourseNotFoundException;
+        $video = $course->videos->firstWhere('uuid', $videoUuid) ?? throw new CourseNotFoundException;
+
+        ['context' => $context] = $contexts->build($course, $video);
+
+        return $streaming->streamStructured(
+            GenerateScriptOutlineAgent::class,
+            $renderer->prompt($context, 'REQUEST: Write the OUTLINE of this video.'),
+            $provider,
+            $policy->modelFor('outline'),
+            $policy->timeoutFor('outline'),
+            'outline-preview',
+        );
     }
 
     private function user(Request $request): User

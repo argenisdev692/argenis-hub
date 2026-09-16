@@ -6,9 +6,10 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
 
@@ -20,9 +21,10 @@ use Stringable;
  * secondary organisations (clients, suppliers such as Heliantia Group), a
  * narration tone and the tool being taught, if any.
  */
-final class ProposeCourseBibleAgent implements Agent, HasStructuredOutput
+final class ProposeCourseBibleAgent implements Agent, Conversational, HasStructuredOutput
 {
     use Promptable;
+    use RemembersConversations;
 
     public function instructions(): Stringable|string
     {
@@ -56,14 +58,6 @@ final class ProposeCourseBibleAgent implements Agent, HasStructuredOutput
             language given in the prompt.
 
             INSTRUCTIONS.UntrustedContentBlock::DIRECTIVE;
-    }
-
-    /**
-     * @return Message[]
-     */
-    public function messages(): iterable
-    {
-        return [];
     }
 
     /**

@@ -99,6 +99,9 @@ Route::middleware(['auth', 'verified'])
             ->post('/{uuid}/videos/{videoUuid}/regenerate', [ScriptVersionController::class, 'regenerate'])
             ->whereUuid(['uuid', 'videoUuid'])->name('videos.regenerate');
         Route::middleware(['permission:GENERATE_COURSE_SCRIPTS', 'throttle:course-scripts-generate'])
+            ->get('/{uuid}/videos/{videoUuid}/outline/preview', [ScriptVersionController::class, 'previewOutline'])
+            ->whereUuid(['uuid', 'videoUuid'])->name('videos.outline.preview');
+        Route::middleware(['permission:GENERATE_COURSE_SCRIPTS', 'throttle:course-scripts-generate'])
             ->post('/{uuid}/videos/{videoUuid}/practice', [ScriptVersionController::class, 'forcePractice'])
             ->whereUuid(['uuid', 'videoUuid'])->name('videos.practice');
         Route::middleware('permission:UPDATE_COURSE_SCRIPTS')
