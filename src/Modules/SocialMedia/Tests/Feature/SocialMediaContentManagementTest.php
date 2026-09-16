@@ -54,11 +54,24 @@ final class SocialMediaContentManagementTest extends TestCase
         $admin = $this->superAdmin();
         $content = SocialMediaContentEloquentModel::factory()->ready()->create();
 
-        $this->actingAs($admin)->post("/social-media/{$content->uuid}/publish")->assertRedirect();
+        $this->actingAs($admin)->post("/social-media/{$content->uuid}/publish", ['confirm' => 1])->assertRedirect();
 
         $content->refresh();
         $this->assertSame('published', $content->status->value);
         $this->assertNotNull($content->published_at);
+    }
+
+    public function test_publishing_without_confirmation_is_rejected(): void
+    {
+        $admin = $this->superAdmin();
+        $content = SocialMediaContentEloquentModel::factory()->ready()->create();
+
+        $this->actingAs($admin)
+            ->post("/social-media/{$content->uuid}/publish")
+            ->assertSessionHasErrors('confirm');
+
+        $content->refresh();
+        $this->assertNotSame('published', $content->status->value);
     }
 
     public function test_scheduling_without_a_future_date_is_rejected(): void

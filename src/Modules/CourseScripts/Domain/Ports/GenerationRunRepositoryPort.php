@@ -14,6 +14,10 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseVideo
  * Persistence of generation runs and their per-video outcomes (US-9 · FR-18,
  * FR-24). Counters are incremented atomically in the database so concurrent
  * workers can never lose a call.
+ *
+ * Boundary note: returns the module's `@internal` Eloquent models (same
+ * documented decision as {@see CourseRepositoryPort}) — they never cross the
+ * module boundary; the port remains the inversion point.
  */
 interface GenerationRunRepositoryPort
 {

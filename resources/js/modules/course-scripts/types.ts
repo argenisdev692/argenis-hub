@@ -53,8 +53,23 @@ export type CoursePage = {
  */
 export type CourseTrashedFilter = 'without' | 'only' | 'with';
 
+/** `CourseFilterData::TRASHED_VALUES`, for client-side guards (URL restore). */
+export const COURSE_TRASHED_VALUES: readonly CourseTrashedFilter[] = [
+    'without',
+    'only',
+    'with',
+];
+
 /** `CourseFilterData::SORTABLE_FIELDS` — `sort_field` is an allow-list server-side. */
 export type CourseSortField = 'created_at' | 'updated_at' | 'title' | 'status';
+
+/** The sortable fields, for client-side guards (sort mapping, URL restore). */
+export const COURSE_SORT_FIELDS: readonly CourseSortField[] = [
+    'created_at',
+    'updated_at',
+    'title',
+    'status',
+];
 
 /**
  * The query params `GET /course-scripts` and `/course-scripts/export` accept.

@@ -115,9 +115,18 @@ function applyPreset(preset: DateRangePreset): void {
 }
 
 function onSelect(value: CalendarRange | null | undefined): void {
+    let from = value?.start ? value.start.toString() : null;
+    let to = value?.end ? value.end.toString() : null;
+
+    // Inline `to >= from` guard: a re-clicked range can land inverted, and the
+    // backend rejects it — swap so the window stays valid instead of 422ing.
+    if (from && to && to < from) {
+        [from, to] = [to, from];
+    }
+
     model.value = {
-        from: value?.start ? value.start.toString() : null,
-        to: value?.end ? value.end.toString() : null,
+        from,
+        to,
     };
 
     if (value?.start && value.end) {

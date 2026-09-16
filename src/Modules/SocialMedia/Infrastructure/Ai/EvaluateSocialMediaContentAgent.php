@@ -8,10 +8,12 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Modules\SocialMedia\Domain\Services\ContentQualityEvaluator;
+use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
 
 /**
@@ -28,9 +30,9 @@ use Stringable;
  * Pass/fail is still computed in PHP, never here: the judge reports numbers,
  * the evaluator service decides.
  */
-final class EvaluateSocialMediaContentAgent implements Agent, Conversational, HasStructuredOutput
+final class EvaluateSocialMediaContentAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
-    use Promptable;
+    use Promptable, UsesPromptCache;
 
     public function instructions(): Stringable|string
     {

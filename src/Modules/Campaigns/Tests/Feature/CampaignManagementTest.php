@@ -56,11 +56,24 @@ final class CampaignManagementTest extends TestCase
         $admin = $this->superAdmin();
         $campaign = CampaignEloquentModel::factory()->ready()->create();
 
-        $this->actingAs($admin)->post("/campaigns/{$campaign->uuid}/publish")->assertRedirect();
+        $this->actingAs($admin)->post("/campaigns/{$campaign->uuid}/publish", ['confirm' => 1])->assertRedirect();
 
         $campaign->refresh();
         $this->assertSame('published', $campaign->status->value);
         $this->assertNotNull($campaign->published_at);
+    }
+
+    public function test_publishing_without_confirmation_is_rejected(): void
+    {
+        $admin = $this->superAdmin();
+        $campaign = CampaignEloquentModel::factory()->ready()->create();
+
+        $this->actingAs($admin)
+            ->post("/campaigns/{$campaign->uuid}/publish")
+            ->assertSessionHasErrors('confirm');
+
+        $campaign->refresh();
+        $this->assertNotSame('published', $campaign->status->value);
     }
 
     public function test_scheduling_without_a_future_date_is_rejected(): void

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Modules\Campaigns\Infrastructure\Ai;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Laravel\Ai\Responses\StreamableAgentResponse;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Modules\Campaigns\Application\Commands\RunCampaignGenerationHandler;
 use Modules\Campaigns\Application\DTOs\CampaignDraftData;
 use Modules\Campaigns\Application\DTOs\CampaignImageConceptData;
@@ -21,10 +24,16 @@ use Modules\Campaigns\Domain\Ports\CampaignIdeatorPort;
 use Modules\Campaigns\Domain\Services\CampaignQualityEvaluator;
 use Modules\Campaigns\Infrastructure\Broadcasting\CampaignProgressNotifier;
 use Modules\SocialMedia\Infrastructure\Ai\LaravelAiSocialMediaAssistantAdapter;
-use Shared\Infrastructure\AI\AIClientInterface;
+use Shared\Infrastructure\AI\PromptCache\CacheablePrompt;
+use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
+use Shared\Infrastructure\AI\PromptCache\PromptLayer;
+use Shared\Infrastructure\AI\ProviderFailover;
+use Shared\Infrastructure\AI\ResearchReranker;
 use Shared\Infrastructure\Company\CompanyProfile;
+use Shared\Infrastructure\Research\FirecrawlClientInterface;
 use Shared\Infrastructure\Research\TavilyClientInterface;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
+use Throwable;
 
 /**
  * Single adapter behind both Campaigns TEXT ports — mirrors
@@ -49,10 +58,16 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
 {
     private const int CACHE_TTL_MINUTES = 15;
 
+    private const int FULL_PAGE_MAX_CHARS = 4000;
+
     public function __construct(
-        private AIClientInterface $ai,
+        private PromptCachingAIClient $ai,
         private TavilyClientInterface $research,
+        private FirecrawlClientInterface $pages,
+        private PastWinnersRetriever $winners,
         private CampaignProgressNotifier $progress,
+        private ProviderFailover $failover,
+        private ResearchReranker $reranker,
     ) {}
 
     public function suggestTopics(SuggestCampaignTopicsData $data, ?object $causer = null): array
@@ -62,30 +77,15 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
             now()->addMinutes(self::CACHE_TTL_MINUTES),
             function () use ($data): array {
                 $company = CompanyProfile::data();
-                $niche = $data->niche ?? $company['description'] ?? $company['name'];
-                $geo = $this->resolveGeo($data->city, $data->state, $data->country, $data->location, $company);
-                $geoLabel = $this->formatGeoLabel($geo);
+                $research = $this->research->search($this->topicResearchQueries($data, $company));
+                $prompt = $this->topicsPrompt($data, $company, $research);
 
-                $research = $this->research->search(array_values(array_filter([
-                    "{$niche} Meta Ads lead generation trends 2026".($geoLabel !== '' ? " {$geoLabel}" : ''),
-                    "{$niche} Facebook Instagram ad examples high ROI".($geoLabel !== '' ? " {$geoLabel}" : ''),
-                    "{$niche} audience pain points buyers".($geoLabel !== '' ? " {$geoLabel}" : ''),
-                    $geoLabel !== '' ? "{$niche} local market video ads {$geoLabel} 2026" : null,
-                ])));
-
-                $prompt = implode("\n\n", array_filter([
-                    "Niche: {$niche}",
-                    $data->audience !== null ? "Target audience: {$data->audience}" : 'Target audience: infer from the niche.',
-                    $data->businessGoal !== null ? "Business goal: {$data->businessGoal}" : null,
-                    $geoLabel !== '' ? "Geographic location: {$geoLabel}" : null,
-                    CampaignLanguage::tryFrom($data->language)?->outputInstruction()
-                        ?? "Output language: {$data->language}",
-                    'Web research context:'."\n".$this->formatResearch($research),
-                    'Generate exactly 10 Meta Ads campaign angles as specified in your instructions.',
-                    'Balance TOFU/MOFU/BOFU/LOYALTY. Prefer local-market angles when geography is supplied.',
-                ]));
-
-                $response = $this->ai->generateStructured(SuggestCampaignTopicsAgent::class, $prompt, $data->provider);
+                $response = $this->generateWithFailover(
+                    SuggestCampaignTopicsAgent::class,
+                    $prompt,
+                    (string) $data->provider,
+                    'suggest-topics',
+                );
 
                 return array_map(
                     static fn (array $topic): CampaignTopicIdeaData => new CampaignTopicIdeaData(
@@ -108,6 +108,122 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
                 );
             },
         );
+    }
+
+    /**
+     * SSE preview of the angle list for the wizard: same research + prompt as
+     * {@see self::suggestTopics()}, streamed token by token instead of
+     * returned as JSON. Runs through the text-only
+     * {@see PreviewCampaignTopicsAgent} — the SDK cannot stream
+     * structured-output agents — so the output is a Markdown list, never
+     * stored and never validated.
+     */
+    public function streamTopics(SuggestCampaignTopicsData $data): StreamableAgentResponse
+    {
+        $company = CompanyProfile::data();
+        $research = $this->research->search($this->topicResearchQueries($data, $company));
+
+        return $this->ai->streamStructured(
+            PreviewCampaignTopicsAgent::class,
+            $this->topicsPrompt($data, $company, $research),
+            (string) $data->provider,
+            step: 'suggest-topics-stream',
+        );
+    }
+
+    /**
+     * @param  array{name: string, description: ?string, city?: ?string, state?: ?string, country?: ?string, address?: ?string}  $company
+     * @return list<string>
+     */
+    private function topicResearchQueries(SuggestCampaignTopicsData $data, array $company): array
+    {
+        $niche = $data->niche ?? $company['description'] ?? $company['name'];
+        $geo = $this->resolveGeo($data->city, $data->state, $data->country, $data->location, $company);
+        $geoLabel = $this->formatGeoLabel($geo);
+
+        return array_values(array_filter([
+            "{$niche} Meta Ads lead generation trends 2026".($geoLabel !== '' ? " {$geoLabel}" : ''),
+            "{$niche} Facebook Instagram ad examples high ROI".($geoLabel !== '' ? " {$geoLabel}" : ''),
+            "{$niche} audience pain points buyers".($geoLabel !== '' ? " {$geoLabel}" : ''),
+            $geoLabel !== '' ? "{$niche} local market video ads {$geoLabel} 2026" : null,
+        ]));
+    }
+
+    /**
+     * Company + geo (long-lived) and the request brief (short-lived) form the
+     * cacheable prefix; research and the generation order stay in the tail.
+     *
+     * @param  array{name: string, description: ?string, city?: ?string, state?: ?string, country?: ?string, address?: ?string}  $company
+     * @param  list<array{title: string, url: string, content: string, score: float}>  $research
+     */
+    private function topicsPrompt(SuggestCampaignTopicsData $data, array $company, array $research): CacheablePrompt
+    {
+        $niche = $data->niche ?? $company['description'] ?? $company['name'];
+        $geo = $this->resolveGeo($data->city, $data->state, $data->country, $data->location, $company);
+        $geoLabel = $this->formatGeoLabel($geo);
+
+        $brief = implode("\n\n", array_filter([
+            "Niche: {$niche}",
+            $data->audience !== null ? "Target audience: {$data->audience}" : 'Target audience: infer from the niche.',
+            $data->businessGoal !== null ? "Business goal: {$data->businessGoal}" : null,
+            $geoLabel !== '' ? "Geographic location: {$geoLabel}" : null,
+            CampaignLanguage::tryFrom($data->language)?->outputInstruction()
+                ?? "Output language: {$data->language}",
+        ]));
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::long($this->companyLayer($company, $geoLabel)), PromptLayer::short($brief)],
+            tail: implode("\n\n", [
+                'Web research context:'."\n".$this->formatResearch($research),
+                'Generate exactly 10 Meta Ads campaign angles as specified in your instructions.',
+                'Balance TOFU/MOFU/BOFU/LOYALTY. Prefer local-market angles when geography is supplied.',
+            ]),
+            cacheKey: 'campaigns-topics:'.md5($brief),
+        );
+    }
+
+    /**
+     * Shared by every Campaigns prompt and unchanged until the company profile
+     * is edited, so it is the long-lived head of the cached prefix.
+     *
+     * @param  array{name: string, description: ?string, city?: ?string, state?: ?string, country?: ?string, address?: ?string}  $company
+     */
+    private function companyLayer(array $company, string $geoLabel): string
+    {
+        return implode("\n\n", array_filter([
+            "Company: {$company['name']}",
+            $company['description'] !== null ? "Company description: {$company['description']}" : null,
+            $geoLabel !== '' ? "Home market: {$geoLabel}" : null,
+        ]));
+    }
+
+    /**
+     * Writer call with automatic provider failover: the preferred provider
+     * first, then every provider from `ai.failover_order`. A down provider
+     * degrades to the next instead of failing the iteration.
+     *
+     * @param  class-string  $agentClass
+     */
+    private function generateWithFailover(string $agentClass, CacheablePrompt $prompt, string $provider, string $step): StructuredAgentResponse
+    {
+        $lastException = null;
+
+        foreach ($this->failover->attempts($provider) as $attempt) {
+            try {
+                return $this->ai->generateStructured($agentClass, $prompt, $attempt, step: $step);
+            } catch (Throwable $exception) {
+                // Class name only: provider errors can echo the brief (LLM02).
+                Log::warning('campaigns.ai.writer_failed', [
+                    'step' => $step,
+                    'provider' => $attempt,
+                    'error' => $exception::class,
+                ]);
+
+                $lastException = $exception;
+            }
+        }
+
+        throw $lastException ?? new \RuntimeException('No AI provider attempts configured.');
     }
 
     public function generate(
@@ -143,8 +259,19 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
         $this->progress->notify($causer, $campaignUuid, 'researching', "Iteration {$iteration}: researching fresh context…", $this->writingProgress($iteration), $iteration);
 
         $company = CompanyProfile::data();
-        $research = $this->research->search($this->researchQueries($data, $iteration));
-        $prompt = $this->buildContentPrompt($data, $company, $research, $iteration, $previousWeaknesses);
+        $research = $this->reranker->rerank(
+            trim("{$data->topic} ".($data->niche ?? '').' '.($data->keyTrend ?? '')),
+            $this->research->search($this->researchQueries($data, $iteration)),
+        );
+        $prompt = $this->buildContentPrompt(
+            $data,
+            $company,
+            $research,
+            $iteration,
+            $previousWeaknesses,
+            $this->fullPageDepth($research),
+            $this->winners->toPromptBlock($this->winners->forBrief($this->causerId($causer), $data->niche, $data->topic)),
+        );
 
         $this->progress->notify($causer, $campaignUuid, 'writing', "Iteration {$iteration}: writing the Meta Ads copy…", $this->writingProgress($iteration) + 4, $iteration);
 
@@ -152,7 +279,12 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
         // and the loop must stop rather than burn its remaining iterations on
         // calls that never leave the process.
         try {
-            $response = $this->ai->generateStructured(GenerateCampaignAgent::class, $prompt, $data->provider);
+            $response = $this->generateWithFailover(
+                GenerateCampaignAgent::class,
+                $prompt,
+                (string) $data->provider,
+                "generate-campaign-{$iteration}",
+            );
         } catch (CircuitBreakerOpenException $exception) {
             throw CampaignGenerationUnavailableException::forService($data->provider, $exception);
         }
@@ -246,6 +378,42 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
     }
 
     /**
+     * Full-page depth for the two top-ranked sources (CourseScripts
+     * convention): snippets tell the model a page exists, the page itself
+     * grounds the claim. `scrape()` never throws — worst case the block is
+     * empty and the tail is just snippets.
+     *
+     * @param  list<array{title: string, url: string, content: string, score: float}>  $research
+     */
+    private function fullPageDepth(array $research): string
+    {
+        $blocks = [];
+
+        foreach (array_slice($research, 0, 2) as $row) {
+            $url = (string) ($row['url'] ?? '');
+
+            if ($url === '') {
+                continue;
+            }
+
+            $markdown = $this->pages->scrape($url);
+
+            if ($markdown === null || trim($markdown) === '') {
+                continue;
+            }
+
+            $blocks[] = 'SOURCE: '.(string) ($row['title'] ?? $url)." ({$url})\n".mb_substr(trim($markdown), 0, self::FULL_PAGE_MAX_CHARS);
+        }
+
+        return $blocks === [] ? '' : "Full-page depth (top sources):\n".implode("\n\n", $blocks);
+    }
+
+    private function causerId(?object $causer): ?int
+    {
+        return is_object($causer) && isset($causer->id) ? (int) $causer->id : null;
+    }
+
+    /**
      * Varies the research queries per iteration (Prompt2's convention) so a
      * retry gets genuinely fresh context instead of repeating the same search.
      *
@@ -283,21 +451,19 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
         array $research,
         int $iteration,
         array $previousWeaknesses,
-    ): string {
+        string $fullPages = '',
+        string $winnersBlock = '',
+    ): CacheablePrompt {
         $geo = $this->resolveGeo($data->city, $data->state, $data->country, $data->location, $company);
         $geoLabel = $this->formatGeoLabel($geo);
         $needsVideo = in_array($data->adFormat, ['reel', 'story'], true);
 
-        return implode("\n\n", array_filter([
-            "Company: {$company['name']}",
-            $company['description'] !== null ? "Company description: {$company['description']}" : null,
+        $brief = implode("\n\n", array_filter([
             "Topic: {$data->topic}",
             $data->angle !== null ? "Angle: {$data->angle}" : null,
             $data->hook !== null ? "Hook: {$data->hook}" : null,
             $data->keyTrend !== null ? "Key trend to reference: {$data->keyTrend}" : null,
             $data->audience !== null ? "Target audience: {$data->audience}" : null,
-            $geoLabel !== '' ? "Geographic location: {$geoLabel}" : null,
-            $geo['location'] !== null && $geo['location'] !== '' ? "Address/locality: {$geo['location']}" : null,
             "Business goal: {$data->businessGoal}",
             "Brand voice: {$data->brandVoice}",
             "Funnel stage: {$data->funnelStage}",
@@ -305,15 +471,26 @@ final readonly class LaravelAiCampaignAssistantAdapter implements CampaignGenera
             "Ad format: {$data->adFormat}",
             CampaignLanguage::tryFrom($data->language)?->outputInstruction()
                 ?? "Output language: {$data->language}",
-            $needsVideo
-                ? 'Ad format requires a CapCut video_package on EVERY platform variant (stage-aware 15-30s, creative_style=ugc_native).'
-                : 'Ad format does NOT use video — set video_package to null on every platform variant.',
-            'Web research context:'."\n".$this->formatResearch($research),
-            $iteration === 1
-                ? 'This is the first attempt. Generate the best possible campaign from the start.'
-                : $this->formatWeaknesses($iteration, $previousWeaknesses),
-            'Write the complete Facebook + Instagram Meta Ads package exactly as specified in your instructions.',
         ]));
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::long($this->companyLayer($company, $geoLabel)), PromptLayer::short($brief)],
+            tail: implode("\n\n", array_filter([
+                $geoLabel !== '' ? "Geographic location: {$geoLabel}" : null,
+                $geo['location'] !== null && $geo['location'] !== '' ? "Address/locality: {$geo['location']}" : null,
+                $needsVideo
+                    ? 'Ad format requires a CapCut video_package on EVERY platform variant (stage-aware 15-30s, creative_style=ugc_native).'
+                    : 'Ad format does NOT use video — set video_package to null on every platform variant.',
+                'Web research context:'."\n".$this->formatResearch($research),
+                $fullPages !== '' ? $fullPages : null,
+                $winnersBlock !== '' ? $winnersBlock : null,
+                $iteration === 1
+                    ? 'This is the first attempt. Generate the best possible campaign from the start.'
+                    : $this->formatWeaknesses($iteration, $previousWeaknesses),
+                'Write the complete Facebook + Instagram Meta Ads package exactly as specified in your instructions.',
+            ])),
+            cacheKey: 'campaigns-content:'.md5($brief),
+        );
     }
 
     /**

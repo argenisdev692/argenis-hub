@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\SocialMedia\Domain\Ports;
 
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Modules\SocialMedia\Application\DTOs\SocialMediaTopicIdeaData;
 use Modules\SocialMedia\Application\DTOs\SuggestSocialMediaTopicsData;
 
@@ -18,4 +19,10 @@ interface SocialMediaTopicIdeatorPort
      * @return list<SocialMediaTopicIdeaData>
      */
     public function suggestTopics(SuggestSocialMediaTopicsData $data, ?object $causer = null): array;
+
+    /**
+     * Same research + prompt as {@see self::suggestTopics()}, streamed token
+     * by token for the wizard preview. Nothing is stored.
+     */
+    public function streamTopics(SuggestSocialMediaTopicsData $data): StreamableAgentResponse;
 }

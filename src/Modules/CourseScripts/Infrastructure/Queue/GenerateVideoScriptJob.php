@@ -11,11 +11,11 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\SkipIfBatchCancelled;
-use Illuminate\Support\Facades\Log;
 use Modules\CourseScripts\Application\Commands\ExecuteRunVideoHandler;
 use Modules\CourseScripts\Domain\Enums\VideoOutcomeStatus;
 use Modules\CourseScripts\Domain\Ports\GenerationRunRepositoryPort;
 use Modules\CourseScripts\Domain\ValueObjects\CallUsage;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -60,7 +60,7 @@ final class GenerateVideoScriptJob implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        Log::warning('course_scripts.video_job_failed', [
+        app(LoggerInterface::class)->warning('course_scripts.video_job_failed', [
             'run_id' => $this->runId,
             'video_id' => $this->videoId,
             'exception' => $exception === null ? null : $exception::class,

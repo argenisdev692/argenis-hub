@@ -14,7 +14,9 @@ use Modules\Campaigns\Domain\Exceptions\CampaignGenerationUnavailableException;
 use Modules\Campaigns\Domain\Ports\CampaignEvaluatorPort;
 use Modules\Campaigns\Domain\Services\CampaignQualityEvaluator;
 use Modules\Campaigns\Infrastructure\Broadcasting\CampaignProgressNotifier;
-use Shared\Infrastructure\AI\AIClientInterface;
+use Shared\Infrastructure\AI\PromptCache\CacheablePrompt;
+use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
+use Shared\Infrastructure\AI\PromptCache\PromptLayer;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
 
 /**
@@ -22,14 +24,15 @@ use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerOpenException;
  * the provider configured as `ai.default_for_evaluation`, deliberately NOT on
  * the caller's writing provider.
  *
- * Never cached. Two drafts are never the same ad, and a stale verdict would
+ * Never result-cached. Two drafts are never the same ad, and a stale verdict would
  * let a rewrite inherit the score of the draft it replaced — the exact bug
- * caching is supposed to avoid.
+ * caching is supposed to avoid. The BRIEF still travels as a cacheable prefix
+ * layer (provider prefix caching), only the verdict itself is never reused.
  */
 final readonly class LaravelAiCampaignEvaluatorAdapter implements CampaignEvaluatorPort
 {
     public function __construct(
-        private AIClientInterface $ai,
+        private PromptCachingAIClient $ai,
         private CampaignQualityEvaluator $evaluator,
         private CampaignProgressNotifier $progress,
     ) {}
@@ -60,6 +63,7 @@ final readonly class LaravelAiCampaignEvaluatorAdapter implements CampaignEvalua
                 EvaluateCampaignAgent::class,
                 $this->buildEvaluationPrompt($draft, $data),
                 $provider,
+                step: 'evaluate-campaign',
             );
         } catch (CircuitBreakerOpenException $exception) {
             throw CampaignGenerationUnavailableException::forService($provider, $exception);
@@ -144,14 +148,14 @@ final readonly class LaravelAiCampaignEvaluatorAdapter implements CampaignEvalua
      * research notes — an argument for why the copy is good is exactly the
      * influence an independent scorer must not receive.
      */
-    private function buildEvaluationPrompt(CampaignDraftData $draft, GenerateCampaignData $data): string
+    private function buildEvaluationPrompt(CampaignDraftData $draft, GenerateCampaignData $data): CacheablePrompt
     {
         $geoLabel = implode(', ', array_values(array_filter(
             [$data->city, $data->state, $data->country],
             static fn (?string $part): bool => $part !== null && $part !== '',
         )));
 
-        return implode("\n\n", array_filter([
+        $brief = implode("\n\n", array_filter([
             'BRIEF',
             "Topic: {$data->topic}",
             $data->niche !== null ? "Niche: {$data->niche}" : null,
@@ -162,10 +166,17 @@ final readonly class LaravelAiCampaignEvaluatorAdapter implements CampaignEvalua
             "Funnel stage: {$data->funnelStage}",
             "Meta platform: {$data->platform}",
             "Ad format: {$data->adFormat}",
-            'AD TO SCORE',
-            $draft->toScorableText(),
-            'Score this ad against every dimension in your instructions.',
         ]));
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::short($brief)],
+            tail: implode("\n\n", [
+                'AD TO SCORE',
+                $draft->toScorableText(),
+                'Score this ad against every dimension in your instructions.',
+            ]),
+            cacheKey: 'campaigns-judge:'.md5($brief),
+        );
     }
 
     /**

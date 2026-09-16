@@ -8,9 +8,11 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
+use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
 
 /**
@@ -21,9 +23,9 @@ use Stringable;
  * Tavily research — this class owns only the persona, the funnel-
  * classification rule and the output contract.
  */
-final class SuggestCampaignTopicsAgent implements Agent, Conversational, HasStructuredOutput
+final class SuggestCampaignTopicsAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput
 {
-    use Promptable;
+    use Promptable, UsesPromptCache;
 
     public function instructions(): Stringable|string
     {

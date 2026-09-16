@@ -44,6 +44,27 @@ const deletedUuids = computed(() =>
     selection.filter((row) => row.deleted_at !== null).map((row) => row.uuid),
 );
 
+/**
+ * A mixed selection acts on its matching subset per button (delete → active
+ * only, restore → deleted only) instead of disabling both — the disabled
+ * button's tooltip always says which rows its action will touch.
+ */
+const mixedSelection = computed(
+    () => activeUuids.value.length > 0 && deletedUuids.value.length > 0,
+);
+
+const restoreTitle = computed(() =>
+    mixedSelection.value
+        ? `Restore the ${deletedUuids.value.length} deleted — active rows are skipped`
+        : 'Restore selected rows',
+);
+
+const deleteTitle = computed(() =>
+    mixedSelection.value
+        ? `Delete the ${activeUuids.value.length} active — deleted rows are skipped`
+        : 'Delete selected rows',
+);
+
 defineSlots<{
     /** Module-specific bulk actions, appended after delete/restore. */
     extra?: (props: { active: string[]; deleted: string[] }) => unknown;
@@ -57,6 +78,7 @@ defineSlots<{
             variant="outline"
             size="sm"
             :disabled="busy || deletedUuids.length === 0"
+            :title="restoreTitle"
             @click="emit('bulk-restore', deletedUuids)"
         >
             <RotateCcwIcon class="size-4" aria-hidden="true" />
@@ -68,6 +90,7 @@ defineSlots<{
             variant="destructive"
             size="sm"
             :disabled="busy || activeUuids.length === 0"
+            :title="deleteTitle"
             @click="emit('bulk-delete', activeUuids)"
         >
             <Trash2Icon class="size-4" aria-hidden="true" />

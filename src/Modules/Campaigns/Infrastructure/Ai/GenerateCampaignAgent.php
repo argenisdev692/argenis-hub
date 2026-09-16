@@ -8,9 +8,13 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
+use Laravel\Ai\Providers\Tools\WebFetch;
+use Shared\Infrastructure\AI\PromptCache\UsesPromptCache;
 use Stringable;
 
 /**
@@ -28,9 +32,9 @@ use Stringable;
  * CampaignAssetRenderer, for the attempt that actually wins the loop. Scoring
  * is likewise not its job; see EvaluateCampaignAgent.
  */
-final class GenerateCampaignAgent implements Agent, Conversational, HasStructuredOutput
+final class GenerateCampaignAgent implements Agent, Conversational, HasProviderOptions, HasStructuredOutput, HasTools
 {
-    use Promptable;
+    use Promptable, UsesPromptCache;
 
     public function instructions(): Stringable|string
     {
@@ -175,6 +179,18 @@ final class GenerateCampaignAgent implements Agent, Conversational, HasStructure
     public function messages(): iterable
     {
         return [];
+    }
+
+    /**
+     * Full-page reads for URLs the model chooses to ground a claim. The tool
+     * executes provider-side (read-only — no touch on our network), capped at
+     * 3 fetches per attempt; Tavily snippets stay the primary context.
+     *
+     * @return list<WebFetch>
+     */
+    public function tools(): iterable
+    {
+        return [(new WebFetch)->max(3)];
     }
 
     /**

@@ -70,6 +70,12 @@ final readonly class SocialMediaContentController
 
     public function publish(string $uuid, Request $request, GetSocialMediaContentHandler $get, PublishSocialMediaContentHandler $publish): RedirectResponse
     {
+        // Human-in-the-loop for AI-born content going live (OWASP LLM06): the
+        // wizard confirms explicitly before the status flips. The 403 for
+        // unauthorized users still fires first — permission middleware runs
+        // before this validation.
+        $request->validate(['confirm' => ['required', 'accepted']]);
+
         (void) $publish->handle($get->handle($uuid), $request->user());
 
         return back()->with('success', __('Content marked as published.'));

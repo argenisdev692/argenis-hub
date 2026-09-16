@@ -38,6 +38,9 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('social-media')->nam
     Route::post('/ai/suggest-topics', [SocialMediaAiAssistController::class, 'suggestTopics'])
         ->middleware(['permission:CREATE_SOCIAL_MEDIA', 'throttle:10,1'])->name('ai.suggest-topics');
 
+    Route::post('/ai/suggest-topics/stream', [SocialMediaAiAssistController::class, 'streamTopics'])
+        ->middleware(['permission:CREATE_SOCIAL_MEDIA', 'throttle:5,1'])->name('ai.suggest-topics.stream');
+
     Route::post('/ai/generate-content', [SocialMediaAiAssistController::class, 'generateContent'])
         ->middleware(['permission:CREATE_SOCIAL_MEDIA', 'throttle:5,1'])->name('ai.generate-content');
 

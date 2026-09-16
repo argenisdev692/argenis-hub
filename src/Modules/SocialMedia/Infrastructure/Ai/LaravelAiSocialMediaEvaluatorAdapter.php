@@ -12,7 +12,9 @@ use Modules\SocialMedia\Application\DTOs\ScoreSetData;
 use Modules\SocialMedia\Domain\Ports\SocialMediaContentEvaluatorPort;
 use Modules\SocialMedia\Domain\Services\ContentQualityEvaluator;
 use Modules\SocialMedia\Infrastructure\Broadcasting\SocialMediaProgressNotifier;
-use Shared\Infrastructure\AI\AIClientInterface;
+use Shared\Infrastructure\AI\PromptCache\CacheablePrompt;
+use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
+use Shared\Infrastructure\AI\PromptCache\PromptLayer;
 
 /**
  * The quality gate's independent half: runs
@@ -20,14 +22,15 @@ use Shared\Infrastructure\AI\AIClientInterface;
  * `ai.default_for_evaluation`, deliberately NOT on the caller's writing
  * provider.
  *
- * Never cached. Two drafts are never the same text, and a stale verdict would
+ * Never result-cached. Two drafts are never the same text, and a stale verdict would
  * let a rewrite inherit the score of the draft it replaced — the exact bug
- * caching is supposed to avoid.
+ * caching is supposed to avoid. The BRIEF still travels as a cacheable prefix
+ * layer (provider prefix caching), only the verdict itself is never reused.
  */
 final readonly class LaravelAiSocialMediaEvaluatorAdapter implements SocialMediaContentEvaluatorPort
 {
     public function __construct(
-        private AIClientInterface $ai,
+        private PromptCachingAIClient $ai,
         private ContentQualityEvaluator $evaluator,
         private SocialMediaProgressNotifier $progress,
     ) {}
@@ -53,6 +56,7 @@ final readonly class LaravelAiSocialMediaEvaluatorAdapter implements SocialMedia
             EvaluateSocialMediaContentAgent::class,
             $this->buildEvaluationPrompt($draft, $data),
             $provider,
+            step: 'evaluate-content',
         );
 
         /**
@@ -99,8 +103,8 @@ final readonly class LaravelAiSocialMediaEvaluatorAdapter implements SocialMedia
     private function buildEvaluationPrompt(
         GeneratedSocialMediaContentData $draft,
         GenerateSocialMediaContentData $data,
-    ): string {
-        return implode("\n\n", array_filter([
+    ): CacheablePrompt {
+        $brief = implode("\n\n", array_filter([
             'BRIEF',
             "Topic: {$data->topic}",
             $data->angle !== null ? "Angle: {$data->angle}" : null,
@@ -109,10 +113,17 @@ final readonly class LaravelAiSocialMediaEvaluatorAdapter implements SocialMedia
             "Brand voice: {$data->brandVoice}",
             "Funnel stage: {$data->funnelStage}",
             "Output language: {$data->language}",
-            'DRAFT TO SCORE',
-            $draft->toScorableText(),
-            'Score this draft against every dimension in your instructions.',
         ]));
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::short($brief)],
+            tail: implode("\n\n", [
+                'DRAFT TO SCORE',
+                $draft->toScorableText(),
+                'Score this draft against every dimension in your instructions.',
+            ]),
+            cacheKey: 'social-media-judge:'.md5($brief),
+        );
     }
 
     /**

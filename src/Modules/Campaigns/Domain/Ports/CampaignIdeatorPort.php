@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Campaigns\Domain\Ports;
 
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Modules\Campaigns\Application\DTOs\CampaignTopicIdeaData;
 use Modules\Campaigns\Application\DTOs\SuggestCampaignTopicsData;
 
@@ -18,4 +19,10 @@ interface CampaignIdeatorPort
      * @return list<CampaignTopicIdeaData>
      */
     public function suggestTopics(SuggestCampaignTopicsData $data, ?object $causer = null): array;
+
+    /**
+     * Same research + prompt as {@see self::suggestTopics()}, streamed token
+     * by token for the wizard preview. Nothing is stored.
+     */
+    public function streamTopics(SuggestCampaignTopicsData $data): StreamableAgentResponse;
 }

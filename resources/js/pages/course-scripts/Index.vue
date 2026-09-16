@@ -42,6 +42,10 @@ import type {
     CourseStatus,
     CourseTrashedFilter,
 } from '@/modules/course-scripts/types';
+import {
+    COURSE_SORT_FIELDS,
+    COURSE_TRASHED_VALUES,
+} from '@/modules/course-scripts/types';
 import { create, exportMethod, index, show } from '@/routes/course-scripts';
 
 defineOptions({
@@ -94,15 +98,8 @@ const dateRange = computed<DateRange>({
         }),
 });
 
-const SORT_FIELDS: readonly CourseSortField[] = [
-    'created_at',
-    'updated_at',
-    'title',
-    'status',
-];
-
 function isSortField(field: string): field is CourseSortField {
-    return SORT_FIELDS.some((sortField) => sortField === field);
+    return (COURSE_SORT_FIELDS as readonly string[]).includes(field);
 }
 
 const sort = computed<DataTableSort | null>({
@@ -152,7 +149,10 @@ function isCourseStatus(value: unknown): value is CourseStatus {
 }
 
 function isTrashedFilter(value: unknown): value is CourseTrashedFilter {
-    return trashedOptions.some((option) => option.value === value);
+    return (
+        typeof value === 'string' &&
+        (COURSE_TRASHED_VALUES as readonly string[]).includes(value)
+    );
 }
 
 function onStatusChange(value: FilterSelectModel): void {
@@ -200,8 +200,13 @@ const columns: DataTableColumn<CourseListItem>[] = [
     },
 ];
 
+/**
+ * Soft-deleted rows read through `.course-row-deleted` (`app.css`), which is
+ * bound to the `--deleted-row-*` tokens — never a hardcoded wash at the call
+ * site, so the tint tracks the theme.
+ */
 function rowClass(row: CourseListItem): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at ? 'course-row-deleted' : undefined;
 }
 
 const selectedActive = computed(() =>

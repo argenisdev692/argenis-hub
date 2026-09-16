@@ -54,10 +54,10 @@ final class GenerationScenario
         // The client consumes lists in order and repeats the last entry, so a
         // sentinel keeps the queues from running dry.
         return array_filter([
-            GenerateScriptOutlineAgent::class => [...$outlines, end($outlines)],
-            GenerateScriptSectionAgent::class => $sections === [] ? [] : [...$sections, end($sections)],
-            GenerateScriptClosingAgent::class => $closings === [] ? [] : [...$closings, end($closings)],
-            GeneratePracticeArtifactAgent::class => $artifacts === [] ? [] : [...$artifacts, end($artifacts)],
+            GenerateScriptOutlineAgent::class => $outlines === [] ? [] : [...$outlines, array_last($outlines)],
+            GenerateScriptSectionAgent::class => $sections === [] ? [] : [...$sections, array_last($sections)],
+            GenerateScriptClosingAgent::class => $closings === [] ? [] : [...$closings, array_last($closings)],
+            GeneratePracticeArtifactAgent::class => $artifacts === [] ? [] : [...$artifacts, array_last($artifacts)],
         ], static fn (array $list): bool => $list !== []);
     }
 }

@@ -504,6 +504,19 @@
     }
 }
 
+@layer components {
+    /*
+      Soft-deleted DataTable rows. Bound to the `--deleted-row-*` tokens in
+      globals.css (which redefines them under `.dark`), so the wash tracks the
+      theme instead of hardcoding a tint at each call site. Applied via the
+      table's `rowClass` callback.
+    */
+    .course-row-deleted {
+        background-color: var(--deleted-row-bg);
+        opacity: var(--deleted-row-opacity);
+    }
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;

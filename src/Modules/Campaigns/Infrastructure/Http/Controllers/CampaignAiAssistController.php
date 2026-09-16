@@ -6,11 +6,13 @@ namespace Modules\Campaigns\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Modules\Campaigns\Application\Commands\GenerateCampaignHandler;
 use Modules\Campaigns\Application\Commands\SuggestCampaignTopicsHandler;
 use Modules\Campaigns\Application\DTOs\GenerateCampaignData;
 use Modules\Campaigns\Application\DTOs\SuggestCampaignTopicsData;
 use Modules\Campaigns\Application\Queries\GetCampaignHandler;
+use Modules\Campaigns\Domain\Ports\CampaignIdeatorPort;
 
 /**
  * XHR-only AI actions for the 2-step wizard. Step 1 (`suggestTopics`) is
@@ -32,6 +34,16 @@ final readonly class CampaignAiAssistController
     public function suggestTopics(SuggestCampaignTopicsData $data, Request $request): JsonResponse
     {
         return response()->json(['data' => $this->suggestTopics->handle($data, $request->user())]);
+    }
+
+    /**
+     * SSE preview of the angle list: same research + cacheable prompt as the
+     * JSON endpoint, streamed token by token. The response is `Responsable` —
+     * returned directly, never wrapped.
+     */
+    public function streamTopics(SuggestCampaignTopicsData $data, CampaignIdeatorPort $ideator): StreamableAgentResponse
+    {
+        return $ideator->streamTopics($data);
     }
 
     public function generateCampaign(GenerateCampaignData $data, Request $request): JsonResponse

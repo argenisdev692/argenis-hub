@@ -6,11 +6,13 @@ namespace Modules\SocialMedia\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Modules\SocialMedia\Application\Commands\GenerateSocialMediaContentHandler;
 use Modules\SocialMedia\Application\Commands\SuggestSocialMediaTopicsHandler;
 use Modules\SocialMedia\Application\DTOs\GenerateSocialMediaContentData;
 use Modules\SocialMedia\Application\DTOs\SuggestSocialMediaTopicsData;
 use Modules\SocialMedia\Application\Queries\GetSocialMediaContentHandler;
+use Modules\SocialMedia\Domain\Ports\SocialMediaTopicIdeatorPort;
 
 /**
  * XHR-only AI actions for the 2-step wizard. Step 1 (`suggestTopics`) is
@@ -32,6 +34,16 @@ final readonly class SocialMediaAiAssistController
     public function suggestTopics(SuggestSocialMediaTopicsData $data, Request $request): JsonResponse
     {
         return response()->json(['data' => $this->suggestTopics->handle($data, $request->user())]);
+    }
+
+    /**
+     * SSE preview of the topic list: same research + cacheable prompt as the
+     * JSON endpoint, streamed token by token. The response is `Responsable` —
+     * returned directly, never wrapped.
+     */
+    public function streamTopics(SuggestSocialMediaTopicsData $data, SocialMediaTopicIdeatorPort $ideator): StreamableAgentResponse
+    {
+        return $ideator->streamTopics($data);
     }
 
     public function generateContent(GenerateSocialMediaContentData $data, Request $request): JsonResponse

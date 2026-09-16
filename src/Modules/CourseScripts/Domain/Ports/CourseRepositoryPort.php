@@ -20,6 +20,13 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseVideo
  * documents. Returns Eloquent models, following the project precedent
  * (InvoiceRepositoryPort, VideoEditRepositoryPort).
  *
+ * Documented boundary decision: the models are `@internal` to this module and
+ * never cross its boundary, and the Entity / Mapper Optionality Rules both
+ * resolve to skip (1:1 aggregate, Eloquent casts cover translation) — so a
+ * separate domain entity would be boilerplate, not DIP. The port stays the
+ * inversion point: handlers depend on this interface, never the Eloquent
+ * implementation.
+ *
  * Every `findOwned*` method is owner-scoped: another user's course is
  * indistinguishable from a missing one (FR-53, OWASP §11).
  */

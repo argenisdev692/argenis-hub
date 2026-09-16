@@ -39,6 +39,9 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('campaigns')->name('
     Route::post('/ai/suggest-topics', [CampaignAiAssistController::class, 'suggestTopics'])
         ->middleware(['permission:CREATE_CAMPAIGNS', 'throttle:10,1'])->name('ai.suggest-topics');
 
+    Route::post('/ai/suggest-topics/stream', [CampaignAiAssistController::class, 'streamTopics'])
+        ->middleware(['permission:CREATE_CAMPAIGNS', 'throttle:5,1'])->name('ai.suggest-topics.stream');
+
     Route::post('/ai/generate-campaign', [CampaignAiAssistController::class, 'generateCampaign'])
         ->middleware(['permission:CREATE_CAMPAIGNS', 'throttle:5,1'])->name('ai.generate-campaign');
 

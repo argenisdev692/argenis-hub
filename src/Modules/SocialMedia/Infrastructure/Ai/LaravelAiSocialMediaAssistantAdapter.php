@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Modules\SocialMedia\Infrastructure\Ai;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Laravel\Ai\Responses\StreamableAgentResponse;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Modules\Post\Infrastructure\Ai\LaravelAiPostAssistantAdapter;
 use Modules\SocialMedia\Application\DTOs\GeneratedSocialMediaContentData;
 use Modules\SocialMedia\Application\DTOs\GenerateSocialMediaContentData;
@@ -23,9 +26,15 @@ use Modules\SocialMedia\Domain\Ports\SocialMediaTopicIdeatorPort;
 use Modules\SocialMedia\Domain\Services\ContentQualityEvaluator;
 use Modules\SocialMedia\Infrastructure\Broadcasting\SocialMediaProgressNotifier;
 use Modules\SocialMedia\Infrastructure\Queue\GenerateSocialMediaContentJob;
-use Shared\Infrastructure\AI\AIClientInterface;
+use Shared\Infrastructure\AI\PromptCache\CacheablePrompt;
+use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
+use Shared\Infrastructure\AI\PromptCache\PromptLayer;
+use Shared\Infrastructure\AI\ProviderFailover;
+use Shared\Infrastructure\AI\ResearchReranker;
 use Shared\Infrastructure\Company\CompanyProfile;
+use Shared\Infrastructure\Research\FirecrawlClientInterface;
 use Shared\Infrastructure\Research\TavilyClientInterface;
+use Throwable;
 
 /**
  * The WRITING adapter behind both text-producing SocialMedia AI ports —
@@ -51,10 +60,16 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
 {
     private const int CACHE_TTL_MINUTES = 15;
 
+    private const int FULL_PAGE_MAX_CHARS = 4000;
+
     public function __construct(
-        private AIClientInterface $ai,
+        private PromptCachingAIClient $ai,
         private TavilyClientInterface $research,
+        private FirecrawlClientInterface $pages,
+        private PastWinnersRetriever $winners,
         private SocialMediaProgressNotifier $progress,
+        private ProviderFailover $failover,
+        private ResearchReranker $reranker,
     ) {}
 
     public function suggestTopics(SuggestSocialMediaTopicsData $data, ?object $causer = null): array
@@ -64,25 +79,15 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
             now()->addMinutes(self::CACHE_TTL_MINUTES),
             function () use ($data): array {
                 $company = CompanyProfile::data();
-                $niche = $data->niche ?? $company['description'] ?? $company['name'];
+                $research = $this->research->search($this->topicResearchQueries($data, $company));
+                $prompt = $this->topicsPrompt($data, $company, $research);
 
-                $research = $this->research->search([
-                    "{$niche} trends 2026",
-                    "{$niche} viral content",
-                    "{$niche} audience pain points",
-                ]);
-
-                $prompt = implode("\n\n", array_filter([
-                    "Niche: {$niche}",
-                    $data->audience !== null ? "Target audience: {$data->audience}" : 'Target audience: infer from the niche.',
-                    $data->businessGoal !== null ? "Business goal: {$data->businessGoal}" : null,
-                    ContentLanguage::tryFrom($data->language)?->outputInstruction()
-                        ?? "Output language: {$data->language}",
-                    'Web research context:'."\n".$this->formatResearch($research),
-                    'Generate exactly 10 viral topics as specified in your instructions.',
-                ]));
-
-                $response = $this->ai->generateStructured(SuggestSocialMediaTopicsAgent::class, $prompt, $data->provider);
+                $response = $this->generateWithFailover(
+                    SuggestSocialMediaTopicsAgent::class,
+                    $prompt,
+                    (string) $data->provider,
+                    'suggest-topics',
+                );
 
                 return array_map(
                     static fn (array $topic): SocialMediaTopicIdeaData => new SocialMediaTopicIdeaData(
@@ -104,6 +109,114 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
                 );
             },
         );
+    }
+
+    /**
+     * SSE preview of the topic list for the wizard: same research + prompt as
+     * {@see self::suggestTopics()}, streamed token by token instead of
+     * returned as JSON. Runs through the text-only
+     * {@see PreviewSocialMediaTopicsAgent} — the SDK cannot stream
+     * structured-output agents — so the output is a Markdown list, never
+     * stored and never validated.
+     */
+    public function streamTopics(SuggestSocialMediaTopicsData $data): StreamableAgentResponse
+    {
+        $company = CompanyProfile::data();
+        $research = $this->research->search($this->topicResearchQueries($data, $company));
+
+        return $this->ai->streamStructured(
+            PreviewSocialMediaTopicsAgent::class,
+            $this->topicsPrompt($data, $company, $research),
+            (string) $data->provider,
+            step: 'suggest-topics-stream',
+        );
+    }
+
+    /**
+     * @param  array{name: string, description: ?string}  $company
+     * @return list<string>
+     */
+    private function topicResearchQueries(SuggestSocialMediaTopicsData $data, array $company): array
+    {
+        $niche = $data->niche ?? $company['description'] ?? $company['name'];
+
+        return [
+            "{$niche} trends 2026",
+            "{$niche} viral content",
+            "{$niche} audience pain points",
+        ];
+    }
+
+    /**
+     * Company (long-lived) + request brief (short-lived) form the cacheable
+     * prefix; research and the generation order stay in the tail.
+     *
+     * @param  array{name: string, description: ?string}  $company
+     * @param  list<array{title: string, url: string, content: string, score: float}>  $research
+     */
+    private function topicsPrompt(SuggestSocialMediaTopicsData $data, array $company, array $research): CacheablePrompt
+    {
+        $niche = $data->niche ?? $company['description'] ?? $company['name'];
+
+        $brief = implode("\n\n", array_filter([
+            "Niche: {$niche}",
+            $data->audience !== null ? "Target audience: {$data->audience}" : 'Target audience: infer from the niche.',
+            $data->businessGoal !== null ? "Business goal: {$data->businessGoal}" : null,
+            ContentLanguage::tryFrom($data->language)?->outputInstruction()
+                ?? "Output language: {$data->language}",
+        ]));
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::long($this->companyLayer($company)), PromptLayer::short($brief)],
+            tail: implode("\n\n", [
+                'Web research context:'."\n".$this->formatResearch($research),
+                'Generate exactly 10 viral topics as specified in your instructions.',
+            ]),
+            cacheKey: 'social-media-topics:'.md5($brief),
+        );
+    }
+
+    /**
+     * Shared by every SocialMedia prompt and unchanged until the company
+     * profile is edited, so it is the long-lived head of the cached prefix.
+     *
+     * @param  array{name: string, description: ?string}  $company
+     */
+    private function companyLayer(array $company): string
+    {
+        return implode("\n\n", array_filter([
+            "Company: {$company['name']}",
+            $company['description'] !== null ? "Company description: {$company['description']}" : null,
+        ]));
+    }
+
+    /**
+     * Writer call with automatic provider failover: the preferred provider
+     * first, then every provider from `ai.failover_order`. A down provider
+     * degrades to the next instead of failing the iteration.
+     *
+     * @param  class-string  $agentClass
+     */
+    private function generateWithFailover(string $agentClass, CacheablePrompt $prompt, string $provider, string $step): StructuredAgentResponse
+    {
+        $lastException = null;
+
+        foreach ($this->failover->attempts($provider) as $attempt) {
+            try {
+                return $this->ai->generateStructured($agentClass, $prompt, $attempt, step: $step);
+            } catch (Throwable $exception) {
+                // Class name only: provider errors can echo the brief (LLM02).
+                Log::warning('social_media.ai.writer_failed', [
+                    'step' => $step,
+                    'provider' => $attempt,
+                    'error' => $exception::class,
+                ]);
+
+                $lastException = $exception;
+            }
+        }
+
+        throw $lastException ?? new \RuntimeException('No AI provider attempts configured.');
     }
 
     public function generate(
@@ -142,12 +255,28 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
         $this->progress->notify($causer, $contentUuid, 'researching', "Iteration {$iteration}: researching fresh context…", 15, $iteration);
 
         $company = CompanyProfile::data();
-        $research = $this->research->search($this->researchQueries($data, $iteration));
-        $prompt = $this->buildContentPrompt($data, $company, $research, $iteration, $previousWeaknesses);
+        $research = $this->reranker->rerank(
+            trim("{$data->topic} {$data->niche} {$data->keyTrend}"),
+            $this->research->search($this->researchQueries($data, $iteration)),
+        );
+        $prompt = $this->buildContentPrompt(
+            $data,
+            $company,
+            $research,
+            $iteration,
+            $previousWeaknesses,
+            $this->fullPageDepth($research),
+            $this->winners->toPromptBlock($this->winners->forBrief($this->causerId($causer), $data->niche, $data->topic)),
+        );
 
         $this->progress->notify($causer, $contentUuid, 'writing', "Iteration {$iteration}: writing the 5-platform package…", 45, $iteration);
 
-        $response = $this->ai->generateStructured(GenerateSocialMediaContentAgent::class, $prompt, $data->provider);
+        $response = $this->generateWithFailover(
+            GenerateSocialMediaContentAgent::class,
+            $prompt,
+            (string) $data->provider,
+            "generate-content-{$iteration}",
+        );
 
         $platforms = [];
 
@@ -217,6 +346,42 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
     }
 
     /**
+     * Full-page depth for the two top-ranked sources (CourseScripts
+     * convention): snippets tell the model a page exists, the page itself
+     * grounds the claim. `scrape()` never throws — worst case the block is
+     * empty and the tail is just snippets.
+     *
+     * @param  list<array{title: string, url: string, content: string, score: float}>  $research
+     */
+    private function fullPageDepth(array $research): string
+    {
+        $blocks = [];
+
+        foreach (array_slice($research, 0, 2) as $row) {
+            $url = (string) ($row['url'] ?? '');
+
+            if ($url === '') {
+                continue;
+            }
+
+            $markdown = $this->pages->scrape($url);
+
+            if ($markdown === null || trim($markdown) === '') {
+                continue;
+            }
+
+            $blocks[] = 'SOURCE: '.(string) ($row['title'] ?? $url)." ({$url})\n".mb_substr(trim($markdown), 0, self::FULL_PAGE_MAX_CHARS);
+        }
+
+        return $blocks === [] ? '' : "Full-page depth (top sources):\n".implode("\n\n", $blocks);
+    }
+
+    private function causerId(?object $causer): ?int
+    {
+        return is_object($causer) && isset($causer->id) ? (int) $causer->id : null;
+    }
+
+    /**
      * Varies the research queries per iteration (Prompt2's convention) so a
      * retry gets genuinely fresh context instead of repeating the same search.
      *
@@ -268,10 +433,11 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
         array $research,
         int $iteration,
         array $previousWeaknesses,
-    ): string {
-        return implode("\n\n", array_filter([
+        string $fullPages = '',
+        string $winnersBlock = '',
+    ): CacheablePrompt {
+        $brief = implode("\n\n", array_filter([
             "Company: {$company['name']}",
-            $company['description'] !== null ? "Company description: {$company['description']}" : null,
             "Topic: {$data->topic}",
             $data->angle !== null ? "Angle: {$data->angle}" : null,
             $data->hook !== null ? "Hook: {$data->hook}" : null,
@@ -282,12 +448,21 @@ final readonly class LaravelAiSocialMediaAssistantAdapter implements SocialMedia
             "Funnel stage: {$data->funnelStage}",
             ContentLanguage::tryFrom($data->language)?->outputInstruction()
                 ?? "Output language: {$data->language}",
-            'Web research context:'."\n".$this->formatResearch($research),
-            $iteration === 1
-                ? 'This is the first attempt. Generate the best possible content from the start.'
-                : $this->formatWeaknesses($iteration, $previousWeaknesses),
-            'Write the complete 5-platform package exactly as specified in your instructions.',
         ]));
+
+        return new CacheablePrompt(
+            layers: [PromptLayer::long($this->companyLayer($company)), PromptLayer::short($brief)],
+            tail: implode("\n\n", array_filter([
+                'Web research context:'."\n".$this->formatResearch($research),
+                $fullPages !== '' ? $fullPages : null,
+                $winnersBlock !== '' ? $winnersBlock : null,
+                $iteration === 1
+                    ? 'This is the first attempt. Generate the best possible content from the start.'
+                    : $this->formatWeaknesses($iteration, $previousWeaknesses),
+                'Write the complete 5-platform package exactly as specified in your instructions.',
+            ])),
+            cacheKey: 'social-media-content:'.md5($brief),
+        );
     }
 
     /**

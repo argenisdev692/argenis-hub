@@ -98,6 +98,17 @@ return [
     ],
 
     /*
+     * TTS backend switch. `elevenlabs` (default) keeps current behavior;
+     * `laravel-ai` routes SpeechSynthesizerPort through the official SDK
+     * (`ai.default_for_audio` provider) — the fallback when the ElevenLabs
+     * quota is exhausted.
+     */
+    'speech' => [
+        'synthesizer' => env('SPEECH_SYNTHESIZER', 'elevenlabs'),
+        'timeout' => (int) env('SPEECH_TIMEOUT', 30),
+    ],
+
+    /*
      * Shared secret for server-side CRM clients (the Astro landing).
      * `EnsureCrmApiToken` is fail-closed: an empty token rejects every request
      * with a 401, which is the intended behaviour for a misconfigured

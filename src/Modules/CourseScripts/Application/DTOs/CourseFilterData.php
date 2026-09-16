@@ -17,6 +17,13 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * state into `status`, but here `status` is the generation lifecycle
  * ({@see CourseStatus}) the author filters by. Soft-delete state is therefore
  * its own axis, `trashed`, named after Eloquent's own vocabulary.
+ *
+ * Validation uses `rules()` rather than property attributes, matching the
+ * sibling precedent (`VideoEditFilterData::rules()`): `Rule::in()` over enum
+ * cases and the cross-field `before_or_equal` / `after_or_equal` pair cannot
+ * be expressed as static attributes. Contract parity holds — search, status,
+ * inclusive date range, allow-listed sort, `page` / `per_page` capped at 100 —
+ * and `scopeApplyFilters` remains the single source for list + export.
  */
 #[MapInputName(SnakeCaseMapper::class)]
 final class CourseFilterData extends Data

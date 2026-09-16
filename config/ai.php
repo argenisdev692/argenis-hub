@@ -33,6 +33,15 @@ return [
     'default_for_reranking' => 'cohere',
 
     /*
+     * Writer failover order. When the requested writing provider fails with a
+     * retryable error, module adapters retry the same prompt on each provider
+     * that follows it in this list. The evaluation judge is NOT failed over —
+     * it must stay on a different provider than the writer to remain
+     * independent. Comma-separated, first match wins.
+     */
+    'failover_order' => env('AI_FAILOVER_ORDER', 'openai,anthropic'),
+
+    /*
     |--------------------------------------------------------------------------
     | Caching
     |--------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { toast } from 'vue-sonner';
 import * as z from 'zod';
 import ThemeToggle from '@/common/feedback/ThemeToggle.vue';
 import {
@@ -62,8 +63,8 @@ const form = useAppForm({
         notifications: true,
     },
     schema,
-    onSubmit: (values) => {
-        console.log('Validated payload', values);
+    onSubmit: () => {
+        toast.success('Valid payload — TanStack Form + Zod 4 accepted it.');
     },
 });
 

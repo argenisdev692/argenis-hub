@@ -35,6 +35,7 @@ use Shared\Infrastructure\Research\TavilyResearchAdapter;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreaker;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerInterface;
 use Shared\Infrastructure\Speech\ElevenLabsSpeechAdapter;
+use Shared\Infrastructure\Speech\LaravelAiSpeechAdapter;
 use Shared\Infrastructure\Storage\R2StorageAdapter;
 
 /**
@@ -61,7 +62,10 @@ final class SharedServiceProvider extends ServiceProvider
         // resolved Context7 library id itself.
         $this->app->bind(DocsVerificationPort::class, Context7DocsAdapter::class);
         $this->app->bind(Context7ClientInterface::class, Context7DocsAdapter::class);
-        $this->app->bind(SpeechSynthesizerPort::class, ElevenLabsSpeechAdapter::class);
+        $this->app->bind(SpeechSynthesizerPort::class, static fn ($app): SpeechSynthesizerPort => match ((string) config('services.speech.synthesizer', 'elevenlabs')) {
+            'laravel-ai' => $app->make(LaravelAiSpeechAdapter::class),
+            default => $app->make(ElevenLabsSpeechAdapter::class),
+        });
         // Outbound mail provider is a config switch, not a code change — see the
         // "adapter" key in config/mail.php. Unknown values fall back to Brevo so a
         // typo in MAIL_ADAPTER degrades to the previous transport, not to no mail.

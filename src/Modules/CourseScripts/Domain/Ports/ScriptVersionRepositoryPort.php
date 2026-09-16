@@ -12,6 +12,10 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseScrip
 /**
  * Persistence of script versions, their practice packs and research sources
  * (US-5, US-7, US-14 · FR-49, FR-13f).
+ *
+ * Boundary note: returns the module's `@internal` Eloquent models (same
+ * documented decision as {@see CourseRepositoryPort}) — they never cross the
+ * module boundary; the port remains the inversion point.
  */
 interface ScriptVersionRepositoryPort
 {
