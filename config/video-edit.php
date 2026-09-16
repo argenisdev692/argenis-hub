@@ -111,9 +111,13 @@ return [
         'model' => env('VIDEO_EDIT_AI_MODEL', 'gemini-3.7-flash'),
         'timeout_seconds' => (int) env('VIDEO_EDIT_AI_TIMEOUT', 300),
 
-        // Decision R6: pause markers and retakes apply automatically at or above
-        // this confidence. Anything less is discarded rather than guessed at.
-        'auto_apply_above_confidence' => (float) env('VIDEO_EDIT_AI_MIN_CONFIDENCE', 0.8),
+        // Every AI cut waits for the owner's review (OWASP LLM06). Proposals at or
+        // above this confidence start ticked in the review; the rest start
+        // unticked but are still shown, so nothing is discarded unseen.
+        'preselect_above_confidence' => (float) env('VIDEO_EDIT_AI_MIN_CONFIDENCE', 0.8),
+
+        // Transcript words shown either side of a proposed cut in the review.
+        'review_context_words' => 8,
 
         // One runaway appendix must not blow the context window or the bill.
         'max_script_characters' => 120_000,
@@ -155,6 +159,8 @@ return [
     'retention' => [
         'failed_sources_hours' => 24,                          // Q3c / FR-10
         'draft_hours' => 24,                                   // D17
+        // An unanswered cut review resolves as "keep everything" and renders.
+        'review_hours' => 24,
         'stale_processing_minutes' => 65,                      // AD-14
     ],
 

@@ -4,6 +4,7 @@ import {
     ClockIcon,
     CombineIcon,
     FilePenIcon,
+    ListChecksIcon,
     Loader2Icon,
     ScissorsIcon,
     XCircleIcon,
@@ -38,6 +39,11 @@ const STATUSES: Record<VideoEditStatus, Presentation> = {
         variant: 'secondary',
         icon: Loader2Icon,
     },
+    awaiting_review: {
+        label: 'Needs your review',
+        variant: 'outline',
+        icon: ListChecksIcon,
+    },
     completed: {
         label: 'Completed',
         variant: 'default',
@@ -55,11 +61,15 @@ export function videoEditStatusPresentation(
 export const LISTED_STATUSES: readonly ListedVideoEditStatus[] = [
     'queued',
     'processing',
+    'awaiting_review',
     'completed',
     'failed',
 ];
 
-/** Queued and processing rows move on their own, so the UI polls them. */
+/**
+ * Queued and processing rows move on their own, so the UI polls them. An edit
+ * awaiting review waits for the owner, so it is not polled.
+ */
 export function isActiveStatus(status: VideoEditStatus): boolean {
     return status === 'queued' || status === 'processing';
 }
@@ -146,11 +156,24 @@ const REASONS: Record<CutReason, string> = {
     vocal_sound: 'Vocal sound',
     pause_marker: 'Pause marker',
     retake: 'Retake',
+    misspoken: 'Misspoken',
 };
 
 /** Applied cuts carry reasons as plain strings; unknown ones pass through. */
 export function cutReasonLabel(reason: string): string {
     return reason in REASONS ? REASONS[reason as CutReason] : reason;
+}
+
+/**
+ * Milliseconds → `4:07.3`. A cut is often under a second, so the review shows
+ * tenths where the summary's whole seconds would make neighbours look equal.
+ */
+export function formatTimestampMs(ms: number): string {
+    const tenths = Math.floor(ms / 100);
+    const minutes = Math.floor(tenths / 600);
+    const seconds = String(Math.floor((tenths % 600) / 10)).padStart(2, '0');
+
+    return `${minutes}:${seconds}.${tenths % 10}`;
 }
 
 /** Milliseconds → `1:05:09` / `4:07`, or an em dash when unknown. */

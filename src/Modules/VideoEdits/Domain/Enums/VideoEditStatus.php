@@ -8,14 +8,20 @@ namespace Modules\VideoEdits\Domain\Enums;
  * Lifecycle of a video edit (spec 001-video-edit, plan AD-9 / AD-11).
  *
  * `Draft` is internal: sources are still uploading, it never appears in the
- * history (D17). `Queued` + `Processing` are the "active" states — a user may
- * hold at most one active edit (FR-16).
+ * history (D17). `Queued`, `Processing` and `AwaitingReview` are the "active"
+ * states — a user may hold at most one active edit (FR-16).
+ *
+ * `AwaitingReview` is the human-in-the-loop hold of an AI edit (OWASP LLM06):
+ * the analysis is done, nothing has been cut, and the owner decides which of
+ * the proposed cuts to apply. It keeps the owner's active slot, so resolving
+ * the review can always re-queue the edit without racing a newer one.
  */
 enum VideoEditStatus: string
 {
     case Draft = 'draft';
     case Queued = 'queued';
     case Processing = 'processing';
+    case AwaitingReview = 'awaiting_review';
     case Completed = 'completed';
     case Failed = 'failed';
 
@@ -27,7 +33,8 @@ enum VideoEditStatus: string
         return match ($this) {
             self::Draft => [self::Queued],
             self::Queued => [self::Processing, self::Failed],
-            self::Processing => [self::Completed, self::Failed],
+            self::Processing => [self::Completed, self::Failed, self::AwaitingReview],
+            self::AwaitingReview => [self::Queued],
             self::Failed => [self::Queued],
             self::Completed => [],
         };
@@ -40,7 +47,7 @@ enum VideoEditStatus: string
 
     public function isActive(): bool
     {
-        return $this === self::Queued || $this === self::Processing;
+        return $this === self::Queued || $this === self::Processing || $this === self::AwaitingReview;
     }
 
     /**

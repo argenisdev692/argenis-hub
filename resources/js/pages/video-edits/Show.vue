@@ -5,10 +5,11 @@ import {
     ArrowLeftIcon,
     DownloadIcon,
     FileTextIcon,
+    ListChecksIcon,
     RotateCcwIcon,
     Trash2Icon,
 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import { ConfirmModal } from '@/common/table';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,8 @@ import {
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePermissions } from '@/composables/usePermissions';
+import VideoEditCutReviewDialog from '@/modules/video-edits/components/VideoEditCutReviewDialog.vue';
 import VideoEditModeBadge from '@/modules/video-edits/components/VideoEditModeBadge.vue';
 import VideoEditStatusBadge from '@/modules/video-edits/components/VideoEditStatusBadge.vue';
 import { useVideoEdit } from '@/modules/video-edits/composables/useVideoEdit';
@@ -104,6 +107,31 @@ const timeline = computed(() =>
     ].filter((entry): entry is { label: string; value: string } =>
         Boolean(entry.value),
     ),
+);
+
+const { can } = usePermissions();
+
+const pendingReview = computed(() =>
+    edit.value?.can_review && edit.value.review ? edit.value.review : null,
+);
+
+const reviewOpen = ref(false);
+let hasAutoOpenedReview = false;
+
+/**
+ * The review is the one thing blocking the render, so it opens by itself the
+ * first time the edit reaches it. Only once: a closed dialog means "later",
+ * and the banner below reopens it.
+ */
+watch(
+    () => pendingReview.value !== null && can('CREATE_VIDEO_EDITS'),
+    (shouldOpen) => {
+        if (shouldOpen && !hasAutoOpenedReview) {
+            hasAutoOpenedReview = true;
+            reviewOpen.value = true;
+        }
+    },
+    { immediate: true },
 );
 
 const confirmDeleteOpen = ref(false);
@@ -233,6 +261,40 @@ async function onRetry(): Promise<void> {
                         </div>
                         <Progress :model-value="edit.progress_percent" />
                     </div>
+
+                    <PermissionGuard
+                        v-if="pendingReview"
+                        permission="CREATE_VIDEO_EDITS"
+                    >
+                        <div
+                            class="flex flex-col gap-3 rounded-lg border border-primary/40 bg-muted/50 p-3 text-sm sm:flex-row sm:items-center"
+                            role="status"
+                        >
+                            <ListChecksIcon
+                                class="hidden size-4 shrink-0 sm:block"
+                                aria-hidden="true"
+                            />
+                            <div class="flex flex-1 flex-col gap-1">
+                                <p class="font-medium">
+                                    The AI found
+                                    {{ pendingReview.cuts.length }}
+                                    {{
+                                        pendingReview.cuts.length === 1
+                                            ? 'passage'
+                                            : 'passages'
+                                    }}
+                                    you may want to remove.
+                                </p>
+                                <p class="text-muted-foreground">
+                                    Nothing is cut or rendered until you review
+                                    them.
+                                </p>
+                            </div>
+                            <Button @click="reviewOpen = true">
+                                Review cuts
+                            </Button>
+                        </div>
+                    </PermissionGuard>
 
                     <div
                         v-if="edit.failure"
@@ -400,6 +462,14 @@ async function onRetry(): Promise<void> {
             </Card>
         </template>
     </div>
+
+    <VideoEditCutReviewDialog
+        v-if="pendingReview"
+        v-model:open="reviewOpen"
+        :uuid="uuid"
+        :review="pendingReview"
+        :expires-at="edit?.review_expires_at ?? null"
+    />
 
     <ConfirmModal
         v-model:open="confirmDeleteOpen"

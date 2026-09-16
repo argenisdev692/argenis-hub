@@ -7,9 +7,12 @@ namespace Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
+use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
+use Modules\VideoEdits\Domain\ValueObjects\AiCutReview;
+use Modules\VideoEdits\Domain\ValueObjects\AiReviewableCut;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
 
 /**
@@ -64,6 +67,34 @@ final class VideoEditFactory extends Factory
             'attempts' => 1,
             'queued_at' => now()->subMinutes(2),
             'started_at' => now()->subMinute(),
+        ]);
+    }
+
+    /**
+     * An AI edit parked on its cut review, with one confident and one doubtful
+     * proposal still unanswered.
+     */
+    public function awaitingReview(): self
+    {
+        return $this->state(fn (): array => [
+            'mode' => VideoEditMode::AiEdit,
+            'status' => VideoEditStatus::AwaitingReview,
+            'parameters' => [
+                'silence_removal' => ['enabled' => false],
+                'manual_ranges' => [],
+                'ai_edit' => ['enabled' => true, 'consented' => true],
+            ],
+            'ai_consent_at' => now()->subMinutes(10),
+            'ai_review' => AiCutReview::pending([
+                new AiReviewableCut((string) Str::uuid7(), CutReason::PauseMarker, 1_500, 2_100, 0.99, 'PAUSA', 'vamos Outluk', 'Outlook', 'Spoken pause marker.', true),
+                new AiReviewableCut((string) Str::uuid7(), CutReason::Misspoken, 900, 1_500, 0.55, 'Outluk', 'Hoy vamos', 'PAUSA', 'Wrong product name.', false),
+            ])->toArray(),
+            'review_expires_at' => now()->addHours(24),
+            'current_stage' => ProcessingStage::AiAnalysis,
+            'progress_percent' => 55,
+            'attempts' => 1,
+            'queued_at' => now()->subMinutes(10),
+            'started_at' => now()->subMinutes(9),
         ]);
     }
 

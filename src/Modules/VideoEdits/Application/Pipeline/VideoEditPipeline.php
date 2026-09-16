@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Application\Pipeline;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as Config;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
+use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
+use Modules\VideoEdits\Domain\Exceptions\CutReviewRequiredException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
 use Modules\VideoEdits\Domain\Ports\ScriptTextExtractorPort;
@@ -30,6 +33,10 @@ use Throwable;
 /**
  * Runs one edit through the ordered stages (plan §3.1, EX-7):
  * Download → Merge → Analysis → Plan cuts → Render → Publish.
+ *
+ * An AI edit takes two passes: the first stops after Analysis in
+ * `awaiting_review` while the owner approves the proposed cuts, the second
+ * runs the whole pipeline again with those approvals.
  *
  * Decision producers are the only variable part (EX-2); validation, planning,
  * rendering and persistence consume the single CutDecision contract (EX-1/EX-3).
@@ -73,7 +80,7 @@ final readonly class VideoEditPipeline
 
         // ── Download ────────────────────────────────────────────────────────
         $progress->startStage(ProcessingStage::Download);
-        [$inputPaths, $inputProbes] = $this->download($edit, $sources, $progress);
+        [$inputPaths, $inputProbes, $sourceFingerprints] = $this->download($edit, $sources, $progress);
         $sourcesDurationMs = array_sum(array_map(static fn (MediaProbe $probe): int => $probe->durationMs, $inputProbes));
         $this->assertWithinDurationLimit($sourcesDurationMs);
         $this->assertManualRangesFit($edit->parameters, $sourcesDurationMs);
@@ -99,25 +106,29 @@ final readonly class VideoEditPipeline
         // detection): they run inside their producer, so the stages exist for
         // progress reporting and the producer registry stays the only seam.
         $progress->startStage(ProcessingStage::Analysis);
-        $decisions = $this->produceDecisions(
-            new DecisionContext(
-                mode: $edit->mode,
-                parameters: $edit->parameters,
-                workingPath: $workingPath,
-                workingProbe: $workingProbe,
-                videoEditId: $edit->id,
-                videoEditUuid: $edit->uuid,
-                ownerId: $edit->user_id,
-                sourceFingerprints: array_values(array_map(
-                    static fn (VideoEditSourceEloquentModel $source): string => (string) $source->sha256,
-                    $sources,
-                )),
-                // A producer owning stages of its own reports them here, so a
-                // long transcription moves the bar instead of looking hung.
-                onStageStart: static fn (ProcessingStage $stage) => $progress->startStage($stage),
-            ),
-            $sourcesDurationMs,
-        );
+
+        try {
+            $decisions = $this->produceDecisions(
+                new DecisionContext(
+                    mode: $edit->mode,
+                    parameters: $edit->parameters,
+                    workingPath: $workingPath,
+                    workingProbe: $workingProbe,
+                    videoEditId: $edit->id,
+                    videoEditUuid: $edit->uuid,
+                    ownerId: $edit->user_id,
+                    sourceFingerprints: $sourceFingerprints,
+                    // A producer owning stages of its own reports them here, so a
+                    // long transcription moves the bar instead of looking hung.
+                    onStageStart: static fn (ProcessingStage $stage) => $progress->startStage($stage),
+                ),
+                $sourcesDurationMs,
+            );
+        } catch (CutReviewRequiredException) {
+            $this->holdForReview($edit);
+
+            return;
+        }
 
         // ── Plan cuts ───────────────────────────────────────────────────────
         $progress->startStage(ProcessingStage::PlanCuts);
@@ -166,8 +177,14 @@ final readonly class VideoEditPipeline
     }
 
     /**
+     * The fingerprints are hashed from the downloaded bytes and returned rather
+     * than read back from the source models: those were loaded before this
+     * download and hold no hash on a first run. Keying the transcript on them
+     * would give every first-run edit of a user the same empty key, and a new
+     * recording would reuse another recording's transcript.
+     *
      * @param  list<VideoEditSourceEloquentModel>  $sources
-     * @return array{0: list<string>, 1: list<MediaProbe>}
+     * @return array{0: list<string>, 1: list<MediaProbe>, 2: list<string>}
      */
     private function download(VideoEditEloquentModel $edit, array $sources, ProgressReporter $progress): array
     {
@@ -181,6 +198,7 @@ final readonly class VideoEditPipeline
         $allowedContainers = (array) $this->config->get('video-edit.limits.allowed_containers');
         $paths = [];
         $probes = [];
+        $fingerprints = [];
 
         foreach ($sources as $index => $source) {
             $localPath = $this->workspace->path($edit->uuid, "source-{$source->position}.{$source->extension}");
@@ -192,14 +210,16 @@ final readonly class VideoEditPipeline
                 throw InvalidMediaException::unsupportedSource($source->position);
             }
 
-            $this->edits->recordSourceProbe($source->uuid, $probe, new ContentFingerprint((string) hash_file('sha256', $localPath)));
+            $fingerprint = new ContentFingerprint((string) hash_file('sha256', $localPath));
+            $this->edits->recordSourceProbe($source->uuid, $probe, $fingerprint);
 
             $paths[] = $localPath;
             $probes[] = $probe;
+            $fingerprints[] = $fingerprint->sha256;
             $progress->advanceStage(ProcessingStage::Download, intdiv(($index + 1) * 100, count($sources)));
         }
 
-        return [$paths, $probes];
+        return [$paths, $probes, $fingerprints];
     }
 
     /**
@@ -227,6 +247,22 @@ final readonly class VideoEditPipeline
         $document = $this->scriptExtractor->extract($localPath, $script->original_name);
 
         $this->edits->recordScriptText($script->uuid, $document->text);
+    }
+
+    /**
+     * Parks the edit until its owner reviews the proposed cuts (OWASP LLM06).
+     *
+     * Nothing is rendered or published, and the sources stay in storage: the
+     * pass after the review starts again from them. The workspace is still
+     * wiped by the run handler — a review can take a day, and a worker's local
+     * disk is no place to hold a merged recording that long.
+     */
+    private function holdForReview(VideoEditEloquentModel $edit): void
+    {
+        $this->edits->transitionStatus($edit->uuid, [VideoEditStatus::Processing], VideoEditStatus::AwaitingReview, [
+            'current_stage' => ProcessingStage::AiAnalysis,
+            'review_expires_at' => CarbonImmutable::now()->addHours((int) $this->config->get('video-edit.retention.review_hours')),
+        ]);
     }
 
     /**

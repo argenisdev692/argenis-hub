@@ -45,6 +45,7 @@
                             "enum": [
                                 "queued",
                                 "processing",
+                                "awaiting_review",
                                 "completed",
                                 "failed",
                                 null
@@ -280,6 +281,50 @@
                 }
             }
         },
+        "/{uuid}/review": {
+            "post": {
+                "operationId": "video-edits.admin.review",
+                "summary": "The owner's answer to the AI cut review. Approved cuts are applied by the\nrender pass this queues; an empty list keeps everything",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReviewVideoEditCutsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "`VideoEditDetailData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VideoEditDetailData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/{uuid}/retry": {
             "post": {
                 "operationId": "video-edits.admin.retry",
@@ -416,6 +461,7 @@
                             "enum": [
                                 "queued",
                                 "processing",
+                                "awaiting_review",
                                 "completed",
                                 "failed",
                                 null
@@ -907,6 +953,25 @@
                 },
                 "title": "RetryVideoEditData"
             },
+            "ReviewVideoEditCutsData": {
+                "type": "object",
+                "description": "The owner's answer to the cut review (`POST /{uuid}/review`).\n\n`approved_cut_ids` must be present even when empty: an empty list is the\nexplicit \"keep everything\" answer, and a request that forgot the field must\nnot be read as one. Whether the ids belong to this edit is checked by the\nhandler against the stored review.",
+                "properties": {
+                    "approved_cut_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 500,
+                        "uniqueItems": true
+                    }
+                },
+                "required": [
+                    "approved_cut_ids"
+                ],
+                "title": "ReviewVideoEditCutsData"
+            },
             "VideoEditDetailData": {
                 "type": "object",
                 "properties": {
@@ -979,7 +1044,19 @@
                             "null"
                         ]
                     },
+                    "review": {
+                        "$ref": "#/components/schemas/AiCutReviewData"
+                    },
+                    "review_expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "can_retry": {
+                        "type": "boolean"
+                    },
+                    "can_review": {
                         "type": "boolean"
                     },
                     "can_delete": {
@@ -1032,6 +1109,7 @@
                     "decisions",
                     "warnings",
                     "can_retry",
+                    "can_review",
                     "can_delete",
                     "can_download"
                 ],

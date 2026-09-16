@@ -160,6 +160,13 @@ interface VideoEditRepositoryPort
     public function staleProcessingUuids(DateTimeInterface $lastActivityBefore, int $limit): array;
 
     /**
+     * Edits whose cut review went unanswered past its deadline.
+     *
+     * @return list<string>
+     */
+    public function expiredReviewUuids(DateTimeInterface $now, int $limit): array;
+
+    /**
      * Drafts never submitted (D17).
      *
      * @return list<string>

@@ -7,7 +7,6 @@ namespace Modules\VideoEdits\Application\Pipeline\Producers;
 use Illuminate\Contracts\Config\Repository as Config;
 use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
-use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Ports\CutDecisionProducer;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\ValueObjects\CutDecision;
@@ -35,7 +34,7 @@ final readonly class SilenceDecisionProducer implements CutDecisionProducer
 
     public function supports(DecisionContext $context): bool
     {
-        return $context->mode === VideoEditMode::AutoEdit
+        return $context->mode->acceptsCutDecisions()
             && ($context->parameters['silence_removal']['enabled'] ?? false) === true;
     }
 

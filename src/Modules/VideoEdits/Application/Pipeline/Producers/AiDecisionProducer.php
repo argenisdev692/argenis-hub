@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Application\Pipeline\Producers;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as Config;
+use Illuminate\Support\Str;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Exceptions\AiConsentRequiredException;
+use Modules\VideoEdits\Domain\Exceptions\CutReviewRequiredException;
+use Modules\VideoEdits\Domain\Ports\AiCutReviewStorePort;
 use Modules\VideoEdits\Domain\Ports\AiEditAnalysisPort;
 use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\Ports\CutDecisionProducer;
@@ -16,10 +20,13 @@ use Modules\VideoEdits\Domain\Ports\ScriptProviderPort;
 use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
 use Modules\VideoEdits\Domain\ValueObjects\AiCutProposal;
+use Modules\VideoEdits\Domain\ValueObjects\AiCutReview;
+use Modules\VideoEdits\Domain\ValueObjects\AiReviewableCut;
 use Modules\VideoEdits\Domain\ValueObjects\CutDecision;
 use Modules\VideoEdits\Domain\ValueObjects\DecisionContext;
 use Modules\VideoEdits\Domain\ValueObjects\ScriptDocument;
 use Modules\VideoEdits\Domain\ValueObjects\Transcript;
+use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
 
 /**
  * V3 — AI edit (US-12/13/14).
@@ -30,17 +37,23 @@ use Modules\VideoEdits\Domain\ValueObjects\Transcript;
  *
  * **The hybrid.** Whisper (V2) supplies the ruler — every word's exact
  * milliseconds. The AI supplies the judgement — which words are a spoken
- * "PAUSA" and which are the failed take before it. The model answers in word
- * indices and this class resolves them against the transcript, so the cut is as
- * frame-accurate as a V1 manual range even though the model only reasons in
- * `MM:SS`.
+ * "PAUSA", the failed take before it, or a word said wrong against the script.
+ * The model answers in word indices and this class resolves them against the
+ * transcript, so the cut is as frame-accurate as a V1 manual range even though
+ * the model only reasons in `MM:SS`.
  *
  * **Consent gate (R9).** Nothing is sent anywhere until the user has explicitly
  * agreed for this edit. The check is first, before the transcript is even read.
  *
- * **What it will not do (R6).** Only `pause_marker` and `retake` become cuts,
- * and only above the configured confidence. Editorial findings — off-script,
- * "REDUCIR", pacing — are stored as report recommendations and never applied.
+ * **Human review (OWASP LLM06).** The AI never cuts on its own. The first pass
+ * analyses, stores every proposal as a reviewable cut and stops the pipeline
+ * with {@see CutReviewRequiredException}. Once the owner has chosen, the next
+ * pass turns exactly the approved cuts into decisions — without calling the
+ * model again, so what renders is what was reviewed.
+ *
+ * **What it will not do (R6).** Editorial findings — "REDUCIR", pacing, broad
+ * drift from the script — are stored as report recommendations and never
+ * become cuts, approved or not.
  */
 final readonly class AiDecisionProducer implements CutDecisionProducer
 {
@@ -51,6 +64,7 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
         private ScriptProviderPort $scripts,
         private TranscriptStorePort $transcripts,
         private AiReportStorePort $reports,
+        private AiCutReviewStorePort $reviews,
         private Config $config,
     ) {}
 
@@ -67,12 +81,32 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
 
     /**
      * @return list<CutDecision>
+     *
+     * @throws AiConsentRequiredException
+     * @throws CutReviewRequiredException when proposals are waiting for the owner
      */
     public function produce(DecisionContext $context): array
     {
         // Before anything is read, let alone sent (R9).
         if (($context->parameters['ai_edit']['consented'] ?? false) !== true) {
             throw new AiConsentRequiredException;
+        }
+
+        // A proposal nobody can review must never be cut, so without an edit to
+        // hang the review on, the model is not even asked.
+        if ($context->videoEditId === null) {
+            return [];
+        }
+
+        $review = $this->reviews->forEdit($context->videoEditId);
+
+        if ($review?->isResolved() === true) {
+            return self::approvedDecisions($review);
+        }
+
+        if ($review !== null) {
+            // A duplicate or stale job must not render around an open review.
+            throw new CutReviewRequiredException(count($review->cuts));
         }
 
         $transcript = $this->transcript($context);
@@ -93,67 +127,86 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
             self::intParameter($context, 'target_duration_minutes'),
         );
 
-        $this->storeReport($context, $analysis);
+        $this->reports->store($context->videoEditId, $analysis);
 
-        return $this->toDecisions($analysis, $transcript);
+        $cuts = $this->reviewableCuts($analysis, $transcript);
+
+        if ($cuts === []) {
+            $this->reviews->store($context->videoEditId, AiCutReview::nothingProposed(CarbonImmutable::now()));
+
+            return [];
+        }
+
+        $this->reviews->store($context->videoEditId, AiCutReview::pending($cuts));
+
+        throw new CutReviewRequiredException(count($cuts));
     }
 
     /**
      * Word indices become exact milliseconds here — the whole point of the
-     * hybrid. Below-threshold proposals are dropped rather than emitted:
-     * the report already records that the model suggested them, and letting
-     * them reach the planner would apply them.
+     * hybrid. Every proposal is kept, low confidence included: the owner sees
+     * it unticked instead of it being thrown away unseen.
      *
-     * @return list<CutDecision>
+     * @return list<AiReviewableCut>
      */
-    private function toDecisions(AiAnalysis $analysis, Transcript $transcript): array
+    private function reviewableCuts(AiAnalysis $analysis, Transcript $transcript): array
     {
-        $threshold = (float) $this->config->get('video-edit.ai.auto_apply_above_confidence');
-        $decisions = [];
+        $threshold = (float) $this->config->get('video-edit.ai.preselect_above_confidence');
+        $contextWords = (int) $this->config->get('video-edit.ai.review_context_words', 8);
 
-        foreach ($analysis->cutProposals as $proposal) {
-            if ($proposal->confidence < $threshold) {
-                continue;
-            }
-
-            $decisions[] = new CutDecision(
-                producer: self::NAME,
+        return array_values(array_map(
+            static fn (AiCutProposal $proposal): AiReviewableCut => new AiReviewableCut(
+                id: (string) Str::uuid7(),
                 reason: $proposal->reason,
-                origin: DecisionOrigin::Ai,
                 startMs: $transcript->words[$proposal->startWordIndex]->startMs,
                 endMs: $transcript->words[$proposal->endWordIndex]->endMs,
                 confidence: $proposal->confidence,
-                evidence: self::evidence($proposal),
-            );
-        }
-
-        return $decisions;
+                text: self::words($transcript, $proposal->startWordIndex, $proposal->endWordIndex - $proposal->startWordIndex + 1),
+                contextBefore: self::words($transcript, max(0, $proposal->startWordIndex - $contextWords), min($contextWords, $proposal->startWordIndex)),
+                contextAfter: self::words($transcript, $proposal->endWordIndex + 1, $contextWords),
+                explanation: $proposal->evidence,
+                preselected: $proposal->confidence >= $threshold,
+            ),
+            // A zero-length word would make an empty range; the validator would
+            // reject it later anyway, so it is not worth a review row.
+            array_filter(
+                $analysis->cutProposals,
+                static fn (AiCutProposal $proposal): bool => $transcript->words[$proposal->endWordIndex]->endMs
+                    > $transcript->words[$proposal->startWordIndex]->startMs,
+            ),
+        ));
     }
 
     /**
-     * @return array<string, scalar|null>
+     * @return list<CutDecision>
      */
-    private static function evidence(AiCutProposal $proposal): array
+    private static function approvedDecisions(AiCutReview $review): array
     {
-        return [
-            'text' => $proposal->evidence,
-            'start_word_index' => $proposal->startWordIndex,
-            'end_word_index' => $proposal->endWordIndex,
-        ];
+        return array_map(
+            static fn (AiReviewableCut $cut): CutDecision => new CutDecision(
+                producer: self::NAME,
+                reason: $cut->reason,
+                origin: DecisionOrigin::Ai,
+                startMs: $cut->startMs,
+                endMs: $cut->endMs,
+                confidence: $cut->confidence,
+                evidence: [
+                    'text' => mb_substr($cut->text, 0, 300),
+                    'review_cut_id' => $cut->id,
+                ],
+            ),
+            $review->approvedCuts(),
+        );
     }
 
-    /**
-     * Only the validated recommendations and the conclusion are kept — never
-     * the raw provider response (decision R10), so a hard delete leaves nothing
-     * of the user's content behind.
-     */
-    private function storeReport(DecisionContext $context, AiAnalysis $analysis): void
+    private static function words(Transcript $transcript, int $offset, int $length): string
     {
-        if ($context->videoEditId === null) {
-            return;
-        }
-
-        $this->reports->store($context->videoEditId, $analysis);
+        return $length <= 0
+            ? ''
+            : implode(' ', array_map(
+                static fn (TranscriptWord $word): string => $word->text,
+                array_slice($transcript->words, $offset, $length),
+            ));
     }
 
     /**

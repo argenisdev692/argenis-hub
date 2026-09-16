@@ -22,7 +22,8 @@
  *     `AGENTS.md` is auto-loaded, rules come through `instructions`)
  *   - `.claude/settings.json` + `.mcp.json` `mcpServers`
  *     → `opencode.json` `mcp` (`type: local` with `command[]` /
- *     `environment`, or `type: remote` with `url` / `headers`)
+ *     `environment`, or `type: remote` with `url` / `headers`), except the
+ *     servers listed in `OPENCODE_MCP_OVERRIDES`, which are written as-is
  *
  * Never copies: `.claude/projects/`, `.claude/settings*.json` (private).
  *
@@ -178,6 +179,30 @@ function planMarkdownTree(plan, sourceRel, destRel, transform = withGeneratedBan
   }
 }
 
+/**
+ * OpenCode-only MCP entries that win over the one generated from
+ * `.mcp.json` / `.claude/settings.json`. Use it when OpenCode should reach a
+ * server differently from Claude Code — e.g. Tavily's hosted endpoint instead
+ * of a local `npx tavily-mcp`. `{env:NAME}` is OpenCode's own substitution
+ * syntax.
+ */
+const OPENCODE_MCP_OVERRIDES = {
+  github: {
+    type: 'remote',
+    url: 'https://api.githubcopilot.com/mcp/',
+    headers: {
+      Authorization: 'Bearer {env:GITHUB_TOKEN}',
+    },
+  },
+  tavily: {
+    type: 'remote',
+    url: 'https://mcp.tavily.com/mcp',
+    headers: {
+      Authorization: 'Bearer {env:TAVILY_API_KEY}',
+    },
+  },
+};
+
 /** Claude/`mcpServers` entry → OpenCode `mcp` entry (`type: local | remote`). */
 function toOpenCodeMcp(server) {
   if (server.type === 'http' || server.url) {
@@ -230,7 +255,7 @@ function buildPlan() {
   }
   const mcp = {};
   for (const name of Object.keys(servers).sort()) {
-    mcp[name] = toOpenCodeMcp(servers[name]);
+    mcp[name] = OPENCODE_MCP_OVERRIDES[name] ?? toOpenCodeMcp(servers[name]);
   }
 
   const ruleFiles = [...plan.keys()]

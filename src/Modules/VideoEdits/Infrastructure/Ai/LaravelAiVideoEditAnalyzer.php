@@ -107,8 +107,8 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
             $start = (int) ($row['start_word_index'] ?? -1);
             $end = (int) ($row['end_word_index'] ?? -1);
 
-            // Only the two reasons a machine may act on, whatever the model says.
-            $isCuttable = $reason === CutReason::PauseMarker || $reason === CutReason::Retake;
+            // Only the reasons a cut may be proposed for, whatever the model says.
+            $isCuttable = $reason?->isAiProposable() === true;
 
             // A hallucinated index would map to the wrong words entirely, so an
             // unaddressable span is dropped rather than resolved to garbage.

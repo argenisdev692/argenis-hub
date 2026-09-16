@@ -1755,6 +1755,13 @@ declare namespace Modules {
     namespace VideoEdits {
         namespace Application {
             namespace DTOs {
+                export type AiCutReviewData = {
+                    cuts: Modules.VideoEdits.Application.DTOs.AiReviewableCutData[];
+                    is_resolved: boolean;
+                    reviewed_at: string | null;
+                    approved_cut_ids: string[];
+                    resolved_by_expiry: boolean;
+                };
                 export type AiEditData = {
                     enabled: boolean;
                     consented: boolean;
@@ -1790,6 +1797,19 @@ declare namespace Modules {
                     rejected_decision_count: number;
                     script_name: string | null;
                     completed_at: string | null;
+                };
+                export type AiReviewableCutData = {
+                    id: string;
+                    reason: Modules.VideoEdits.Domain.Enums.CutReason;
+                    start_ms: number;
+                    end_ms: number;
+                    duration_ms: number;
+                    confidence: number;
+                    text: string;
+                    context_before: string;
+                    context_after: string;
+                    explanation: string | null;
+                    preselected: boolean;
                 };
                 export type AppliedCutData = {
                     sequence: number;
@@ -1844,6 +1864,9 @@ declare namespace Modules {
                         | Modules.VideoEdits.Application.DTOs.ManualRangeData[]
                         | null;
                 };
+                export type ReviewVideoEditCutsData = {
+                    approved_cut_ids: string[];
+                };
                 export type ScriptUploadData = {
                     file_name: string;
                     mime_type: string;
@@ -1889,7 +1912,10 @@ declare namespace Modules {
                     warnings: string[];
                     failure: Modules.VideoEdits.Application.DTOs.VideoEditFailureData | null;
                     retry_available_until: string | null;
+                    review: Modules.VideoEdits.Application.DTOs.AiCutReviewData | null;
+                    review_expires_at: string | null;
                     can_retry: boolean;
+                    can_review: boolean;
                     can_delete: boolean;
                     can_download: boolean;
                     created_at: string | null;
@@ -1963,7 +1989,8 @@ declare namespace Modules {
                     | 'repetition'
                     | 'vocal_sound'
                     | 'pause_marker'
-                    | 'retake';
+                    | 'retake'
+                    | 'misspoken';
                 export type DecisionOrigin =
                     'system_detection' | 'user' | 'transcription' | 'ai';
                 export type DecisionOutcome = 'applied' | 'rejected';
@@ -1993,7 +2020,12 @@ declare namespace Modules {
                     | 'vocal_sound';
                 export type VideoEditMode = 'merge' | 'auto_edit' | 'ai_edit';
                 export type VideoEditStatus =
-                    'draft' | 'queued' | 'processing' | 'completed' | 'failed';
+                    | 'draft'
+                    | 'queued'
+                    | 'processing'
+                    | 'awaiting_review'
+                    | 'completed'
+                    | 'failed';
             }
         }
     }

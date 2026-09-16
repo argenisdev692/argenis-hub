@@ -15,6 +15,9 @@ use Shared\Domain\Ports\StoragePort;
  *  - an edit with no progress write for longer than the stale limit is marked
  *    `processing_timeout` (a crashed worker never calls `failed()`, and PCNTL
  *    timeouts do not exist on Windows);
+ *  - a cut review left unanswered past its deadline resolves as "keep
+ *    everything", so the edit renders without AI cuts instead of holding the
+ *    owner's active slot forever;
  *  - a draft never submitted is deleted together with anything uploaded for it.
  */
 final readonly class SweepStaleVideoEditsHandler
@@ -24,17 +27,19 @@ final readonly class SweepStaleVideoEditsHandler
     public function __construct(
         private VideoEditRepositoryPort $edits,
         private MarkVideoEditFailedHandler $failures,
+        private ReviewVideoEditCutsHandler $reviews,
         private StoragePort $storage,
         private Config $config,
     ) {}
 
     /**
-     * @return array{timed_out: int, expired_drafts: int}
+     * @return array{timed_out: int, expired_reviews: int, expired_drafts: int}
      */
     public function handle(): array
     {
         $now = CarbonImmutable::now();
         $timedOut = 0;
+        $expiredReviews = 0;
         $expiredDrafts = 0;
 
         $staleBefore = $now->subMinutes((int) $this->config->get('video-edit.retention.stale_processing_minutes'));
@@ -42,6 +47,12 @@ final readonly class SweepStaleVideoEditsHandler
         foreach ($this->edits->staleProcessingUuids($staleBefore, self::BATCH) as $uuid) {
             $this->failures->handleTimeout($uuid);
             $timedOut++;
+        }
+
+        foreach ($this->edits->expiredReviewUuids($now, self::BATCH) as $uuid) {
+            if ($this->reviews->handleExpired($uuid)) {
+                $expiredReviews++;
+            }
         }
 
         $draftsBefore = $now->subHours((int) $this->config->get('video-edit.retention.draft_hours'));
@@ -58,6 +69,6 @@ final readonly class SweepStaleVideoEditsHandler
             }
         }
 
-        return ['timed_out' => $timedOut, 'expired_drafts' => $expiredDrafts];
+        return ['timed_out' => $timedOut, 'expired_reviews' => $expiredReviews, 'expired_drafts' => $expiredDrafts];
     }
 }

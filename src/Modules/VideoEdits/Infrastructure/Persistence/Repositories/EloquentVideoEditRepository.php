@@ -343,6 +343,17 @@ final readonly class EloquentVideoEditRepository implements VideoEditRepositoryP
             ->all();
     }
 
+    public function expiredReviewUuids(DateTimeInterface $now, int $limit): array
+    {
+        return VideoEditEloquentModel::query()
+            ->where('status', VideoEditStatus::AwaitingReview->value)
+            ->where('review_expires_at', '<=', $now)
+            ->orderBy('review_expires_at')
+            ->limit($limit)
+            ->pluck('uuid')
+            ->all();
+    }
+
     public function expiredDraftUuids(DateTimeInterface $createdBefore, int $limit): array
     {
         return VideoEditEloquentModel::query()

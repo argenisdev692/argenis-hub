@@ -84,6 +84,23 @@ it('converts a well-formed response into proposals and recommendations', functio
         ->and($analysis->conclusion)->toBe('Done.');
 });
 
+it('accepts a misspoken word as a proposal for the owner to review', function (): void {
+    fakeAnalyzerFor([
+        'cuts' => [
+            ['reason' => 'misspoken', 'start_word_index' => 2, 'end_word_index' => 2, 'confidence' => 70, 'evidence' => 'Script says "vemos".'],
+            ['reason' => 'filler_word', 'start_word_index' => 0, 'end_word_index' => 0, 'confidence' => 99],
+        ],
+        'recommendations' => [],
+    ]);
+
+    $proposals = app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null)->cutProposals;
+
+    // Filler words belong to the speech stage, so only the misspoken word survives.
+    expect($proposals)->toHaveCount(1)
+        ->and($proposals[0]->reason)->toBe(CutReason::Misspoken)
+        ->and($proposals[0]->evidence)->toBe('Script says "vemos".');
+});
+
 it('drops a cut whose word index does not exist', function (): void {
     // A hallucinated index would otherwise resolve to the wrong words entirely.
     fakeAnalyzerFor([

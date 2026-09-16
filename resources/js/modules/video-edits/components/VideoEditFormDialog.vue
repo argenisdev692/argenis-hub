@@ -330,7 +330,7 @@ function toNullableInteger(value: string | number): number | null {
                         :field="field"
                         label="Send the transcript and script to the AI provider"
                         orientation="horizontal"
-                        description="Required for AI edit. Nothing is sent without it."
+                        description="Required for AI edit. Nothing is sent without it, and you approve every cut the AI proposes before anything is removed."
                         required
                         #default="{ control }"
                     >

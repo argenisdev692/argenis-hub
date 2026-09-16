@@ -15,7 +15,7 @@ it('documents every video edit endpoint in its own OpenAPI document', function (
     File::delete($path);
 
     expect(array_keys($document['paths']))->toEqualCanonicalizing([
-        '/', '/bulk-delete', '/export', '/{uuid}', '/{uuid}/download-url', '/{uuid}/submit', '/{uuid}/retry', '/{uuid}/report',
+        '/', '/bulk-delete', '/export', '/{uuid}', '/{uuid}/download-url', '/{uuid}/submit', '/{uuid}/retry', '/{uuid}/review', '/{uuid}/report',
     ])
         ->and(array_column($document['paths']['/export']['get']['parameters'] ?? [], 'name'))
         ->toContain('format', 'status', 'date_from', 'date_to');

@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
+use Modules\VideoEdits\Domain\ValueObjects\AiCutReview;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditAppliedCutEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditCutDecisionEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
@@ -50,7 +51,10 @@ final class VideoEditDetailData extends Data
         public array $warnings,
         public ?VideoEditFailureData $failure,
         public ?string $retryAvailableUntil,
+        public ?AiCutReviewData $review,
+        public ?string $reviewExpiresAt,
         public bool $canRetry,
+        public bool $canReview,
         public bool $canDelete,
         public bool $canDownload,
         public ?string $createdAt,
@@ -68,6 +72,8 @@ final class VideoEditDetailData extends Data
         $retryable = $edit->status === VideoEditStatus::Failed
             && $edit->sources_purged_at === null
             && $edit->sources_expire_at?->isAfter($now) === true;
+
+        $review = is_array($edit->ai_review) ? AiCutReview::fromArray($edit->ai_review) : null;
 
         return new self(
             uuid: $edit->uuid,
@@ -93,7 +99,10 @@ final class VideoEditDetailData extends Data
                 details: $edit->failure_details,
             ),
             retryAvailableUntil: $retryable ? $edit->sources_expire_at?->toIso8601String() : null,
+            review: $review === null ? null : AiCutReviewData::fromReview($review),
+            reviewExpiresAt: $edit->status === VideoEditStatus::AwaitingReview ? $edit->review_expires_at?->toIso8601String() : null,
             canRetry: $retryable,
+            canReview: $edit->status === VideoEditStatus::AwaitingReview && $review?->isResolved() === false,
             canDelete: $edit->status->isDeletable(),
             canDownload: $edit->status === VideoEditStatus::Completed && $edit->result_path !== null,
             createdAt: $edit->created_at?->toIso8601String(),

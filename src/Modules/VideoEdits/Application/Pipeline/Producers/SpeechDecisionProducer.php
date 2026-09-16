@@ -8,7 +8,6 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\SpeechCategory;
-use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Ports\CutDecisionProducer;
 use Modules\VideoEdits\Domain\Ports\TranscriptionPort;
 use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
@@ -52,9 +51,14 @@ final readonly class SpeechDecisionProducer implements CutDecisionProducer
         return self::NAME;
     }
 
+    /**
+     * Runs for AI edits too: the request validation requires speech cleanup on
+     * an AI edit precisely because the AI producer reads the transcript this
+     * producer stores.
+     */
     public function supports(DecisionContext $context): bool
     {
-        return $context->mode === VideoEditMode::AutoEdit
+        return $context->mode->acceptsCutDecisions()
             && ($context->parameters['speech_cleanup']['enabled'] ?? false) === true
             // Transcription of a silent track costs money and returns nothing.
             && $context->workingProbe->hasAudio;

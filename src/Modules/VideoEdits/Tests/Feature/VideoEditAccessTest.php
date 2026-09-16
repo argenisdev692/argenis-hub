@@ -52,7 +52,7 @@ it('rate-limits every endpoint that changes data (OWASP §14)', function (): voi
         ->filter(fn ($route): bool => str_starts_with($route->uri(), 'data/admin/video-edits')
             && array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE']) !== []);
 
-    expect($mutating)->toHaveCount(5);
+    expect($mutating)->toHaveCount(6);
 
     $mutating->each(function ($route): void {
         expect(collect($route->gatherMiddleware())->contains(fn ($middleware): bool => is_string($middleware) && str_starts_with($middleware, 'throttle:')))

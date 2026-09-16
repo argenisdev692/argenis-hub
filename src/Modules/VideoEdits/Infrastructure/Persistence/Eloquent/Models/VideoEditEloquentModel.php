@@ -54,6 +54,8 @@ use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
  * @property int|null $result_size_bytes
  * @property Carbon|null $ai_consent_at
  * @property array<string, mixed>|null $ai_report
+ * @property array<string, mixed>|null $ai_review
+ * @property Carbon|null $review_expires_at
  * @property Carbon|null $sources_expire_at
  * @property Carbon|null $sources_purged_at
  * @property Carbon|null $queued_at
@@ -100,6 +102,8 @@ use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
     'result_size_bytes',
     'ai_consent_at',
     'ai_report',
+    'ai_review',
+    'review_expires_at',
     'sources_expire_at',
     'sources_purged_at',
     'queued_at',
@@ -302,6 +306,8 @@ final class VideoEditEloquentModel extends Model
             'rejected_decision_count' => 'integer',
             'warnings' => 'array',
             'ai_report' => 'array',
+            'ai_review' => 'array',
+            'review_expires_at' => 'datetime',
             'ai_consent_at' => 'datetime',
             'result_size_bytes' => 'integer',
             'sources_expire_at' => 'datetime',

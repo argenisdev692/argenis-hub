@@ -18,11 +18,13 @@ use Modules\VideoEdits\Application\Pipeline\Producers\SilenceDecisionProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\SpeechDecisionProducer;
 use Modules\VideoEdits\Domain\Exceptions\AiConsentRequiredException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
+use Modules\VideoEdits\Domain\Exceptions\InvalidCutReviewException;
 use Modules\VideoEdits\Domain\Exceptions\ManualRangesNotCorrectableException;
 use Modules\VideoEdits\Domain\Exceptions\ScriptUnreadableException;
 use Modules\VideoEdits\Domain\Exceptions\SourceUploadInvalidException;
 use Modules\VideoEdits\Domain\Exceptions\VideoEditNotFoundException;
 use Modules\VideoEdits\Domain\Exceptions\VideoEditStateConflictException;
+use Modules\VideoEdits\Domain\Ports\AiCutReviewStorePort;
 use Modules\VideoEdits\Domain\Ports\AiEditAnalysisPort;
 use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\Ports\ScriptProviderPort;
@@ -42,6 +44,7 @@ use Modules\VideoEdits\Infrastructure\Console\Commands\SweepStaleVideoEditsComma
 use Modules\VideoEdits\Infrastructure\Media\FfmpegCommandBuilder;
 use Modules\VideoEdits\Infrastructure\Media\FfmpegVideoEditor;
 use Modules\VideoEdits\Infrastructure\Media\LocalVideoEditWorkspace;
+use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentAiCutReviewStore;
 use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentAiReportStore;
 use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentScriptProvider;
 use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentTranscriptStore;
@@ -67,6 +70,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
         $this->app->bind(TranscriptStorePort::class, EloquentTranscriptStore::class);
         $this->app->bind(AiEditAnalysisPort::class, LaravelAiVideoEditAnalyzer::class);
         $this->app->bind(AiReportStorePort::class, EloquentAiReportStore::class);
+        $this->app->bind(AiCutReviewStorePort::class, EloquentAiCutReviewStore::class);
         $this->app->bind(ScriptProviderPort::class, EloquentScriptProvider::class);
         $this->app->bind(ScriptTextExtractorPort::class, ScriptTextExtractor::class);
 
@@ -221,6 +225,12 @@ final class VideoEditsServiceProvider extends ServiceProvider
             'message' => $exception->getMessage(),
             'code' => ScriptUnreadableException::FAILURE_CODE,
             'errors' => ['ai_edit.script' => [$exception->getMessage()]],
+        ], 422));
+
+        $handler->renderable(static fn (InvalidCutReviewException $exception): JsonResponse => response()->json([
+            'message' => $exception->getMessage(),
+            'code' => InvalidCutReviewException::CODE,
+            'errors' => ['approved_cut_ids' => [$exception->getMessage()]],
         ], 422));
 
         $handler->renderable(static fn (InvalidCutRangesException $exception): JsonResponse => response()->json([

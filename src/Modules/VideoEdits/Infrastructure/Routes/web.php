@@ -49,6 +49,10 @@ Route::middleware(['auth', 'verified'])
             ->get('/{uuid}/download-url', [VideoEditController::class, 'downloadUrl'])->whereUuid('uuid')->name('download-url');
         Route::middleware(['permission:CREATE_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/{uuid}/submit', [VideoEditController::class, 'submit'])->whereUuid('uuid')->name('submit');
+        // The owner approves or rejects AI-proposed cuts (OWASP LLM06). Part of
+        // creating an edit, so it shares the create permission.
+        Route::middleware(['permission:CREATE_VIDEO_EDITS', 'throttle:10,1'])
+            ->post('/{uuid}/review', [VideoEditController::class, 'review'])->whereUuid('uuid')->name('review');
         Route::middleware(['permission:RETRY_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/{uuid}/retry', [VideoEditController::class, 'retry'])->whereUuid('uuid')->name('retry');
 

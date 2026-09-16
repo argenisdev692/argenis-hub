@@ -11,10 +11,12 @@ use Modules\VideoEdits\Application\Commands\BulkDeleteVideoEditsHandler;
 use Modules\VideoEdits\Application\Commands\CreateVideoEditHandler;
 use Modules\VideoEdits\Application\Commands\DeleteVideoEditHandler;
 use Modules\VideoEdits\Application\Commands\RetryVideoEditHandler;
+use Modules\VideoEdits\Application\Commands\ReviewVideoEditCutsHandler;
 use Modules\VideoEdits\Application\Commands\SubmitVideoEditHandler;
 use Modules\VideoEdits\Application\DTOs\BulkDeleteVideoEditsData;
 use Modules\VideoEdits\Application\DTOs\CreateVideoEditData;
 use Modules\VideoEdits\Application\DTOs\RetryVideoEditData;
+use Modules\VideoEdits\Application\DTOs\ReviewVideoEditCutsData;
 use Modules\VideoEdits\Application\DTOs\VideoEditDetailData;
 use Modules\VideoEdits\Application\DTOs\VideoEditFilterData;
 use Modules\VideoEdits\Application\Queries\GetVideoEditDownloadUrlHandler;
@@ -36,6 +38,7 @@ final readonly class VideoEditController
         private CreateVideoEditHandler $createVideoEdit,
         private SubmitVideoEditHandler $submitVideoEdit,
         private RetryVideoEditHandler $retryVideoEdit,
+        private ReviewVideoEditCutsHandler $reviewVideoEditCuts,
         private DeleteVideoEditHandler $deleteVideoEdit,
         private BulkDeleteVideoEditsHandler $bulkDeleteVideoEdits,
     ) {}
@@ -74,6 +77,18 @@ final readonly class VideoEditController
     {
         return response()->json(
             VideoEditDetailData::fromModel($this->retryVideoEdit->handle($uuid, $this->user($request), $data), now()),
+            202,
+        );
+    }
+
+    /**
+     * The owner's answer to the AI cut review. Approved cuts are applied by the
+     * render pass this queues; an empty list keeps everything.
+     */
+    public function review(Request $request, string $uuid, ReviewVideoEditCutsData $data): JsonResponse
+    {
+        return response()->json(
+            VideoEditDetailData::fromModel($this->reviewVideoEditCuts->handle($uuid, $this->user($request), $data), now()),
             202,
         );
     }

@@ -12,8 +12,10 @@ trigger: always_on
   - Formatter → `vendor/bin/pint --dirty --format agent`
   - Tests → `php artisan test --compact` (Pest runner) or `vendor/bin/pest`
     Do not ask the developer to paste output — execute and read it.
-- **Tests = Pest:** All tests are written with **Pest 5** (`php artisan make:test --pest {Name}`). No PHPUnit class-style tests in new code. **At the end of every module** (generation, audit, or refactor) you MUST run the module's tests and report the real result: `php artisan test --compact --filter={Module}`, then `php artisan test --compact` for the full suite before declaring the module done. Never claim a module is complete without a green test run pasted from an actual execution.
-- **Module finalization (MANDATORY — runs AFTER the backend suite is green):** a backend module is NOT done until this pipeline is executed, in this order, from the project root, with the real output read:
+- **Tests = Pest:** All tests are written with **Pest 5** (`php artisan make:test --pest {Name}`). No PHPUnit class-style tests in new code. **At the end of every module** (generation, audit, or refactor) you MUST run the module's tests and report the real result: `php artisan test --compact src/Modules/{Module}` (or `--filter={Module}`). Never claim a module is complete without a green test run pasted from an actual execution.
+  - **Do NOT run the full suite** (`php artisan test --compact` with no path/filter) — it takes too long. Run only the tests of the module(s) you touched; if a change crosses modules, run each affected module's tests individually. Run the full suite only when the developer explicitly asks for it.
+  - If a finalization step changes code (e.g. `vendor/bin/pint`, `ide-helper:models --write`), re-run the module's tests afterwards.
+- **Module finalization (MANDATORY — runs AFTER the module's tests are green):** a backend module is NOT done until this pipeline is executed, in this order, from the project root, with the real output read:
   ```bash
   php artisan optimize:clear             # flush config / route / view / event caches
   php artisan ide-helper:generate        # IDE helpers for facades

@@ -7,6 +7,7 @@ import {
     destroy,
     downloadUrl,
     retry,
+    review,
     store,
     submit,
 } from '@/routes/video-edits/admin';
@@ -16,6 +17,7 @@ import type {
     CreatedVideoEdit,
     CreateVideoEditPayload,
     DownloadUrl,
+    ReviewVideoEditCutsPayload,
     VideoEditDetail,
 } from '../types';
 import { VIDEO_EDITS_KEY } from './useVideoEdits';
@@ -120,6 +122,37 @@ export function useVideoEditMutations() {
         onSettled: invalidate,
     });
 
+    /**
+     * The owner's answer to the AI cut review. An empty list is a real answer
+     * — "keep everything" — and still renders the video.
+     */
+    const reviewVideoEditCuts = useMutation({
+        mutation: ({
+            uuid,
+            payload,
+        }: {
+            uuid: string;
+            payload: ReviewVideoEditCutsPayload;
+        }) =>
+            httpJson<VideoEditDetail>(toUrl(review(uuid)), {
+                method: 'POST',
+                body: payload,
+            }),
+        onSuccess(_edit, { payload }) {
+            const count = payload.approved_cut_ids.length;
+
+            toast.success(
+                count === 0
+                    ? 'Rendering with nothing removed by the AI.'
+                    : `Rendering with ${count} ${count === 1 ? 'cut' : 'cuts'} removed.`,
+            );
+        },
+        onError(error: unknown) {
+            toast.error(errorMessage(error, 'Failed to save your review.'));
+        },
+        onSettled: invalidate,
+    });
+
     const deleteVideoEdit = useMutation({
         mutation: (uuid: string) =>
             httpJson<void>(toUrl(destroy(uuid)), { method: 'DELETE' }),
@@ -181,6 +214,7 @@ export function useVideoEditMutations() {
     return {
         createVideoEdit,
         retryVideoEdit,
+        reviewVideoEditCuts,
         deleteVideoEdit,
         bulkDeleteVideoEdits,
         downloadVideoEdit,

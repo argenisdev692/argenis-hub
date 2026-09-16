@@ -26,6 +26,11 @@ export type UploadTarget = Modules.VideoEdits.Application.DTOs.UploadTargetData;
 export type DownloadUrl = Modules.VideoEdits.Application.DTOs.DownloadUrlData;
 export type BulkDeletedVideoEdits =
     Modules.VideoEdits.Application.DTOs.BulkDeletedVideoEditsData;
+export type AiCutReview = Modules.VideoEdits.Application.DTOs.AiCutReviewData;
+export type AiReviewableCut =
+    Modules.VideoEdits.Application.DTOs.AiReviewableCutData;
+export type ReviewVideoEditCutsPayload =
+    Modules.VideoEdits.Application.DTOs.ReviewVideoEditCutsData;
 
 export type VideoEditStatus = Modules.VideoEdits.Domain.Enums.VideoEditStatus;
 export type VideoEditMode = Modules.VideoEdits.Domain.Enums.VideoEditMode;
