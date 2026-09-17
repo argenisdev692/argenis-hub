@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { DownloadIcon, EyeIcon, PlusIcon, Trash2Icon } from '@lucide/vue';
+import {
+    ClapperboardIcon,
+    DownloadIcon,
+    EyeIcon,
+    PlusIcon,
+    Trash2Icon,
+    XIcon,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import type { FilterSelectOption, FilterSelectValue } from '@/common/form';
@@ -113,8 +120,10 @@ const searchTerm = computed<string>({
 const dateRange = computed<DateRange>({
     get: () => ({ from: filters.value.date_from, to: filters.value.date_to }),
     set: (value) => {
+        filters.value.date_from = value.from;
         filters.value.date_to = value.to;
-        setFilter('date_from', value.from);
+        filters.value.page = 1;
+        selection.value = [];
     },
 });
 
@@ -142,6 +151,35 @@ function onModeChange(
 ): void {
     setFilter('mode', VIDEO_EDIT_MODES.find((mode) => mode === value) ?? '');
 }
+
+/** Any narrowed facet — drives the "Clear" affordance and the empty state. */
+const hasActiveFilters = computed(
+    () =>
+        filters.value.search !== '' ||
+        filters.value.status !== '' ||
+        filters.value.mode !== '' ||
+        filters.value.date_from !== null ||
+        filters.value.date_to !== null,
+);
+
+/** Keeps sort + page size; drops every narrowing facet and its selection. */
+function clearFilters(): void {
+    const defaults = defaultVideoEditFilters();
+
+    filters.value.search = defaults.search;
+    filters.value.status = defaults.status;
+    filters.value.mode = defaults.mode;
+    filters.value.date_from = defaults.date_from;
+    filters.value.date_to = defaults.date_to;
+    filters.value.page = 1;
+    selection.value = [];
+}
+
+const emptyDescription = computed(() =>
+    hasActiveFilters.value
+        ? 'No edits match these filters. Clear them to see everything.'
+        : 'Start an edit to merge clips or clean up a recording.',
+);
 
 /** Same helper as the list query — the export always matches the table. */
 const exportParams = computed(() => buildVideoEditQueryParams(filters.value));
@@ -214,12 +252,25 @@ const page = computed<number>({
     },
 });
 
+const perPage = computed<number>({
+    get: () => filters.value.per_page,
+    set: (value) => {
+        filters.value.per_page = value;
+        filters.value.page = 1;
+    },
+});
+
 const selection = ref<VideoEditListItem[]>([]);
 
 /** A render in progress cannot be deleted (D14) — mirrors `isDeletable()`. */
 const deletableSelection = computed(() =>
     selection.value.filter((row) => row.status !== 'processing'),
 );
+
+/** Failed rows carry a faint destructive tint so they pop while scanning. */
+function editRowClass(row: VideoEditListItem): string | undefined {
+    return row.status === 'failed' ? 'bg-destructive/5' : undefined;
+}
 
 const createOpen = ref(false);
 
@@ -275,12 +326,24 @@ async function confirmBulkDelete(): Promise<void> {
     <Head title="Video edits" />
 
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-6">
-        <header class="flex flex-col gap-1">
-            <h1 class="text-2xl font-semibold tracking-tight">Video edits</h1>
-            <p class="text-sm text-muted-foreground">
-                Merge clips, remove silences and filler speech, or let the AI
-                cut against your script. Results are private to you.
-            </p>
+        <header class="flex items-start gap-3">
+            <span
+                class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card"
+            >
+                <ClapperboardIcon
+                    class="size-5 text-primary"
+                    aria-hidden="true"
+                />
+            </span>
+            <div class="flex flex-col gap-1">
+                <h1 class="text-2xl font-semibold tracking-tight">
+                    Video edits
+                </h1>
+                <p class="text-sm text-muted-foreground">
+                    Merge clips, remove silences and filler speech, or let the
+                    AI cut against your script. Results are private to you.
+                </p>
+            </div>
         </header>
 
         <DataTableToolbar
@@ -319,6 +382,16 @@ async function confirmBulkDelete(): Promise<void> {
                     :model-value="filters.status || null"
                     @update:model-value="onStatusChange"
                 />
+
+                <Button
+                    v-if="hasActiveFilters"
+                    variant="ghost"
+                    size="sm"
+                    @click="clearFilters"
+                >
+                    <XIcon class="size-4" aria-hidden="true" />
+                    Clear
+                </Button>
             </template>
 
             <template #bulk>
@@ -376,10 +449,11 @@ async function confirmBulkDelete(): Promise<void> {
                 :rows="videoEdits"
                 :columns="columns"
                 :loading="isTableBusy"
+                :row-class="editRowClass"
                 selectable
                 caption="Your video edit history"
                 empty-title="No video edits yet"
-                empty-description="Start an edit to merge clips or clean up a recording."
+                :empty-description="emptyDescription"
                 class="rounded-b-none border-b-0"
             >
                 <template #[`cell:reference`]="{ row }">
@@ -441,6 +515,7 @@ async function confirmBulkDelete(): Promise<void> {
 
             <Paginator
                 v-model:page="page"
+                v-model:per-page="perPage"
                 :meta="meta"
                 :disabled="isTableBusy"
                 label="video edits"

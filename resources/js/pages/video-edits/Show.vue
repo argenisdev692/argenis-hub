@@ -3,15 +3,21 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import {
     AlertTriangleIcon,
     ArrowLeftIcon,
+    ClockIcon,
     DownloadIcon,
     FileTextIcon,
+    FilmIcon,
     ListChecksIcon,
+    Loader2Icon,
     RotateCcwIcon,
+    ScissorsIcon,
     Trash2Icon,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import type { Component } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import { ConfirmModal } from '@/common/table';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -65,18 +71,22 @@ const summary = computed(() => {
               {
                   label: 'Original',
                   value: formatDurationMs(current.original_duration_ms),
+                  icon: FilmIcon as Component,
               },
               {
                   label: 'Final',
                   value: formatDurationMs(current.final_duration_ms),
+                  icon: ClockIcon as Component,
               },
               {
                   label: 'Removed',
                   value: formatDurationMs(current.removed_duration_ms),
+                  icon: ScissorsIcon as Component,
               },
               {
                   label: 'Cuts applied',
                   value: String(current.applied_cut_count),
+                  icon: ListChecksIcon as Component,
               },
           ]
         : [];
@@ -247,14 +257,20 @@ async function onRetry(): Promise<void> {
                 <CardContent class="flex flex-col gap-4">
                     <div
                         v-if="isActiveStatus(edit.status)"
-                        class="flex flex-col gap-2"
+                        class="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3"
                         role="status"
                         aria-live="polite"
                     >
-                        <div class="flex justify-between text-sm">
-                            <span>{{
-                                processingStageLabel(edit.current_stage)
-                            }}</span>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="flex items-center gap-2 font-medium">
+                                <Loader2Icon
+                                    class="size-4 animate-spin motion-reduce:animate-none"
+                                    aria-hidden="true"
+                                />
+                                {{
+                                    processingStageLabel(edit.current_stage)
+                                }}</span
+                            >
                             <span class="tabular-nums"
                                 >{{ edit.progress_percent }}%</span
                             >
@@ -330,9 +346,20 @@ async function onRetry(): Promise<void> {
                         </li>
                     </ul>
 
-                    <dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                        <div v-for="item in summary" :key="item.label">
-                            <dt class="text-xs text-muted-foreground">
+                    <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div
+                            v-for="item in summary"
+                            :key="item.label"
+                            class="flex flex-col gap-1 rounded-lg border border-border bg-muted/40 p-3"
+                        >
+                            <dt
+                                class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                            >
+                                <component
+                                    :is="item.icon"
+                                    class="size-3.5"
+                                    aria-hidden="true"
+                                />
                                 {{ item.label }}
                             </dt>
                             <dd class="text-lg font-semibold tabular-nums">
@@ -380,18 +407,28 @@ async function onRetry(): Promise<void> {
                         <CardTitle>Timeline</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <dl class="flex flex-col gap-2 text-sm">
-                            <div
+                        <ol class="relative flex flex-col gap-4 pl-5">
+                            <span
+                                class="absolute top-1 bottom-1 left-[5px] w-px bg-border"
+                                aria-hidden="true"
+                            />
+                            <li
                                 v-for="entry in timeline"
                                 :key="entry.label"
-                                class="flex justify-between gap-3"
+                                class="relative flex items-baseline justify-between gap-3 text-sm"
                             >
-                                <dt class="text-muted-foreground">
+                                <span
+                                    class="absolute top-1.5 -left-5 size-[11px] rounded-full border-2 border-primary bg-card"
+                                    aria-hidden="true"
+                                />
+                                <span class="text-muted-foreground">
                                     {{ entry.label }}
-                                </dt>
-                                <dd class="tabular-nums">{{ entry.value }}</dd>
-                            </div>
-                        </dl>
+                                </span>
+                                <span class="tabular-nums">{{
+                                    entry.value
+                                }}</span>
+                            </li>
+                        </ol>
                     </CardContent>
                 </Card>
             </div>
@@ -448,11 +485,15 @@ async function onRetry(): Promise<void> {
                                         {{ formatDurationMs(cut.duration_ms) }}
                                     </td>
                                     <td class="py-1.5">
-                                        {{
-                                            cut.reasons
-                                                .map(cutReasonLabel)
-                                                .join(', ')
-                                        }}
+                                        <span class="flex flex-wrap gap-1">
+                                            <Badge
+                                                v-for="reason in cut.reasons"
+                                                :key="reason"
+                                                variant="secondary"
+                                            >
+                                                {{ cutReasonLabel(reason) }}
+                                            </Badge>
+                                        </span>
                                     </td>
                                 </tr>
                             </tbody>
