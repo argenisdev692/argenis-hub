@@ -30,9 +30,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])
             ->middleware('permission:VIEW_ANY_CAMPAIGNS')->name('index');
 
         Route::post('/ai/suggest-topics', [CampaignApiController::class, 'suggestTopics'])
-            ->middleware('throttle:10,1')->name('ai.suggest-topics');
+            ->middleware(['permission:CREATE_CAMPAIGNS', 'throttle:10,1'])->name('ai.suggest-topics');
         Route::post('/ai/generate-campaign', [CampaignApiController::class, 'generateCampaign'])
-            ->middleware('throttle:5,1')->name('ai.generate-campaign');
+            ->middleware(['permission:CREATE_CAMPAIGNS', 'throttle:5,1'])->name('ai.generate-campaign');
 
         Route::get('/{uuid}', [CampaignApiController::class, 'show'])
             ->whereUuid('uuid')
