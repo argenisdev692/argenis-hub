@@ -120,7 +120,7 @@ final class SocialMediaContentManagementTest extends TestCase
 
     public function test_bulk_delete_rejects_more_than_500_uuids(): void
     {
-        $uuids = array_map(static fn (): string => (string) Str::uuid(), range(1, 501));
+        $uuids = array_map(static fn (): string => (string) Str::uuid7(), range(1, 501));
 
         $this->actingAs($this->superAdmin())
             ->postJson('/social-media/bulk-delete', ['uuids' => $uuids])

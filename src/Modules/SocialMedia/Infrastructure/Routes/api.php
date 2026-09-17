@@ -42,9 +42,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])
             ->middleware('permission:VIEW_ANY_SOCIAL_MEDIA')->name('index');
 
         Route::post('/ai/suggest-topics', [SocialMediaApiController::class, 'suggestTopics'])
-            ->middleware('throttle:10,1')->name('ai.suggest-topics');
+            ->middleware(['permission:CREATE_SOCIAL_MEDIA', 'throttle:10,1'])->name('ai.suggest-topics');
         Route::post('/ai/generate-content', [SocialMediaApiController::class, 'generateContent'])
-            ->middleware('throttle:5,1')->name('ai.generate-content');
+            ->middleware(['permission:CREATE_SOCIAL_MEDIA', 'throttle:5,1'])->name('ai.generate-content');
 
         Route::get('/{uuid}', [SocialMediaApiController::class, 'show'])
             ->whereUuid('uuid')
