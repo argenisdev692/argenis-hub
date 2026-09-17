@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { EyeIcon, PlusIcon, RotateCcwIcon, Trash2Icon } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
+import EmptyState from '@/common/feedback/EmptyState.vue';
 import type { FilterSelectOption, FilterSelectValue } from '@/common/form';
 import { FilterSelect } from '@/common/form';
 import type { DataTableColumn, DataTableSort, DateRange } from '@/common/table';
@@ -18,8 +19,11 @@ import {
     Paginator,
 } from '@/common/table';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/composables/usePermissions';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
+import { cn } from '@/lib/utils';
 import CourseStatusBadge from '@/modules/course-scripts/components/CourseStatusBadge.vue';
 import CourseTitleList from '@/modules/course-scripts/components/CourseTitleList.vue';
 import { useCourseMutations } from '@/modules/course-scripts/composables/useCourseMutations';
@@ -54,7 +58,14 @@ defineOptions({
     },
 });
 
-const { courses, meta, filters, isLoading } = useCourses();
+const {
+    courses,
+    meta,
+    filters,
+    isLoading,
+    isPending,
+    isPlaceholderData,
+} = useCourses();
 
 const { deleteCourse, restoreCourse, bulkDeleteCourses, bulkRestoreCourses } =
     useCourseMutations();
@@ -67,6 +78,50 @@ useUrlSyncedFilters(filters, {
 });
 
 const selection = ref<CourseListItem[]>([]);
+
+function isSelected(row: CourseListItem): boolean {
+    return selection.value.some((selected) => selected.uuid === row.uuid);
+}
+
+function toggleSelect(
+    row: CourseListItem,
+    checked: boolean | 'indeterminate',
+): void {
+    selection.value =
+        checked === true
+            ? [...selection.value, row]
+            : selection.value.filter((selected) => selected.uuid !== row.uuid);
+}
+
+/**
+ * Skeletons on the very first load only; background refetches dim the rows
+ * they already show instead (`isPlaceholderData`), so paging, filtering and
+ * sorting never flash an empty table.
+ */
+const tableLoading = computed(
+    () => isPending.value || isPlaceholderData.value,
+);
+
+/** Any narrowed axis — drives the empty state's reset shortcut. */
+const hasActiveFilters = computed(() => {
+    const defaults = defaultCourseFilters();
+
+    return (
+        filters.value.search !== defaults.search ||
+        filters.value.status !== defaults.status ||
+        filters.value.trashed !== defaults.trashed ||
+        filters.value.date_from !== defaults.date_from ||
+        filters.value.date_to !== defaults.date_to
+    );
+});
+
+function clearFilters(): void {
+    filters.value = {
+        ...defaultCourseFilters(),
+        per_page: filters.value.per_page,
+    };
+    selection.value = [];
+}
 
 const recordCounter = computed(() => {
     const total = meta.value.total;
@@ -396,13 +451,13 @@ async function confirmBulkRestore(): Promise<void> {
                 v-model:sort="sort"
                 :rows="courses"
                 :columns="columns"
-                :loading="isLoading"
+                :loading="tableLoading"
                 :row-class="rowClass"
                 selectable
                 caption="Your courses and their script generation progress"
                 empty-title="No courses found"
                 empty-description="Upload a course index to start generating video scripts."
-                class="rounded-b-none border-b-0"
+                class="hidden rounded-b-none border-b-0 md:block"
             >
                 <template #[`cell:title`]="{ row }">
                     <span class="truncate font-medium">{{ row.title }}</span>
@@ -439,6 +494,7 @@ async function confirmBulkRestore(): Promise<void> {
                                 :label="`View ${row.title}`"
                                 tooltip="View"
                                 :href="show.url(row.uuid)"
+                                prefetch
                             />
                         </PermissionGuard>
 
@@ -462,7 +518,158 @@ async function confirmBulkRestore(): Promise<void> {
                         />
                     </PermissionGuard>
                 </template>
+
+                <template #empty>
+                    <EmptyState
+                        v-if="hasActiveFilters"
+                        title="No courses match these filters"
+                        description="Try widening the date range or clearing the search."
+                    >
+                        <template #action>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                @click="clearFilters"
+                            >
+                                Clear filters
+                            </Button>
+                        </template>
+                    </EmptyState>
+                    <EmptyState
+                        v-else
+                        title="No courses found"
+                        description="Upload a course index to start generating video scripts."
+                    />
+                </template>
             </DataTable>
+
+            <!--
+                Phones get stacked cards instead of the table: the desktop
+                columns hide all but Title / Status below `md`, so a card keeps
+                language, generation progress and the row actions usable.
+                Selection, filters, sort and the paginator below stay shared.
+            -->
+            <div
+                v-if="courses.length > 0"
+                class="flex flex-col gap-3 transition-opacity duration-200 md:hidden"
+                :class="tableLoading && 'pointer-events-none opacity-60'"
+                role="list"
+                aria-label="Courses"
+                :aria-busy="tableLoading"
+            >
+                <article
+                    v-for="row in courses"
+                    :key="row.uuid"
+                    role="listitem"
+                    :data-state="isSelected(row) ? 'selected' : undefined"
+                    :class="
+                        cn(
+                            'rounded-xl border border-border bg-card p-4',
+                            rowClass(row),
+                        )
+                    "
+                >
+                    <div class="flex items-start gap-3">
+                        <Checkbox
+                            :model-value="isSelected(row)"
+                            aria-label="Select row"
+                            class="mt-1"
+                            @update:model-value="toggleSelect(row, $event)"
+                        />
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate font-medium">
+                                {{ row.title }}
+                            </p>
+                            <p class="mt-0.5 text-xs text-muted-foreground">
+                                {{ row.language.toUpperCase() }} ·
+                                {{
+                                    generatedProgress(
+                                        row.generated_videos_count,
+                                        row.videos_count,
+                                    )
+                                }}
+                                scripts ·
+                                {{ formatDate(row.created_at) ?? '—' }}
+                            </p>
+                        </div>
+                        <CourseStatusBadge
+                            :status="row.status"
+                            :deleted-at="row.deleted_at"
+                        />
+                    </div>
+
+                    <div
+                        class="mt-2 flex items-center justify-end gap-1 border-t border-border pt-2"
+                    >
+                        <template v-if="row.deleted_at === null">
+                            <PermissionGuard permission="VIEW_COURSE_SCRIPTS">
+                                <DataTableRowAction
+                                    :icon="EyeIcon"
+                                    :label="`View ${row.title}`"
+                                    tooltip="View"
+                                    :href="show.url(row.uuid)"
+                                    prefetch
+                                />
+                            </PermissionGuard>
+
+                            <PermissionGuard permission="DELETE_COURSE_SCRIPTS">
+                                <DataTableRowAction
+                                    :icon="Trash2Icon"
+                                    :label="`Delete ${row.title}`"
+                                    tooltip="Delete"
+                                    destructive
+                                    @click="requestDelete(row)"
+                                />
+                            </PermissionGuard>
+                        </template>
+
+                        <PermissionGuard
+                            v-else
+                            permission="RESTORE_COURSE_SCRIPTS"
+                        >
+                            <DataTableRowAction
+                                :icon="RotateCcwIcon"
+                                :label="`Restore ${row.title}`"
+                                tooltip="Restore"
+                                @click="requestRestore(row)"
+                            />
+                        </PermissionGuard>
+                    </div>
+                </article>
+            </div>
+
+            <div
+                v-else-if="!tableLoading"
+                class="rounded-xl border border-border bg-card md:hidden"
+            >
+                <EmptyState
+                    v-if="hasActiveFilters"
+                    title="No courses match these filters"
+                    description="Try widening the date range or clearing the search."
+                >
+                    <template #action>
+                        <Button variant="outline" size="sm" @click="clearFilters">
+                            Clear filters
+                        </Button>
+                    </template>
+                </EmptyState>
+                <EmptyState
+                    v-else
+                    title="No courses found"
+                    description="Upload a course index to start generating video scripts."
+                />
+            </div>
+
+            <div v-else class="flex flex-col gap-3 md:hidden" aria-hidden="true">
+                <div
+                    v-for="index in 3"
+                    :key="`course-skeleton-${index}`"
+                    class="rounded-xl border border-border bg-card p-4"
+                >
+                    <Skeleton class="h-4 w-3/4" />
+                    <Skeleton class="mt-2 h-3 w-1/2" />
+                </div>
+            </div>
 
             <Paginator
                 v-model:page="page"

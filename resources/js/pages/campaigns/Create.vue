@@ -65,12 +65,18 @@ defineOptions({
     },
 });
 
-const { topicIdeas, generatingUuid, generatingCampaign, suggest, generate } =
-    useCampaignAi({
-        onReady: (campaign) => {
-            router.visit(edit(campaign.uuid).url);
-        },
-    });
+const {
+    topicIdeas,
+    generatingUuid,
+    generatingCampaign,
+    generationElapsedSec,
+    suggest,
+    generate,
+} = useCampaignAi({
+    onReady: (campaign) => {
+        router.visit(edit(campaign.uuid).url);
+    },
+});
 
 const form = useAppForm({
     defaultValues: emptyCampaignBrief(),
@@ -89,6 +95,15 @@ const selectedTopic = form.useStore((state) => state.values.topic);
 
 /** True from the moment generation is accepted until the poll settles. */
 const isGenerating = computed(() => generatingUuid.value !== null);
+
+/** `generationElapsedSec` as `m:ss` — proof the run is alive, not stuck. */
+const generationElapsedLabel = computed(() => {
+    const total = generationElapsedSec.value;
+    const minutes = Math.floor(total / 60);
+    const seconds = String(total % 60).padStart(2, '0');
+
+    return `${minutes}:${seconds}`;
+});
 
 const imagesId = useId();
 
@@ -516,8 +531,9 @@ function onSelectIdea(idea: CampaignTopicIdea): void {
                             role="status"
                             aria-live="polite"
                         >
-                            The quality loop is running — up to five passes.
-                            You'll land on the review screen automatically.
+                            Generation running — {{ generationElapsedLabel }}
+                            elapsed. The quality loop runs up to five passes;
+                            you'll land on the review screen automatically.
                             <span v-if="generatingCampaign">
                                 Current status: {{ generatingCampaign.status }}.
                             </span>

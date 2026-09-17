@@ -69,6 +69,12 @@ export function useSocialMediaAi({ onReady }: UseSocialMediaAiOptions = {}) {
     /** Set once Step 2 is accepted; drives the poll. Null when idle. */
     const generatingUuid = ref<string | null>(null);
 
+    /** When the current run was accepted — the base of the elapsed clock. */
+    const generationStartedAt = ref<number | null>(null);
+
+    /** Seconds since `generationStartedAt`, ticked while the poll runs. */
+    const generationElapsedSec = ref(0);
+
     /** The last polled snapshot, so the wizard can show live status. */
     const generatingContent = ref<SocialMediaContentDetail | null>(null);
 
@@ -106,6 +112,8 @@ export function useSocialMediaAi({ onReady }: UseSocialMediaAiOptions = {}) {
         onSuccess(content: SocialMediaContentDetail) {
             generatingContent.value = content;
             generatingUuid.value = content.uuid;
+            generationStartedAt.value = Date.now();
+            generationElapsedSec.value = 0;
             toast.success(
                 'Generation started. This usually takes a few minutes.',
             );
@@ -157,8 +165,28 @@ export function useSocialMediaAi({ onReady }: UseSocialMediaAiOptions = {}) {
                 .catch(() => undefined);
         }, POLL_INTERVAL_MS);
 
-        onWatcherCleanup(() => window.clearInterval(timer));
+        // The elapsed clock the wizard shows next to the live status. Owned by
+        // the same watcher so it starts and stops with the poll itself.
+        const elapsedTimer = window.setInterval(() => {
+            if (generationStartedAt.value !== null) {
+                generationElapsedSec.value = Math.floor(
+                    (Date.now() - generationStartedAt.value) / 1000,
+                );
+            }
+        }, 1000);
+
+        onWatcherCleanup(() => {
+            window.clearInterval(timer);
+            window.clearInterval(elapsedTimer);
+        });
     });
 
-    return { topicIdeas, generatingUuid, generatingContent, suggest, generate };
+    return {
+        topicIdeas,
+        generatingUuid,
+        generatingContent,
+        generationElapsedSec,
+        suggest,
+        generate,
+    };
 }

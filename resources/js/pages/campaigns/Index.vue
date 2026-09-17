@@ -11,6 +11,7 @@ import {
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
+import EmptyState from '@/common/feedback/EmptyState.vue';
 import type { FilterSelectOption } from '@/common/form';
 import { FilterSelect } from '@/common/form';
 import type {
@@ -30,8 +31,11 @@ import {
 } from '@/common/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usePermissions } from '@/composables/usePermissions';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
+import { cn } from '@/lib/utils';
 import CampaignStatusBadge from '@/modules/campaigns/components/CampaignStatusBadge.vue';
 import { useCampaignMutations } from '@/modules/campaigns/composables/useCampaignMutations';
 import {
@@ -61,7 +65,14 @@ defineOptions({
     },
 });
 
-const { campaigns, meta: queryMeta, filters, isLoading } = useCampaigns();
+const {
+    campaigns,
+    meta: queryMeta,
+    filters,
+    isLoading,
+    isPending,
+    isPlaceholderData,
+} = useCampaigns();
 
 const {
     deleteCampaign,
@@ -188,6 +199,49 @@ const page = computed<number>({
 
 const selection = ref<CampaignListItem[]>([]);
 
+function isSelected(row: CampaignListItem): boolean {
+    return selection.value.some((selected) => selected.uuid === row.uuid);
+}
+
+function toggleSelect(
+    row: CampaignListItem,
+    checked: boolean | 'indeterminate',
+): void {
+    selection.value =
+        checked === true
+            ? [...selection.value, row]
+            : selection.value.filter((selected) => selected.uuid !== row.uuid);
+}
+
+/**
+ * Skeletons on the very first load only; background refetches dim the rows
+ * they already show instead (`isPlaceholderData`), so paging and filtering
+ * never flash an empty table.
+ */
+const tableLoading = computed(
+    () => isPending.value || isPlaceholderData.value,
+);
+
+/** Anything the user narrowed — drives the empty state's reset shortcut. */
+const hasActiveFilters = computed(() => {
+    const defaults = defaultCampaignFilters();
+
+    return (
+        filters.value.search !== defaults.search ||
+        filters.value.status !== defaults.status ||
+        filters.value.date_from !== defaults.date_from ||
+        filters.value.date_to !== defaults.date_to
+    );
+});
+
+function clearFilters(): void {
+    filters.value = {
+        ...defaultCampaignFilters(),
+        per_page: filters.value.per_page,
+    };
+    selection.value = [];
+}
+
 const selectedActive = computed(() =>
     selection.value.filter((row) => row.deleted_at === null),
 );
@@ -196,7 +250,7 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: CampaignListItem): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at ? 'course-row-deleted' : undefined;
 }
 
 /**
@@ -350,6 +404,8 @@ async function onBulkRestore(): Promise<void> {
                 <DataTableDateRangeFilter
                     v-model="dateRange"
                     placeholder="Created any time"
+                    presets
+                    disable-future
                 />
 
                 <FilterSelect
@@ -386,7 +442,7 @@ async function onBulkRestore(): Promise<void> {
 
                 <PermissionGuard permission="CREATE_CAMPAIGNS">
                     <Button as-child>
-                        <Link :href="create()">
+                        <Link :href="create()" prefetch>
                             <SparklesIcon class="size-4" aria-hidden="true" />
                             Generate campaign
                         </Link>
@@ -408,13 +464,13 @@ async function onBulkRestore(): Promise<void> {
                 v-model:selection="selection"
                 :rows="campaigns"
                 :columns="columns"
-                :loading="isLoading"
+                :loading="tableLoading"
                 :row-class="rowClass"
                 selectable
                 caption="AI-generated Meta lead-gen campaigns"
                 empty-title="No campaigns yet"
                 empty-description="Generate the first one to see it here."
-                class="rounded-b-none border-b-0"
+                class="hidden rounded-b-none border-b-0 md:block"
             >
                 <template #[`cell:topic`]="{ row }">
                     <div class="flex items-center gap-2">
@@ -501,7 +557,7 @@ async function onBulkRestore(): Promise<void> {
                                 size="icon"
                                 aria-label="Review campaign"
                             >
-                                <Link :href="edit(row.uuid)">
+                                <Link :href="edit(row.uuid)" prefetch>
                                     <PencilIcon
                                         class="size-4"
                                         aria-hidden="true"
@@ -551,7 +607,228 @@ async function onBulkRestore(): Promise<void> {
                         </Button>
                     </PermissionGuard>
                 </template>
+
+                <template #empty>
+                    <EmptyState
+                        v-if="hasActiveFilters"
+                        title="No campaigns match these filters"
+                        description="Try widening the date range or clearing the search."
+                    >
+                        <template #action>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                @click="clearFilters"
+                            >
+                                Clear filters
+                            </Button>
+                        </template>
+                    </EmptyState>
+                    <EmptyState
+                        v-else
+                        title="No campaigns yet"
+                        description="Generate the first one to see it here."
+                    />
+                </template>
             </DataTable>
+
+            <!--
+                Phones get stacked cards instead of the table: the desktop
+                columns hide all but Topic / Status / Quality below `md`, so a
+                card keeps placement, goal, quality and the row actions usable.
+                Selection, filters and the paginator below stay shared.
+            -->
+            <div
+                v-if="campaigns.length > 0"
+                class="flex flex-col gap-3 transition-opacity duration-200 md:hidden"
+                :class="tableLoading && 'pointer-events-none opacity-60'"
+                role="list"
+                aria-label="Campaigns"
+                :aria-busy="tableLoading"
+            >
+                <article
+                    v-for="row in campaigns"
+                    :key="row.uuid"
+                    role="listitem"
+                    :data-state="isSelected(row) ? 'selected' : undefined"
+                    :class="
+                        cn(
+                            'rounded-xl border border-border bg-card p-4',
+                            rowClass(row),
+                        )
+                    "
+                >
+                    <div class="flex items-start gap-3">
+                        <Checkbox
+                            :model-value="isSelected(row)"
+                            aria-label="Select row"
+                            class="mt-1"
+                            @update:model-value="toggleSelect(row, $event)"
+                        />
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate font-medium">
+                                {{ row.topic }}
+                            </p>
+                            <p class="mt-0.5 text-xs text-muted-foreground">
+                                {{ campaignPlatformLabel(row.platform) }} ·
+                                {{
+                                    campaignBusinessGoalLabel(
+                                        row.business_goal,
+                                    )
+                                }}
+                                ·
+                                {{ formatDate(row.created_at) ?? '—' }}
+                            </p>
+                        </div>
+                        <CampaignStatusBadge
+                            :status="row.status"
+                            :deleted-at="row.deleted_at"
+                        />
+                    </div>
+
+                    <div
+                        v-if="row.overall_score_avg !== null"
+                        class="mt-2 flex items-center gap-1.5 text-sm"
+                    >
+                        <span class="text-muted-foreground">Quality</span>
+                        <span
+                            class="font-semibold tabular-nums"
+                            :class="
+                                scoreTextClass(scoreTone(row.overall_score_avg))
+                            "
+                        >
+                            {{ row.overall_score_avg }}
+                        </span>
+                        <TriangleAlertIcon
+                            v-if="row.quality_warning"
+                            class="size-4 shrink-0 text-warning"
+                            aria-label="Finished below the quality threshold"
+                        />
+                    </div>
+
+                    <div
+                        class="mt-2 flex items-center justify-end gap-1 border-t border-border pt-2"
+                    >
+                        <PermissionGuard permission="VIEW_CAMPAIGNS">
+                            <Button
+                                as-child
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Download campaign report"
+                            >
+                                <a :href="reportUrl(row.uuid)">
+                                    <FileTextIcon
+                                        class="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </a>
+                            </Button>
+                        </PermissionGuard>
+
+                        <template v-if="row.deleted_at === null">
+                            <PermissionGuard
+                                v-if="isEditable(row)"
+                                permission="VIEW_CAMPAIGNS"
+                            >
+                                <Button
+                                    as-child
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Review campaign"
+                                >
+                                    <Link :href="edit(row.uuid)" prefetch>
+                                        <PencilIcon
+                                            class="size-4"
+                                            aria-hidden="true"
+                                        />
+                                    </Link>
+                                </Button>
+                            </PermissionGuard>
+
+                            <PermissionGuard
+                                v-if="isPublishable(row)"
+                                permission="PUBLISH_CAMPAIGNS"
+                            >
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Publish campaign"
+                                    @click="requestPublish(row)"
+                                >
+                                    <SendIcon
+                                        class="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </PermissionGuard>
+
+                            <PermissionGuard permission="DELETE_CAMPAIGNS">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Suspend campaign"
+                                    @click="requestDelete(row)"
+                                >
+                                    <Trash2Icon
+                                        class="size-4 text-destructive"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </PermissionGuard>
+                        </template>
+
+                        <PermissionGuard
+                            v-else
+                            permission="RESTORE_CAMPAIGNS"
+                        >
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Restore campaign"
+                                @click="onRestoreRow(row)"
+                            >
+                                <RotateCcwIcon
+                                    class="size-4"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+                        </PermissionGuard>
+                    </div>
+                </article>
+            </div>
+
+            <div
+                v-else-if="!tableLoading"
+                class="rounded-xl border border-border bg-card md:hidden"
+            >
+                <EmptyState
+                    v-if="hasActiveFilters"
+                    title="No campaigns match these filters"
+                    description="Try widening the date range or clearing the search."
+                >
+                    <template #action>
+                        <Button variant="outline" size="sm" @click="clearFilters">
+                            Clear filters
+                        </Button>
+                    </template>
+                </EmptyState>
+                <EmptyState
+                    v-else
+                    title="No campaigns yet"
+                    description="Generate the first one to see it here."
+                />
+            </div>
+
+            <div v-else class="flex flex-col gap-3 md:hidden" aria-hidden="true">
+                <div
+                    v-for="index in 3"
+                    :key="`campaign-skeleton-${index}`"
+                    class="rounded-xl border border-border bg-card p-4"
+                >
+                    <Skeleton class="h-4 w-3/4" />
+                    <Skeleton class="mt-2 h-3 w-1/2" />
+                </div>
+            </div>
 
             <Paginator
                 v-model:page="page"
