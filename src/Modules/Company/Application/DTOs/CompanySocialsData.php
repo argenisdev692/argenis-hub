@@ -30,6 +30,7 @@ final class CompanySocialsData extends Data
         public readonly ?string $twitter,
     ) {}
 
+    #[\NoDiscard('fromSnapshot() returns the social-links shape.')]
     public static function fromSnapshot(CompanySnapshot $company): self
     {
         return new self(

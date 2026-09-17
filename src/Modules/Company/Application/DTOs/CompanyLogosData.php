@@ -27,6 +27,7 @@ final class CompanyLogosData extends Data
     /**
      * @param  array<string, string>  $urls  {@see LogoVariant} value → absolute URL
      */
+    #[\NoDiscard('fromUrls() returns the logo URL shape.')]
     public static function fromUrls(array $urls): self
     {
         return new self(

@@ -113,6 +113,7 @@ final readonly class CompanyMapper
     /**
      * @return array<string, string|null>
      */
+    #[\NoDiscard('logos() returns the resolved logo map.')]
     private static function logos(CompanyData $model): array
     {
         $logos = [];
@@ -128,6 +129,7 @@ final readonly class CompanyMapper
     /**
      * @return array<string, WebUrl|null>
      */
+    #[\NoDiscard('socials() returns the resolved channel map.')]
     private static function socials(CompanyData $model): array
     {
         $socials = [];
@@ -140,6 +142,7 @@ final readonly class CompanyMapper
         return $socials;
     }
 
+    #[\NoDiscard('url() returns the parsed URL or null; it never throws.')]
     private static function url(?string $value): ?WebUrl
     {
         try {
@@ -149,6 +152,7 @@ final readonly class CompanyMapper
         }
     }
 
+    #[\NoDiscard('postalCode() returns the parsed code or null; it never throws.')]
     private static function postalCode(?string $value): ?PostalCode
     {
         try {
@@ -158,6 +162,7 @@ final readonly class CompanyMapper
         }
     }
 
+    #[\NoDiscard('coordinates() returns the parsed pair or null; it never throws.')]
     private static function coordinates(?float $latitude, ?float $longitude): ?GeoCoordinates
     {
         try {

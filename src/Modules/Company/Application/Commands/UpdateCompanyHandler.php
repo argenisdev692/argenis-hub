@@ -94,6 +94,7 @@ final readonly class UpdateCompanyHandler
     /**
      * @return array<string, WebUrl|null>
      */
+    #[\NoDiscard('socials() returns the normalized channel map.')]
     private static function socials(UpdateCompanyData $data): array
     {
         $links = [
@@ -111,6 +112,7 @@ final readonly class UpdateCompanyHandler
     /**
      * Single-line text: trimmed, internal runs of whitespace collapsed.
      */
+    #[\NoDiscard('text() returns the normalized value; it does not mutate in place.')]
     private static function text(?string $value): ?string
     {
         if ($value === null) {
@@ -128,6 +130,7 @@ final readonly class UpdateCompanyHandler
      * Multi-line text: trimmed at the ends only, so the deliberate line breaks
      * in a description or an invoice footnote survive.
      */
+    #[\NoDiscard('paragraph() returns the normalized value; it does not mutate in place.')]
     private static function paragraph(?string $value): ?string
     {
         if ($value === null) {
@@ -139,6 +142,7 @@ final readonly class UpdateCompanyHandler
         return $normalized === '' ? null : $normalized;
     }
 
+    #[\NoDiscard('email() returns the normalized value; it does not mutate in place.')]
     private static function email(?string $value): ?string
     {
         return self::text($value) |> (static fn (?string $email): ?string => $email === null
@@ -150,6 +154,7 @@ final readonly class UpdateCompanyHandler
      * ISO country codes and BIC/SWIFT codes are upper-case by convention, and
      * comparing them anywhere downstream is only safe if they are stored that way.
      */
+    #[\NoDiscard('countryCode() returns the normalized value; it does not mutate in place.')]
     private static function countryCode(?string $value): ?string
     {
         return self::text($value) |> (static fn (?string $code): ?string => $code === null
@@ -161,6 +166,7 @@ final readonly class UpdateCompanyHandler
      * IBANs are quoted with grouping spaces on paper and without them in
      * payment files. Store the machine form; the UI can re-group for display.
      */
+    #[\NoDiscard('iban() returns the normalized value; it does not mutate in place.')]
     private static function iban(?string $value): ?string
     {
         return self::text($value) |> (static fn (?string $iban): ?string => $iban === null

@@ -219,7 +219,9 @@ async function onSubmit(event: Event): Promise<void> {
             </m.div>
         </m.div>
 
-        <div class="flex items-center justify-end gap-3">
+        <div
+            class="sticky bottom-0 -mb-1 flex items-center justify-end gap-3 border-t border-border bg-card/85 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/70"
+        >
             <Button variant="outline" type="button" as-child>
                 <Link :href="showCompany()">Cancel</Link>
             </Button>

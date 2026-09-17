@@ -42,6 +42,7 @@ final class PublicCompanyData extends Data
     /**
      * @param  array<string, string>  $logoUrls  {@see LogoVariant} value → absolute URL
      */
+    #[\NoDiscard('fromSnapshot() returns the public allowlist shape.')]
     public static function fromSnapshot(CompanySnapshot $company, array $logoUrls): self
     {
         return new self(

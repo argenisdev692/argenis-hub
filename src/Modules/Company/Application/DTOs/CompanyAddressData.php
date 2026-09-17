@@ -36,6 +36,7 @@ final class CompanyAddressData extends Data
         public readonly ?string $formatted,
     ) {}
 
+    #[\NoDiscard('fromSnapshot() returns the public address shape.')]
     public static function fromSnapshot(CompanySnapshot $company): self
     {
         return new self(
@@ -58,6 +59,7 @@ final class CompanyAddressData extends Data
      * The postal code and city belong on the same segment ("6200-386 Covilhã"),
      * every other part gets its own.
      */
+    #[\NoDiscard('compose() returns the formatted address line.')]
     private static function compose(CompanySnapshot $company): ?string
     {
         $locality = [$company->postalCode?->value, $company->city]
