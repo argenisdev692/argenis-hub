@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import {
+    ChevronDownIcon,
     EyeIcon,
     FileTextIcon,
     PencilIcon,
     PlusIcon,
     RotateCcwIcon,
+    SlidersHorizontalIcon,
     Trash2Icon,
     XIcon,
 } from '@lucide/vue';
@@ -24,11 +26,14 @@ import {
     DataTableBulkActions,
     DataTableDateRangeFilter,
     DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
 } from '@/common/table';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { usePermissions } from '@/composables/usePermissions';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
 import { useClientOptions } from '@/modules/clients/composables/useClientOptions';
@@ -79,6 +84,18 @@ useUrlSyncedFilters(filters, {
     defaults: defaultInvoiceFilters(),
     exclude: ['per_page'],
 });
+
+/**
+ * `useUrlSyncedFilters` coerces by the runtime type of each default, and the
+ * `year` default is `null` — so `?year=2026` hydrates as the string `"2026"`.
+ * Normalise once: the filter type, the query builder and the `FilterSelect`
+ * all expect `number | null`.
+ */
+if (typeof filters.value.year === 'string') {
+    const parsed = Number(filters.value.year);
+
+    filters.value.year = Number.isFinite(parsed) ? parsed : null;
+}
 
 const meta = computed<PaginationMeta>(
     () =>
@@ -136,27 +153,59 @@ const exportParams = computed(() => buildInvoiceQueryParams(filters.value));
 const exportEndpoint = exportMethod.url();
 
 /**
+ * How many facets are narrowing the list.
+ *
+ * Drives the filter toggle's badge. The date range counts once no matter which
+ * end is set — "from January" and "January to March" are both one narrowing
+ * idea. `status` and `payment_status` compare against `'all'` rather than a
+ * falsy check because that is their neutral value, not `''`.
+ */
+const activeFilterCount = computed<number>(() => {
+    const active = filters.value;
+    let count = 0;
+
+    if (active.search !== '') {
+        count++;
+    }
+
+    if (active.status !== 'all') {
+        count++;
+    }
+
+    if (active.payment_status !== 'all') {
+        count++;
+    }
+
+    if (active.client_uuid !== null) {
+        count++;
+    }
+
+    if (active.year !== null) {
+        count++;
+    }
+
+    if (active.date_from !== null || active.date_to !== null) {
+        count++;
+    }
+
+    return count;
+});
+
+/**
  * Whether anything is narrowing the list.
  *
  * Drives the empty state's wording. "No invoices yet — create the first one" is
  * actively misleading on a full ledger that six filters happen to have narrowed
  * to nothing, and with this many facets that is an easy state to reach by
- * accident. `status` and `payment_status` compare against `'all'` rather than a
- * falsy check because that is their neutral value, not `''`.
+ * accident.
  */
-const hasActiveFilters = computed<boolean>(() => {
-    const active = filters.value;
+const hasActiveFilters = computed<boolean>(() => activeFilterCount.value > 0);
 
-    return (
-        active.search !== '' ||
-        active.status !== 'all' ||
-        active.payment_status !== 'all' ||
-        active.client_uuid !== null ||
-        active.year !== null ||
-        active.date_from !== null ||
-        active.date_to !== null
-    );
-});
+/**
+ * The filter panel starts open when a shared link already carries filters —
+ * otherwise the operator lands on a narrowed table with no visible reason why.
+ */
+const filtersOpen = ref<boolean>(hasActiveFilters.value);
 
 /**
  * Resets every facet at once.
@@ -279,7 +328,12 @@ const columns: DataTableColumn<InvoiceListItem>[] = [
         value: (row) => formatDate(row.issue_date),
         hideOnMobile: true,
     },
-    { key: 'due_date', header: 'Due', hideOnMobile: true },
+    {
+        key: 'due_date',
+        header: 'Due',
+        value: (row) => formatDate(row.due_date),
+        hideOnMobile: true,
+    },
     { key: 'total', header: 'Total', align: 'right' },
     { key: 'payment', header: 'Payment' },
     { key: 'status', header: 'Status', hideOnMobile: true },
@@ -289,6 +343,15 @@ const page = computed<number>({
     get: () => filters.value.page,
     set: (value) => {
         filters.value.page = value;
+    },
+});
+
+/** Page size — a size change restarts at page 1 via `onFiltersChanged`. */
+const perPage = computed<number>({
+    get: () => filters.value.per_page,
+    set: (value) => {
+        filters.value.per_page = value;
+        onFiltersChanged();
     },
 });
 
@@ -404,31 +467,35 @@ async function confirmBulkRestore(): Promise<void> {
     confirmBulkRestoreOpen.value = false;
 }
 
-/** The unpaid balance on screen — the number this table exists to surface. */
-const outstanding = computed(() =>
-    invoices.value
-        .filter((invoice) => !invoice.is_paid && invoice.deleted_at === null)
-        .reduce((carry, invoice) => carry + invoice.total, 0),
-);
-
 /**
- * The currency the summary is denominated in.
+ * The unpaid balances on screen — the numbers this table exists to surface.
  *
- * A ledger can legitimately mix currencies, and summing across them would be
- * nonsense — so the line is only shown when every unpaid row on this page
- * agrees, and stays hidden otherwise rather than printing a meaningless total.
+ * Grouped by currency rather than summed: a ledger can legitimately mix
+ * currencies, and adding euros to dollars would print a confident but
+ * meaningless total. Each currency gets its own figure instead of the whole
+ * line hiding the moment two disagree.
  */
-const outstandingCurrency = computed<string | null>(() => {
-    const currencies = new Set(
-        invoices.value
-            .filter(
-                (invoice) => !invoice.is_paid && invoice.deleted_at === null,
-            )
-            .map((invoice) => invoice.currency),
-    );
+const outstandingByCurrency = computed<{ currency: string; total: number }[]>(
+    () => {
+        const totals = new Map<string, number>();
 
-    return currencies.size === 1 ? [...currencies][0] : null;
-});
+        for (const invoice of invoices.value) {
+            if (invoice.is_paid || invoice.deleted_at !== null) {
+                continue;
+            }
+
+            totals.set(
+                invoice.currency,
+                (totals.get(invoice.currency) ?? 0) + invoice.total,
+            );
+        }
+
+        return [...totals.entries()]
+            .map(([currency, total]) => ({ currency, total }))
+            .filter(({ total }) => total > 0)
+            .sort((a, b) => a.currency.localeCompare(b.currency));
+    },
+);
 </script>
 
 <template>
@@ -440,10 +507,16 @@ const outstandingCurrency = computed<string | null>(() => {
             <p class="text-sm text-muted-foreground">
                 {{ meta.total }}
                 {{ meta.total === 1 ? 'record' : 'records' }} found.
-                <template v-if="outstandingCurrency && outstanding > 0">
+                <template v-if="outstandingByCurrency.length > 0">
                     ·
-                    <span class="font-medium text-foreground">
-                        {{ formatMoney(outstanding, outstandingCurrency) }}
+                    <span
+                        v-for="(entry, index) in outstandingByCurrency"
+                        :key="entry.currency"
+                    >
+                        <template v-if="index > 0"> + </template>
+                        <span class="font-medium text-foreground">
+                            {{ formatMoney(entry.total, entry.currency) }}</span
+                        >
                     </span>
                     outstanding on this page.
                 </template>
@@ -469,60 +542,25 @@ const outstandingCurrency = computed<string | null>(() => {
             </template>
 
             <template #filters>
-                <DataTableDateRangeFilter
-                    v-model="dateRange"
-                    placeholder="Issued any time"
-                />
-
-                <FilterSelect
-                    class="w-48"
-                    :options="clientFilterOptions"
-                    placeholder="Any client"
-                    search-placeholder="Search clients…"
-                    :model-value="filters.client_uuid"
-                    @update:model-value="onClientChange"
-                />
-
-                <FilterSelect
-                    class="w-28"
-                    :options="yearOptions"
-                    placeholder="Any year"
-                    :model-value="
-                        filters.year === null ? null : String(filters.year)
-                    "
-                    @update:model-value="onYearChange"
-                />
-
-                <FilterSelect
-                    class="w-36"
-                    :options="paymentOptions"
-                    :clearable="false"
-                    :model-value="filters.payment_status"
-                    @update:model-value="onPaymentStatusChange"
-                />
-
-                <FilterSelect
-                    class="w-36"
-                    :options="statusOptions"
-                    :clearable="false"
-                    :model-value="filters.status"
-                    @update:model-value="onStatusChange"
-                />
-
-                <!--
-                    Only rendered while something is actually narrowing the
-                    list: a permanently visible "Clear filters" on an unfiltered
-                    table is a control that does nothing, and its presence is
-                    the only signal the operator gets that filters are on.
-                -->
                 <Button
-                    v-if="hasActiveFilters"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    @click="clearFilters"
+                    :aria-expanded="filtersOpen"
+                    aria-controls="invoice-filters-panel"
+                    @click="filtersOpen = !filtersOpen"
                 >
-                    <XIcon class="size-4" aria-hidden="true" />
-                    Clear filters
+                    <SlidersHorizontalIcon class="size-4" aria-hidden="true" />
+                    Filters
+                    <Badge v-if="activeFilterCount > 0" variant="secondary">
+                        {{ activeFilterCount }}
+                    </Badge>
+                    <ChevronDownIcon
+                        :class="[
+                            'size-4 transition-transform duration-200',
+                            filtersOpen && 'rotate-180',
+                        ]"
+                        aria-hidden="true"
+                    />
                 </Button>
             </template>
 
@@ -558,6 +596,71 @@ const outstandingCurrency = computed<string | null>(() => {
             </template>
         </DataTableToolbar>
 
+        <Collapsible v-model:open="filtersOpen">
+            <CollapsibleContent>
+                <div
+                    id="invoice-filters-panel"
+                    class="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4"
+                >
+                    <DataTableDateRangeFilter
+                        v-model="dateRange"
+                        placeholder="Issued any time"
+                    />
+
+                    <FilterSelect
+                        class="w-48"
+                        :options="clientFilterOptions"
+                        placeholder="Any client"
+                        search-placeholder="Search clients…"
+                        :model-value="filters.client_uuid"
+                        @update:model-value="onClientChange"
+                    />
+
+                    <FilterSelect
+                        class="w-28"
+                        :options="yearOptions"
+                        placeholder="Any year"
+                        :model-value="
+                            filters.year === null ? null : String(filters.year)
+                        "
+                        @update:model-value="onYearChange"
+                    />
+
+                    <FilterSelect
+                        class="w-36"
+                        :options="paymentOptions"
+                        :clearable="false"
+                        :model-value="filters.payment_status"
+                        @update:model-value="onPaymentStatusChange"
+                    />
+
+                    <FilterSelect
+                        class="w-36"
+                        :options="statusOptions"
+                        :clearable="false"
+                        :model-value="filters.status"
+                        @update:model-value="onStatusChange"
+                    />
+
+                    <!--
+                        Only rendered while something is actually narrowing the
+                        list: a permanently visible "Clear filters" on an unfiltered
+                        table is a control that does nothing, and its presence is
+                        the only signal the operator gets that filters are on.
+                    -->
+                    <Button
+                        v-if="hasActiveFilters"
+                        variant="ghost"
+                        size="sm"
+                        @click="clearFilters"
+                    >
+                        <XIcon class="size-4" aria-hidden="true" />
+                        Clear filters
+                    </Button>
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
+
         <div class="flex flex-col">
             <DataTable
                 v-model:selection="selection"
@@ -580,7 +683,23 @@ const outstandingCurrency = computed<string | null>(() => {
                 class="rounded-b-none border-b-0"
             >
                 <template #[`cell:invoice_number`]="{ row }">
-                    <span class="font-medium tabular-nums">
+                    <!--
+                        The number is the row's natural handle: opening the
+                        detail from here saves aiming for the eye icon on every
+                        row. Gated on VIEW_INVOICES like the icon itself, so the
+                        cell stays plain text for operators who may not open it.
+                    -->
+                    <Button
+                        v-if="can('VIEW_INVOICES')"
+                        variant="link"
+                        size="sm"
+                        class="h-auto p-0 font-medium tabular-nums"
+                        :aria-label="`View invoice ${row.invoice_number}`"
+                        @click="openDetail(row)"
+                    >
+                        {{ row.invoice_number }}
+                    </Button>
+                    <span v-else class="font-medium tabular-nums">
                         {{ row.invoice_number }}
                     </span>
                 </template>
@@ -616,15 +735,11 @@ const outstandingCurrency = computed<string | null>(() => {
 
                 <template #actions="{ row }">
                     <PermissionGuard permission="VIEW_INVOICES">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="View invoice"
-                            title="View"
+                        <DataTableRowAction
+                            label="View invoice"
+                            :icon="EyeIcon"
                             @click="openDetail(row)"
-                        >
-                            <EyeIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
 
                     <PermissionGuard permission="EXPORT_INVOICES">
@@ -650,49 +765,36 @@ const outstandingCurrency = computed<string | null>(() => {
 
                     <template v-if="!row.deleted_at">
                         <PermissionGuard permission="UPDATE_INVOICES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Edit invoice"
-                                title="Edit"
+                            <DataTableRowAction
+                                label="Edit invoice"
+                                :icon="PencilIcon"
                                 @click="openEditDialog(row)"
-                            >
-                                <PencilIcon class="size-4" aria-hidden="true" />
-                            </Button>
+                            />
                         </PermissionGuard>
 
                         <PermissionGuard permission="DELETE_INVOICES">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Suspend invoice"
-                                title="Suspend"
+                            <DataTableRowAction
+                                label="Suspend invoice"
+                                :icon="Trash2Icon"
+                                destructive
                                 @click="requestDelete(row)"
-                            >
-                                <Trash2Icon
-                                    class="size-4 text-destructive"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+                            />
                         </PermissionGuard>
                     </template>
 
                     <PermissionGuard v-else permission="RESTORE_INVOICES">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Restore invoice"
-                            title="Restore"
+                        <DataTableRowAction
+                            label="Restore invoice"
+                            :icon="RotateCcwIcon"
                             @click="onRestoreRow(row)"
-                        >
-                            <RotateCcwIcon class="size-4" aria-hidden="true" />
-                        </Button>
+                        />
                     </PermissionGuard>
                 </template>
             </DataTable>
 
             <Paginator
                 v-model:page="page"
+                v-model:per-page="perPage"
                 :meta="meta"
                 :disabled="isLoading"
                 label="invoices"

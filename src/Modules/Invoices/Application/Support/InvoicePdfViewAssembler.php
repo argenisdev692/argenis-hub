@@ -118,7 +118,7 @@ final class InvoicePdfViewAssembler
             $units[$item->unit->value] = $item->unit;
         }
 
-        return count($units) === 1 ? reset($units) : null;
+        return count($units) === 1 ? array_first($units) : null;
     }
 
     /**

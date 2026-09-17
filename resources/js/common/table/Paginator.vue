@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useId } from 'vue';
 import {
     Pagination,
     PaginationContent,
@@ -10,6 +10,13 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from '@/components/ui/pagination';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { PaginationMeta } from './types';
 
@@ -18,6 +25,7 @@ const {
     disabled = false,
     siblingCount = 2,
     label = 'records',
+    perPageOptions = [15, 30, 50],
     class: className,
 } = defineProps<{
     meta: PaginationMeta;
@@ -30,10 +38,33 @@ const {
     siblingCount?: number;
     /** Plural noun for the counter — "records", "clients", "invoices". */
     label?: string;
+    /** Page-size choices offered once a page binds `v-model:per-page`. */
+    perPageOptions?: readonly number[];
     class?: string;
 }>();
 
 const page = defineModel<number>('page', { required: true });
+
+/**
+ * Opt-in page size. Left unbound the control stays out of the DOM entirely, so
+ * every existing page renders byte-identical output until it opts in.
+ */
+const perPage = defineModel<number>('perPage');
+
+const perPageLabelId = useId();
+
+/**
+ * Checked narrowing for the select payload (`AcceptableValue` is wider than
+ * `number`): a value outside the offered options is ignored rather than
+ * written into the filters, where it would 422 the list query.
+ */
+function onPerPageChange(value: unknown): void {
+    const parsed = typeof value === 'string' ? Number(value) : NaN;
+
+    if (Number.isFinite(parsed) && perPageOptions.includes(parsed)) {
+        perPage.value = parsed;
+    }
+}
 
 /**
  * `from`/`to` are null on an empty result set, so the counter falls back to a
@@ -64,13 +95,43 @@ const hasPages = computed(() => meta.last_page > 1);
             )
         "
     >
-        <p
-            class="text-sm text-muted-foreground tabular-nums"
-            role="status"
-            aria-live="polite"
-        >
-            {{ summary }}
-        </p>
+        <div class="flex items-center gap-4">
+            <p
+                class="text-sm text-muted-foreground tabular-nums"
+                role="status"
+                aria-live="polite"
+            >
+                {{ summary }}
+            </p>
+
+            <div
+                v-if="perPage !== undefined"
+                class="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+                <span :id="perPageLabelId">Rows per page</span>
+                <Select
+                    :model-value="String(perPage)"
+                    @update:model-value="onPerPageChange"
+                >
+                    <SelectTrigger
+                        size="sm"
+                        class="w-20 tabular-nums"
+                        :aria-labelledby="perPageLabelId"
+                    >
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem
+                            v-for="option in perPageOptions"
+                            :key="option"
+                            :value="String(option)"
+                        >
+                            {{ option }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
 
         <Pagination
             v-if="hasPages"
