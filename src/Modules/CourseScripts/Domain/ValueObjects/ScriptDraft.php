@@ -25,7 +25,9 @@ namespace Modules\CourseScripts\Domain\ValueObjects;
  *               recording_notes: {preparation, during_recording, tools_required: list<string>,
  *                                 tools_none_reason: string, continuity: string,
  *                                 organisations_used: list<string>},
- *               verification_checklist: list<string>}
+ *               verification_checklist: list<string>,
+ *               practice_exercise: {title: string, scenario: string, task: string,
+ *                                   success_criteria: list<string>}}
  *   artifact = {file_name, content_blocks: list<block>, organisations: list<{name, role, sector}>,
  *               characters: list<{name, role, organisation}>}
  *   block    = {type, level: int, text, items: list<string>, table_header: list<string>,

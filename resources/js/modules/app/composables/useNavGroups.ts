@@ -37,6 +37,7 @@ import { index as campaignsIndex } from '@/routes/campaigns';
 import { index as clientsIndex } from '@/routes/clients';
 import { index as contactSupportsIndex } from '@/routes/contact-supports';
 import { index as courseScriptsIndex } from '@/routes/course-scripts';
+import { index as studioDashboardIndex } from '@/routes/cv-studio';
 import { index as cvsIndex } from '@/routes/cvs';
 import { index as invoicesIndex } from '@/routes/invoices';
 import { index as leadScoutIndex } from '@/routes/lead-scout';
@@ -175,6 +176,12 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: cvsIndex(),
                     icon: FileText,
                     permission: 'VIEW_ANY_CVS',
+                },
+                {
+                    title: 'CV Studio',
+                    href: studioDashboardIndex(),
+                    icon: Briefcase,
+                    permission: 'VIEW_ANY_STUDIO_POSTINGS',
                 },
             ],
         },

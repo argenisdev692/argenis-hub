@@ -16,10 +16,10 @@ use Illuminate\Support\Carbon;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 
 /**
- * @internal
- *
  * One generated script (US-5). Every part of the reference format is stored as
  * structure; Markdown, PDF and the prompts sheet are renderings (DEC-3).
+ *
+ * @internal
  *
  * @property int $id
  * @property string $uuid
@@ -43,6 +43,7 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property array{number: int, title: string}|null $next_video
  * @property array<string, mixed> $recording_notes
  * @property list<string> $verification_checklist
+ * @property array{title: string, scenario: string, task: string, success_criteria: list<string>}|null $practice_exercise
  * @property array<string, list<string>> $coverage_map
  * @property array<string, mixed> $errors_check
  * @property bool $is_grounded
@@ -64,6 +65,51 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property-read CoursePracticeVersionEloquentModel|null $practice
  * @property-read Collection<int, CourseDeliverableEloquentModel> $deliverables
  * @property-read Collection<int, CourseResearchFindingEloquentModel> $sources
+ * @property-read int|null $deliverables_count
+ * @property-read int|null $sources_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereBibleRevision($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereBriefRevision($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereContinuityIsProvisional($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereContinuityNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereContinuitySourceVideoIds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereContinuityStale($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereCourseGenerationRunId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereCourseVideoId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereCoverageMap($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereErrorsCheck($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereFeedbackNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereIsAccepted($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereIsGrounded($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereLearningObjectives($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereNextVideo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereNotesExcerptIds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel wherePassedReview($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel wherePracticeDecisionReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel wherePracticeExercise($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel wherePracticeWarranted($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel wherePromptsSheetReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereRecordingNotes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereReviewIterations($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereReviewObjections($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereReviewScores($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereReviewed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereReviewerProvider($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereSections($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereSummaryPoints($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereTaughtSummary($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereTechnicalHeader($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereUsesTool($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereVerificationChecklist($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereVersion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseScriptVersionEloquentModel whereWriterProvider($value)
  *
  * @mixin \Eloquent
  */
@@ -90,6 +136,7 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
     'next_video',
     'recording_notes',
     'verification_checklist',
+    'practice_exercise',
     'coverage_map',
     'errors_check',
     'is_grounded',
@@ -180,6 +227,7 @@ final class CourseScriptVersionEloquentModel extends Model
             'next_video' => 'array',
             'recording_notes' => 'array',
             'verification_checklist' => 'array',
+            'practice_exercise' => 'array',
             'coverage_map' => 'array',
             'errors_check' => 'array',
             'is_grounded' => 'boolean',

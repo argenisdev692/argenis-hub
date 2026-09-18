@@ -32,9 +32,13 @@ final readonly class ScriptFormatGuide
            explanations, a practical closing.
         5. Inside sections, clearly separated parts:
            - Narration: the exact words the presenter says, in quotes, natural
-             spoken language, second person, no filler.
+             spoken language, second person, no filler. Dynamic pace: short
+             sentences that flow into each other, no throat-clearing transitions.
            - PROMPT: the literal text the presenter types into the tool on screen.
-             Complete and paste-ready. Only when the course teaches a tool.
+             Complete and paste-ready. Only when the course teaches a tool. The
+             presenter PASTES it, never dictates it: the narration around it says
+             in one sentence what the prompt asks for and why, and never repeats
+             the prompt word for word.
            - Expected result on screen: what the audience sees after the prompt.
            - ACCIONES EN PANTALLA: short imperative steps for the presenter.
            - MOSTRAR EN PANTALLA: material shown (and optionally read aloud)
@@ -44,7 +48,10 @@ final readonly class ScriptFormatGuide
            - Presenter notes: timing cues ("mantener 8 segundos en pantalla").
            Demonstrations are numbered across the script: DEMO 1, DEMO 2…
            A "comparison" section shows an incorrect case and its corrected version.
-        6. Closing parts: RESUMEN (5–8 bullet takeaways), PRÓXIMO VÍDEO (the next
+        6. Closing parts: RESUMEN (5–8 bullet takeaways), EJERCICIO PRÁCTICO (a
+           challenge the student does alone after the video — a realistic scenario
+           that sparks interest, the task, and 2–4 success criteria; every video
+           has one, conceptual ones included), PRÓXIMO VÍDEO (the next
            video by number and title, only if one exists), NOTAS TÉCNICAS PARA LA
            GRABACIÓN (preparación previa — including every practice file to have
            ready —, durante la grabación, conectores/herramientas necesarias or an
@@ -63,7 +70,9 @@ final readonly class ScriptFormatGuide
 
         Only when a demonstration needs prepared material: documents to upload,
         notes to paste, data to analyse, an incorrect/correct case. A purely
-        conceptual video gets none, and says why.
+        conceptual video gets none, and says why. The pack is material for the
+        presenter's demos; the student's EJERCICIO PRÁCTICO is a separate closing
+        part that every video has, with or without a pack.
 
         A practice pack has:
         - Header: "DOCUMENTO DE PRÁCTICA · VÍDEO NN — title".

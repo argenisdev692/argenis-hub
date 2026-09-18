@@ -22,6 +22,13 @@ final readonly class FilterGraphBuilder
     public const string AUDIO_OUTPUT = '[outa]';
 
     /**
+     * Length of the audio fade on each side of a join. A hard cut between two
+     * waveforms that are not at zero clicks; 15 ms is too short to hear as a
+     * fade but long enough to remove the click.
+     */
+    public const int JOIN_FADE_MS = 15;
+
+    /**
      * Normalize every input to the profile (scale + pad, never stretch) and join
      * them in order. Inputs without audio get generated silence of their length.
      *
@@ -49,6 +56,7 @@ final readonly class FilterGraphBuilder
     /**
      * Keep only the given ranges of a single input, frame- and sample-accurately
      * (trim/atrim + reset timestamps + concat), then normalize to the profile.
+     * Every audio join gets a {@see self::JOIN_FADE_MS} fade so cuts do not click.
      *
      * @param  list<TimeRange>  $keepRanges
      */
@@ -67,9 +75,10 @@ final readonly class FilterGraphBuilder
             );
             $parts[] = $inputProbe->hasAudio
                 ? sprintf(
-                    '[0:a:0]atrim=start=%s:end=%s,asetpts=PTS-STARTPTS[a%d]',
+                    '[0:a:0]atrim=start=%s:end=%s,asetpts=PTS-STARTPTS%s[a%d]',
                     self::seconds($range->startMs),
                     self::seconds($range->endMs),
+                    self::joinFades($range, fadeIn: $index > 0, fadeOut: $index < count($keepRanges) - 1),
                     $index,
                 )
                 : sprintf('%s[a%d]', $this->silence($profile, $range->durationMs()), $index);
@@ -81,6 +90,22 @@ final readonly class FilterGraphBuilder
         $parts[] = sprintf('[ca]%s%s', $this->audioNormalization($profile), self::AUDIO_OUTPUT);
 
         return implode(';', $parts);
+    }
+
+    /**
+     * Fades only the edges that meet another range: the very start and end of
+     * the recording are not joins and keep their original attack and decay.
+     */
+    private static function joinFades(TimeRange $range, bool $fadeIn, bool $fadeOut): string
+    {
+        $fadeMs = min(self::JOIN_FADE_MS, intdiv($range->durationMs(), 2));
+
+        if ($fadeMs <= 0) {
+            return '';
+        }
+
+        return ($fadeIn ? sprintf(',afade=t=in:st=0:d=%s', self::seconds($fadeMs)) : '')
+            .($fadeOut ? sprintf(',afade=t=out:st=%s:d=%s', self::seconds($range->durationMs() - $fadeMs), self::seconds($fadeMs)) : '');
     }
 
     private function videoNormalization(OutputProfile $profile): string

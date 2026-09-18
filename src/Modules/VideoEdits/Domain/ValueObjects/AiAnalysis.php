@@ -21,6 +21,15 @@ final readonly class AiAnalysis
         public ?string $conclusion = null,
     ) {}
 
+    /**
+     * Adds a recommendation measured outside the model (the pace analysis).
+     */
+    #[\NoDiscard]
+    public function withRecommendation(AiRecommendation $recommendation): self
+    {
+        return clone ($this, ['recommendations' => [...$this->recommendations, $recommendation]]);
+    }
+
     public function isEmpty(): bool
     {
         return $this->cutProposals === [] && $this->recommendations === [];

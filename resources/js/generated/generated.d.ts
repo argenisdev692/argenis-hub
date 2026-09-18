@@ -801,6 +801,12 @@ declare namespace Modules {
                     next_video: Record<string, any> | null;
                     recording_notes: Record<string, any>;
                     verification_checklist: string[];
+                    practice_exercise: {
+                        title: string;
+                        scenario: string;
+                        task: string;
+                        success_criteria: string[];
+                    } | null;
                     errors_check: Record<string, any> | null;
                     is_grounded: boolean;
                     prompts_sheet_reason: string | null;
@@ -967,6 +973,150 @@ declare namespace Modules {
                     'pending' | 'running' | 'completed' | 'failed' | 'skipped';
                 export type VideoScriptStatus =
                     'not_started' | 'generating' | 'generated' | 'failed';
+            }
+        }
+    }
+    namespace CvJobStudio {
+        namespace Application {
+            namespace DTOs {
+                export type IngestPostingData = {
+                    readonly profile_uuid: string;
+                    readonly title: string;
+                    readonly canonical_url: string;
+                    readonly employer_name: string | null;
+                    readonly location_text: string | null;
+                    readonly source: string | null;
+                    readonly discovery_channel: string | null;
+                    readonly text: string | null;
+                    readonly requirements: {
+                        canonical_name: string;
+                        tag: string;
+                        nature: string;
+                    }[];
+                };
+                export type PasteJobTextData = {
+                    readonly text: string;
+                };
+                export type RecordOutcomeData = {
+                    readonly outcome: string;
+                    readonly note: string | null;
+                };
+                export type ScorePostingInputData = {
+                    readonly cv_skills: {
+                        name: string;
+                        evidence: string;
+                        position_ratio: number;
+                    }[];
+                    readonly similarities: {
+                        title_cosine: number;
+                        responsibility_cosine: number;
+                    };
+                    readonly signals: {
+                        experience: number | null;
+                        location: number | null;
+                        education: number | null;
+                        language: number | null;
+                    };
+                    readonly cap_context: {
+                        readable: boolean;
+                        credential_ok: boolean;
+                        evidence_ok: boolean;
+                    };
+                };
+                export type StudioPostingData = {
+                    readonly uuid: string;
+                    readonly title: string;
+                    readonly employer_name: string | null;
+                    readonly location_text: string | null;
+                    readonly remote_scope: string | null;
+                    readonly status: string;
+                    readonly discovery_channel: string | null;
+                    readonly apply_destination: string | null;
+                    readonly total_score: number | null;
+                    readonly band: string | null;
+                    readonly cap_reason: string | null;
+                    readonly attribution: string | null;
+                    readonly canonical_url: string | null;
+                    readonly created_at: string | null;
+                    readonly deleted_at: string | null;
+                };
+                export type StudioPostingFilterData = {
+                    remote_scope: string | null;
+                    search: string | null;
+                    status: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                };
+                export type StudioProfileData = {
+                    readonly name: string;
+                    readonly slug: string;
+                    readonly base_city: string | null;
+                    readonly base_country: string | null;
+                    readonly accepted_remote_scopes: string[] | null;
+                    readonly stack_must: string[] | null;
+                    readonly stack_reject: string[] | null;
+                    readonly geography_deny: string[] | null;
+                    readonly years_baseline: number | null;
+                    readonly uuid: string | null;
+                };
+                export type StudioScoreData = {
+                    readonly uuid: string;
+                    readonly h: number;
+                    readonly s: number;
+                    readonly d: number;
+                    readonly raw_score: number;
+                    readonly total_score: number;
+                    readonly band: string | null;
+                    readonly cap_reason: string | null;
+                    readonly rules_version: number;
+                    readonly heuristic_label: string;
+                    readonly computed_at: string | null;
+                };
+                export type SubmitMetricAnswersData = {
+                    readonly answers: Record<string, string>;
+                };
+                export type UpdateOpportunityPolicyData = {
+                    readonly channels: Record<
+                        string,
+                        {
+                            value: number;
+                            grade: string;
+                            source: string;
+                        }
+                    >;
+                    readonly neutral: boolean;
+                };
+                export type UpdatePostingStatusData = {
+                    readonly status: string;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type AiPurpose =
+                    | 'requirement_extraction'
+                    | 'match_narrative'
+                    | 'tailor'
+                    | 'translate'
+                    | 'cv_rewrite'
+                    | 'cv_judge'
+                    | 'cv_structure_parse';
+                export type CapReason =
+                    | 'unreadable_requirements'
+                    | 'credential_or_floor_or_language'
+                    | 'weak_evidence';
+                export type GateCode = 'G1' | 'G2' | 'G3' | 'G4' | 'G4b';
+                export type RemoteScope =
+                    | 'remote_global'
+                    | 'remote_eu'
+                    | 'remote_pt_es'
+                    | 'remote_unclear'
+                    | 'hybrid_local';
+                export type RequirementNature = 'hard' | 'soft';
+                export type RequirementTag = 'required' | 'preferred' | 'bonus';
+                export type ScoreBand =
+                    'strong' | 'good' | 'apply' | 'consider' | 'skip';
+                export type SkillRelationKind = 'alias' | 'family';
             }
         }
     }
@@ -2414,7 +2564,11 @@ declare namespace Modules {
         namespace Domain {
             namespace Enums {
                 export type AiRecommendationKind =
-                    'reduce' | 'off_script' | 'script_coverage' | 'pacing';
+                    | 'reduce'
+                    | 'off_script'
+                    | 'script_coverage'
+                    | 'pacing'
+                    | 'read_prompt_aloud';
                 export type CutReason =
                     | 'silence'
                     | 'manual'

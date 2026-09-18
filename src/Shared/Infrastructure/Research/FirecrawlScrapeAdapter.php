@@ -22,7 +22,7 @@ final readonly class FirecrawlScrapeAdapter implements FirecrawlClientInterface
 {
     public function __construct(private CircuitBreakerInterface $breaker) {}
 
-    public function scrape(string $url): ?string
+    public function scrape(string $url, ?string $proxy = null): ?string
     {
         $apiKey = (string) config('services.firecrawl.api_key');
 
@@ -32,16 +32,22 @@ final readonly class FirecrawlScrapeAdapter implements FirecrawlClientInterface
 
         return $this->breaker->call(
             'firecrawl',
-            function () use ($apiKey, $url): ?string {
+            function () use ($apiKey, $url, $proxy): ?string {
+                $payload = [
+                    'url' => $url,
+                    'formats' => ['markdown'],
+                    'onlyMainContent' => true,
+                    'maxAge' => (int) config('services.firecrawl.max_age', 172800000),
+                ];
+
+                if ($proxy !== null) {
+                    $payload['proxy'] = $proxy;
+                }
+
                 $response = Http::withToken($apiKey)
                     ->timeout((int) config('services.firecrawl.timeout', 30))
                     ->retry(1, 500)
-                    ->post(rtrim((string) config('services.firecrawl.base_url'), '/').'/scrape', [
-                        'url' => $url,
-                        'formats' => ['markdown'],
-                        'onlyMainContent' => true,
-                        'maxAge' => (int) config('services.firecrawl.max_age', 172800000),
-                    ]);
+                    ->post(rtrim((string) config('services.firecrawl.base_url'), '/').'/scrape', $payload);
 
                 if ($response->failed()) {
                     throw new RuntimeException("Firecrawl scrape failed with status {$response->status()}.");

@@ -168,6 +168,8 @@ final readonly class LaravelAiScriptWriterAdapter implements ScriptWriterPort
             $corrections,
         ));
 
+        $exercise = is_array($response['practice_exercise'] ?? null) ? $response['practice_exercise'] : [];
+
         return [
             'summary_points' => $this->strings($response['summary_points'] ?? [], 500),
             'next_video_handoff' => $this->text($response['next_video_handoff'] ?? '', 1000),
@@ -180,6 +182,12 @@ final readonly class LaravelAiScriptWriterAdapter implements ScriptWriterPort
                 'organisations_used' => $this->strings($response['organisations_used'] ?? [], 160),
             ],
             'verification_checklist' => $this->strings($response['verification_checklist'] ?? [], 500),
+            'practice_exercise' => [
+                'title' => $this->text($exercise['title'] ?? '', 200),
+                'scenario' => $this->text($exercise['scenario'] ?? '', 2000),
+                'task' => $this->text($exercise['task'] ?? '', 2000),
+                'success_criteria' => $this->strings($exercise['success_criteria'] ?? [], 500),
+            ],
         ];
     }
 

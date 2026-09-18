@@ -40,7 +40,10 @@ final class ReviewScriptAgent implements Agent, Conversational, HasProviderOptio
             - coverage: every mandatory content item is really taught, not just named.
             - duration: narration volume and section minutes fit the video duration.
             - format_fidelity: all reference parts present and well formed; prompts
-              are complete and paste-ready; narration is speakable.
+              are complete and paste-ready and the narration summarises them instead
+              of reading them aloud; narration is speakable at a dynamic pace; the
+              EJERCICIO PRÁCTICO is a realistic, motivating challenge, not a repeat
+              of a demo.
             - continuity: correct references to previous/next videos; consistent use
               of the course bible.
             - errors_to_avoid: none of the brief's errors to avoid are committed.

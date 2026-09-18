@@ -11,13 +11,21 @@ use Modules\CourseScripts\Domain\ValueObjects\ScriptDraft;
  * (plan §3.5 step 9, FR-44a):
  *
  * - every section has segments; narration exists (FR-30)
- * - prompts only when the course teaches a tool (FR-30a)
- * - closing parts present; next video iff one follows; organisations known (FR-33b)
+ * - prompts only when the course teaches a tool (FR-30a), and never read aloud
+ *   word for word by the narration
+ * - closing parts present, including the student's practical exercise; next
+ *   video iff one follows; organisations known (FR-33b)
  * - practice references resolve both ways, artifacts all written (FR-36b, FR-39)
  * - artifact tables add up, contact data invented (FR-36d, FR-39b)
  */
 final readonly class ScriptCompletenessValidator
 {
+    /**
+     * Consecutive prompt words a narration may not repeat: long enough that a
+     * quoted phrase passes, short enough that reading a sentence out loud fails.
+     */
+    private const int READ_ALOUD_RUN_WORDS = 8;
+
     public function __construct(
         private TableArithmeticValidator $tables,
         private ContactDataValidator $contacts,
@@ -71,6 +79,13 @@ final readonly class ScriptCompletenessValidator
                     $violations[] = sprintf('Section %s has an on-screen table without columns.', $section['number']);
                 }
             }
+
+            if ($this->narrationReadsPromptAloud($segments)) {
+                $violations[] = sprintf(
+                    'Section %s narration reads the on-screen prompt aloud word for word: the prompt is pasted, so the narration must summarise its intent in one sentence instead.',
+                    $section['number'],
+                );
+            }
         }
 
         if (! $hasNarration) {
@@ -78,6 +93,65 @@ final readonly class ScriptCompletenessValidator
         }
 
         return $violations;
+    }
+
+    /**
+     * True when any narration of the section repeats a run of
+     * {@see self::READ_ALOUD_RUN_WORDS} consecutive words of one of its prompts.
+     * Reading a prompt out loud slows the video down; a shorter prompt, or a
+     * phrase or two quoted from it, stays below the run and is fine.
+     *
+     * @param  array<int, mixed>  $segments
+     */
+    private function narrationReadsPromptAloud(array $segments): bool
+    {
+        $promptRuns = [];
+        $narrations = [];
+
+        foreach ($segments as $segment) {
+            $type = (string) ($segment['type'] ?? '');
+
+            if ($type === 'on_screen_prompt') {
+                $promptRuns = [...$promptRuns, ...self::wordRuns((string) ($segment['prompt'] ?? ''))];
+            } elseif ($type === 'narration') {
+                $narrations[] = (string) ($segment['text'] ?? '');
+            }
+        }
+
+        if ($promptRuns === []) {
+            return false;
+        }
+
+        $promptRuns = array_flip($promptRuns);
+
+        foreach ($narrations as $narration) {
+            foreach (self::wordRuns($narration) as $run) {
+                if (isset($promptRuns[$run])) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string> every run of consecutive normalised words
+     */
+    private static function wordRuns(string $text): array
+    {
+        $words = mb_strtolower($text)
+            |> (static fn (string $lower): string => (string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', $lower))
+            |> trim(...)
+            |> (static fn (string $clean): array => $clean === '' ? [] : explode(' ', $clean));
+
+        $runs = [];
+
+        for ($start = 0; $start + self::READ_ALOUD_RUN_WORDS <= count($words); $start++) {
+            $runs[] = implode(' ', array_slice($words, $start, self::READ_ALOUD_RUN_WORDS));
+        }
+
+        return $runs;
     }
 
     /**
@@ -102,6 +176,16 @@ final readonly class ScriptCompletenessValidator
 
         if ((array) ($closing['verification_checklist'] ?? []) === []) {
             $violations[] = 'The final verification checklist is empty.';
+        }
+
+        $exercise = (array) ($closing['practice_exercise'] ?? []);
+
+        if (trim((string) ($exercise['scenario'] ?? '')) === '' || trim((string) ($exercise['task'] ?? '')) === '') {
+            $violations[] = 'The practical exercise (EJERCICIO PRÁCTICO) for the student needs a realistic scenario and a task.';
+        }
+
+        if ((array) ($exercise['success_criteria'] ?? []) === []) {
+            $violations[] = 'The practical exercise (EJERCICIO PRÁCTICO) needs success criteria the student can check.';
         }
 
         if ((array) ($notes['preparation'] ?? []) === []) {

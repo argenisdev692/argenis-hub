@@ -18,6 +18,7 @@ use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\Ports\CutDecisionProducer;
 use Modules\VideoEdits\Domain\Ports\ScriptProviderPort;
 use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
+use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
 use Modules\VideoEdits\Domain\ValueObjects\AiCutProposal;
 use Modules\VideoEdits\Domain\ValueObjects\AiCutReview;
@@ -53,7 +54,8 @@ use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
  *
  * **What it will not do (R6).** Editorial findings — "REDUCIR", pacing, broad
  * drift from the script — are stored as report recommendations and never
- * become cuts, approved or not.
+ * become cuts, approved or not. The speaking pace is measured here from the
+ * word timings, not asked of the model, and joins them as a `pacing` one.
  */
 final readonly class AiDecisionProducer implements CutDecisionProducer
 {
@@ -65,6 +67,7 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
         private TranscriptStorePort $transcripts,
         private AiReportStorePort $reports,
         private AiCutReviewStorePort $reviews,
+        private SpeechPaceAnalyzer $pace,
         private Config $config,
     ) {}
 
@@ -126,6 +129,12 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
             self::stringParameter($context, 'instructions'),
             self::intParameter($context, 'target_duration_minutes'),
         );
+
+        $pace = $this->pace->recommendation($transcript, $this->silenceThresholdMs($context));
+
+        if ($pace !== null) {
+            $analysis = $analysis->withRecommendation($pace);
+        }
 
         $this->reports->store($context->videoEditId, $analysis);
 
@@ -232,6 +241,23 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
         $script = $this->scripts->forEdit($context->videoEditId);
 
         return $script?->truncated((int) $this->config->get('video-edit.ai.max_script_characters'));
+    }
+
+    /**
+     * The gap silence removal will cut in this edit, or null when it is off and
+     * every pause reaches the final video.
+     */
+    private function silenceThresholdMs(DecisionContext $context): ?int
+    {
+        $silence = (array) ($context->parameters['silence_removal'] ?? []);
+
+        if (($silence['enabled'] ?? false) !== true) {
+            return null;
+        }
+
+        $seconds = $silence['threshold_seconds'] ?? $this->config->get('video-edit.silence.default_threshold_seconds');
+
+        return (int) round((float) $seconds * 1000);
     }
 
     private static function stringParameter(DecisionContext $context, string $key): ?string

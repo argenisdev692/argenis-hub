@@ -129,6 +129,25 @@ return [
         ],
     ],
 
+    /*
+    |----------------------------------------------------------------------
+    | Speaking pace (AI edit report)
+    |----------------------------------------------------------------------
+    |
+    | Measured from the Whisper word timings, never by the model. A mini-pause
+    | is a gap long enough to hear as hesitation that the silence threshold
+    | leaves in; the report flags a recording with too many of them, or with a
+    | delivery slower than `slow_words_per_minute`.
+    |
+    */
+    'pace' => [
+        'mini_pause_ms' => 400,
+        'min_mini_pauses' => 5,
+        'slow_words_per_minute' => 130,
+        // Below this, words per minute is noise rather than a measurement.
+        'min_speaking_ms' => 60_000,
+    ],
+
     'cuts' => [
         'min_kept_fragment_ms' => 250,                         // D6
         'min_output_ms' => 1000,                               // D6

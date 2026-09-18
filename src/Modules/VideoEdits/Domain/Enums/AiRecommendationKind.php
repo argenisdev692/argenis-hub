@@ -25,6 +25,11 @@ enum AiRecommendationKind: string
 
     /** A section running long or short against its scripted time budget. */
     case Pacing = 'pacing';
+    /**
+     * A script PROMPT read aloud word for word instead of pasted and summarised
+     * in one sentence. Fixing it needs a re-record, so it is advice, not a cut.
+     */
+    case ReadPromptAloud = 'read_prompt_aloud';
 
     /**
      * @return list<string>

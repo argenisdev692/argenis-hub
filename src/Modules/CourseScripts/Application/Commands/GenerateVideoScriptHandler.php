@@ -127,6 +127,7 @@ final readonly class GenerateVideoScriptHandler
                 ] : null,
                 'recording_notes' => (array) ($closing['recording_notes'] ?? []),
                 'verification_checklist' => (array) ($closing['verification_checklist'] ?? []),
+                'practice_exercise' => $closing['practice_exercise'] ?? null,
                 'coverage_map' => $draft->coverageMap,
                 'errors_check' => $this->errorsCheck($context, $draft),
                 'is_grounded' => $context->isGrounded(),

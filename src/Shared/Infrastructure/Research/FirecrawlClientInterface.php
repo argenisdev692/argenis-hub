@@ -13,6 +13,10 @@ interface FirecrawlClientInterface
     /**
      * Main-content Markdown of the page, or null when the key is empty, the
      * request fails or the breaker is open. Never throws.
+     *
+     * `$proxy` selects the Firecrawl proxy mode (`basic`, `auto`, `stealth`).
+     * Null keeps the previous behaviour (no proxy param sent). Modules with a
+     * basic-only rule (CvJobStudio T-159) pass `'basic'` explicitly.
      */
-    public function scrape(string $url): ?string;
+    public function scrape(string $url, ?string $proxy = null): ?string;
 }

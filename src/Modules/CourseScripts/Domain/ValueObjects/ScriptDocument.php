@@ -18,6 +18,7 @@ final readonly class ScriptDocument
      * @param  array<string, mixed>|null  $nextVideo
      * @param  array<string, mixed>  $recordingNotes
      * @param  list<string>  $verificationChecklist
+     * @param  array{title: string, scenario: string, task: string, success_criteria: list<string>}|null  $practiceExercise
      */
     public function __construct(
         public string $language,
@@ -36,6 +37,7 @@ final readonly class ScriptDocument
         public ?array $nextVideo,
         public array $recordingNotes,
         public array $verificationChecklist,
+        public ?array $practiceExercise,
         public ?string $practiceDocumentName,
         public bool $isGrounded,
         public ?bool $passedReview,

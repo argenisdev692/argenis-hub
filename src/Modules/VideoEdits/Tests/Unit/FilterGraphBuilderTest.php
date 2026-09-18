@@ -36,13 +36,35 @@ it('keeps only the requested ranges with millisecond precision', function (): vo
 
     expect(explode(';', $graph))->toBe([
         '[0:v:0]trim=start=0.000:end=10.150,setpts=PTS-STARTPTS[v0]',
-        '[0:a:0]atrim=start=0.000:end=10.150,asetpts=PTS-STARTPTS[a0]',
+        '[0:a:0]atrim=start=0.000:end=10.150,asetpts=PTS-STARTPTS,afade=t=out:st=10.135:d=0.015[a0]',
         '[0:v:0]trim=start=11.850:end=60.000,setpts=PTS-STARTPTS[v1]',
-        '[0:a:0]atrim=start=11.850:end=60.000,asetpts=PTS-STARTPTS[a1]',
+        '[0:a:0]atrim=start=11.850:end=60.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.015[a1]',
         '[v0][a0][v1][a1]concat=n=2:v=1:a=1[cv][ca]',
         '[cv]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=29.970,format=yuv420p[outv]',
         '[ca]aresample=48000:async=1,aformat=sample_rates=48000:channel_layouts=stereo[outa]',
     ]);
+});
+
+it('fades both sides of an inner range and never the outer edges of the recording', function (): void {
+    $graph = (new FilterGraphBuilder)->keepRanges(
+        [new TimeRange(0, 1_000), new TimeRange(2_000, 3_000), new TimeRange(4_000, 5_000)],
+        new MediaProbe(5_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+    );
+
+    expect($graph)->toContain('atrim=start=0.000:end=1.000,asetpts=PTS-STARTPTS,afade=t=out:st=0.985:d=0.015[a0]')
+        ->and($graph)->toContain('asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.015,afade=t=out:st=0.985:d=0.015[a1]')
+        ->and($graph)->toContain('atrim=start=4.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.015[a2]');
+});
+
+it('does not fade a single kept range, which has no join', function (): void {
+    $graph = (new FilterGraphBuilder)->keepRanges(
+        [new TimeRange(1_000, 4_000)],
+        new MediaProbe(5_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+    );
+
+    expect($graph)->not->toContain('afade');
 });
 
 it('fills silent ranges when the input has no audio', function (): void {

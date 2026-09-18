@@ -201,4 +201,56 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Per-purpose LLM settings (CvJobStudio T-150, CHG-20)
+    |--------------------------------------------------------------------------
+    |
+    | Each AI purpose owns its provider, fallbacks (via `failover_order`
+    | above), model per provider, timeout, input/output caps, prompt-cache
+    | flag and prompt version. Cache is ON only where reuse is measured to
+    | pay for itself (SC-18, T-154): extraction, narrative, tailor and
+    | translate share long-lived layers; rewrite, judge and structure-parse
+    | run unique inputs and stay uncached.
+    |
+    */
+
+    'purposes' => [
+        'requirement_extraction' => [
+            'provider' => 'openai', 'models' => [], 'timeout' => 60,
+            'max_input_chars' => 20000, 'max_output_tokens' => 4000,
+            'prompt_cache' => true, 'prompt_version' => 'v2',
+        ],
+        'match_narrative' => [
+            'provider' => 'openai', 'models' => [], 'timeout' => 30,
+            'max_input_chars' => 8000, 'max_output_tokens' => 500,
+            'prompt_cache' => true, 'prompt_version' => 'v2',
+        ],
+        'tailor' => [
+            'provider' => 'openai', 'models' => [], 'timeout' => 90,
+            'max_input_chars' => 20000, 'max_output_tokens' => 6000,
+            'prompt_cache' => true, 'prompt_version' => 'v2',
+        ],
+        'translate' => [
+            'provider' => 'openai', 'models' => [], 'timeout' => 90,
+            'max_input_chars' => 20000, 'max_output_tokens' => 6000,
+            'prompt_cache' => true, 'prompt_version' => 'v2',
+        ],
+        'cv_rewrite' => [
+            'provider' => 'openai', 'models' => [], 'timeout' => 120,
+            'max_input_chars' => 20000, 'max_output_tokens' => 6000,
+            'prompt_cache' => false, 'prompt_version' => 'v2',
+        ],
+        'cv_judge' => [
+            'provider' => 'anthropic', 'models' => [], 'timeout' => 90,
+            'max_input_chars' => 20000, 'max_output_tokens' => 4000,
+            'prompt_cache' => false, 'prompt_version' => 'v2',
+        ],
+        'cv_structure_parse' => [
+            'provider' => 'openai', 'models' => [], 'timeout' => 90,
+            'max_input_chars' => 20000, 'max_output_tokens' => 6000,
+            'prompt_cache' => false, 'prompt_version' => 'v2',
+        ],
+    ],
+
 ];

@@ -37,6 +37,7 @@ use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
+use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
 use Modules\VideoEdits\Infrastructure\Ai\LaravelAiVideoEditAnalyzer;
 use Modules\VideoEdits\Infrastructure\Ai\ScriptTextExtractor;
 use Modules\VideoEdits\Infrastructure\Console\Commands\PurgeExpiredVideoEditSourcesCommand;
@@ -135,6 +136,14 @@ final class VideoEditsServiceProvider extends ServiceProvider
             repetitionAllowList: (array) config('video-edit.speech.dictionaries.repetition_allow_list', []),
             maxStutterFragmentMs: (int) config('video-edit.speech.max_stutter_fragment_ms'),
             minConfidence: (float) config('video-edit.speech.min_confidence'),
+        ));
+
+        $this->app->bind(SpeechPaceAnalyzer::class, static fn (): SpeechPaceAnalyzer => new SpeechPaceAnalyzer(
+            miniPauseMs: (int) config('video-edit.pace.mini_pause_ms'),
+            minMiniPauses: (int) config('video-edit.pace.min_mini_pauses'),
+            slowWordsPerMinute: (int) config('video-edit.pace.slow_words_per_minute'),
+            minSpeakingMs: (int) config('video-edit.pace.min_speaking_ms'),
+            defaultLanguage: (string) config('video-edit.speech.default_language'),
         ));
     }
 

@@ -78,6 +78,7 @@ final readonly class BuildDeliverablesHandler
             nextVideo: $version->next_video,
             recordingNotes: $version->recording_notes,
             verificationChecklist: $version->verification_checklist,
+            practiceExercise: $version->practice_exercise,
             practiceDocumentName: $version->practice?->document_name,
             isGrounded: $version->is_grounded,
             passedReview: $version->reviewed ? $version->passed_review : null,

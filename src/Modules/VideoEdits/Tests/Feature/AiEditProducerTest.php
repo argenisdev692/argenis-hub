@@ -295,6 +295,43 @@ it('stores the recommendations but never the raw response', function (): void {
         ->and(array_keys($columns))->toEqualCanonicalizing(['recommendations', 'conclusion']);
 });
 
+it('adds the measured speaking pace to the report recommendations', function (): void {
+    $edit = VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create();
+
+    // Two minutes of speech with a 700 ms hesitation after every tenth word:
+    // under the 1 s silence threshold, so all of them survive the edit.
+    $words = [];
+    $cursor = 0;
+
+    for ($index = 0; $index < 300; $index++) {
+        $cursor += $index % 10 === 0 && $index > 0 ? 700 : 50;
+        $words[] = new TranscriptWord('palabra', $cursor, $cursor + 300);
+        $cursor += 300;
+    }
+
+    storeTranscriptFor($edit, new Transcript($words, language: 'es'));
+
+    runFirstPass($edit, new DecisionContext(
+        mode: VideoEditMode::AiEdit,
+        parameters: [
+            'ai_edit' => ['enabled' => true, 'consented' => true],
+            'silence_removal' => ['enabled' => true, 'threshold_seconds' => 1.0],
+        ],
+        workingPath: '/workspace/edit/merged.mp4',
+        workingProbe: new MediaProbe(120_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        videoEditId: $edit->id,
+        videoEditUuid: $edit->uuid,
+        ownerId: $edit->user_id,
+        sourceFingerprints: ['fp'],
+    ));
+
+    $recommendations = app(AiReportStorePort::class)->forEdit($edit->id)?->recommendations ?? [];
+
+    expect($recommendations)->toHaveCount(2)
+        ->and($recommendations[1]->kind)->toBe(AiRecommendationKind::Pacing)
+        ->and($recommendations[1]->title)->toContain('29 minipausas');
+});
+
 it('does nothing when no transcript was produced', function (): void {
     $edit = VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create();
 

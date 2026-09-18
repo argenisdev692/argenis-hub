@@ -23,7 +23,7 @@ class RolePermissionSeeder extends Seeder
      *
      * @var list<string>
      */
-    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS', 'SERVICES', 'PAYMENT_ACCOUNTS'];
+    private const array MODULES = ['USERS', 'ROLES', 'PERMISSIONS', 'BLOG_CATEGORIES', 'POSTS', 'SOCIAL_MEDIA', 'CAMPAIGNS', 'CONTACT_SUPPORTS', 'AVAILABILITY_RULES', 'AVAILABILITY_EXCEPTIONS', 'APPOINTMENTS', 'MEETINGS', 'CLIENTS', 'INVOICES', 'CVS', 'STUDIO_PROFILES', 'STUDIO_POSTINGS', 'RESUME_STUDIOS', 'PRODUCTS', 'ENROLLMENTS', 'STUDENTS', 'PORTFOLIOS', 'SERVICES', 'PAYMENT_ACCOUNTS'];
 
     /**
      * Singleton records: one row, provisioned by a seeder, edited in place and
@@ -98,6 +98,8 @@ class RolePermissionSeeder extends Seeder
         'CLIENTS',
         'INVOICES',
         'CVS',
+        'STUDIO_PROFILES',
+        'STUDIO_POSTINGS',
         'RESUME_STUDIOS',
         'PRODUCTS',
         'PAYMENT_ACCOUNTS',

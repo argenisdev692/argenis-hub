@@ -33,6 +33,32 @@ use Modules\Clients\Infrastructure\Persistence\Eloquent\Models\ClientEloquentMod
 use Modules\ContactSupport\Infrastructure\Persistence\Eloquent\Models\ContactSupportEloquentModel;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseEloquentModel;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseGenerationRunEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioApplicationEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioBudgetEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioChannelBaselineEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvAuditEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvBulletEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvEntryEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvSkillEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvStructureEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersionEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioEmbeddingEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioExportEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioInsightReportEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioMetricAnswerEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingSightingEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingSourceEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProviderCallEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioQueryExperimentEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioQueryTemplateEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSkillRelationEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSourceCompanyEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSourceEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSourceLocaleEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioVocabularyEloquentModel;
 use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachEloquentModel;
@@ -109,6 +135,34 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, CampaignEloquentModel> $campaigns
  * @property-read int|null $campaigns_count
  * @property-read Collection<int, CvEloquentModel> $cvs
+ * @property-read Collection<int, StudioProfileEloquentModel> $studioProfiles
+ * @property-read int|null $studio_profiles_count
+ * @property-read Collection<int, StudioPostingEloquentModel> $studioPostings
+ * @property-read int|null $studio_postings_count
+ * @property-read Collection<int, StudioRunEloquentModel> $studioRuns
+ * @property-read Collection<int, StudioApplicationEloquentModel> $studioApplications
+ * @property-read Collection<int, StudioInsightReportEloquentModel> $studioInsightReports
+ * @property-read Collection<int, StudioBudgetEloquentModel> $studioBudgets
+ * @property-read Collection<int, StudioProviderCallEloquentModel> $studioProviderCalls
+ * @property-read Collection<int, StudioEmbeddingEloquentModel> $studioEmbeddings
+ * @property-read Collection<int, StudioSourceEloquentModel> $studioSources
+ * @property-read Collection<int, StudioSourceCompanyEloquentModel> $studioSourceCompanies
+ * @property-read Collection<int, StudioSourceLocaleEloquentModel> $studioSourceLocales
+ * @property-read Collection<int, StudioPostingSourceEloquentModel> $studioPostingSources
+ * @property-read Collection<int, StudioPostingSightingEloquentModel> $studioPostingSightings
+ * @property-read Collection<int, StudioVocabularyEloquentModel> $studioVocabulary
+ * @property-read Collection<int, StudioQueryTemplateEloquentModel> $studioQueryTemplates
+ * @property-read Collection<int, StudioQueryExperimentEloquentModel> $studioQueryExperiments
+ * @property-read Collection<int, StudioChannelBaselineEloquentModel> $studioChannelBaselines
+ * @property-read Collection<int, StudioCvStructureEloquentModel> $studioCvStructures
+ * @property-read Collection<int, StudioCvEntryEloquentModel> $studioCvEntries
+ * @property-read Collection<int, StudioCvBulletEloquentModel> $studioCvBullets
+ * @property-read Collection<int, StudioCvSkillEloquentModel> $studioCvSkills
+ * @property-read Collection<int, StudioCvAuditEloquentModel> $studioCvAudits
+ * @property-read Collection<int, StudioMetricAnswerEloquentModel> $studioMetricAnswers
+ * @property-read Collection<int, StudioCvVersionEloquentModel> $studioCvVersions
+ * @property-read Collection<int, StudioExportEloquentModel> $studioExports
+ * @property-read Collection<int, StudioSkillRelationEloquentModel> $studioSkillRelations
  * @property-read Collection<int, ProductEloquentModel> $products
  * @property-read Collection<int, InvoiceEloquentModel> $invoices
  * @property-read Collection<int, PaymentAccountEloquentModel> $paymentAccounts
@@ -193,6 +247,30 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $invoices_count
  * @property-read int|null $payment_accounts_count
  * @property-read int|null $products_count
+ * @property-read int|null $studio_applications_count
+ * @property-read int|null $studio_budgets_count
+ * @property-read int|null $studio_channel_baselines_count
+ * @property-read int|null $studio_cv_audits_count
+ * @property-read int|null $studio_cv_bullets_count
+ * @property-read int|null $studio_cv_entries_count
+ * @property-read int|null $studio_cv_skills_count
+ * @property-read int|null $studio_cv_structures_count
+ * @property-read int|null $studio_cv_versions_count
+ * @property-read int|null $studio_embeddings_count
+ * @property-read int|null $studio_exports_count
+ * @property-read int|null $studio_insight_reports_count
+ * @property-read int|null $studio_metric_answers_count
+ * @property-read int|null $studio_posting_sightings_count
+ * @property-read int|null $studio_posting_sources_count
+ * @property-read int|null $studio_provider_calls_count
+ * @property-read int|null $studio_query_experiments_count
+ * @property-read int|null $studio_query_templates_count
+ * @property-read int|null $studio_runs_count
+ * @property-read int|null $studio_skill_relations_count
+ * @property-read int|null $studio_source_companies_count
+ * @property-read int|null $studio_source_locales_count
+ * @property-read int|null $studio_sources_count
+ * @property-read int|null $studio_vocabulary_count
  *
  * @mixin \Eloquent
  */
@@ -406,6 +484,176 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function cvs(): HasMany
     {
         return $this->hasMany(CvEloquentModel::class);
+    }
+
+    /**
+     * The job-studio search profiles this candidate owns.
+     *
+     * Inverse of `StudioProfileEloquentModel::user()` — declared here because
+     * `studio_profiles.user_id` is a foreign key and every FK in this project
+     * carries both sides of the relation.
+     *
+     * @return HasMany<StudioProfileEloquentModel, $this>
+     */
+    public function studioProfiles(): HasMany
+    {
+        return $this->hasMany(StudioProfileEloquentModel::class);
+    }
+
+    /**
+     * The job postings discovered for this candidate.
+     *
+     * Inverse of `StudioPostingEloquentModel::user()`.
+     *
+     * @return HasMany<StudioPostingEloquentModel, $this>
+     */
+    public function studioPostings(): HasMany
+    {
+        return $this->hasMany(StudioPostingEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioRunEloquentModel, $this> */
+    public function studioRuns(): HasMany
+    {
+        return $this->hasMany(StudioRunEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioApplicationEloquentModel, $this> */
+    public function studioApplications(): HasMany
+    {
+        return $this->hasMany(StudioApplicationEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioInsightReportEloquentModel, $this> */
+    public function studioInsightReports(): HasMany
+    {
+        return $this->hasMany(StudioInsightReportEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioBudgetEloquentModel, $this> */
+    public function studioBudgets(): HasMany
+    {
+        return $this->hasMany(StudioBudgetEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioProviderCallEloquentModel, $this> */
+    public function studioProviderCalls(): HasMany
+    {
+        return $this->hasMany(StudioProviderCallEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioEmbeddingEloquentModel, $this> */
+    public function studioEmbeddings(): HasMany
+    {
+        return $this->hasMany(StudioEmbeddingEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioSourceEloquentModel, $this> */
+    public function studioSources(): HasMany
+    {
+        return $this->hasMany(StudioSourceEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioSourceCompanyEloquentModel, $this> */
+    public function studioSourceCompanies(): HasMany
+    {
+        return $this->hasMany(StudioSourceCompanyEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioSourceLocaleEloquentModel, $this> */
+    public function studioSourceLocales(): HasMany
+    {
+        return $this->hasMany(StudioSourceLocaleEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioPostingSourceEloquentModel, $this> */
+    public function studioPostingSources(): HasMany
+    {
+        return $this->hasMany(StudioPostingSourceEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioPostingSightingEloquentModel, $this> */
+    public function studioPostingSightings(): HasMany
+    {
+        return $this->hasMany(StudioPostingSightingEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioVocabularyEloquentModel, $this> */
+    public function studioVocabulary(): HasMany
+    {
+        return $this->hasMany(StudioVocabularyEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioQueryTemplateEloquentModel, $this> */
+    public function studioQueryTemplates(): HasMany
+    {
+        return $this->hasMany(StudioQueryTemplateEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioQueryExperimentEloquentModel, $this> */
+    public function studioQueryExperiments(): HasMany
+    {
+        return $this->hasMany(StudioQueryExperimentEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioChannelBaselineEloquentModel, $this> */
+    public function studioChannelBaselines(): HasMany
+    {
+        return $this->hasMany(StudioChannelBaselineEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioCvStructureEloquentModel, $this> */
+    public function studioCvStructures(): HasMany
+    {
+        return $this->hasMany(StudioCvStructureEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioCvEntryEloquentModel, $this> */
+    public function studioCvEntries(): HasMany
+    {
+        return $this->hasMany(StudioCvEntryEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioCvBulletEloquentModel, $this> */
+    public function studioCvBullets(): HasMany
+    {
+        return $this->hasMany(StudioCvBulletEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioCvSkillEloquentModel, $this> */
+    public function studioCvSkills(): HasMany
+    {
+        return $this->hasMany(StudioCvSkillEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioCvAuditEloquentModel, $this> */
+    public function studioCvAudits(): HasMany
+    {
+        return $this->hasMany(StudioCvAuditEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioMetricAnswerEloquentModel, $this> */
+    public function studioMetricAnswers(): HasMany
+    {
+        return $this->hasMany(StudioMetricAnswerEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioCvVersionEloquentModel, $this> */
+    public function studioCvVersions(): HasMany
+    {
+        return $this->hasMany(StudioCvVersionEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioExportEloquentModel, $this> */
+    public function studioExports(): HasMany
+    {
+        return $this->hasMany(StudioExportEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioSkillRelationEloquentModel, $this> */
+    public function studioSkillRelations(): HasMany
+    {
+        return $this->hasMany(StudioSkillRelationEloquentModel::class);
     }
 
     /**

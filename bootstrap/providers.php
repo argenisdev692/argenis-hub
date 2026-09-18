@@ -14,6 +14,7 @@ use Modules\Clients\Providers\ClientsServiceProvider;
 use Modules\Company\Providers\CompanyServiceProvider;
 use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
 use Modules\CourseScripts\Providers\CourseScriptsServiceProvider;
+use Modules\CvJobStudio\Providers\CvJobStudioServiceProvider;
 use Modules\Cvs\Providers\CvsServiceProvider;
 use Modules\Invoices\Providers\InvoicesServiceProvider;
 use Modules\LeadScout\Providers\LeadScoutServiceProvider;
@@ -49,6 +50,7 @@ return [
     SocialMediaServiceProvider::class,
     CampaignServiceProvider::class,
     CvsServiceProvider::class,
+    CvJobStudioServiceProvider::class,
     // Billable catalog (courses / video courses) — must boot before Invoices,
     // whose line items and form options read the product catalog.
     ProductsServiceProvider::class,

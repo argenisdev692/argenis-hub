@@ -80,6 +80,11 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
             - off_script: content that departs from the supplied script.
             - script_coverage: a scripted topic covered thinly or skipped.
             - pacing: a section running long or short against its time budget.
+            - read_prompt_aloud: the speaker reads a prompt from the script (a
+              PROMPT: block, the text typed into the tool) aloud word for word,
+              which slows the explanation. The prompt should be pasted on screen
+              and summarised in one sentence. Name the prompt and quote the
+              first words of the reading.
 
             Do NOT propose cuts for filler words, stutters, repetitions or
             silences. Another stage already removes those with exact timings, so

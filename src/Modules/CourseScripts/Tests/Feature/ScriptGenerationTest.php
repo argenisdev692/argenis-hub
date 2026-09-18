@@ -82,6 +82,7 @@ it('writes and stores a complete script with its practice pack', function (): vo
         ->and($version->summary_points)->not->toBeEmpty()
         ->and($version->next_video['number'])->toBe(3)
         ->and($version->verification_checklist)->toHaveCount(3)
+        ->and($version->practice_exercise['success_criteria'])->toHaveCount(2)
         ->and($version->is_grounded)->toBeTrue()
         ->and($version->sources)->not->toBeEmpty()
         ->and($version->prompts_sheet_reason)->toBeNull()

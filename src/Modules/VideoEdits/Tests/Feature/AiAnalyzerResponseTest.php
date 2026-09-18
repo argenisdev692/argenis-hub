@@ -144,6 +144,23 @@ it('drops a recommendation of an unknown kind', function (): void {
         ->and($analysis->recommendations[0]->kind)->toBe(AiRecommendationKind::Pacing);
 });
 
+it('keeps a prompt read aloud as a recommendation, never as a cut', function (): void {
+    fakeAnalyzerFor([
+        'cuts' => [
+            ['reason' => 'read_prompt_aloud', 'start_word_index' => 0, 'end_word_index' => 1, 'confidence' => 90, 'evidence' => 'Prompt read'],
+        ],
+        'recommendations' => [
+            ['kind' => 'read_prompt_aloud', 'title' => 'PROMPT DEMO 1 read aloud', 'detail' => 'Paste it and summarise it.'],
+        ],
+    ]);
+
+    $analysis = app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null);
+
+    expect($analysis->cutProposals)->toBe([])
+        ->and($analysis->recommendations)->toHaveCount(1)
+        ->and($analysis->recommendations[0]->kind)->toBe(AiRecommendationKind::ReadPromptAloud);
+});
+
 it('marks the script as data rather than instructions in the prompt', function (): void {
     $client = fakeAnalyzerFor(['cuts' => [], 'recommendations' => []]);
 

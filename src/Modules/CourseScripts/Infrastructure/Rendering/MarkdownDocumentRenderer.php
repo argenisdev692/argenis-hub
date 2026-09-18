@@ -88,6 +88,7 @@ final readonly class MarkdownDocumentRenderer
         }
 
         $lines[] = '';
+        $lines = [...$lines, ...$this->exercise($document->practiceExercise, $t)];
 
         if ($document->nextVideo !== null) {
             $lines[] = sprintf('**%s:** %s (%s %d)', $t['next_video'], $document->nextVideo['title'], $t['video'], $document->nextVideo['number']);
@@ -317,6 +318,33 @@ final readonly class MarkdownDocumentRenderer
         }
 
         return ['### '.$title, '', ...array_map(fn (string $item): string => '- '.$this->inline($item), $items), ''];
+    }
+
+    /**
+     * The student's EJERCICIO PRÁCTICO. Versions written before it existed have
+     * none, and render exactly as they did.
+     *
+     * @param  array<string, mixed>|null  $exercise
+     * @param  array<string, string>  $t
+     * @return list<string>
+     */
+    private function exercise(?array $exercise, array $t): array
+    {
+        if ($exercise === null || trim((string) ($exercise['task'] ?? '')) === '') {
+            return [];
+        }
+
+        $title = trim((string) ($exercise['title'] ?? ''));
+
+        return [
+            '## '.$t['exercise'].($title === '' ? '' : ' — '.$this->inline($title)),
+            '',
+            sprintf('**%s:** %s', $t['exercise_scenario'], $this->inline((string) ($exercise['scenario'] ?? ''))),
+            '',
+            sprintf('**%s:** %s', $t['exercise_task'], $this->inline((string) $exercise['task'])),
+            '',
+            ...$this->list($t['exercise_criteria'], array_map(strval(...), (array) ($exercise['success_criteria'] ?? []))),
+        ];
     }
 
     private function cell(string $value): string

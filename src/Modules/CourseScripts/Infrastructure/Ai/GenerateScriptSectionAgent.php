@@ -42,10 +42,13 @@ final class GenerateScriptSectionAgent implements Agent, Conversational, HasProv
               narration, on_screen_prompt, expected_result, on_screen_actions,
               show_on_screen, on_screen_table, presenter_note.
             - narration: text = the exact spoken words, natural and specific, sized to
-              the section's minutes (about 130 spoken words per minute in total).
+              the section's minutes (about 150 spoken words per minute in total, a
+              dynamic pace: short sentences, no pauses written in).
             - on_screen_prompt: prompt = the complete literal prompt to type. Only if
               the outline says the course uses a tool. Follow it with an
-              expected_result and on_screen_actions.
+              expected_result and on_screen_actions. The presenter pastes it: the
+              narration before it states in ONE sentence what it asks for and why,
+              and never repeats the prompt text word for word.
             - on_screen_actions and presenter_note: items = short imperative steps.
             - show_on_screen: text = what is shown; read_aloud true when the presenter
               reads it; practice_file = the practice file name when the material comes

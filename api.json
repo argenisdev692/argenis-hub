@@ -3099,6 +3099,1877 @@
                     }
                 }
             }
+        },
+        "/cv-studio/postings/{uuid}/status": {
+            "put": {
+                "operationId": "cv-studio.postings.status",
+                "tags": [
+                    "StudioApplication"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePostingStatusData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/applications/{uuid}/outcome": {
+            "put": {
+                "operationId": "cv-studio.applications.outcome",
+                "tags": [
+                    "StudioApplication"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecordOutcomeData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/applications": {
+            "get": {
+                "operationId": "cv-studio.applications.index",
+                "tags": [
+                    "StudioApplication"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "current_page": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/StudioApplicationEloquentModel"
+                                            }
+                                        },
+                                        "first_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "from": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ],
+                                            "minimum": 1
+                                        },
+                                        "last_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "last_page": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "links": {
+                                            "type": "array",
+                                            "description": "Generated paginator links.",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "url": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "label": {
+                                                        "type": "string"
+                                                    },
+                                                    "active": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "url",
+                                                    "label",
+                                                    "active"
+                                                ]
+                                            }
+                                        },
+                                        "next_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "path": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "description": "Base path for paginator generated URLs."
+                                        },
+                                        "per_page": {
+                                            "type": "integer",
+                                            "description": "Number of items shown per page.",
+                                            "minimum": 0
+                                        },
+                                        "prev_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "to": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ],
+                                            "description": "Number of the last item in the slice.",
+                                            "minimum": 1
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "description": "Total number of items being paginated.",
+                                            "minimum": 0
+                                        }
+                                    },
+                                    "required": [
+                                        "current_page",
+                                        "data",
+                                        "first_page_url",
+                                        "from",
+                                        "last_page_url",
+                                        "last_page",
+                                        "links",
+                                        "next_page_url",
+                                        "path",
+                                        "per_page",
+                                        "prev_page_url",
+                                        "to",
+                                        "total"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/budgets": {
+            "get": {
+                "operationId": "cv-studio.budgets.index",
+                "tags": [
+                    "StudioCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "category": {
+                                                        "type": "string"
+                                                    },
+                                                    "limit_micros": {
+                                                        "type": "integer"
+                                                    },
+                                                    "spent_micros": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "category",
+                                                    "limit_micros",
+                                                    "spent_micros"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/budgets/own-rates": {
+            "get": {
+                "operationId": "cv-studio.budgets.own-rates",
+                "tags": [
+                    "StudioCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "bucket": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "unknown"
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    "applications": {
+                                                        "type": "string"
+                                                    },
+                                                    "positives": {
+                                                        "type": "string"
+                                                    },
+                                                    "rate": {
+                                                        "type": [
+                                                            "number",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "lower": {
+                                                        "type": "number"
+                                                    },
+                                                    "upper": {
+                                                        "type": "number"
+                                                    },
+                                                    "gate_passed": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "bucket",
+                                                    "applications",
+                                                    "positives",
+                                                    "rate",
+                                                    "lower",
+                                                    "upper",
+                                                    "gate_passed"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/sources": {
+            "get": {
+                "operationId": "cv-studio.sources.index",
+                "tags": [
+                    "StudioCatalog"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/StudioSourceEloquentModel"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/versions": {
+            "get": {
+                "operationId": "cv-studio.versions.index",
+                "tags": [
+                    "StudioCv"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "current_page": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/StudioCvVersionEloquentModel"
+                                            }
+                                        },
+                                        "first_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "from": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ],
+                                            "minimum": 1
+                                        },
+                                        "last_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "last_page": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "links": {
+                                            "type": "array",
+                                            "description": "Generated paginator links.",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "url": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "label": {
+                                                        "type": "string"
+                                                    },
+                                                    "active": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "url",
+                                                    "label",
+                                                    "active"
+                                                ]
+                                            }
+                                        },
+                                        "next_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "path": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "description": "Base path for paginator generated URLs."
+                                        },
+                                        "per_page": {
+                                            "type": "integer",
+                                            "description": "Number of items shown per page.",
+                                            "minimum": 0
+                                        },
+                                        "prev_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "to": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ],
+                                            "description": "Number of the last item in the slice.",
+                                            "minimum": 1
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "description": "Total number of items being paginated.",
+                                            "minimum": 0
+                                        }
+                                    },
+                                    "required": [
+                                        "current_page",
+                                        "data",
+                                        "first_page_url",
+                                        "from",
+                                        "last_page_url",
+                                        "last_page",
+                                        "links",
+                                        "next_page_url",
+                                        "path",
+                                        "per_page",
+                                        "prev_page_url",
+                                        "to",
+                                        "total"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/cvs/structure": {
+            "post": {
+                "operationId": "cv-studio.cvs.parse",
+                "tags": [
+                    "StudioCv"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "cv_uuid": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "uuid"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/cvs/audit": {
+            "post": {
+                "operationId": "cv-studio.cvs.audit",
+                "tags": [
+                    "StudioCv"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "cv_uuid": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "uuid"
+                                    },
+                                    "target_job_title": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 255
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/StudioCvAuditEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/versions/{uuid}/export": {
+            "get": {
+                "operationId": "cv-studio.versions.export",
+                "tags": [
+                    "StudioCv"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "docx",
+                                "pdf",
+                                null
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                },
+                                                "verified": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid",
+                                                "verified"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings": {
+            "get": {
+                "operationId": "cv-studio.postings.index",
+                "tags": [
+                    "StudioPosting"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "all",
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "remote_scope",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "remote_global",
+                                "remote_eu",
+                                "remote_pt_es",
+                                "remote_unclear",
+                                "hybrid_local",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/DataCollection"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/PaginatedDataCollection"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/CursorPaginatedDataCollection"
+                                        },
+                                        {
+                                            "type": "object"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/LazyCollection"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "cv-studio.postings.store",
+                "tags": [
+                    "StudioPosting"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/IngestPostingData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings/{uuid}": {
+            "get": {
+                "operationId": "cv-studio.postings.show",
+                "tags": [
+                    "StudioPosting"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "posting": {
+                                            "$ref": "#/components/schemas/StudioPostingData"
+                                        },
+                                        "requirements": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string"
+                                                    },
+                                                    "canonical_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "tag": {
+                                                        "type": "string"
+                                                    },
+                                                    "nature": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "uuid",
+                                                    "canonical_name",
+                                                    "tag",
+                                                    "nature"
+                                                ]
+                                            }
+                                        },
+                                        "gates": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "gate_code": {
+                                                        "type": "string"
+                                                    },
+                                                    "passed": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "reason_code": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "gate_code",
+                                                    "passed",
+                                                    "reason_code"
+                                                ]
+                                            }
+                                        },
+                                        "score": {
+                                            "anyOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/StudioScoreData"
+                                                },
+                                                {
+                                                    "type": "null"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "posting",
+                                        "requirements",
+                                        "gates",
+                                        "score"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "cv-studio.postings.destroy",
+                "tags": [
+                    "StudioPosting"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings/{uuid}/score": {
+            "post": {
+                "operationId": "cv-studio.postings.score",
+                "tags": [
+                    "StudioPosting"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ScorePostingInputData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/StudioScoreData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings/{uuid}/rescore": {
+            "post": {
+                "operationId": "cv-studio.postings.rescore",
+                "tags": [
+                    "StudioPosting"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ScorePostingInputData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/StudioScoreData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings/{uuid}/restore": {
+            "patch": {
+                "operationId": "cv-studio.postings.restore",
+                "tags": [
+                    "StudioPosting"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings/export": {
+            "get": {
+                "operationId": "cv-studio.postings.export",
+                "tags": [
+                    "StudioPostingExport"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text match. Which columns it searches is per-module; see the\nendpoint's own description.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Inclusive start of the date window. May not fall after `date_to`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Inclusive end of the date window. May not fall before `date_from`.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "all",
+                                "active",
+                                "suspended",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "remote_scope",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "remote_global",
+                                "remote_eu",
+                                "remote_pt_es",
+                                "remote_unclear",
+                                "hybrid_local",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "Export file format: `csv`, `xlsx` or `pdf`.",
+                        "schema": {
+                            "type": "string",
+                            "default": "csv"
+                        },
+                        "example": "xlsx"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/profiles": {
+            "get": {
+                "operationId": "cv-studio.profiles.index",
+                "tags": [
+                    "StudioProfile"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/DataCollection"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/PaginatedDataCollection"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/CursorPaginatedDataCollection"
+                                        },
+                                        {
+                                            "type": "object"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/LazyCollection"
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "cv-studio.profiles.store",
+                "tags": [
+                    "StudioProfile"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StudioProfileData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/profiles/{uuid}/policy": {
+            "put": {
+                "operationId": "cv-studio.profiles.policy",
+                "summary": "Opportunity policy edit (T-135, FR-51): the handler validates every\nfactor through the policy object before it touches the profile.\nNeutral toggle included",
+                "tags": [
+                    "StudioProfile"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateOpportunityPolicyData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/references": {
+            "get": {
+                "operationId": "cv-studio.references.index",
+                "tags": [
+                    "StudioReference"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/references/{uuid}/paste": {
+            "post": {
+                "operationId": "cv-studio.references.paste",
+                "tags": [
+                    "StudioReference"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasteJobTextData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/relations": {
+            "get": {
+                "operationId": "cv-studio.relations.index",
+                "tags": [
+                    "StudioRelation"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "current_page": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/StudioSkillRelationEloquentModel"
+                                            }
+                                        },
+                                        "first_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "from": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ],
+                                            "minimum": 1
+                                        },
+                                        "last_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "last_page": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "links": {
+                                            "type": "array",
+                                            "description": "Generated paginator links.",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "url": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "label": {
+                                                        "type": "string"
+                                                    },
+                                                    "active": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "url",
+                                                    "label",
+                                                    "active"
+                                                ]
+                                            }
+                                        },
+                                        "next_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "path": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "description": "Base path for paginator generated URLs."
+                                        },
+                                        "per_page": {
+                                            "type": "integer",
+                                            "description": "Number of items shown per page.",
+                                            "minimum": 0
+                                        },
+                                        "prev_page_url": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "to": {
+                                            "type": [
+                                                "integer",
+                                                "null"
+                                            ],
+                                            "description": "Number of the last item in the slice.",
+                                            "minimum": 1
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "description": "Total number of items being paginated.",
+                                            "minimum": 0
+                                        }
+                                    },
+                                    "required": [
+                                        "current_page",
+                                        "data",
+                                        "first_page_url",
+                                        "from",
+                                        "last_page_url",
+                                        "last_page",
+                                        "links",
+                                        "next_page_url",
+                                        "path",
+                                        "per_page",
+                                        "prev_page_url",
+                                        "to",
+                                        "total"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/relations/{uuid}/confirm": {
+            "post": {
+                "operationId": "cv-studio.relations.confirm",
+                "tags": [
+                    "StudioRelation"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/relations/{uuid}/reject": {
+            "post": {
+                "operationId": "cv-studio.relations.reject",
+                "tags": [
+                    "StudioRelation"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings/{uuid}/resolve": {
+            "post": {
+                "operationId": "cv-studio.postings.resolve",
+                "tags": [
+                    "StudioResolution"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/postings/{uuid}/unlink": {
+            "post": {
+                "operationId": "cv-studio.postings.unlink",
+                "tags": [
+                    "StudioResolution"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/runs": {
+            "post": {
+                "operationId": "cv-studio.runs.store",
+                "tags": [
+                    "StudioRun"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "profile_uuid": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "required": [
+                                    "profile_uuid"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid",
+                                                "status"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/runs/{uuid}": {
+            "get": {
+                "operationId": "cv-studio.runs.show",
+                "tags": [
+                    "StudioRun"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "run": {
+                                            "$ref": "#/components/schemas/StudioRunEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "run"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/cv-studio/runs/{uuid}/report": {
+            "get": {
+                "operationId": "cv-studio.runs.report",
+                "tags": [
+                    "StudioRun"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "report": {
+                                            "$ref": "#/components/schemas/StudioInsightReportEloquentModel"
+                                        }
+                                    },
+                                    "required": [
+                                        "report"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -4354,6 +6225,97 @@
                 ],
                 "title": "GenerateSocialMediaContentData"
             },
+            "IngestPostingData": {
+                "type": "object",
+                "description": "Manual posting intake (references + pasted text live here until the\ndiscovery providers land). Requirements arrive structured \u2014 the LLM\nextractor is a later slice; this DTO is its future output contract.",
+                "properties": {
+                    "profile_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "canonical_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "maxLength": 2048
+                    },
+                    "employer_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "location_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    },
+                    "source": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 64
+                    },
+                    "discovery_channel": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 32
+                    },
+                    "text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 100000
+                    },
+                    "requirements": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "canonical_name": {
+                                    "type": "string",
+                                    "maxLength": 255
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "enum": [
+                                        "required",
+                                        "preferred",
+                                        "bonus"
+                                    ]
+                                },
+                                "nature": {
+                                    "type": "string",
+                                    "enum": [
+                                        "hard",
+                                        "soft"
+                                    ]
+                                }
+                            }
+                        },
+                        "maxItems": 100
+                    }
+                },
+                "required": [
+                    "profile_uuid",
+                    "title",
+                    "canonical_url"
+                ],
+                "title": "IngestPostingData"
+            },
             "InvoiceDetailData": {
                 "type": "object",
                 "properties": {
@@ -4649,6 +6611,20 @@
                 "type": "object",
                 "additionalProperties": {},
                 "title": "PaginatedDataCollection"
+            },
+            "PasteJobTextData": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "minLength": 50,
+                        "maxLength": 100000
+                    }
+                },
+                "required": [
+                    "text"
+                ],
+                "title": "PasteJobTextData"
             },
             "Permission": {
                 "type": "object",
@@ -5125,6 +7101,35 @@
                 ],
                 "title": "PublicContactSupportData"
             },
+            "RecordOutcomeData": {
+                "type": "object",
+                "properties": {
+                    "outcome": {
+                        "type": "string",
+                        "enum": [
+                            "unknown",
+                            "pending",
+                            "no_reply",
+                            "rejected",
+                            "screening",
+                            "interview",
+                            "offer",
+                            "withdrawn"
+                        ]
+                    },
+                    "note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "outcome"
+                ],
+                "title": "RecordOutcomeData"
+            },
             "ReelPackageData": {
                 "type": "object",
                 "properties": {
@@ -5216,6 +7221,123 @@
                     "deleted_at"
                 ],
                 "title": "Role"
+            },
+            "ScorePostingInputData": {
+                "type": "object",
+                "description": "Explicit scoring inputs for slice 1. The CV-structure tables (Phase I)\nwill feed these rows; until then the caller supplies them, which keeps\nscoring deterministic and provider-free (NFR-1, FR-37).",
+                "properties": {
+                    "cv_skills": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "maxLength": 255
+                                },
+                                "evidence": {
+                                    "type": "string",
+                                    "enum": [
+                                        "list_only",
+                                        "in_bullet",
+                                        "both"
+                                    ]
+                                },
+                                "position_ratio": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                }
+                            }
+                        },
+                        "maxItems": 500
+                    },
+                    "similarities": {
+                        "type": "object",
+                        "properties": {
+                            "title_cosine": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": -1,
+                                "maximum": 1
+                            },
+                            "responsibility_cosine": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": -1,
+                                "maximum": 1
+                            }
+                        }
+                    },
+                    "signals": {
+                        "type": "object",
+                        "properties": {
+                            "experience": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100
+                            },
+                            "location": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100
+                            },
+                            "education": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100
+                            },
+                            "language": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100
+                            }
+                        }
+                    },
+                    "cap_context": {
+                        "type": "object",
+                        "properties": {
+                            "readable": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "credential_ok": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "evidence_ok": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "title": "ScorePostingInputData"
             },
             "SocialCopyData": {
                 "type": "object",
@@ -5722,6 +7844,1019 @@
                 ],
                 "title": "StorePublicContactSupportRequest"
             },
+            "StudioApplicationEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "posting_id": {
+                        "type": "integer"
+                    },
+                    "cv_version_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "export_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "applied_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "outcome": {
+                        "type": "string"
+                    },
+                    "outcome_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "outcome_note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "posting_id",
+                    "cv_version_id",
+                    "export_id",
+                    "status",
+                    "applied_at",
+                    "outcome",
+                    "outcome_at",
+                    "outcome_note",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "StudioApplicationEloquentModel"
+            },
+            "StudioCvAuditEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "cv_id": {
+                        "type": "integer"
+                    },
+                    "structure_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "profile_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "verdict": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "verdict_reasons": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "structural_checks": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "parse_recovery_ratio": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "content_issues": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "target_job_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "strengths": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "improvements": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "keyword_gaps": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "xyz_gaps": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "rules_version": {
+                        "type": "integer"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "cv_id",
+                    "structure_id",
+                    "profile_id",
+                    "verdict",
+                    "verdict_reasons",
+                    "structural_checks",
+                    "parse_recovery_ratio",
+                    "content_issues",
+                    "target_job_title",
+                    "strengths",
+                    "improvements",
+                    "keyword_gaps",
+                    "xyz_gaps",
+                    "rules_version",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "StudioCvAuditEloquentModel"
+            },
+            "StudioCvVersionEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "cv_id": {
+                        "type": "integer"
+                    },
+                    "structure_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "profile_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "posting_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "purpose": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "content": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "page_count_estimate": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "parent_version_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "bullet_provenance": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "rules_version": {
+                        "type": "integer"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "cv_id",
+                    "structure_id",
+                    "profile_id",
+                    "posting_id",
+                    "purpose",
+                    "language",
+                    "content",
+                    "page_count_estimate",
+                    "parent_version_id",
+                    "bullet_provenance",
+                    "rules_version",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "StudioCvVersionEloquentModel"
+            },
+            "StudioInsightReportEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "run_id": {
+                        "type": "integer"
+                    },
+                    "jds_analyzed": {
+                        "type": "integer"
+                    },
+                    "sample_note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "requirements": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "reach_table": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "recommendations": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "outcome_correlation": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "rules_version": {
+                        "type": "integer"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "run_id",
+                    "jds_analyzed",
+                    "sample_note",
+                    "requirements",
+                    "reach_table",
+                    "recommendations",
+                    "outcome_correlation",
+                    "rules_version",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "StudioInsightReportEloquentModel"
+            },
+            "StudioPostingData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "employer_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "location_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "remote_scope": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "discovery_channel": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "apply_destination": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "total_score": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "band": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cap_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "attribution": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "canonical_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "title",
+                    "status"
+                ],
+                "title": "StudioPostingData"
+            },
+            "StudioProfileData": {
+                "type": "object",
+                "description": "Profile create/update shape (fused: \u226590% identical). Gates, stack lock,\ngeography, languages, seniority band and protected block are profile data,\nnever engine constants (FR-30). `rules` carries the full ruleset versioned\nsnapshot; null means \"use the config defaults at score time\".",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "slug": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9-]+$",
+                        "maxLength": 64
+                    },
+                    "base_city": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 128
+                    },
+                    "base_country": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 8
+                    },
+                    "accepted_remote_scopes": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "remote_global",
+                                "remote_eu",
+                                "remote_pt_es",
+                                "remote_unclear",
+                                "hybrid_local"
+                            ]
+                        }
+                    },
+                    "stack_must": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "stack_reject": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "geography_deny": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "years_baseline": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 50
+                    }
+                },
+                "required": [
+                    "name",
+                    "slug"
+                ],
+                "title": "StudioProfileData"
+            },
+            "StudioRunEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "profile_id": {
+                        "type": "integer"
+                    },
+                    "cv_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "structure_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "started_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "finished_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "queries": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "candidates_count": {
+                        "type": "integer"
+                    },
+                    "gate_passed_count": {
+                        "type": "integer"
+                    },
+                    "extracted_count": {
+                        "type": "integer"
+                    },
+                    "scored_count": {
+                        "type": "integer"
+                    },
+                    "new_matches_count": {
+                        "type": "integer"
+                    },
+                    "excluded_count": {
+                        "type": "integer"
+                    },
+                    "spend_micros": {
+                        "type": "integer"
+                    },
+                    "refresh_flags": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "rules_version": {
+                        "type": "integer"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "profile_id",
+                    "cv_id",
+                    "structure_id",
+                    "status",
+                    "started_at",
+                    "finished_at",
+                    "queries",
+                    "candidates_count",
+                    "gate_passed_count",
+                    "extracted_count",
+                    "scored_count",
+                    "new_matches_count",
+                    "excluded_count",
+                    "spend_micros",
+                    "refresh_flags",
+                    "notes",
+                    "rules_version",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "StudioRunEloquentModel"
+            },
+            "StudioScoreData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "h": {
+                        "type": "number"
+                    },
+                    "s": {
+                        "type": "number"
+                    },
+                    "d": {
+                        "type": "number"
+                    },
+                    "raw_score": {
+                        "type": "number"
+                    },
+                    "total_score": {
+                        "type": "number"
+                    },
+                    "band": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cap_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "rules_version": {
+                        "type": "integer"
+                    },
+                    "heuristic_label": {
+                        "type": "string"
+                    },
+                    "computed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "h",
+                    "s",
+                    "d",
+                    "raw_score",
+                    "total_score",
+                    "rules_version",
+                    "heuristic_label"
+                ],
+                "title": "StudioScoreData"
+            },
+            "StudioSkillRelationEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "from_skill": {
+                        "type": "string"
+                    },
+                    "to_skill": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "origin": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "from_skill",
+                    "to_skill",
+                    "kind",
+                    "origin",
+                    "status",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "StudioSkillRelationEloquentModel"
+            },
+            "StudioSourceEloquentModel": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "endpoint": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "auth_kind": {
+                        "type": "string"
+                    },
+                    "tier": {
+                        "type": "integer"
+                    },
+                    "layer": {
+                        "type": "string"
+                    },
+                    "attribution_required": {
+                        "type": "boolean"
+                    },
+                    "attribution_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "redistribution_allowed": {
+                        "type": "boolean"
+                    },
+                    "publish_delay_hours": {
+                        "type": "integer"
+                    },
+                    "rate_limit_per_minute": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "health_checked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "gate_tags": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "resolution_priority": {
+                        "type": "integer"
+                    },
+                    "supplies_full_text": {
+                        "type": "boolean"
+                    },
+                    "company_scoped": {
+                        "type": "boolean"
+                    },
+                    "ats_kind": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "endpoint_template": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "supports_since_filter": {
+                        "type": "boolean"
+                    },
+                    "requires_api_key": {
+                        "type": "boolean"
+                    },
+                    "access_mode": {
+                        "type": "string"
+                    },
+                    "resolution_tier": {
+                        "type": "integer"
+                    },
+                    "usage_restriction": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "user_id",
+                    "kind",
+                    "name",
+                    "endpoint",
+                    "auth_kind",
+                    "tier",
+                    "layer",
+                    "attribution_required",
+                    "attribution_text",
+                    "redistribution_allowed",
+                    "publish_delay_hours",
+                    "rate_limit_per_minute",
+                    "status",
+                    "health_checked_at",
+                    "gate_tags",
+                    "resolution_priority",
+                    "supplies_full_text",
+                    "company_scoped",
+                    "ats_kind",
+                    "endpoint_template",
+                    "supports_since_filter",
+                    "requires_api_key",
+                    "access_mode",
+                    "resolution_tier",
+                    "usage_restriction",
+                    "deleted_at",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "StudioSourceEloquentModel"
+            },
             "SuggestCampaignTopicsData": {
                 "type": "object",
                 "description": "Input for Step 1 (10 Meta Ads lead-gen angle candidates). `niche` is an\noptional steer \u2014 when blank the agent leans entirely on the company\nprofile + Tavily trend research, mirroring\n{@see SuggestSocialMediaTopicsData}.",
@@ -5871,6 +9006,69 @@
                     "language"
                 ],
                 "title": "SuggestSocialMediaTopicsData"
+            },
+            "UpdateOpportunityPolicyData": {
+                "type": "object",
+                "description": "Opportunity policy edit (T-135, FR-51): validated by `OpportunityPolicy`\n(every factor in [0.1, 1] with grade + source) before it touches the\nprofile \u2014 the handler parses, never trusts.",
+                "properties": {
+                    "channels": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "value": {
+                                    "type": "number",
+                                    "minimum": 0.1,
+                                    "maximum": 1
+                                },
+                                "grade": {
+                                    "type": "string",
+                                    "maxLength": 4
+                                },
+                                "source": {
+                                    "type": "string",
+                                    "maxLength": 255
+                                }
+                            },
+                            "required": [
+                                "value",
+                                "grade",
+                                "source"
+                            ]
+                        },
+                        "minItems": 1
+                    },
+                    "neutral": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "channels"
+                ],
+                "title": "UpdateOpportunityPolicyData"
+            },
+            "UpdatePostingStatusData": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "new",
+                            "saved",
+                            "applied",
+                            "dismissed",
+                            "skipped",
+                            "reference"
+                        ]
+                    }
+                },
+                "required": [
+                    "status"
+                ],
+                "title": "UpdatePostingStatusData"
             },
             "User": {
                 "type": "object",

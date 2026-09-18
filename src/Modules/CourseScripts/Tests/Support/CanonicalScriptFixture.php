@@ -96,6 +96,12 @@ final class CanonicalScriptFixture
             'continuity' => 'Conecta con el Vídeo 21 y prepara el Vídeo 23.',
             'organisations_used' => $withPractice ? ['Heliantia Group', 'Transportes Meridional S.L.'] : ['Tecnoform S.A.'],
             'verification_checklist' => ['Se muestra la conexión de Drive', 'DEMO 1 resume un documento', 'DEMO 2 genera la tabla comparativa'],
+            'practice_exercise' => [
+                'title' => 'Tu primera comparativa real',
+                'scenario' => 'Tu equipo tiene dos presupuestos de proveedores en Drive y hay que decidir esta semana.',
+                'task' => 'Conecta tu Drive y pide a Claude una tabla que compare los dos presupuestos en precio, plazos y riesgos.',
+                'success_criteria' => ['La tabla cita los dos documentos', 'Las cifras coinciden con los originales'],
+            ],
         ];
     }
 

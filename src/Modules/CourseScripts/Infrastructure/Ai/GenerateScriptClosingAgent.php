@@ -49,6 +49,14 @@ final class GenerateScriptClosingAgent implements Agent, Conversational, HasProv
               from the course bible or from the practice pack.
             - verification_checklist: what must visibly happen on screen, one item per
               demonstration, plus format checks.
+            - practice_exercise: the EJERCICIO PRÁCTICO the student does on their own
+              after the video — every video has one, conceptual ones included.
+              title: a short, inviting name. scenario: a concrete, realistic
+              situation from the student's own work or life (2–4 sentences) that
+              makes them want to try it. task: exactly what to produce, reusing
+              what the video taught, without copying a demo step by step.
+              success_criteria: 2–4 observable checks that tell the student they
+              got it right.
             - Write in the course language. Fix every correction listed in the request.
             INSTRUCTIONS."\n\n".UntrustedContentBlock::DIRECTIVE;
     }
@@ -68,6 +76,12 @@ final class GenerateScriptClosingAgent implements Agent, Conversational, HasProv
             'continuity' => $schema->string()->required(),
             'organisations_used' => $schema->array()->items($schema->string())->required(),
             'verification_checklist' => $schema->array()->items($schema->string())->required(),
+            'practice_exercise' => $schema->object(static fn (JsonSchema $schema): array => [
+                'title' => $schema->string()->required(),
+                'scenario' => $schema->string()->required(),
+                'task' => $schema->string()->required(),
+                'success_criteria' => $schema->array()->items($schema->string())->required(),
+            ])->required(),
         ];
     }
 }

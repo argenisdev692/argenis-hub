@@ -27,6 +27,7 @@ final class ScriptVersionData extends Data
      * @param  array<string, mixed>|null  $nextVideo
      * @param  array<string, mixed>  $recordingNotes
      * @param  list<string>  $verificationChecklist
+     * @param  array{title: string, scenario: string, task: string, success_criteria: list<string>}|null  $practiceExercise
      * @param  array<string, mixed>|null  $errorsCheck
      * @param  array<string, int>|null  $reviewScores
      * @param  list<array{target: string, text: string}>|null  $reviewObjections
@@ -51,6 +52,7 @@ final class ScriptVersionData extends Data
         public ?array $nextVideo,
         public array $recordingNotes,
         public array $verificationChecklist,
+        public ?array $practiceExercise,
         public ?array $errorsCheck,
         public bool $isGrounded,
         public ?string $promptsSheetReason,
@@ -90,6 +92,7 @@ final class ScriptVersionData extends Data
             nextVideo: $version->next_video,
             recordingNotes: $version->recording_notes,
             verificationChecklist: $version->verification_checklist,
+            practiceExercise: $version->practice_exercise,
             errorsCheck: $version->errors_check,
             isGrounded: $version->is_grounded,
             promptsSheetReason: $version->prompts_sheet_reason,
