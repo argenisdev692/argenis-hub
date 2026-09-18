@@ -1125,6 +1125,441 @@ declare namespace Modules {
             }
         }
     }
+    namespace LeadScout {
+        namespace Application {
+            namespace DTOs {
+                export type AiSettingsData = {
+                    readonly purposes: Record<
+                        string,
+                        {
+                            provider: string | null;
+                            model: string | null;
+                            fallback_provider: string | null;
+                            fallback_model: string | null;
+                            options: {
+                                provider: string;
+                                model: string;
+                                label: string;
+                                available: boolean;
+                                unavailable_reason: string | null;
+                                est_cost_per_100_usd: number;
+                                price_expired: boolean;
+                            }[];
+                        }
+                    >;
+                };
+                export type BudgetStatusData = {
+                    readonly period: string;
+                    readonly categories: {
+                        category: string;
+                        limit_micros: number;
+                        spent_micros: number;
+                        percent: number;
+                        exhausted: boolean;
+                    }[];
+                };
+                export type CompanyData = {
+                    readonly uuid: string;
+                    readonly name: string;
+                    readonly domain: string;
+                    readonly country: string | null;
+                    readonly origin: string;
+                    readonly company_type: string | null;
+                    readonly created_at: string | null;
+                };
+                export type ContactData = {
+                    readonly uuid: string;
+                    readonly full_name: string | null;
+                    readonly role_title: string | null;
+                    readonly role_category: string | null;
+                    readonly is_primary: boolean;
+                    readonly published_email: string | null;
+                    readonly email_kind: string | null;
+                    readonly public_profile_url: string | null;
+                    readonly source: string;
+                    readonly evidence_url: string | null;
+                    readonly evidence_excerpt: string | null;
+                    readonly last_verified_at: string | null;
+                };
+                export type CreateManualLeadData = {
+                    name: string;
+                    url: string;
+                    note: string | null;
+                };
+                export type CvOptionData = {
+                    readonly uuid: string;
+                    readonly title: string;
+                    readonly niche: string;
+                    readonly file_type: string;
+                    readonly is_primary: boolean;
+                    readonly updated_at: string;
+                    readonly importable: boolean;
+                };
+                export type DecisionRuleData = {
+                    sampleSize: number | null;
+                    windowDays: number | null;
+                    thresholds: Record<string, number> | null;
+                };
+                export type GenerateDraftData = {
+                    jobPostingId: string | null;
+                    variant: string | null;
+                    language: string | null;
+                    provider: string | null;
+                    model: string | null;
+                };
+                export type ImportCvData = {
+                    cvUuid: string;
+                };
+                export type LeadDetailData = {
+                    readonly company: Record<string, any>;
+                    readonly postings: {
+                        uuid: string;
+                        title: string;
+                        status: string;
+                        source_url: string;
+                    }[];
+                    readonly score: {
+                        subscores: Record<string, number>;
+                        lead_score: number | null;
+                        confidence: number | null;
+                        tier: string | null;
+                        discard_reason: string | null;
+                        rules_version: string | null;
+                    } | null;
+                    readonly reasons: {
+                        points: number;
+                        explanation: string;
+                        signal_key: string | null;
+                        evidence_url: string | null;
+                        evidence_excerpt: string | null;
+                    }[];
+                    readonly decisors: Modules.LeadScout.Application.DTOs.ContactData[];
+                    readonly channels: {
+                        uuid: string | null;
+                        type: string;
+                        url: string | null;
+                        rank: number;
+                        allowed: boolean;
+                        blocked_reason: string | null;
+                        warning: string | null;
+                        audience: string | null;
+                        evidence_url: string | null;
+                    }[];
+                    readonly outreaches: Modules.LeadScout.Application.DTOs.OutreachData[];
+                    readonly cold_email_allowed: boolean;
+                    readonly employment_application: boolean;
+                };
+                export type LeadFilterData = {
+                    tier: string[] | null;
+                    country: string[] | null;
+                    company_type: string[] | null;
+                    signal_type: string[] | null;
+                    stage: string[] | null;
+                    origin: string[] | null;
+                    needs_research: boolean | null;
+                    search: string | null;
+                    date_from: string | null;
+                    date_to: string | null;
+                    per_page: number | null;
+                };
+                export type LeadListItemData = {
+                    readonly uuid: string;
+                    readonly name: string;
+                    readonly domain: string;
+                    readonly country: string | null;
+                    readonly company_type: string | null;
+                    readonly origin: string;
+                    readonly discovery_wave: string | null;
+                    readonly tier: string | null;
+                    readonly lead_score: number | null;
+                    readonly confidence: number | null;
+                    readonly needs_research: boolean;
+                    readonly activity_status: string;
+                    readonly has_decision_maker: boolean;
+                    readonly updated_at: string | null;
+                };
+                export type MetricsFilterData = {
+                    from: string | null;
+                    to: string | null;
+                    groupBy: string | null;
+                };
+                export type OpportunityData = {
+                    readonly uuid: string;
+                    readonly outreach_uuid: string;
+                    readonly type: string;
+                    readonly hours_per_month: number | null;
+                    readonly hourly_rate_cents: number | null;
+                    readonly amount_cents: number | null;
+                    readonly currency: string;
+                    readonly status: string;
+                    readonly started_at: string | null;
+                    readonly ended_at: string | null;
+                };
+                export type OutreachData = {
+                    readonly uuid: string;
+                    readonly company_uuid: string;
+                    readonly stage: string;
+                    readonly send_medium: string | null;
+                    readonly outreach_kind: string | null;
+                    readonly sender_kind: string | null;
+                    readonly variant: string | null;
+                    readonly draft_body: string | null;
+                    readonly ai_provider: string | null;
+                    readonly ai_model: string | null;
+                    readonly channel_warning: string | null;
+                    readonly legal_rule_status: string | null;
+                    readonly sent_at: string | null;
+                    readonly reply_outcome: string | null;
+                    readonly stage_changed_at: string | null;
+                    readonly contact_channel_id: string | null;
+                    readonly opportunities: {
+                        uuid: string;
+                        type: string;
+                        status: string;
+                        hours_per_month: number | null;
+                        amount_cents: number | null;
+                    }[];
+                };
+                export type ProfileData = {
+                    readonly uuid: string;
+                    readonly version: number;
+                    readonly source_cv_uuid: string | null;
+                    readonly confirmed_skills: string[];
+                    readonly potential_skills: string[];
+                    readonly proof_points: Record<string, any>[];
+                    readonly languages: Record<string, string>;
+                    readonly min_rate_cents: number | null;
+                    readonly target_countries: string[] | null;
+                    readonly weights: Record<string, any> | null;
+                    readonly stale: boolean;
+                    readonly updated_at: string | null;
+                };
+                export type RecordReplyData = {
+                    outcome: string;
+                    repliedAt: string | null;
+                    notes: string | null;
+                };
+                export type ScoreResultData = {
+                    readonly uuid: string;
+                    readonly company_uuid: string;
+                    readonly subscores: Record<string, number>;
+                    readonly lead_score: number;
+                    readonly confidence: number;
+                    readonly tier: string;
+                    readonly discard_reason: string | null;
+                    readonly reasons: {
+                        signal_key: string;
+                        points: number;
+                        explanation: string;
+                    }[];
+                    readonly rules_version: string;
+                };
+                export type SourceData = {
+                    readonly uuid: string;
+                    readonly name: string;
+                    readonly type: string;
+                    readonly country: string | null;
+                    readonly access_method: string;
+                    readonly frequency_minutes: number;
+                    readonly priority: number;
+                    readonly status: string;
+                    readonly last_run_at: string | null;
+                    readonly last_cursor: string | null;
+                    readonly terms_reviewed_at: string | null;
+                };
+                export type SuppressData = {
+                    domain: string;
+                    reason: string;
+                };
+                export type UpdateAiSettingsData = {
+                    purpose: string;
+                    provider: string;
+                    model: string;
+                    fallbackProvider: string | null;
+                    fallbackModel: string | null;
+                };
+                export type UpdateBudgetsData = {
+                    budgets: {
+                        category: string;
+                        limit_eur: number;
+                    }[];
+                };
+                export type UpdateChannelData = {
+                    status: string;
+                };
+                export type UpdateOutreachData = {
+                    draftBody: string | null;
+                    stage: string | null;
+                    notes: string | null;
+                    contactChannelId: string | null;
+                    sendMedium: string | null;
+                    senderKind: string | null;
+                    acknowledgePendingLegal: boolean | null;
+                };
+                export type UpdateProfileData = {
+                    weights: Record<string, number> | null;
+                    languages: Record<string, string> | null;
+                    minRateCents: number | null;
+                    targetCountries: string[] | null;
+                };
+                export type UpdateSourceData = {
+                    status: string | null;
+                    frequencyMinutes: number | null;
+                    termsReviewedAt: string | null;
+                };
+                export type UpsertContactData = {
+                    fullName: string;
+                    roleTitle: string;
+                    roleCategory: string;
+                    publishedEmail: string | null;
+                    publicProfileUrl: string | null;
+                    isPrimary: boolean | null;
+                };
+                export type UpsertOpportunityData = {
+                    type: string | null;
+                    hoursPerMonth: number | null;
+                    hourlyRateCents: number | null;
+                    amountCents: number | null;
+                    currency: string | null;
+                    status: string | null;
+                    startedAt: string | null;
+                    endedAt: string | null;
+                };
+            }
+        }
+        namespace Domain {
+            namespace Enums {
+                export type ActivityStatus =
+                    'active' | 'stale' | 'inactive' | 'unknown';
+                export type AiPurpose = 'extraction' | 'drafting';
+                export type BudgetCategory = 'search' | 'extraction' | 'ai';
+                export type ChannelAudience =
+                    'leadership_sales' | 'hr_recruiting' | 'unknown';
+                export type ChannelStatus = 'active' | 'broken' | 'used';
+                export type ChannelType =
+                    | 'job_posting_apply'
+                    | 'freelance_call'
+                    | 'partner_page'
+                    | 'contact_form'
+                    | 'careers_form'
+                    | 'generic_email'
+                    | 'company_network_page';
+                export type CompanyOrigin =
+                    'job_posting' | 'discovery' | 'manual' | 'import';
+                export type CompanyType =
+                    | 'software_agency'
+                    | 'consultancy'
+                    | 'product_company'
+                    | 'recruiter'
+                    | 'large_outsourcer'
+                    | 'other';
+                export type ContactSource =
+                    'job_posting' | 'website' | 'manual';
+                export type ContractType =
+                    'freelance' | 'employment' | 'unknown';
+                export type DecisionOutcome =
+                    'scale' | 'iterate' | 'stop' | 'inconclusive';
+                export type DiscardReason =
+                    | 'suppressed'
+                    | 'large_outsourcer'
+                    | 'low_technical'
+                    | 'onsite_abroad'
+                    | 'solo_freelancer'
+                    | 'inactive'
+                    | 'dead_or_acquired';
+                export type EmailKind = 'nominative' | 'generic';
+                export type EmployeeRange =
+                    | 'solo'
+                    | 'from_2_to_4'
+                    | 'from_5_to_10'
+                    | 'from_11_to_50'
+                    | 'from_51_to_200'
+                    | 'over_200'
+                    | 'unknown';
+                export type ExtractionMethod = 'rule' | 'ai';
+                export type FetchMethod =
+                    'cache' | 'robots' | 'http' | 'firecrawl' | 'api' | 'rss';
+                export type FetchStatus =
+                    | 'ok'
+                    | 'blocked'
+                    | 'failed'
+                    | 'skipped_robots'
+                    | 'proxy_mismatch';
+                export type LegalRuleStatus =
+                    'pending_verification' | 'verified';
+                export type MessageVariant =
+                    'vacancy' | 'stack' | 'legacy' | 'sector';
+                export type OpportunityStatus = 'open' | 'won' | 'lost';
+                export type OpportunityType =
+                    'trial' | 'project' | 'retainer' | 'staff_augmentation';
+                export type OutreachChannel =
+                    | 'email'
+                    | 'contact_form'
+                    | 'job_posting'
+                    | 'linkedin_manual'
+                    | 'employment_application';
+                export type OutreachKind =
+                    'contractor_offer' | 'employment_application';
+                export type OutreachStage =
+                    | 'draft'
+                    | 'ready'
+                    | 'sent'
+                    | 'replied'
+                    | 'positive'
+                    | 'call'
+                    | 'trial'
+                    | 'won'
+                    | 'recurrent'
+                    | 'lost'
+                    | 'do_not_contact';
+                export type PageType =
+                    | 'home'
+                    | 'services'
+                    | 'about'
+                    | 'team'
+                    | 'jobs'
+                    | 'contact'
+                    | 'cases'
+                    | 'blog'
+                    | 'partners'
+                    | 'legal'
+                    | 'privacy';
+                export type PostingStatus = 'active' | 'expired';
+                export type PrivacyRequestOutcome =
+                    'pending' | 'resolved' | 'rejected';
+                export type PrivacyRequestType =
+                    'access' | 'erasure' | 'objection' | 'rectification';
+                export type RemoteMode =
+                    'remote' | 'hybrid' | 'onsite' | 'unknown';
+                export type ReplyOutcome =
+                    'interested' | 'not_interested' | 'unsubscribe';
+                export type RoleCategory =
+                    'founder' | 'executive' | 'technical_lead';
+                export type SearchPurpose = 'discovery' | 'resolve';
+                export type SearchStatus = 'ok' | 'failed' | 'quota_exhausted';
+                export type SignalDimension =
+                    | 'technical'
+                    | 'commercial'
+                    | 'remote'
+                    | 'communication'
+                    | 'recurrent'
+                    | 'vitality'
+                    | 'geo_contract';
+                export type SignalNature = 'fact' | 'inference';
+                export type SourceStatus =
+                    'active' | 'paused' | 'failing' | 'quota_exhausted';
+                export type SourceType =
+                    | 'job_api'
+                    | 'rss'
+                    | 'directory'
+                    | 'search'
+                    | 'company_website';
+                export type SuppressionSource =
+                    'manual' | 'objection' | 'dgc_list';
+                export type Tier = 'A' | 'B' | 'C' | 'discarded';
+            }
+        }
+    }
     namespace PaymentAccounts {
         namespace Application {
             namespace DTOs {

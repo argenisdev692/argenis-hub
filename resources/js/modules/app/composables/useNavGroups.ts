@@ -17,6 +17,7 @@ import {
     LayoutGrid,
     LifeBuoy,
     Megaphone,
+    Radar,
     ScrollText,
     Share2,
     ShieldCheck,
@@ -38,6 +39,7 @@ import { index as contactSupportsIndex } from '@/routes/contact-supports';
 import { index as courseScriptsIndex } from '@/routes/course-scripts';
 import { index as cvsIndex } from '@/routes/cvs';
 import { index as invoicesIndex } from '@/routes/invoices';
+import { index as leadScoutIndex } from '@/routes/lead-scout';
 import { index as permissionsIndex } from '@/routes/permissions';
 import { index as portfoliosIndex } from '@/routes/portfolios';
 import { index as postsIndex } from '@/routes/posts';
@@ -173,6 +175,18 @@ export function useNavGroups(): readonly NavGroup[] {
                     href: cvsIndex(),
                     icon: FileText,
                     permission: 'VIEW_ANY_CVS',
+                },
+            ],
+        },
+        {
+            id: 'prospecting',
+            label: 'Prospecting',
+            items: [
+                {
+                    title: 'LeadScout',
+                    href: leadScoutIndex(),
+                    icon: Radar,
+                    permission: 'VIEW_ANY_LEAD_SCOUT',
                 },
             ],
         },

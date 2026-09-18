@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "mode": "video-content-es",
+  "updated_at": "2026-08-04T03:15:00+01:00",
+  "companies": {
+    "https://openwebinars.net/ser-formador-en-openwebinars": {
+      "name": "OpenWebinars",
+      "country": "España",
+      "application_channel": "https://teamtailor.openwebinars.net/ · profesorado@openwebinars.net",
+      "content_needs": ["grabar cursos", "escribir cursos", "crear ejercicios", "revisar contenido"],
+      "tech_focus": ["Inteligencia Artificial", "Desarrollo", "Ofimática", "Claude", "Copilot"],
+      "modality": "remoto — grabación de cursos + Top Teacher (prueba audiovisual)",
+      "language": "es",
+      "notes": "Fit fuerte Course Creator. Proceso 4 fases; fase 4 crear/grabar. also_in_formador_cache.",
+      "also_in_formador_cache": true,
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://imaginaformacion.com": {
+      "name": "Imagina Formación",
+      "country": "España",
+      "application_channel": "contacto directo (ya colaborador) / imaginaformacion.com/contacto",
+      "content_needs": ["grabar cursos", "escribir cursos", "crear ejercicios", "revisar contenido"],
+      "tech_focus": ["Claude AI", "Microsoft 365 Copilot", "GitHub Copilot", "Cursor", "IA generativa"],
+      "modality": "online / remoto — continuidad",
+      "language": "es",
+      "notes": "Ya colabora 2025–2026. Mensaje de ampliación píldoras/microlearning, no frío.",
+      "also_in_formador_cache": true,
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://www.adrformacion.com/nosotros/redTalento.html": {
+      "name": "ADR Formación (Red de Talento / Autor eLearning)",
+      "country": "España",
+      "application_channel": "https://www.adrformacion.com/nosotros/admisionRedTalento.html",
+      "content_needs": ["escribir cursos", "crear laboratorios", "crear ejercicios", "revisar contenido", "grabar cursos"],
+      "tech_focus": ["eLearning", "herramienta de autor propia", "metodología online ADR"],
+      "modality": "colaboración mercantil / red de autores (remoto posible); formación interna gratuita",
+      "language": "es",
+      "notes": "Autor/a de contenidos eLearning. LinkedIn menciona ~40% royalties y no exclusividad. Gap: Articulate/SCORM formal — ADR ofrece formación de metodología + autor.",
+      "also_in_formador_cache": false,
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://revolutia.ai": {
+      "name": "Revolutia.ai",
+      "country": "España",
+      "application_channel": "formulario en revolutia.ai (verificar vigencia; LinkedIn a veces 'cerrado') + vídeo 4–6 min",
+      "content_needs": ["grabar cursos", "escribir cursos", "crear ejercicios"],
+      "tech_focus": ["Claude", "Claude Code", "n8n", "Make", "Airtable", "Voiceflow", "IA aplicada"],
+      "modality": "remoto freelance",
+      "language": "es",
+      "notes": "Vídeo enseñanza 4–6 min obligatorio. Gaps: n8n/Make/Airtable/Voiceflow no en CV. Confirmar formulario abierto antes de enviar.",
+      "also_in_formador_cache": false,
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://es.linkedin.com/jobs/view/formador-a-freelance-ia-productividad-copilot-gemini-chatgpt-at-be-skiller-4445036257": {
+      "name": "Be-skiller",
+      "country": "España",
+      "application_channel": "hola@be-skiller.com — asunto 'IA + [nombre]' + vídeo 2–3 min (obligatorio)",
+      "content_needs": ["grabar cursos", "escribir cursos", "crear ejercicios"],
+      "tech_focus": ["Microsoft Copilot", "ChatGPT", "Google Gemini", "IA & productividad"],
+      "modality": "freelance remoto / corporativo",
+      "language": "es",
+      "notes": "Ángulo contenido + formador. Sin vídeo no revisan. Gap Gemini.",
+      "also_in_formador_cache": true,
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://nanfor.com": {
+      "name": "Nanfor (Nanfor Ibérica)",
+      "country": "España",
+      "application_channel": "cristina@nanforiberica.com · info@nanforiberica.com (bolsa)",
+      "content_needs": ["grabar cursos", "escribir cursos", "crear laboratorios", "crear ejercicios"],
+      "tech_focus": ["Claude AI", "Microsoft 365 Copilot", "GitHub Copilot", "Copilot Studio", "Azure AI"],
+      "modality": "virtual / telepresencial / self-learning",
+      "language": "es",
+      "notes": "Catálogo alineado con Imagina. Mensaje con ángulo Course Creator (no solo FUNDAE aula).",
+      "also_in_formador_cache": true,
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    }
+  },
+  "explored_no_channel": {
+    "https://www.iseazy.com": {
+      "name": "isEazy",
+      "reason": "Producto/servicio B2B Factory; no canal claro de hiring freelance Course Creator esta ronda",
+      "last_seen": "2026-08-04"
+    },
+    "https://tradumedia.com": {
+      "name": "Tradumedia",
+      "reason": "Enfoque Articulate Storyline/Rise — keyword gap fuerte vs CV",
+      "last_seen": "2026-08-04"
+    },
+    "https://courseboot.com": {
+      "name": "CourseBoot",
+      "reason": "Gate idioma/mercado (EE / EN delivery)",
+      "last_seen": "2026-08-04"
+    },
+    "thepower": {
+      "name": "thePower",
+      "reason": "Señal débil / canal no resuelto esta ronda",
+      "last_seen": "2026-08-04"
+    }
+  },
+  "runs": [
+    {
+      "date": "2026-08-04",
+      "queries": [
+        "Course Creator grabar cursos e-learning España",
+        "Autor contenidos eLearning España",
+        "OpenWebinars Top Teacher",
+        "site:linkedin.com/jobs Course Creator OR píldoras OR videotutoriales España",
+        "Revolutia creador contenido formativo IA",
+        "ADR Formación Red Talento autor"
+      ],
+      "companies_found": 6,
+      "target_role": "Course Creator / Creador de píldoras y videotutoriales e-learning (español)",
+      "ats_score": 79,
+      "notes": "Primera corrida video-content-es. CV maestro + 6 mensajes. Prioridad: OpenWebinars, ADR, Nanfor. Revolutia/Be-skiller requieren vídeo demo."
+    }
+  ]
+}

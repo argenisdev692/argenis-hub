@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Remotive - Remote Jobs</title>
+    <link>https://remotive.example.com</link>
+    <item>
+      <title>Backend PHP Developer (Laravel) @ Remota Corp</title>
+      <link>https://remotive.example.com/remote-jobs/99</link>
+      <pubDate>Sat, 12 Sep 2026 08:00:00 +0000</pubDate>
+      <description>Remote-first PHP/Laravel role, async team, written English.</description>
+    </item>
+  </channel>
+</rss>

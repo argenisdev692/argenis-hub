@@ -1,0 +1,31 @@
+THEME
+- Headline: 94% of Marketers Plan to Use AI for Blogs—Why Google Still Rewards Human Content
+- Primary keyword: why AI blog content still needs human editing
+- Visual metaphor: A glowing AI draft document on one side of a dark desk, crossed out in places by a human hand with a red pen / editorial marks; on the other side, a clean published article with subtle trust signals (byline silhouette, citation marks). Tension between speed and craft—not a robot vs human fight scene.
+- Mood: editorial, skeptical-optimistic, premium tech journalism
+- Avoid: cute robots, neon cyberpunk overload, stock “handshake with AI” clichés, long readable paragraphs of text on the image
+
+STYLE (JOBORA brand)
+- Aspect ratio: 16:9 blog cover
+- Background: deep navy / near-black #0a0a0f with soft depth (subtle gradient or grain)
+- Accents: indigo #6366f1 and lilac #a855f7 used sparingly on highlights / underlines / UI glow
+- Composition: minimalist, high negative space, cinematic desk-top crop or abstract editorial collage
+- Typography on image: none or at most 2–4 short words max (prefer no text)
+- No watermark, no logos, no UI chrome from real products
+- Photoreal or refined 3D editorial illustration, sharp, modern, quiet confidence
+
+PROMPT A — no text (copy-paste into ChatGPT / DALL·E)
+Create a 16:9 editorial blog cover image for an AI content strategy article. Theme: “why AI blog content still needs human editing.” Show a dark navy (#0a0a0f) workspace where a luminous AI-generated draft floats or sits on a screen, marked up with red editorial annotations by a human hand, while a refined finished article lies beside it with subtle trust cues (byline, citation-like marks). Minimalist composition, soft indigo (#6366f1) and lilac (#a855f7) accents only, cinematic lighting, grain, high negative space. No long text on the image, no watermarks, no logos, no cartoon robots, no purple glow overload. Premium tech-magazine aesthetic.
+
+PROMPT B — with text (copy-paste into ChatGPT / DALL·E)
+Create a 16:9 editorial blog cover image for an AI content strategy article. Theme: "why AI blog content still needs human editing." Show a dark navy (#0a0a0f) workspace where a luminous AI-generated draft is displayed on a screen or floating document, covered with realistic red editorial annotations, strike-throughs, circles, and handwritten proofreading marks made by a human editor. Beside it, place a refined finished article with subtle trust signals such as a byline silhouette, citation-style markers, and clean editorial layout.
+
+Include a single elegant editorial headline in the composition:
+
+"AI Writes. Humans Build Trust."
+
+The typography should be modern, premium, minimal, and occupy no more than 10–15% of the image. Keep all other document text abstract and unreadable. No paragraphs or UI labels.
+
+Use a minimalist composition with high negative space, cinematic lighting, subtle film grain, deep navy background (#0a0a0f), and restrained indigo (#6366f1) and lilac (#a855f7) accents. Convey the tension between speed and editorial craftsmanship rather than humans versus robots.
+
+Photorealistic or refined 3D editorial illustration, premium technology magazine aesthetic similar to The Verge, Stripe, Linear, or Notion blog covers. No watermarks, no logos, no branding, no real product interfaces, no cartoon robots, no handshake-with-AI clichés, and no cyberpunk overload.

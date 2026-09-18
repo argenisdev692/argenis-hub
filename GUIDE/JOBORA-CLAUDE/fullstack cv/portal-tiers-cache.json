@@ -1,0 +1,1816 @@
+{
+  "version": 4,
+  "mode": "fullstack",
+  "updated_at": "2026-09-11T14:10:00+01:00",
+  "researched_at": "2026-08-07T16:35:00+01:00",
+  "last_weekly_refresh": "2026-08-03",
+  "populated": true,
+  "skip_research_when_populated": true,
+  "tier_definitions": {
+    "1": "Mega employment boards — high-volume IT/jobs, usually multi-country (LinkedIn, Indeed, InfoJobs, Glassdoor, Monster, StepStone, Reed, ZipRecruiter…)",
+    "2": "Strong specialized remote or tech boards (WWR, Remote OK, Remotive, Landing.Jobs, ITJobs.pt, JustJoin, Dice, Arc, Otta, Tecnoempleo…)",
+    "3": "Long-tail / niche / agency / aggregator (Adzuna, Randstad, Net-Empregos, Remoteo, Get on Board, Jobspresso…)",
+    "4": "Freelance / gig marketplaces (Upwork, Freelancer, Workana) — Expansion rare; low D_disc P"
+  },
+  "geography_policy": {
+    "candidate_base": "Covilhã, Portugal",
+    "prefer_locale_codes": [
+      "pt",
+      "es",
+      "uk",
+      "us",
+      "global"
+    ],
+    "allow_locale_codes": [
+      "pt",
+      "es",
+      "uk",
+      "us",
+      "global",
+      "eu",
+      "de",
+      "fr",
+      "nl",
+      "ie",
+      "it",
+      "ca"
+    ],
+    "deny_regions": [
+      "Asia",
+      "Middle East",
+      "Africa"
+    ],
+    "deny_locale_codes": [
+      "jp",
+      "cn",
+      "in",
+      "sg",
+      "kr",
+      "hk",
+      "tw",
+      "th",
+      "ph",
+      "my",
+      "id",
+      "vn",
+      "pk",
+      "bd",
+      "ae",
+      "sa",
+      "il",
+      "za",
+      "ng",
+      "eg"
+    ],
+    "deny_host_substrings": [
+      ".co.jp",
+      ".com.cn",
+      "linkedin.cn",
+      "indeed.co.in",
+      "jp.linkedin",
+      "in.linkedin",
+      "sg.linkedin",
+      "cn.linkedin",
+      "jp.indeed",
+      "in.indeed",
+      "sg.indeed",
+      "hk.indeed",
+      "kr.indeed"
+    ],
+    "notes": "On discover: check multinational locales → keep only allow list → S_portal → tier 1–4. Never activate Asia locales. US/UK/CA seeds OK but JD still needs G1. Asia-locked roles FAIL."
+  },
+  "omitted_locales": [],
+  "refresh_policy": {
+    "weekday": "Sunday",
+    "timezone": "Europe/Lisbon",
+    "also_on_low_yield": true,
+    "low_yield_new_matches_lt": 2,
+    "low_yield_gate_passed_lt": 3,
+    "summary": "Skip weekday research when populated. Sunday/low-yield/force: discover portals → multinational locales → geography_policy (omit Asia) → S_portal → tier 1–4 + keywords. Prefer PT/ES/UK/US/global."
+  },
+  "sources": [
+    "user_tier_scale_1_to_4_2026-08-07",
+    "user_tier_list_2026-08-07",
+    "user_iberia_extras_2026-08-07",
+    "user_multinational_locales_2026-08-07"
+  ],
+  "discovery": {
+    "core_budget_queries": 10,
+    "expansion_budget_queries": 8,
+    "tier4_max_queries_per_run": 1,
+    "rotation_index": 3,
+    "rotation_buckets": [
+      "europe_core",
+      "europe_east_dach_fr",
+      "iberia_es_pt",
+      "uk_global_only",
+      "usa_global_only",
+      "canada_global_only",
+      "lisbon_hybrid",
+      "multinational_locales"
+    ]
+  },
+  "multinationals": {
+    "notes": "Same brand, country locales. Prefer locale site_query matching the seed language/region. Still apply G1 residency gates on every JD. Sunday refresh must discover missing country hosts.",
+    "linkedin": {
+      "name": "LinkedIn",
+      "domain": "linkedin.com",
+      "tier": 1,
+      "locales": [
+        {
+          "code": "global",
+          "label": "Global",
+          "site_query": "site:linkedin.com/jobs",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu",
+            "remote-pt-es",
+            "hybrid-lisbon"
+          ]
+        },
+        {
+          "code": "es",
+          "label": "Spain",
+          "site_query": "site:es.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu",
+            "hybrid-lisbon"
+          ]
+        },
+        {
+          "code": "pt",
+          "label": "Portugal",
+          "site_query": "site:pt.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu",
+            "hybrid-lisbon"
+          ]
+        },
+        {
+          "code": "uk",
+          "label": "United Kingdom",
+          "site_query": "site:uk.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "gate_tags": [
+            "global-only",
+            "remote-global",
+            "remote-eu"
+          ]
+        },
+        {
+          "code": "us",
+          "label": "United States",
+          "site_query": "site:www.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "ca",
+          "label": "Canada",
+          "site_query": "site:ca.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        }
+      ]
+    },
+    "indeed": {
+      "name": "Indeed",
+      "domain": "indeed.com",
+      "tier": 1,
+      "locales": [
+        {
+          "code": "global",
+          "label": "Global",
+          "site_query": "site:indeed.com",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ]
+        },
+        {
+          "code": "es",
+          "label": "Spain",
+          "site_query": "site:es.indeed.com",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu",
+            "hybrid-lisbon"
+          ]
+        },
+        {
+          "code": "pt",
+          "label": "Portugal",
+          "site_query": "site:pt.indeed.com",
+          "gate_tags": [
+            "remote-pt-es",
+            "hybrid-lisbon",
+            "eu-first"
+          ]
+        },
+        {
+          "code": "uk",
+          "label": "United Kingdom",
+          "site_query": "site:uk.indeed.com",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "us",
+          "label": "United States",
+          "site_query": "site:indeed.com",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "ca",
+          "label": "Canada",
+          "site_query": "site:ca.indeed.com",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        }
+      ]
+    },
+    "infojobs": {
+      "name": "InfoJobs",
+      "domain": "infojobs.net",
+      "tier": 1,
+      "locales": [
+        {
+          "code": "es",
+          "label": "Spain",
+          "site_query": "site:infojobs.net OR site:www.infojobs.net",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu",
+            "hybrid-lisbon"
+          ]
+        },
+        {
+          "code": "it",
+          "label": "Italy",
+          "site_query": "site:infojobs.it",
+          "gate_tags": [
+            "remote-eu",
+            "eu-first"
+          ]
+        },
+        {
+          "code": "global",
+          "label": "Network",
+          "site_query": "site:infojobs.net",
+          "gate_tags": [
+            "remote-eu",
+            "remote-pt-es"
+          ]
+        }
+      ]
+    },
+    "glassdoor": {
+      "name": "Glassdoor",
+      "domain": "glassdoor.com",
+      "tier": 1,
+      "locales": [
+        {
+          "code": "es",
+          "label": "Spain",
+          "site_query": "site:glassdoor.es",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ]
+        },
+        {
+          "code": "pt",
+          "label": "Portugal",
+          "site_query": "site:glassdoor.pt OR site:glassdoor.com",
+          "gate_tags": [
+            "remote-pt-es",
+            "hybrid-lisbon"
+          ]
+        },
+        {
+          "code": "uk",
+          "label": "United Kingdom",
+          "site_query": "site:glassdoor.co.uk",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "us",
+          "label": "United States",
+          "site_query": "site:glassdoor.com",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "ca",
+          "label": "Canada",
+          "site_query": "site:glassdoor.ca",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        }
+      ]
+    },
+    "monster": {
+      "name": "Monster",
+      "domain": "monster.com",
+      "tier": 1,
+      "locales": [
+        {
+          "code": "uk",
+          "label": "United Kingdom",
+          "site_query": "site:monster.co.uk",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "us",
+          "label": "United States",
+          "site_query": "site:monster.com",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "es",
+          "label": "Spain",
+          "site_query": "site:monster.es",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ]
+        },
+        {
+          "code": "global",
+          "label": "Global",
+          "site_query": "site:monster.com",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ]
+        }
+      ]
+    },
+    "randstad": {
+      "name": "Randstad",
+      "domain": "randstad.com",
+      "tier": 3,
+      "locales": [
+        {
+          "code": "es",
+          "label": "Spain",
+          "site_query": "site:randstad.es",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ]
+        },
+        {
+          "code": "pt",
+          "label": "Portugal",
+          "site_query": "site:randstad.pt",
+          "gate_tags": [
+            "remote-pt-es",
+            "hybrid-lisbon"
+          ]
+        },
+        {
+          "code": "uk",
+          "label": "United Kingdom",
+          "site_query": "site:randstad.co.uk",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "us",
+          "label": "United States",
+          "site_query": "site:randstadusa.com OR site:randstad.com",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ]
+        },
+        {
+          "code": "global",
+          "label": "Global",
+          "site_query": "site:randstad.com",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ]
+        }
+      ]
+    }
+  },
+  "regions": {
+    "europe": {
+      "label": "Europe",
+      "gate_default": "eu-first",
+      "portals": [
+        {
+          "rank": 1,
+          "name": "LinkedIn",
+          "domain": "linkedin.com",
+          "site_query": "site:linkedin.com/jobs",
+          "locales_ref": "multinationals.linkedin",
+          "prefer_locales": [
+            "pt",
+            "es",
+            "uk",
+            "us",
+            "global"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu",
+            "remote-pt-es",
+            "remote-global",
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-1 mega; Core locales PT+ES+UK+US+global; never Asia"
+        },
+        {
+          "rank": 2,
+          "name": "Indeed",
+          "domain": "indeed.com",
+          "site_query": "site:pt.indeed.com OR site:es.indeed.com OR site:indeed.com",
+          "locales_ref": "multinationals.indeed",
+          "prefer_locales": [
+            "pt",
+            "es"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu",
+            "remote-pt-es",
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-1 mega; prefer PT/ES locales"
+        },
+        {
+          "rank": 3,
+          "name": "InfoJobs",
+          "domain": "infojobs.net",
+          "site_query": "site:infojobs.net OR site:infojobs.it",
+          "locales_ref": "multinationals.infojobs",
+          "prefer_locales": [
+            "es"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu",
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-1 mega ES (+ IT locale); Sunday locale discovery may add more countries"
+        },
+        {
+          "rank": 4,
+          "name": "Glassdoor",
+          "domain": "glassdoor.com",
+          "site_query": "site:glassdoor.es OR site:glassdoor.com",
+          "locales_ref": "multinationals.glassdoor",
+          "prefer_locales": [
+            "es",
+            "pt"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ],
+          "notes": "Tier-1 mega employment + reviews"
+        },
+        {
+          "rank": 5,
+          "name": "StepStone",
+          "domain": "stepstone.com",
+          "site_query": "site:stepstone.de OR site:stepstone.com",
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu"
+          ],
+          "notes": "Tier-1 mega DACH/EU ~27 countries"
+        },
+        {
+          "rank": 6,
+          "name": "Xing",
+          "domain": "xing.com",
+          "site_query": "site:xing.com/jobs",
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu"
+          ],
+          "notes": "Tier-1 DACH employment network"
+        },
+        {
+          "rank": 7,
+          "name": "We Work Remotely",
+          "domain": "weworkremotely.com",
+          "site_query": "site:weworkremotely.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 specialized remote"
+        },
+        {
+          "rank": 8,
+          "name": "Remote OK",
+          "domain": "remoteok.com",
+          "site_query": "site:remoteok.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 stack filters Laravel/PHP"
+        },
+        {
+          "rank": 9,
+          "name": "Remotive",
+          "domain": "remotive.com",
+          "site_query": "site:remotive.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 curated remote tech"
+        },
+        {
+          "rank": 10,
+          "name": "Landing.Jobs",
+          "domain": "landing.jobs",
+          "site_query": "site:landing.jobs",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu",
+            "remote-pt-es",
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-2 PT-born specialized tech"
+        },
+        {
+          "rank": 11,
+          "name": "ITJobs.pt",
+          "domain": "itjobs.pt",
+          "site_query": "site:itjobs.pt",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-pt-es",
+            "hybrid-lisbon",
+            "eu-first"
+          ],
+          "notes": "Tier-2 Portugal IT leader"
+        },
+        {
+          "rank": 12,
+          "name": "RemoteRocketship",
+          "domain": "remoterocketship.com",
+          "site_query": "site:remoterocketship.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 remote aggregator"
+        },
+        {
+          "rank": 13,
+          "name": "Honeypot",
+          "domain": "honeypot.io",
+          "site_query": "site:honeypot.io",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 DE reverse-apply"
+        },
+        {
+          "rank": 14,
+          "name": "Just Join IT",
+          "domain": "justjoin.it",
+          "site_query": "site:justjoin.it",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 CEE tech"
+        },
+        {
+          "rank": 15,
+          "name": "NoFluffJobs",
+          "domain": "nofluffjobs.com",
+          "site_query": "site:nofluffjobs.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 salary+stack visible"
+        },
+        {
+          "rank": 16,
+          "name": "EuropeRemotely",
+          "domain": "europeremotely.com",
+          "site_query": "site:europeremotely.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 Europe-resident remote"
+        },
+        {
+          "rank": 17,
+          "name": "Otta",
+          "domain": "otta.com",
+          "site_query": "site:otta.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu",
+            "remote-global"
+          ],
+          "notes": "Tier-2 product startups EU/UK"
+        },
+        {
+          "rank": 18,
+          "name": "Welcome to the Jungle",
+          "domain": "welcometothejungle.com",
+          "site_query": "site:welcometothejungle.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "eu-first",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 FR startups"
+        },
+        {
+          "rank": 19,
+          "name": "Wellfound",
+          "domain": "wellfound.com",
+          "site_query": "site:wellfound.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 startups"
+        },
+        {
+          "rank": 20,
+          "name": "Jobspresso",
+          "domain": "jobspresso.co",
+          "site_query": "site:jobspresso.co",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-3 curated remote"
+        },
+        {
+          "rank": 21,
+          "name": "Monster ES",
+          "domain": "monster.es",
+          "site_query": "site:monster.es OR site:monster.com",
+          "locales_ref": "multinationals.monster",
+          "prefer_locales": [
+            "es"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ],
+          "notes": "Tier-1 mega locale ES"
+        }
+      ]
+    },
+    "iberia_es_pt": {
+      "label": "Iberia ES/PT + LatAm Spanish remote boards",
+      "gate_default": "remote-pt-es",
+      "portals": [
+        {
+          "rank": 1,
+          "name": "InfoJobs",
+          "domain": "infojobs.net",
+          "site_query": "site:infojobs.net",
+          "locales_ref": "multinationals.infojobs",
+          "prefer_locales": [
+            "es"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ],
+          "notes": "Tier-1 mega ES"
+        },
+        {
+          "rank": 2,
+          "name": "LinkedIn ES/PT",
+          "domain": "linkedin.com",
+          "site_query": "site:es.linkedin.com/jobs OR site:pt.linkedin.com/jobs",
+          "locales_ref": "multinationals.linkedin",
+          "prefer_locales": [
+            "es",
+            "pt"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu",
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-1 mega locales"
+        },
+        {
+          "rank": 3,
+          "name": "Indeed ES/PT",
+          "domain": "indeed.com",
+          "site_query": "site:es.indeed.com OR site:pt.indeed.com",
+          "locales_ref": "multinationals.indeed",
+          "prefer_locales": [
+            "es",
+            "pt"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "remote-pt-es",
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-1 mega locales"
+        },
+        {
+          "rank": 4,
+          "name": "Glassdoor ES/PT",
+          "domain": "glassdoor.es",
+          "site_query": "site:glassdoor.es OR site:glassdoor.pt OR site:glassdoor.com",
+          "locales_ref": "multinationals.glassdoor",
+          "prefer_locales": [
+            "es",
+            "pt"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 5,
+          "name": "Tecnoempleo",
+          "domain": "tecnoempleo.com",
+          "site_query": "site:tecnoempleo.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu"
+          ],
+          "notes": "Tier-2 ES IT specialist"
+        },
+        {
+          "rank": 6,
+          "name": "Get on Board",
+          "domain": "getonbrd.com",
+          "site_query": "site:getonbrd.com OR site:www.getonbrd.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global",
+            "remote-pt-es"
+          ],
+          "notes": "Tier-3 LatAm tech"
+        },
+        {
+          "rank": 7,
+          "name": "Remoteo",
+          "domain": "remoteo.es",
+          "site_query": "site:remoteo.es",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-eu",
+            "remote-global"
+          ],
+          "notes": "Tier-3 ES remote"
+        },
+        {
+          "rank": 8,
+          "name": "RemotoList",
+          "domain": "remotolist.com",
+          "site_query": "site:remotolist.com OR site:remotolist.es",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-global"
+          ],
+          "notes": "Tier-3 remote list"
+        },
+        {
+          "rank": 9,
+          "name": "WeRemoto",
+          "domain": "weremoto.com",
+          "site_query": "site:weremoto.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-global"
+          ],
+          "notes": "Tier-3 ES aggregator"
+        },
+        {
+          "rank": 10,
+          "name": "Net-Empregos",
+          "domain": "net-empregos.com",
+          "site_query": "site:net-empregos.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-3 PT generalist"
+        },
+        {
+          "rank": 11,
+          "name": "Randstad ES/PT",
+          "domain": "randstad.es",
+          "site_query": "site:randstad.es OR site:randstad.pt",
+          "locales_ref": "multinationals.randstad",
+          "prefer_locales": [
+            "es",
+            "pt"
+          ],
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "hybrid-lisbon",
+            "remote-eu"
+          ],
+          "notes": "Tier-3 agency"
+        },
+        {
+          "rank": 12,
+          "name": "Workana",
+          "domain": "workana.com",
+          "site_query": "site:workana.com",
+          "tier": 4,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global",
+            "remote-pt-es"
+          ],
+          "notes": "Tier-4 freelance marketplace"
+        },
+        {
+          "rank": 13,
+          "name": "Freelancer.com",
+          "domain": "freelancer.com",
+          "site_query": "site:freelancer.com",
+          "tier": 4,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-4 gig"
+        },
+        {
+          "rank": 14,
+          "name": "Freelancer.es",
+          "domain": "freelancer.es",
+          "site_query": "site:freelancer.es",
+          "tier": 4,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-pt-es",
+            "remote-global"
+          ],
+          "notes": "Tier-4 gig ES"
+        },
+        {
+          "rank": 15,
+          "name": "Upwork",
+          "domain": "upwork.com",
+          "site_query": "site:upwork.com",
+          "tier": 4,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-4 gig — max 1 query/run unless user asks freelance"
+        }
+      ]
+    },
+    "usa": {
+      "label": "United States",
+      "gate_default": "global-only",
+      "portals": [
+        {
+          "rank": 1,
+          "name": "LinkedIn",
+          "domain": "linkedin.com",
+          "site_query": "site:linkedin.com/jobs",
+          "locales_ref": "multinationals.linkedin",
+          "prefer_locales": [
+            "us",
+            "global"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega; worldwide/hire-abroad only"
+        },
+        {
+          "rank": 2,
+          "name": "Indeed",
+          "domain": "indeed.com",
+          "site_query": "site:indeed.com",
+          "locales_ref": "multinationals.indeed",
+          "prefer_locales": [
+            "us"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 3,
+          "name": "Glassdoor",
+          "domain": "glassdoor.com",
+          "site_query": "site:glassdoor.com",
+          "locales_ref": "multinationals.glassdoor",
+          "prefer_locales": [
+            "us"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 4,
+          "name": "ZipRecruiter",
+          "domain": "ziprecruiter.com",
+          "site_query": "site:ziprecruiter.com",
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega distributor; US-only noise common"
+        },
+        {
+          "rank": 5,
+          "name": "Monster",
+          "domain": "monster.com",
+          "site_query": "site:monster.com",
+          "locales_ref": "multinationals.monster",
+          "prefer_locales": [
+            "us"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 6,
+          "name": "Dice",
+          "domain": "dice.com",
+          "site_query": "site:dice.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-2 US tech specialist"
+        },
+        {
+          "rank": 7,
+          "name": "We Work Remotely",
+          "domain": "weworkremotely.com",
+          "site_query": "site:weworkremotely.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2 specialized remote"
+        },
+        {
+          "rank": 8,
+          "name": "Remote OK",
+          "domain": "remoteok.com",
+          "site_query": "site:remoteok.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2"
+        },
+        {
+          "rank": 9,
+          "name": "Wellfound",
+          "domain": "wellfound.com",
+          "site_query": "site:wellfound.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-2 startups"
+        },
+        {
+          "rank": 10,
+          "name": "Arc.dev",
+          "domain": "arc.dev",
+          "site_query": "site:arc.dev",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2 vetted remote"
+        },
+        {
+          "rank": 11,
+          "name": "Built In",
+          "domain": "builtin.com",
+          "site_query": "site:builtin.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-2 US hubs"
+        },
+        {
+          "rank": 12,
+          "name": "Remote100K",
+          "domain": "remote100k.com",
+          "site_query": "site:remote100k.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3 niche"
+        },
+        {
+          "rank": 13,
+          "name": "FlexJobs",
+          "domain": "flexjobs.com",
+          "site_query": "site:flexjobs.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3 curated; may paywall"
+        },
+        {
+          "rank": 14,
+          "name": "Hired",
+          "domain": "hired.com",
+          "site_query": "site:hired.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-3 matching"
+        },
+        {
+          "rank": 15,
+          "name": "Turing",
+          "domain": "turing.com",
+          "site_query": "site:turing.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3 marketplace-ish; not pure gig"
+        },
+        {
+          "rank": 16,
+          "name": "Work at a Startup (YC)",
+          "domain": "workatastartup.com",
+          "site_query": "site:workatastartup.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3 YC direct"
+        },
+        {
+          "rank": 17,
+          "name": "Hacker News Who is Hiring",
+          "domain": "news.ycombinator.com",
+          "site_query": "site:news.ycombinator.com \"Who is Hiring\" Laravel OR PHP",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3 monthly thread; pivot to careers"
+        }
+      ]
+    },
+    "uk": {
+      "label": "United Kingdom",
+      "gate_default": "global-only",
+      "portals": [
+        {
+          "rank": 1,
+          "name": "LinkedIn UK",
+          "domain": "linkedin.com",
+          "site_query": "site:uk.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "locales_ref": "multinationals.linkedin",
+          "prefer_locales": [
+            "uk"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global",
+            "remote-eu"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 2,
+          "name": "Indeed UK",
+          "domain": "uk.indeed.com",
+          "site_query": "site:uk.indeed.com",
+          "locales_ref": "multinationals.indeed",
+          "prefer_locales": [
+            "uk"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 3,
+          "name": "Reed",
+          "domain": "reed.co.uk",
+          "site_query": "site:reed.co.uk",
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 UK mega generalist"
+        },
+        {
+          "rank": 4,
+          "name": "Totaljobs",
+          "domain": "totaljobs.com",
+          "site_query": "site:totaljobs.com",
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 UK mega"
+        },
+        {
+          "rank": 5,
+          "name": "Glassdoor UK",
+          "domain": "glassdoor.co.uk",
+          "site_query": "site:glassdoor.co.uk",
+          "locales_ref": "multinationals.glassdoor",
+          "prefer_locales": [
+            "uk"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 6,
+          "name": "Monster UK",
+          "domain": "monster.co.uk",
+          "site_query": "site:monster.co.uk",
+          "locales_ref": "multinationals.monster",
+          "prefer_locales": [
+            "uk"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 7,
+          "name": "CWJobs",
+          "domain": "cwjobs.co.uk",
+          "site_query": "site:cwjobs.co.uk",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-2 UK tech specialist"
+        },
+        {
+          "rank": 8,
+          "name": "Otta",
+          "domain": "otta.com",
+          "site_query": "site:otta.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-eu",
+            "remote-global"
+          ],
+          "notes": "Tier-2 product startups"
+        },
+        {
+          "rank": 9,
+          "name": "DevITjobs.uk",
+          "domain": "devitjobs.uk",
+          "site_query": "site:devitjobs.uk",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-2 developers-only"
+        },
+        {
+          "rank": 10,
+          "name": "Arc.dev",
+          "domain": "arc.dev",
+          "site_query": "site:arc.dev",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2 remote"
+        },
+        {
+          "rank": 11,
+          "name": "ITJobBoard",
+          "domain": "itjobboard.net",
+          "site_query": "site:itjobboard.net",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 12,
+          "name": "WorkInStartups",
+          "domain": "workinstartups.com",
+          "site_query": "site:workinstartups.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-3 UK startups"
+        },
+        {
+          "rank": 13,
+          "name": "Adzuna",
+          "domain": "adzuna.co.uk",
+          "site_query": "site:adzuna.co.uk",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-3 aggregator"
+        },
+        {
+          "rank": 14,
+          "name": "Jobsite",
+          "domain": "jobsite.co.uk",
+          "site_query": "site:jobsite.co.uk",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 15,
+          "name": "JobLeads",
+          "domain": "jobleads.com",
+          "site_query": "site:jobleads.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global",
+            "hybrid-lisbon",
+            "remote-eu"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 16,
+          "name": "Randstad UK",
+          "domain": "randstad.co.uk",
+          "site_query": "site:randstad.co.uk",
+          "locales_ref": "multinationals.randstad",
+          "prefer_locales": [
+            "uk"
+          ],
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-3 agency"
+        }
+      ]
+    },
+    "canada": {
+      "label": "Canada",
+      "gate_default": "global-only",
+      "portals": [
+        {
+          "rank": 1,
+          "name": "LinkedIn",
+          "domain": "linkedin.com",
+          "site_query": "site:ca.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "locales_ref": "multinationals.linkedin",
+          "prefer_locales": [
+            "ca"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 2,
+          "name": "Indeed Canada",
+          "domain": "ca.indeed.com",
+          "site_query": "site:ca.indeed.com",
+          "locales_ref": "multinationals.indeed",
+          "prefer_locales": [
+            "ca"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 3,
+          "name": "Glassdoor CA",
+          "domain": "glassdoor.ca",
+          "site_query": "site:glassdoor.ca",
+          "locales_ref": "multinationals.glassdoor",
+          "prefer_locales": [
+            "ca"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 4,
+          "name": "We Work Remotely",
+          "domain": "weworkremotely.com",
+          "site_query": "site:weworkremotely.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2"
+        },
+        {
+          "rank": 5,
+          "name": "Remote OK",
+          "domain": "remoteok.com",
+          "site_query": "site:remoteok.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2"
+        },
+        {
+          "rank": 6,
+          "name": "Remotive",
+          "domain": "remotive.com",
+          "site_query": "site:remotive.com",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2"
+        },
+        {
+          "rank": 7,
+          "name": "Wellfound",
+          "domain": "wellfound.com",
+          "site_query": "site:wellfound.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2"
+        },
+        {
+          "rank": 8,
+          "name": "Arc.dev",
+          "domain": "arc.dev",
+          "site_query": "site:arc.dev",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2"
+        },
+        {
+          "rank": 9,
+          "name": "RemoteRocketship",
+          "domain": "remoterocketship.com",
+          "site_query": "site:remoterocketship.com",
+          "tier": 2,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-2"
+        },
+        {
+          "rank": 10,
+          "name": "Jobspresso",
+          "domain": "jobspresso.co",
+          "site_query": "site:jobspresso.co",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 11,
+          "name": "FlexJobs",
+          "domain": "flexjobs.com",
+          "site_query": "site:flexjobs.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 12,
+          "name": "Remote.co",
+          "domain": "remote.co",
+          "site_query": "site:remote.co",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 13,
+          "name": "Himalayas",
+          "domain": "himalayas.app",
+          "site_query": "site:himalayas.app",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 14,
+          "name": "Dynamite Jobs",
+          "domain": "dynamitejobs.com",
+          "site_query": "site:dynamitejobs.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 15,
+          "name": "Workopolis",
+          "domain": "workopolis.com",
+          "site_query": "site:workopolis.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only",
+            "remote-global"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 16,
+          "name": "Job Bank Canada",
+          "domain": "jobbank.gc.ca",
+          "site_query": "site:jobbank.gc.ca",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "global-only"
+          ],
+          "notes": "Tier-3 gov; often CA-resident FAIL"
+        }
+      ]
+    },
+    "lisbon_hybrid": {
+      "label": "Lisbon hybrid only",
+      "gate_default": "hybrid-lisbon",
+      "portals": [
+        {
+          "rank": 1,
+          "name": "LinkedIn PT",
+          "domain": "linkedin.com",
+          "site_query": "site:pt.linkedin.com/jobs OR site:linkedin.com/jobs",
+          "locales_ref": "multinationals.linkedin",
+          "prefer_locales": [
+            "pt"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 2,
+          "name": "Indeed PT",
+          "domain": "pt.indeed.com",
+          "site_query": "site:pt.indeed.com",
+          "locales_ref": "multinationals.indeed",
+          "prefer_locales": [
+            "pt"
+          ],
+          "tier": 1,
+          "layer": "core",
+          "gate_tags": [
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-1 mega"
+        },
+        {
+          "rank": 3,
+          "name": "InfoJobs",
+          "domain": "infojobs.net",
+          "site_query": "site:infojobs.net",
+          "locales_ref": "multinationals.infojobs",
+          "prefer_locales": [
+            "es"
+          ],
+          "tier": 1,
+          "layer": "expansion",
+          "gate_tags": [
+            "hybrid-lisbon",
+            "remote-pt-es"
+          ],
+          "notes": "Tier-1; occasional PT-relevant"
+        },
+        {
+          "rank": 4,
+          "name": "ITJobs.pt",
+          "domain": "itjobs.pt",
+          "site_query": "site:itjobs.pt",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-2 primary PT hybrid"
+        },
+        {
+          "rank": 5,
+          "name": "Landing.Jobs",
+          "domain": "landing.jobs",
+          "site_query": "site:landing.jobs",
+          "tier": 2,
+          "layer": "core",
+          "gate_tags": [
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-2 Lisbon tech"
+        },
+        {
+          "rank": 6,
+          "name": "Net-Empregos",
+          "domain": "net-empregos.com",
+          "site_query": "site:net-empregos.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "hybrid-lisbon",
+            "remote-pt-es"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 7,
+          "name": "Randstad PT",
+          "domain": "randstad.pt",
+          "site_query": "site:randstad.pt",
+          "locales_ref": "multinationals.randstad",
+          "prefer_locales": [
+            "pt"
+          ],
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "hybrid-lisbon",
+            "remote-pt-es"
+          ],
+          "notes": "Tier-3 agency"
+        },
+        {
+          "rank": 8,
+          "name": "JobLeads",
+          "domain": "jobleads.com",
+          "site_query": "site:jobleads.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "hybrid-lisbon"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 9,
+          "name": "Teamlyzer",
+          "domain": "teamlyzer.com",
+          "site_query": "site:teamlyzer.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "hybrid-lisbon",
+            "remote-pt-es"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 10,
+          "name": "Welcome to the Jungle",
+          "domain": "welcometothejungle.com",
+          "site_query": "site:welcometothejungle.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "hybrid-lisbon",
+            "eu-first"
+          ],
+          "notes": "Tier-3"
+        },
+        {
+          "rank": 11,
+          "name": "Otta",
+          "domain": "otta.com",
+          "site_query": "site:otta.com",
+          "tier": 3,
+          "layer": "expansion",
+          "gate_tags": [
+            "hybrid-lisbon",
+            "eu-first"
+          ],
+          "notes": "Tier-3"
+        }
+      ]
+    }
+  }
+}

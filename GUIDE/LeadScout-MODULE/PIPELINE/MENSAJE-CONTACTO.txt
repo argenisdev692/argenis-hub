@@ -1,0 +1,37 @@
+Hola [Nombre],
+
+Soy desarrollador full-stack con 4 años de experiencia trabajando principalmente con PHP/Laravel, y actualmente estoy ampliando mi stack con Vue 3 y TypeScript.
+
+Estoy disponible para colaborar remotamente, tanto en proyectos Laravel existentes como en desarrollo de nuevas funcionalidades o como apoyo temporal a equipos que necesiten capacidad adicional.
+
+He visto que [Empresa] trabaja con [Laravel/Vue/desarrollo a medida/etc.] y quería preguntarte si actualmente tenéis necesidad de incorporar capacidad adicional de desarrollo, aunque sea inicialmente como contractor o por proyecto.
+
+Si tiene sentido, puedo enviarte mi CV/GitHub y algunos ejemplos de proyectos.
+
+Un saludo,
+[Nombre]
+
+Y haría una cosa más agresiva
+
+Crearía una lista de 100 empresas.
+
+No 1.000.
+
+Por ejemplo:
+
+Portugal + España + UK + Alemania + Países Bajos + Irlanda + países nórdicos
+
+con:
+
+10–250 empleados
+software agency
+SaaS
+Laravel/PHP/Vue/Node
+trabajo remoto
+clientes internacionales
+
+Y contactaría directamente a:
+
+Founder / CTO / Head of Engineering / Engineering Manager
+
+No necesariamente HR.

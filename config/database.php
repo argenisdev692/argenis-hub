@@ -99,6 +99,31 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | PostgreSQL local para el grupo Pest `pgsql` (spec 003-lead-scout, T003)
+        |--------------------------------------------------------------------------
+        |
+        | Solo para los tests que necesitan PostgreSQL real (CHECK, índices
+        | parciales, jsonb, RLS). Nunca apunta a Supabase: el guard de
+        | `tests/Pest.php` aborta si el host contiene `supabase.co/.com`.
+        |
+        */
+
+        'pgsql_testing' => [
+            'driver' => 'pgsql',
+            'host' => env('PG_TEST_HOST', '127.0.0.1'),
+            'port' => env('PG_TEST_PORT', '5432'),
+            'database' => env('PG_TEST_DATABASE', 'argenis_hub_testing'),
+            'username' => env('PG_TEST_USERNAME', 'postgres'),
+            'password' => env('PG_TEST_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('PG_TEST_SSLMODE', 'prefer'),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

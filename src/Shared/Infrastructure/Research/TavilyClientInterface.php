@@ -21,8 +21,23 @@ interface TavilyClientInterface
      * sources; omitted, the request is exactly what it always was, so existing
      * callers are unaffected.
      *
+     * `$searchDepth` (`basic`|`advanced`) overrides the configured default for
+     * this call only — LeadScout uses `basic` to resolve a known company (1
+     * credit) and `advanced` for discovery (2 credits). Omitted or invalid,
+     * the configured default applies, so existing callers are unaffected.
+     *
+     * `$excludeDomains` (max 150) and `$country` travel to the provider when
+     * given; omitted, the request is exactly what it always was.
+     *
      * @param  list<string>  $queries
+     * @param  list<string>|null  $excludeDomains
      * @return list<array{title: string, url: string, content: string, score: float}>
      */
-    public function search(array $queries, ?string $timeRange = null): array;
+    public function search(
+        array $queries,
+        ?string $timeRange = null,
+        ?string $searchDepth = null,
+        ?array $excludeDomains = null,
+        ?string $country = null,
+    ): array;
 }

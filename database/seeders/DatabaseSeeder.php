@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
             PortfolioSeeder::class,
             BlogCategorySeeder::class,
             AvailabilitySeeder::class,
+            LeadScoutSourcesSeeder::class,
+            LeadScoutAiSettingsSeeder::class,
         ]);
     }
 }

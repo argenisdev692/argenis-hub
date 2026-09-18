@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Schedule;
 use Modules\Auth\Infrastructure\Persistence\Eloquent\Models\AuthSessionEloquentModel;
 use Modules\Backups\Infrastructure\Console\Commands\SyncBackupsCommand;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseEloquentModel;
+use Modules\LeadScout\Infrastructure\Console\Commands\LeadScoutBackupCommand;
+use Modules\LeadScout\Infrastructure\Console\Commands\LeadScoutDiscoverCommand;
+use Modules\LeadScout\Infrastructure\Console\Commands\LeadScoutExpireCommand;
+use Modules\LeadScout\Infrastructure\Console\Commands\LeadScoutIngestCommand;
+use Modules\LeadScout\Infrastructure\Console\Commands\LeadScoutPruneCommand;
 use Modules\VideoEdits\Infrastructure\Console\Commands\PurgeExpiredVideoEditSourcesCommand;
 use Modules\VideoEdits\Infrastructure\Console\Commands\SweepStaleVideoEditsCommand;
 use Spatie\OneTimePasswords\Models\OneTimePassword;
@@ -90,3 +95,20 @@ Schedule::command('backup:clean')->dailyAt('01:00');
 Schedule::command('backup:run --only-db')->dailyAt('02:00');
 Schedule::command(SyncBackupsCommand::class)->dailyAt('02:30');
 Schedule::command('backup:monitor')->dailyAt('03:00');
+
+/*
+|--------------------------------------------------------------------------
+| LeadScout pipeline (spec 003-lead-scout · T026/T027)
+|--------------------------------------------------------------------------
+|
+| Ingest runs every 15 minutes and dispatches only the sources due for
+| their own frequency; expiry prunes stale postings nightly. Both are
+| `withoutOverlapping` so a slow tick never stacks.
+|
+*/
+
+Schedule::command(LeadScoutIngestCommand::class)->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command(LeadScoutExpireCommand::class)->dailyAt('04:00')->withoutOverlapping();
+Schedule::command(LeadScoutDiscoverCommand::class)->weeklyOn(0, '06:00')->withoutOverlapping();
+Schedule::command(LeadScoutPruneCommand::class)->dailyAt('04:30')->withoutOverlapping();
+Schedule::command(LeadScoutBackupCommand::class)->weeklyOn(0, '05:00')->withoutOverlapping();

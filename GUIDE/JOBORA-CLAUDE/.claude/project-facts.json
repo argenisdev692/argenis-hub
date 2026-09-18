@@ -1,0 +1,25 @@
+{
+  "php": "^8.5",
+  "laravel": "^13.8",
+  "inertiaLaravel": "^3.0",
+  "vue": "^3.5.39",
+  "primevue": "^4.5.5",
+  "inertiaVue": "^3.6.0",
+  "tailwind": true,
+  "testRunner": "phpunit",
+  "unstyled": true,
+  "hasZod": true,
+  "hasPiniaColada": true,
+  "inertiaSsr": false,
+  "sailServices": [
+    "laravel.test",
+    "scheduler",
+    "reverb",
+    "horizon",
+    "pgsql",
+    "redis",
+    "sail",
+    "sail-pgsql",
+    "sail-redis"
+  ]
+}

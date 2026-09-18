@@ -1,0 +1,152 @@
+{
+  "version": 3,
+  "mode": "gap",
+  "updated_at": "2026-08-25",
+  "freshness_policy": {
+    "window_days": 7,
+    "changed_on": "2026-08-25",
+    "reason": "El usuario subio la ventana de 72h a 7 dias de forma explicita, tras encontrar en la corrida anterior una vacante de Majorel con fecha de 2023. A partir de ahora: nada publicado hace mas de 7 dias entra en las listas, y toda entrada lleva su fecha de publicacion visible."
+  },
+
+  "_LEEME": "Los enlaces estan separados en tres listas segun si es seguro candidatarse. Mira SOLO 'apply_links'. La seccion 'seen_urls' de abajo es el registro tecnico para no repetir busquedas; no la necesitas para decidir.",
+
+  "apply_links": {
+    "1_aplicar_ya": {
+      "descripcion": "Pasaron TODOS los gates y estan verificadas. Puedes candidatarte sin comprobar nada mas.",
+      "total": 0,
+      "enlaces": [],
+      "nota": "Vacio tras dos rondas de busqueda (espanol + portugues, ventana de 7 dias). No es un fallo de la busqueda: es el estado real del mercado. Explicacion en el informe."
+    },
+    "2_verificar_antes": {
+      "descripcion": "Encaje real, pero hay UNA cosa concreta que confirmar antes de invertir tiempo. Puedes candidatarte, preguntando eso primero.",
+      "total": 2,
+      "enlaces": [
+        {
+          "empresa": "Majorel Portugal (Teleperformance)",
+          "puesto": "Junior Content Analyst - Spanish Speaking - WFH Portugal Continental",
+          "link": "https://majorelportugal.softgarden.io/job/39302672",
+          "publicado": "12/11/23 (fecha del propio board)",
+          "por_que_encaja": "Espanol imprescindible; ingles pedido a nivel 'intermediate', que es exactamente tu B1; remoto en Portugal continental; jornada completa; junior.",
+          "que_verificar": "DOS cosas, por email antes de nada: (1) si la vacante sigue realmente abierta, porque el anuncio tiene casi 3 anios en el board; (2) si aplica la restriccion de 'solo a 50 km de Lisboa' que menciona un snippet de Indeed. Covilha esta a ~220 km: si esa restriccion es real, no puedes optar."
+        },
+        {
+          "empresa": "Velenosi & Meredith Consulting / CB Talents",
+          "puesto": "Spanish Speaker customer support agent - FULL REMOTE freelance",
+          "link": "https://jobgether.com/offer/6a8771f9a55bd7e3ae0ee033-spanish-speaker-customer-support-agent-full-remote-freelance",
+          "publicado": "hace ~5 dias (dentro de la ventana de 7 dias)",
+          "por_que_encaja": "Solo email, sin llamadas ni venta. Lunes a viernes de dia. 15 EUR/h fijos. Espanol C1 (nativo) e ingles 'good' sin exigir titulo. Pide estatus de autonomo con facturacion: tu tienes recibos verdes.",
+          "que_verificar": "TRES cosas por escrito antes de aceptar nada: (1) cuantas horas semanales te garantizan - sin eso, los 15 EUR/h no son un sueldo; (2) pais y razon social de la empresa que firma; (3) contrato por escrito antes de dar cualquier dato. Esta capada a 55 puntos por eso, no por ser sospechosa de estafa: tienen dominio propio verificable y dicen explicitamente que nunca te pediran pagar nada."
+        }
+      ]
+    },
+    "3_no_aplicar": {
+      "descripcion": "Descartadas. No pierdas tiempo aqui. Motivo concreto en cada una.",
+      "total": 14,
+      "enlaces": [
+        { "empresa": "Nortempo", "puesto": "Operador de call-center - Cosmetica - Teletrabalho", "link": "https://www.net-empregos.com/15849796/operador-de-call-center-m-f-cosmetica-teletrabalho/", "publicado": "25-8-2026", "motivo": "G2 - Es VENTA. 'Venda consultiva e fecho de vendas', objetivos comerciales, y exige 2 anios de experiencia en ventas. Lastima: 1.785,70 EUR/mes, 100% remoto en todo Portugal y equipo incluido." },
+        { "empresa": "Gi Group", "puesto": "Operador de Call Center ONG (Teletrabalho)", "link": "https://www.net-empregos.com/15883943/operador-de-call-center-ong-teletrabalho-inicio-02-09/", "publicado": "20-8-2026", "motivo": "G2 + G5 - Outbound para captar donantes (venta) y 920 EUR brutos a jornada completa, por debajo de tu banda minima de 1.000. Ademas el equipo lo pagas tu, incluido comprar cable de red y auriculares USB." },
+        { "empresa": "3Consulting Management", "puesto": "Apoio ao Cliente - Endesa", "link": "https://www.net-empregos.com/15857207/apoio-ao-cliente-endesa/", "publicado": "25-8-2026", "motivo": "G1 + G2 - Presencial en Vila Nova de Gaia o Porto, y es 'base + comisiones' sin declarar la base. Usa la marca Endesa aunque quien contrata es otra empresa. Evitala." },
+        { "empresa": "Workster", "puesto": "Especialista de Apoio ao Cliente - Servicos Bancarios", "link": "https://www.net-empregos.com/15734767/especialista-de-apoio-ao-cliente-servicos-bancarios/", "publicado": "25-8-2026", "motivo": "G1 - 'Posicao full-time PRESENCIAL em Lisboa'. Condiciones buenas, pero hay que estar en Lisboa. Ademas pide experiencia previa en contact center." },
+        { "empresa": "Grupo EGOR", "puesto": "Assistente de Contact Center Comercial - 100% Teletrabalho - Castelo Branco", "link": "https://www.net-empregos.com/15895464/assistente-de-contact-center-comercial-100-teletrabalho-10h-as-17h-castelo-branco/", "publicado": "24-8-2026", "motivo": "G2 - 'Comercial' en el titulo. Es venta telefonica, aunque el distrito sea el tuyo." },
+        { "empresa": "Vertente Humana", "puesto": "Operador de Contact Center Outbound - Teletrabalho - Castelo Branco", "link": "https://www.net-empregos.com/15899404/operador-de-contact-center-outbound-m-f-10h-17h-teletrabalho-castelo-branco/", "publicado": "25-8-2026", "motivo": "G2 - Outbound puro: vender planes de salud por telefono con objetivos comerciales." },
+        { "empresa": "Randstad Portugal", "puesto": "Board completo de apoio ao cliente remoto (58 vacantes)", "link": "https://www.randstad.pt/empregos/s-servicos-de-apoio-ao-cliente/remote/", "publicado": "24-25 agosto 2026", "motivo": "IDIOMA - Revise las 58. TODAS las 'remote (portugal) / permanente' son en aleman, frances, neerlandes o italiano. Las que son en portugues son presenciales en Lisboa, Porto u Oeiras. Cero en espanol o portugues en remoto." },
+        { "empresa": "Global People Sphere", "puesto": "Customer Service Representative - Spanish Market", "link": "https://jobgether.com/offer/6a87800aa55bd7e3ae0f202e-customer-service-representative---spanish-market-fully-remote-in-greece", "publicado": "hace ~5 dias", "motivo": "G1 - TRAMPA CLASICA: el agregador dice 'Remote from Greece, Portugal, Spain' pero el anuncio original dice 'live and work from anywhere in GREECE'. Manda el anuncio. Habria puntuado 79 si no fuera por eso. 1.045 EUR + 200 de bonus." },
+        { "empresa": "Velenosi & Meredith / CB Talents", "puesto": "Spanish Speaker Content Moderator - Grecia", "link": "https://jobgether.com/offer/6a8771f9a55bd7e3ae0ee031-spanish-speaker-content-moderator---relocation-to-greece-remote---eu-passport", "publicado": "hace ~5 dias", "motivo": "G1 doble - Exige PASAPORTE UE obligatorio (tu tienes residencia legal, no nacionalidad) y residir en Grecia. Por lo demas era tu perfil clavado." },
+        { "empresa": "Cross Border Talents", "puesto": "Portuguese Speaker Content Moderator / Customer support - Grecia", "link": "https://www.careers-page.com/cross-border-talents-7/job/4R8X356V", "publicado": "dentro de 7 dias", "motivo": "G1 - 1.100-1.400 EUR netos y contrato de 40h, pero 'must be resident in GREECE'. Es mudanza, no teletrabajo desde Covilha." },
+        { "empresa": "Otonomee", "puesto": "Customer Support Advisor (Remote in Portugal)", "link": "https://otonomee.jobs.personio.com/job/1441332?language=en", "publicado": "dentro de 7 dias", "motivo": "IDIOMA + EXPERIENCIA - Atiende a clientes de EE.UU./Reino Unido en ingles (cap 55) y exige 3-4 anios de experiencia. Nota: Otonomee NO tiene puesto en espanol para Portugal; el suyo en espanol esta bloqueado a Colombia." },
+        { "empresa": "Velenosi & Meredith / CB Talents", "puesto": "Outbound Sales for Spanish-Speaking Freelancer", "link": "https://jobgether.com/offer/6a8771f9a55bd7e3ae0edf9d-outbound-sales-for-spanish-speaking-freelancer-remote", "publicado": "dentro de 7 dias", "motivo": "G2 + idioma - Mezcla soporte con venta saliente, y exige ingles B2 (cap 65). No llegaria a la tabla ni aprobando el resto." },
+        { "empresa": "Plataformas de tareas de IA", "puesto": "DataAnnotation / micro1 / Mercor / Turing / RWS TrainAI / NeuraScale / Meridial", "link": null, "motivo": "G2b - Todas son colas de micro-tareas 'on demand', horario a tu eleccion y pago por proyecto. No son empleos. Decidiste no perseguir ese modelo, y ademas casi todas piden MD/PhD o ingles nativo." },
+        { "empresa": "Publicaciones de grupos de Facebook", "puesto": "Reign Gigs, '$18/HR REMOTE', 'Agente Call Center Freelancer', Ryzer Group y similares", "link": null, "motivo": "G4 ANTIFRAUDE - Sin dominio corporativo, sin razon social, redaccion vaga con emojis y sin tareas concretas. NO las busques ni por curiosidad." },
+        { "empresa": "Bloomreach", "puesto": "Associate Product Support Specialist - EMEA & US hours", "link": "https://euremotejobs.com/job/associate-product-support-specialist-emea-us-hours", "publicado": "hace 7 dias", "motivo": "G1 - 1.700 EUR brutos/mes y entry-level, pero 'remote work from Czechia or Slovakia' unicamente. Atado a residencia checa o eslovaca." },
+        { "empresa": "HubSpot", "puesto": "Spanish Customer Support Specialist", "link": "https://nodesk.co/remote-jobs/hubspot-spanish-customer-support-specialist/", "publicado": "hace 29 semanas", "motivo": "G3 + G1 - Caducada (29 semanas) y contrata solo en Irlanda. Es el arquetipo del cuadrante: soporte en espanol si existe en remoto, pero se contrata desde Irlanda." },
+        { "empresa": "Squarespace", "puesto": "Bilingual Customer Support Associate/Advisor, Spanish", "link": "https://nodesk.co/remote-jobs/squarespace-bilingual-customer-support-advisor-spanish/", "publicado": "hace 158-204 semanas", "motivo": "G3 + G1 - Muy caducada y contrata solo en EE.UU. Era entry-level, lo cual duele." },
+        { "empresa": "Doist", "puesto": "Support Specialist (Bilingual Spanish/English)", "link": "https://nodesk.co/remote-jobs/doist-support-specialist-bilingual-spanish-english/", "publicado": "hace 372 semanas", "motivo": "G3 - Worldwide y encaje perfecto, pero el anuncio tiene 7 anios. Vigilar la pagina de empleo de Doist por si reabren: es remote-first de verdad y contrata en cualquier pais." },
+        { "empresa": "Mercor / TELUS International AI / Welocalize", "puesto": "Bilingual Spanish Evaluator · Online Data Analyst · Internet Search Evaluator", "link": null, "motivo": "G2b - Contract/freelance por tarea. Colas de tareas otra vez, el mismo modelo que descartaste." },
+        { "empresa": "Babel Profiles / Alphanumeric Systems", "puesto": "Customer Service Specialist - Full remote anywhere in Spain", "link": null, "motivo": "G1 - 'Full remote anywhere in SPAIN' exige contrato y residencia espanoles. Para un residente en Portugal es tan inalcanzable como Grecia. OJO: la etiqueta compartida 'remote-pt-es' agrupa PT y ES y aqui enganya." }
+      ]
+    }
+  },
+
+  "seen_urls": {
+    "https://majorelportugal.softgarden.io/job/39302672": { "title": "Junior Content Analyst - Spanish Speaking - WFH in Portugal Continental", "company": "Majorel Portugal (Teleperformance)", "safe_to_apply": "verify_first", "match_score": null, "block": null, "contract_type": "no_especificado", "salary_eur_month": null, "salary_basis": "not_stated", "salary_confirmed": false, "salary_note": "La variante en italiano de la misma familia publica 1.024 EUR base/mes (Indeed). La de espanol no publica cifra.", "hours_guarantee": 1.0, "countries_accepted": ["PT"], "experience_required": "preferred_1y", "language_primary": "es", "modality": "remote-pt-es", "posted": "2023-11-12", "gate_failed": "G3", "scam_flags": [], "status": "skipped", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://jobgether.com/offer/6a8771f9a55bd7e3ae0ee033-spanish-speaker-customer-support-agent-full-remote-freelance": { "title": "Spanish Speaker customer support agent FULL REMOTE freelance", "company": "Velenosi & Meredith Consulting / CB Talents", "safe_to_apply": "verify_first", "match_score": 55, "raw_score": 74, "cap_reason": "G4 sospecha unica: tarifa ~1,7x el mercado local con contrato y ninguna hora garantizada; entidad sin pais declarado.", "score_breakdown": { "H": 74, "S": 70, "D": 78, "semantic_note": "proxy" }, "block": null, "contract_type": "freelance-contrato", "salary_eur_month": 2400, "salary_basis": "hourly", "salary_confirmed": false, "salary_note": "15 EUR/h x 160 h = 2.400 EUR/mes de EQUIVALENCIA a jornada completa, NO ingreso prometido. Formacion pagada a 10 EUR/h.", "hours_guarantee": 0.6, "countries_accepted": ["worldwide"], "experience_required": "none", "language_primary": "es", "modality": "remote-global", "posted": "2026-08-20", "scam_flags": ["sueldo_sobre_mercado_sin_horas_garantizadas", "entidad_sin_pais_declarado"], "status": "skipped", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://jobgether.com/offer/6a87800aa55bd7e3ae0f202e-customer-service-representative---spanish-market-fully-remote-in-greece": { "title": "Customer Service Representative - Spanish Market", "company": "Global People Sphere", "safe_to_apply": "no", "match_score": null, "raw_score": 79, "block": null, "contract_type": "no_especificado", "salary_eur_month": 1045, "salary_basis": "monthly", "salary_confirmed": true, "salary_note": "1.045 EUR brutos base + hasta 200 EUR de bonus mensual.", "hours_guarantee": 1.0, "countries_accepted": ["GR"], "experience_required": "none", "language_primary": "es", "modality": "remote-country-locked", "posted": "2026-08-21", "gate_failed": "G1", "gate_note": "Agregador dice PT/ES/GR; el anuncio dice 'live and work from anywhere in Greece'. Manda el anuncio.", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://jobgether.com/offer/6a8771f9a55bd7e3ae0ee031-spanish-speaker-content-moderator---relocation-to-greece-remote---eu-passport": { "title": "Spanish Speaker Content Moderator - Relocation to Greece", "company": "Velenosi & Meredith / CB Talents", "safe_to_apply": "no", "match_score": null, "contract_type": "indefinido", "salary_eur_month": 1300, "salary_basis": "monthly", "salary_confirmed": true, "salary_note": "Minimo 1.300 EUR NETOS/mes.", "hours_guarantee": 1.0, "countries_accepted": ["GR"], "experience_required": "none", "language_primary": "es", "modality": "remote-country-locked", "posted": "2026-08-21", "gate_failed": "G1", "gate_note": "Pasaporte UE obligatorio + residir en Grecia.", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://www.careers-page.com/cross-border-talents-7/job/4R8X356V": { "title": "Portuguese Speaker Content Moderator Customer support - Relocation to Greece", "company": "Cross Border Talents", "safe_to_apply": "no", "match_score": null, "contract_type": "indefinido", "salary_eur_month": 1250, "salary_basis": "monthly", "salary_confirmed": true, "salary_note": "1.100-1.400 EUR netos/mes segun proyecto; 40h/semana.", "hours_guarantee": 1.0, "countries_accepted": ["GR"], "experience_required": "none", "language_primary": "pt", "modality": "remote-country-locked", "posted": "2026-08-22", "gate_failed": "G1", "gate_note": "'Must be resident in Greece'. Ademas pide portugues nativo o C1+, por encima de tu nivel residente.", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://www.net-empregos.com/15849796/operador-de-call-center-m-f-cosmetica-teletrabalho/": { "title": "Operador de call-center (M/F) - Cosmetica - Teletrabalho", "company": "Nortempo", "safe_to_apply": "no", "match_score": null, "contract_type": "no_especificado", "salary_eur_month": 1785.7, "salary_basis": "monthly", "salary_confirmed": true, "hours_guarantee": 1.0, "countries_accepted": ["PT"], "experience_required": "1_2y", "language_primary": "pt", "modality": "remote-pt-es", "posted": "2026-08-25", "gate_failed": "G2", "gate_note": "Venta consultiva y cierre de ventas con objetivos comerciales; 2 anios de experiencia en ventas. Sueldo y modalidad excelentes, rol equivocado.", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://www.net-empregos.com/15883943/operador-de-call-center-ong-teletrabalho-inicio-02-09/": { "title": "Operador de Call Center ONG (Teletrabalho)", "company": "Gi Group", "safe_to_apply": "no", "match_score": null, "contract_type": "temporal", "salary_eur_month": 920, "salary_basis": "monthly", "salary_confirmed": true, "hours_guarantee": 1.0, "countries_accepted": ["PT"], "experience_required": "preferred_1y", "language_primary": "pt", "modality": "remote-pt-es", "posted": "2026-08-20", "gate_failed": "G2+G5", "gate_note": "Outbound de captacion de donantes (venta) y 920 EUR a jornada completa, bajo la banda. El equipo corre por cuenta del candidato.", "scam_flags": ["equipo_a_cargo_del_candidato"], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://www.net-empregos.com/15857207/apoio-ao-cliente-endesa/": { "title": "Apoio ao Cliente - Endesa", "company": "3Consulting Management", "safe_to_apply": "no", "match_score": null, "contract_type": "no_especificado", "salary_eur_month": null, "salary_basis": "not_stated", "salary_confirmed": false, "salary_note": "'Ganhos acima da media (1000-2000 EUR)' = base + comisiones, sin declarar la base.", "hours_guarantee": 0.6, "countries_accepted": ["PT"], "experience_required": "none", "language_primary": "pt", "modality": "onsite", "posted": "2026-08-25", "gate_failed": "G1+G2", "gate_note": "Presencial en Vila Nova de Gaia/Porto y retribucion por comision.", "scam_flags": ["marca_ajena_en_el_titulo", "base_no_declarada"], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://www.net-empregos.com/15734767/especialista-de-apoio-ao-cliente-servicos-bancarios/": { "title": "Especialista de Apoio ao Cliente - Servicos Bancarios", "company": "Workster", "safe_to_apply": "no", "match_score": null, "contract_type": "indefinido", "salary_eur_month": null, "salary_basis": "not_stated", "salary_confirmed": false, "hours_guarantee": 1.0, "countries_accepted": ["PT"], "experience_required": "1_2y", "language_primary": "pt", "modality": "onsite", "posted": "2026-08-25", "gate_failed": "G1", "gate_note": "Full-time presencial en Lisboa, turnos rotativos 08:00-00:00. Pide experiencia previa en contact center.", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://www.randstad.pt/empregos/s-servicos-de-apoio-ao-cliente/remote/": { "title": "Board de apoio ao cliente remoto (58 vacantes)", "company": "Randstad Portugal", "safe_to_apply": "no", "match_score": null, "language_primary": "de/fr/nl/it", "modality": "remote-pt-es", "posted": "2026-08-24/25", "gate_failed": "language_mismatch", "gate_note": "HALLAZGO ESTRUCTURAL: las 58 revisadas. Todas las 'remote (portugal) / permanente' son en aleman, frances, neerlandes o italiano. Las de lengua portuguesa son presenciales en Lisboa/Porto/Oeiras. Ninguna en espanol ni en portugues en remoto.", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://otonomee.jobs.personio.com/job/1441332?language=en": { "title": "Customer Support Advisor (Remote in Portugal)", "company": "Otonomee", "safe_to_apply": "no", "match_score": null, "contract_type": "indefinido", "salary_eur_month": null, "salary_basis": "not_stated", "salary_confirmed": false, "hours_guarantee": 1.0, "countries_accepted": ["PT"], "experience_required": "3y_plus", "language_primary": "en", "modality": "remote-pt-es", "posted": "2026-08-21", "gate_failed": "G4b+experiencia", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" },
+    "https://jobgether.com/offer/6a8771f9a55bd7e3ae0edf9d-outbound-sales-for-spanish-speaking-freelancer-remote": { "title": "Outbound Sales for Spanish-Speaking Freelancer", "company": "Velenosi & Meredith / CB Talents", "safe_to_apply": "no", "match_score": null, "contract_type": "freelance-contrato", "salary_eur_month": null, "salary_basis": "not_stated", "salary_confirmed": false, "hours_guarantee": 0.6, "countries_accepted": ["worldwide"], "experience_required": "preferred_1y", "language_primary": "es", "modality": "remote-global", "posted": "2026-08-21", "gate_failed": "G2", "gate_note": "Venta saliente + ingles B2 requerido (cap 65).", "scam_flags": [], "status": "dismissed", "outcome": null, "first_seen": "2026-08-25", "last_seen": "2026-08-25" }
+  },
+
+  "runs": [
+    {
+      "date": "2026-08-25",
+      "round": 1,
+      "languages_searched": ["es", "en"],
+      "freshness": "72h -> relaxed_7d",
+      "new_matches_a": 0,
+      "new_matches_b": 0,
+      "excluded_count": 55,
+      "excluded_breakdown": { "scam_gate": 9, "contract_model": 7, "residency": 18, "language_mismatch": 16, "listing_quality": 12, "stale": 1, "role_fit": 5, "salary_band": 0 },
+      "notes": "Primera corrida. Bloques A y B vacios. Descartes dominados por residencia (18) e idioma (16). El cuadrante de IA cayo entero por G2b: 7 plataformas de micro-tareas. 9 descartes por fraude, todos publicaciones de grupos de Facebook sin dominio corporativo salvo un esquema de agente de viajes por comision."
+    },
+    {
+      "date": "2026-08-25",
+      "round": 2,
+      "languages_searched": ["pt-PT", "en"],
+      "freshness": "7d",
+      "new_matches_a": 0,
+      "new_matches_b": 0,
+      "excluded_count": 31,
+      "excluded_breakdown": { "scam_gate": 3, "contract_model": 0, "residency": 9, "language_mismatch": 12, "listing_quality": 4, "stale": 0, "role_fit": 8, "salary_band": 1 },
+      "notes": "Ampliacion a portugues pedida por el usuario, ventana fijada en 7 dias. Cero matches otra vez, pero con un hallazgo estructural que explica las dos rondas: en Portugal el teletrabajo de apoio ao cliente esta reservado a idiomas escasos (aleman, frances, neerlandes, italiano, sueco). Verificado sobre el board completo de Randstad Portugal: 58 vacantes remotas, publicadas el 24-25 de agosto, y NINGUNA en portugues ni en espanol en remoto - las de lengua portuguesa son presenciales en Lisboa, Porto u Oeiras. Segundo patron del mercado portugues: de las vacantes de call center 100% teletrabalho publicadas esta semana en net-empregos, la practica totalidad son outbound / comercial / telemarketing, no apoio ao cliente inbound (8 descartes por role_fit). La unica de apoio puro remoto y bien pagada (Nortempo, 1.785 EUR) exige 2 anios en ventas.",
+      "market_insights": {
+        "N_jds_read": 21,
+        "recurring": {
+          "segundo_idioma_escaso_como_condicion_del_remoto": "12/12 de las remotas en Portugal (aleman/frances/neerlandes/italiano)",
+          "portugues_o_espanol_en_remoto_desde_cualquier_punto_de_PT": "0/21",
+          "ingles_B2_o_superior_exigido": "9/21 (43%)",
+          "contrato_laboral_permanente_40h": "13/21 (62%)",
+          "sin_experiencia_previa_con_formacion_pagada": "9/21 (43%)",
+          "rol_realmente_de_venta_pese_al_titulo_de_apoio": "8/21 (38%)",
+          "exige_relocalizacion_o_presencialidad": "11/21 (52%)",
+          "herramienta_de_soporte_exigida_zendesk_intercom_freshdesk": "0/21 (0%)"
+        },
+        "salary_range_observed_eur_month": "920 - 1.845 base bruto. Portugal remoto de entrada: 1.050 - 1.450. El unico de 1.785 EUR era un puesto de ventas.",
+        "binding_constraint": "No es el CV ni la experiencia: es que ni el espanol ni el portugues son idiomas escasos en Portugal, asi que no hay razon de negocio para contratarlos en remoto. El ingles B1 -> B2 sigue siendo el segundo cuello de botella (9/21).",
+        "non_blocker": "Zendesk/Intercom/Freshdesk: 0 de 21 anuncios los exigian, en dos rondas y dos idiomas. Deja de considerarlo un hueco."
+      }
+    }
+  ],
+
+  "runs_round3": [
+    {
+      "date": "2026-08-25",
+      "round": 3,
+      "quadrant": "espanol para empresas internacionales (ingles tecnico B1)",
+      "languages_searched": ["en", "es"],
+      "freshness": "7d",
+      "new_matches_a": 0,
+      "new_matches_b": 0,
+      "excluded_count": 34,
+      "excluded_breakdown": { "scam_gate": 0, "contract_model": 4, "residency": 14, "language_mismatch": 5, "listing_quality": 3, "stale": 6, "role_fit": 2, "salary_band": 0 },
+      "notes": "Tercera ronda, cuadrante nuevo pedido por el usuario. Cero matches, pero CIERRA el diagnostico. Hallazgo: el soporte en espanol SI existe en remoto internacional, pero se contrata desde Irlanda (HubSpot, Dropbox), Estados Unidos (Squarespace) o solo Espana (Alphanumeric, Babel Profiles). Ninguno desde Portugal. Segundo hallazgo, de presupuesto: el board 'spanish' de NoDesk tiene 24 vacantes y NINGUNA de los ultimos 7 dias - la mas reciente tiene 20 semanas y la mas vieja 372. Sembrar en este cuadrante exige filtrar por fecha ANTES de gastar extract. Tercer hallazgo, de reglas: 'full remote anywhere in Spain' debe tratarse como remote-country-locked, no como remote-pt-es; la etiqueta compartida agrupa PT y ES y engania a un residente portugues.",
+      "market_insights": {
+        "N_jds_read": 9,
+        "conclusion": "El diagnostico de las tres rondas ya es completo y coherente: (a) en Portugal el remoto se reserva a idiomas escasos, y el espanol/portugues se cubre presencialmente; (b) fuera de Portugal el espanol si es escaso y el puesto si es remoto, pero el contrato se firma en Irlanda, EE.UU. o Espana. El obstaculo real no es el idioma ni el CV: es que el candidato reside en Portugal y casi nadie contrata soporte en espanol con contrato portugues.",
+        "palanca_reordenada": "El ingles B2 baja al segundo puesto. La palanca numero uno pasa a ser el MODELO DE CONTRATACION: empresas que contratan por EOR (Deel, Remote.com, Oyster) o que aceptan freelance con contrato largo, porque el candidato tiene recibos verdes en Portugal y eso salva la frontera que ni el idioma ni el CV pueden salvar."
+      }
+    }
+  ],
+
+  "outcome_policy": {
+    "values": ["unknown", "pending", "no_reply", "rejected", "screening", "interview", "offer", "withdrawn"],
+    "default_on_apply": "pending",
+    "aging_rule": "An entry still unknown/pending more than 21 days after applied_at is COUNTED AS no_reply by the market-insights correlation, but the stored value is NOT overwritten.",
+    "note": "Same semantics as fullstack cv/job-search-cache.json. Never mix the two caches."
+  }
+}

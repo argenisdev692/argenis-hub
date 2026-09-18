@@ -16,6 +16,7 @@ use Modules\ContactSupport\Providers\ContactSupportServiceProvider;
 use Modules\CourseScripts\Providers\CourseScriptsServiceProvider;
 use Modules\Cvs\Providers\CvsServiceProvider;
 use Modules\Invoices\Providers\InvoicesServiceProvider;
+use Modules\LeadScout\Providers\LeadScoutServiceProvider;
 use Modules\PaymentAccounts\Providers\PaymentAccountsServiceProvider;
 use Modules\Portfolios\Providers\PortfoliosServiceProvider;
 use Modules\Post\Providers\PostServiceProvider;
@@ -54,6 +55,7 @@ return [
     // Issuer payment accounts — Invoices snapshots one onto every invoice.
     PaymentAccountsServiceProvider::class,
     InvoicesServiceProvider::class,
+    LeadScoutServiceProvider::class,
     ActivityLogServiceProvider::class,
     BackupsServiceProvider::class,
     // Video editing pipeline (spec 001-video-edit) — depends on the Shared StoragePort / AuditPort.

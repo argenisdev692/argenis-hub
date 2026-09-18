@@ -1,0 +1,283 @@
+{
+  "version": 2,
+  "mode": "fullstack",
+  "updated_at": "2026-08-24T00:00:00+01:00",
+  "researched_at": "2026-08-07T02:20:00+01:00",
+  "last_weekly_refresh": "2026-08-03",
+  "populated": true,
+  "skip_research_when_populated": true,
+  "refresh_policy": {
+    "weekday": "Sunday",
+    "timezone": "Europe/Lisbon",
+    "also_on_low_yield": true,
+    "low_yield_new_matches_lt": 2,
+    "low_yield_gate_passed_lt": 3,
+    "force_phrases": [
+      "refresh keywords",
+      "actualizar keywords",
+      "refresh portals",
+      "actualizar portales"
+    ],
+    "never_drop": [
+      "user_pinned.titles",
+      "seniority_focus",
+      "stack_lock",
+      "never_seed"
+    ]
+  },
+  "stack_lock": [
+    "PHP",
+    "Laravel",
+    "Vue",
+    "Inertia",
+    "Livewire",
+    "MySQL",
+    "PostgreSQL"
+  ],
+  "never_seed": [
+    "NestJS",
+    "Angular",
+    "Django",
+    "Spring Boot"
+  ],
+  "seniority_focus": {
+    "primary": [
+      "mid-level",
+      "unlabelled",
+      "stack-pair titles"
+    ],
+    "secondary": [
+      "senior",
+      "entry-level",
+      "associate",
+      "junior"
+    ],
+    "deprioritize_seeds": [
+      "lead",
+      "principal",
+      "staff",
+      "head of",
+      "architect",
+      "engineering manager"
+    ],
+    "target_years": "2-5",
+    "changed_at": "2026-08-24",
+    "note": "Mid-level is the primary target (user decision 2026-08-24). Expansion rotation carries BOTH ends: senior titles (added 2026-08-24 - the CV scored 78 on a Senior Full-Stack Engineer posting) and junior/entry titles (kept thin - remote junior openings are rare). Lead/principal/staff/architect stay unseeded. Seeding order is a budget decision and never changes how a JD scores: see job-match-scoring.md G4 years table + D years sub-score. A senior JD with an explicit 7+ year floor is still capped at 55 by G4 and feeds the reach table as years_cap."
+  },
+  "user_pinned": {
+    "pinned_at": "2026-08-24",
+    "source": "user request 2026-08-24 — search mainly junior/entry Laravel+Vue",
+    "note": "Verbatim user title list. Weekly Tavily refresh MUST merge on top of these, never remove them. Seniority ROUTING (which titles drive Core vs Expansion) is set by seniority_focus + fragment_policy and was changed to mid-first on 2026-08-24 - the list itself stays pinned.",
+    "titles": {
+      "en": [
+        "Junior Full Stack Developer Laravel",
+        "Junior PHP Developer Laravel",
+        "PHP Developer Vue",
+        "Junior PHP Vue Developer",
+        "Full Stack Laravel Vue",
+        "Laravel Vue Developer",
+        "Laravel Inertia Developer",
+        "Laravel TypeScript Vue",
+        "Laravel React TypeScript",
+        "PHP Full Stack Developer",
+        "Associate Software Engineer Laravel",
+        "Junior Software Engineer PHP",
+        "Entry Level Laravel",
+        "Junior Web Developer PHP Laravel"
+      ],
+      "es": [
+        "Desarrollador PHP Laravel Junior",
+        "Desarrollador Full Stack Laravel Vue",
+        "Desarrollador Laravel Vue remoto",
+        "Desarrollador PHP Vue remoto",
+        "Desarrollador Full Stack PHP",
+        "Programador Laravel Junior",
+        "Desarrollador web Laravel",
+        "Desarrollador Vue Laravel",
+        "Desarrollador Full Stack remoto"
+      ]
+    },
+    "routing": {
+      "core": "mid-level + stack-pair titles",
+      "expansion": "junior/entry/associate + senior titles"
+    }
+  },
+  "keywords": {
+    "en": {
+      "strong": [
+        "Laravel",
+        "PHP",
+        "Vue",
+        "Vue.js",
+        "Inertia",
+        "Inertia.js",
+        "Livewire",
+        "Full Stack",
+        "Backend",
+        "MySQL",
+        "PostgreSQL",
+        "REST API",
+        "Eloquent",
+        "Tailwind CSS",
+        "TypeScript"
+      ],
+      "role": [
+        "Full Stack Developer",
+        "PHP Developer",
+        "Laravel Developer",
+        "Backend Developer",
+        "Software Engineer PHP",
+        "Full Stack PHP",
+        "PHP Full Stack Developer",
+        "PHP Backend",
+        "Mid-level Full Stack Developer",
+        "Full Stack Engineer",
+        "Web Developer PHP"
+      ],
+      "seniority": [
+        "Junior Full Stack Developer Laravel",
+        "Junior PHP Developer Laravel",
+        "Junior PHP Vue Developer",
+        "Junior Software Engineer PHP",
+        "Junior Web Developer PHP Laravel",
+        "Associate Software Engineer Laravel",
+        "Entry Level Laravel",
+        "Graduate Software Engineer PHP"
+      ],
+      "stack_pairs": [
+        "PHP Developer Vue",
+        "Full Stack Laravel Vue",
+        "Laravel Vue Developer",
+        "Laravel Inertia Developer",
+        "Laravel TypeScript Vue",
+        "Laravel React TypeScript",
+        "Laravel Livewire Developer"
+      ],
+      "modality": [
+        "remote",
+        "fully remote",
+        "work from anywhere",
+        "Europe remote",
+        "EU remote",
+        "EMEA",
+        "hybrid Lisbon",
+        "hybrid Lisboa"
+      ],
+      "senior": [
+        "Senior Full Stack Developer",
+        "Senior PHP Developer",
+        "Senior Laravel Developer",
+        "Senior Software Engineer PHP",
+        "Senior Backend Developer PHP",
+        "Senior Full Stack Engineer"
+      ]
+    },
+    "es": {
+      "strong": [
+        "Laravel",
+        "PHP",
+        "Vue",
+        "Vue.js",
+        "Inertia",
+        "Livewire",
+        "Full Stack",
+        "Backend",
+        "MySQL",
+        "PostgreSQL",
+        "API REST",
+        "Eloquent",
+        "Tailwind",
+        "TypeScript"
+      ],
+      "role": [
+        "Desarrollador Full Stack",
+        "Desarrollador PHP",
+        "Desarrollador Laravel",
+        "Desarrollador Backend",
+        "Programador Laravel",
+        "Desarrollador Full Stack PHP",
+        "Desarrollador web Laravel",
+        "Ingeniero de Software PHP"
+      ],
+      "seniority": [
+        "Desarrollador PHP Laravel Junior",
+        "Programador Laravel Junior",
+        "Desarrollador Junior PHP",
+        "Desarrollador Full Stack Junior",
+        "Perfil junior Laravel",
+        "Nivel inicial Laravel"
+      ],
+      "stack_pairs": [
+        "Desarrollador Full Stack Laravel Vue",
+        "Desarrollador Laravel Vue remoto",
+        "Desarrollador PHP Vue remoto",
+        "Desarrollador Vue Laravel",
+        "Laravel Inertia",
+        "Laravel TypeScript Vue"
+      ],
+      "modality": [
+        "remoto",
+        "teletrabajo",
+        "100% remoto",
+        "remoto Europa",
+        "híbrido Lisboa",
+        "híbrido Lisbon"
+      ],
+      "senior": [
+        "Desarrollador Senior PHP",
+        "Desarrollador Laravel Senior",
+        "Desarrollador Full Stack Senior",
+        "Ingeniero de Software Senior PHP",
+        "Programador Senior Laravel"
+      ]
+    }
+  },
+  "query_fragments": {
+    "en": [
+      "\"mid-level\" OR \"mid level\" full stack developer Laravel Vue remote",
+      "\"PHP developer\" Vue OR \"Laravel Vue developer\" remote Europe",
+      "\"Laravel Inertia\" OR \"Laravel TypeScript Vue\" OR \"Laravel React TypeScript\" developer",
+      "\"full stack\" Laravel Vue OR Inertia remote",
+      "PHP Laravel backend developer remote",
+      "\"junior\" OR \"entry level\" OR \"associate\" Laravel OR \"PHP developer\" remote",
+      "\"junior full stack developer\" Laravel Vue OR Inertia remote",
+      "\"senior\" (Laravel OR \"PHP developer\" OR \"full stack PHP\") remote Europe OR EMEA"
+    ],
+    "es": [
+      "\"desarrollador full stack Laravel Vue\" remoto OR teletrabajo",
+      "\"desarrollador PHP Vue\" OR \"desarrollador Vue Laravel\" remoto España OR Portugal",
+      "\"desarrollador web Laravel\" OR \"desarrollador full stack PHP\" teletrabajo",
+      "desarrollador Laravel OR PHP remoto OR teletrabajo",
+      "programador Laravel Vue remoto España OR Portugal",
+      "\"desarrollador PHP Laravel junior\" OR \"programador Laravel junior\" remoto",
+      "\"desarrollador senior\" Laravel OR PHP remoto España OR Portugal"
+    ]
+  },
+  "fragment_policy": {
+    "core_en": "Fragments 1-5 (mid-level + stack-pair + generic). Every run.",
+    "core_es": "Fragments 1-5 (mid-level + stack-pair + generic). Every run.",
+    "expansion_en": "Fragments 6-7 (junior/entry) + 8 (senior) + <=2 emerging. Rotation only.",
+    "expansion_es": "Fragment 6 (junior) + 7 (senior) + <=2 emerging. Rotation only.",
+    "rationale": "Mid-level leads Core because the CV (4+ yrs) scores 78-90 on mid/senior titles historically. Expansion rotation covers both edges: senior (real historical hits, e.g. Pixelmatters 78) and junior (thin, catches mislabelled 3-4 yr postings). G4 caps any 7+ year floor at 55 before it can reach the table, so seeding senior costs queries, not table noise."
+  },
+  "emerging": [],
+  "sources": [
+    "career_stack_lock_seed_2026-08-07",
+    "user_portal_list_alignment",
+    "user_seniority_tier_2026-08-24",
+    "user_mid_level_pivot_2026-08-24",
+    "user_senior_expansion_2026-08-24"
+  ],
+  "frontend_policy": {
+    "lock": "PHP/Laravel only",
+    "accepted": [
+      "Vue",
+      "Inertia",
+      "Livewire",
+      "React",
+      "Blade",
+      "none named"
+    ],
+    "note": "Front-end variant is not a G2 gate. Laravel+React passes and scores as a real match (CV has React 19 + TypeScript). \"Vue preferred\" / \"React or Vue\" is a preferred weight (0.6), not a wall."
+  }
+}

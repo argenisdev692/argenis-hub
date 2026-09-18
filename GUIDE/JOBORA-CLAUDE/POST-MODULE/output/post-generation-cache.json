@@ -1,0 +1,80 @@
+{
+  "selected_category": {
+    "blog_category_name": "AI",
+    "blog_category_description": "Artificial Intelligence trends, tools and insights"
+  },
+  "optional_topic_steer": "Post viral para blog landing page sobre contenidos de AI (high virality + SEO)",
+  "provider": "gemini",
+  "ideas_run": {
+    "at": "2026-08-07T00:40:00Z",
+    "tavily_queries": [
+      "AI viral content ideas ROI blogging 2026",
+      "AI content creators audience pain points SEO EEAT",
+      "AI EEAT thought leadership topics generative AI content trust",
+      "enterprise generative AI ROI 2026",
+      "AI tools developers adoption statistics 2026",
+      "Artificial Intelligence trends 2026 high search intent content marketing",
+      "94% marketers use AI content creation blog HubSpot 2026",
+      "Google AI generated content EEAT helpful content guidance 2026",
+      "AI Overviews SEO content quality human expertise statistics"
+    ],
+    "selected_idea_index": 1,
+    "selected_idea": {
+      "index": 1,
+      "title": "94% of Marketers Plan to Use AI for Blogs—Why Google Still Rewards Human Content",
+      "title_es_original": "El 94% usa AI para blogs: por qué Google (y tu audiencia) aún premian lo humano",
+      "hook": "Contrarian + dato HubSpot 2026",
+      "virality": 92,
+      "roi": 90,
+      "eeat": 88,
+      "key_trend": "AI mainstream en content + EEAT / people-first"
+    }
+  },
+  "draft_run": {
+    "at": "2026-08-07T00:50:00Z",
+    "iterations": 1,
+    "all_scores_pass": true,
+    "scores": {
+      "human_writing_index": 86,
+      "eeat_score": 88,
+      "virality_score": 84,
+      "roi_score": 87,
+      "seo_score": 90
+    },
+    "primary_keyword": "why AI blog content still needs human editing",
+    "meta_title": "Why AI Blog Content Still Needs Human Editing in 2026",
+    "meta_description": "Nearly 94% of marketers plan to use AI for blogs—yet thin drafts still flop in search. See what Google rewards, one publishing miss, and a human edit checklist.",
+    "meta_keywords": [
+      "why AI blog content still needs human editing",
+      "AI blog content that ranks with EEAT 2026",
+      "human vs AI blog content for SEO",
+      "how to edit AI drafts for Google rankings",
+      "EEAT checklist for AI assisted blog posts",
+      "marketers using AI for blog content 2026",
+      "Google AI content quality guidelines for blogs"
+    ],
+    "seo_meta_gate_pass": true,
+    "output_file": "POST-MODULE/output/ai_2026-08-07_why-ai-blog-content-still-needs-human-editing.md"
+  },
+  "cover_prompt_file": "POST-MODULE/output/ai_2026-08-07_why-ai-blog-content-still-needs-human-editing_cover-prompt.txt",
+  "runs": [
+    {
+      "command": "post-ideas",
+      "at": "2026-08-07T00:33:00Z",
+      "category": "AI",
+      "summary": "Category confirmed AI; topic steer: viral AI content for blog landing"
+    },
+    {
+      "command": "post-ideas",
+      "at": "2026-08-07T00:40:00Z",
+      "category": "AI",
+      "summary": "10 ideas generated; user selected idea #1"
+    },
+    {
+      "command": "post-draft",
+      "at": "2026-08-07T00:50:00Z",
+      "category": "AI",
+      "summary": "EN draft saved for idea #1; all scores pass; cover prompt written"
+    }
+  ]
+}

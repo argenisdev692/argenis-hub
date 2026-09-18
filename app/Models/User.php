@@ -35,6 +35,9 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseEloqu
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseGenerationRunEloquentModel;
 use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 use Modules\Invoices\Infrastructure\Persistence\Eloquent\Models\InvoiceEloquentModel;
+use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachEloquentModel;
+use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachStageEventEloquentModel;
+use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutProfileEloquentModel;
 use Modules\PaymentAccounts\Infrastructure\Persistence\Eloquent\Models\PaymentAccountEloquentModel;
 use Modules\Portfolios\Infrastructure\Persistence\Eloquent\Models\PortfolioEloquentModel;
 use Modules\Post\Infrastructure\Persistence\Eloquent\Models\PostAiGenerationEloquentModel;
@@ -115,6 +118,12 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $courses_count
  * @property-read Collection<int, CourseGenerationRunEloquentModel> $courseGenerationRuns
  * @property-read int|null $course_generation_runs_count
+ * @property-read Collection<int, ScoutProfileEloquentModel> $scoutProfiles
+ * @property-read int|null $scout_profiles_count
+ * @property-read Collection<int, ScoutOutreachEloquentModel> $operatedOutreaches
+ * @property-read int|null $operated_outreaches_count
+ * @property-read Collection<int, ScoutOutreachStageEventEloquentModel> $outreachStageEvents
+ * @property-read int|null $outreach_stage_events_count
  * @property-read int|null $cvs_count
  * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
@@ -474,6 +483,36 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function courseGenerationRuns(): HasMany
     {
         return $this->hasMany(CourseGenerationRunEloquentModel::class);
+    }
+
+    /**
+     * Inverse of `ScoutProfileEloquentModel::user()` (LeadScout US-1).
+     *
+     * @return HasMany<ScoutProfileEloquentModel, $this>
+     */
+    public function scoutProfiles(): HasMany
+    {
+        return $this->hasMany(ScoutProfileEloquentModel::class);
+    }
+
+    /**
+     * Outreaches this user sent (LeadScout FR-41: `operator_id`).
+     *
+     * @return HasMany<ScoutOutreachEloquentModel, $this>
+     */
+    public function operatedOutreaches(): HasMany
+    {
+        return $this->hasMany(ScoutOutreachEloquentModel::class, 'operator_id');
+    }
+
+    /**
+     * Stage transitions this user recorded (LeadScout US-6).
+     *
+     * @return HasMany<ScoutOutreachStageEventEloquentModel, $this>
+     */
+    public function outreachStageEvents(): HasMany
+    {
+        return $this->hasMany(ScoutOutreachStageEventEloquentModel::class, 'operator_id');
     }
 
     /**

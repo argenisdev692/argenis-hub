@@ -1,0 +1,341 @@
+
+-------------------------------------
+
+ Hay un efecto secundario útil: esas entradas capadas se guardan con cap_reason: years_cap + raw_score, así que van a
+  alimentar la tabla de alcance. En dos o tres corridas vas a poder leer literalmente cuánto te cuesta el muro de "7+
+  años" comparado con el del inglés B2 — y decidir con números si el siguiente movimiento es el examen de inglés o dejar
+  de mirar senior.
+
+ Una cosa que salta al ver el cache completo: 13 aplicaciones registradas y ningún resultado registrado. El cache sabe
+  a qué aplicaste pero no qué pasó después, y ese es justamente el dato que haría útil el informe de mercado. Con un
+  campo outcome (no_reply / rejected / screening / interview) podrías cruzar la tabla de requisitos recurrentes contra
+  tus respuestas reales — por ejemplo, descubrir que las 5 ofertas donde no hubo respuesta pedían todas B2, mientras que
+  las que sí contestaron no mencionaban inglés. Eso convierte el informe de "qué pide el mercado" en "qué te está
+  costando entrevistas", que es distinto y más accionable.
+
+No he registrado ningún motivo. No me lo has dicho y no lo voy a suponer. Si te dieron uno (idioma, años, perfil),
+    ese outcome_note vale más que diez correlaciones — es literalmente lo que dice la regla del informe.
+
+  Son dos líneas en el schema si lo quieres.
+
+Campo outcome agregado (cache v3). Las 13 entradas applied quedaron en unknown — no inventé resultados.
+
+  Cómo funciona: status dice lo que hiciste tú, outcome lo que hizo la empresa. Valores: pending → no_reply · rejected ·
+  screening · interview · offer · withdrawn, más outcome_at y un outcome_note opcional (una línea, tipo "rechazado:
+  pedían C1" — eso vale más que cualquier correlación).
+
+  Regla de envejecimiento a 21 días, que es lo que hace esto usable sin que marques 13 entradas a mano: una aplicación
+  que sigue en unknown pasados 21 días se cuenta como no_reply en el análisis, pero el valor guardado no se sobrescribe
+  nunca. El silencio es un supuesto razonable para analizar; escribir un rechazo que nadie mandó es fabricar. De tus 13,
+  8 ya pasaron los 21 días (las del 30-jul y 1-ago), así que el análisis ya tiene con qué trabajar.
+
+  Sección nueva en el informe — correlación de resultados: compara la frecuencia de cada requisito entre las
+  aplicaciones que respondieron y las silenciosas:
+
+  ┌─────────────────────────┬──────────────────────┬──────────────────────┬──────────────┐
+  │        Requisito        │ En respondidas (n=3) │ En silenciosas (n=8) │  Dirección   │
+  ├─────────────────────────┼──────────────────────┼──────────────────────┼──────────────┤
+  │ Inglés B2+ requerido    │ 0 de 3               │ 6 de 8               │ En tu contra │
+  ├─────────────────────────┼──────────────────────┼──────────────────────┼──────────────┤
+  │ Laravel + Vue nombrados │ 3 de 3               │ 3 de 8               │ A tu favor   │
+  └─────────────────────────┴──────────────────────┴──────────────────────┴──────────────┘
+
+  Con tres guardarraíles que me parecen importantes dado el tamaño de muestra:
+
+  - Mínimo 8 resultados usables para mostrar la columna de dirección. Con 3 aplicaciones no se distingue un muro de
+    idioma de la mala suerte.
+  - Se reporta como direccional, nunca causal. Un rechazo tiene una lista de requisitos visible y una docena de razones
+    invisibles — candidato interno, presupuesto congelado, alguien que aplicó antes.
+  - Nunca revisa un match_score. El scoring es CV-contra-oferta; los resultados son feedback de mercado. Mezclarlos
+    convertiría el score en una profecía autocumplida.
+
+  Ahora todo está en pie: rutas, keywords mid-first con senior y junior en Expansion, la matemática con los cinco
+  arreglos, el informe de mercado con tabla de alcance y correlación de resultados.
+
+------------------------------------------
+
+Perfecto. Ahora tengo una visión completa de tu pipeline. Déjame analizar y darte una recomendación fundamentada.
+
+📊 Análisis de tu Pipeline Actual
+Tu sistema actual es muy sofisticado pero funciona como un script orquestado por IA en Cursor con:
+
+Skills personalizados en .cursor/skills/
+MCP tools: Tavily (search), Firecrawl (scraping), GitHub
+Lógica compleja: Gates (G1-G4), scoring multi-componente (H/S/D), cascadas de extracción, caches con rotación de portales
+Multi-idioma: EN/ES/PT-PT
+Datos: JSON files como cache (job-search-cache, portal-tiers, keywords)
+Estado: Todo en archivos Markdown + JSON locales
+Limitaciones Actuales
+No persistente: Cada ejecución requiere leer/escribir JSON manualmente
+Sin UI: Todo es conversacional, no hay interfaz gráfica
+No escalable: No hay paralelización real, APIs REST, o cola de jobs
+Sin embeddings reales: Tu scoring "S" es un proxy, no similarity cosine real
+Sin analytics: No hay métricas históricas, dashboards, A/B testing
+Monolítico: Todo vive en un flujo secuencial orquestado por Claude
+
+🎯 Recomendación: FastAPI + React + AI Stack Moderno
+Te recomiendo FastAPI sobre Laravel por estas razones:
+
+✅ Por qué FastAPI + Python
+Ecosistema AI/NLP Superior
+
+spaCy / Transformers (HuggingFace) para embeddings reales (no proxy)
+Sentence-Transformers para similarity scoring (all-MiniLM-L6-v2, paraphrase-multilingual)
+LangChain / LlamaIndex para orquestación LLM + RAG
+Instructor / Pydantic AI para structured outputs
+ChromaDB / Qdrant / Weaviate para vector stores (embeddings de CVs/JDs)
+Async por Defecto → tu pipeline tiene cascadas de scraping (Firecrawl), search (Tavily), GitHub → con asyncio puedes paralelizar:
+
+python
+
+# Procesar 10 job URLs en paralelo
+results = await asyncio.gather(*[extract_job(url) for url in urls])
+Pydantic Native → tus schemas (cache-schema, scoring-rubric) ya son estructurados → mapean 1:1 a Pydantic models
+
+Celery / Arq para background tasks → "buscar jobs" puede ser async task de 5-10 min
+
+Python ML Tools:
+
+scikit-learn para feature engineering (H/S/D scores)
+pandas para analytics sobre job-search-cache.json histórico
+nltk / spaCy para keyword extraction y NER (empresas, skills)
+❌ Por qué NO Laravel 13
+Laravel es excelente para web apps tradicionales, pero para tu caso:
+
+Ecosistema AI débil: PHP no tiene equivalentes maduros a spaCy, Transformers, Sentence-Transformers
+Async limitado: Laravel Octane (Swoole/RoadRunner) es async, pero no tan natural como Python asyncio
+NLP tools: Tendrías que llamar a APIs externas (OpenAI embeddings API) → más caro, menos control
+Vercel AI SDK: Es TypeScript/Node, no PHP → no aplica aquí
+Comunidad AI: Python domina research → librerías, modelos pre-trained, papers implementados
+🏗️ Arquitectura Propuesta
+Backend: FastAPI + Python 3.12+
+
+jobora-api/
+├── app/
+│   ├── models/         # Pydantic (Job, CV, MatchScore, GateResult)
+│   ├── services/
+│   │   ├── cv_judge.py        # Judge audit (10s scan, XYZ)
+│   │   ├── ats_rewriter.py    # ATS rewrite engine
+│   │   ├── job_search.py      # Tavily orchestration + gates
+│   │   ├── scoring.py         # H/S/D math (con embeddings)
+│   │   ├── extractors.py      # Firecrawl/Tavily cascade
+│   │   └── cache_manager.py   # Redis + JSON fallback
+│   ├── routers/        # API endpoints (/cv/judge, /jobs/search, etc.)
+│   ├── ml/
+│   │   ├── embeddings.py      # Sentence-Transformers
+│   │   ├── skill_matcher.py   # Alias normalization + fuzzy matching
+│   │   └── semantic_sim.py    # Cosine similarity (reemplazo del proxy S)
+│   └── workers/        # Celery tasks (async job search)
+├── tests/
+└── requirements.txt
+Stack Python:
+
+txt
+
+fastapi[all]
+pydantic>=2.0
+sentence-transformers  # Embeddings reales
+spacy                  # NLP pipeline
+langchain              # LLM orchestration (opcional)
+instructor             # Structured outputs desde LLMs
+celery[redis]          # Background tasks
+redis                  # Cache + Celery broker
+httpx                  # Async HTTP (Tavily, Firecrawl)
+pandas                 # Analytics
+chromadb               # Vector DB (opcional, si quieres RAG)
+Frontend: React 19 + TypeScript + shadcn/ui
+
+jobora-web/
+├── src/
+│   ├── components/
+│   │   ├── CVUploader.tsx
+│   │   ├── JobTable.tsx           # Match scores con H/S/D breakdown
+│   │   ├── ScoreVisualization.tsx # Radial charts para H/S/D
+│   │   └── CacheInsights.tsx      # Portal rotation, keyword trends
+│   ├── hooks/
+│   │   ├── useJobSearch.ts        # React Query
+│   │   └── useCVJudge.ts
+│   ├── lib/
+│   │   └── api.ts                 # axios/fetch wrappers
+│   └── pages/
+│       ├── Dashboard.tsx
+│       ├── JobSearchPage.tsx
+│       └── CVStudioPage.tsx
+└── package.json
+Stack Frontend:
+
+json
+
+{
+  "dependencies": {
+    "react": "^19.0",
+    "@tanstack/react-query": "^5.0",  // Data fetching
+    "shadcn/ui": "latest",            // Components
+    "recharts": "^2.0",               // Charts para scoring
+    "react-hook-form": "^7.0",
+    "zod": "^3.0"                     // Validation
+  }
+}
+Base de Datos
+PostgreSQL con:
+
+Tabla jobs: JDs scrapeados, embeddings (vector column con pgvector)
+Tabla cvs: CVs históricos, embeddings
+Tabla matches: Scores (H/S/D), status (new/applied/dismissed)
+Tabla cache_runs: Historial de búsquedas (queries, excluded_count, etc.)
+Redis:
+
+Cache de portal tiers, keywords (TTL 7 días)
+Celery message broker
+🧠 Mejoras de AI/NLP que Puedes Implementar
+1. Embeddings Reales (reemplazar S proxy)
+python
+
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2')
+
+# CV embedding
+cv_embedding = model.encode(cv_text)
+
+# JD embedding
+jd_embedding = model.encode(job_description)
+
+# Cosine similarity (0-100)
+from sklearn.metrics.pairwise import cosine_similarity
+S = cosine_similarity([cv_embedding], [jd_embedding])[0][0] * 100
+Ventaja: Captura synonyms semánticos sin alias tables manuales.
+
+2. Named Entity Recognition (NER) para Skills
+python
+
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+doc = nlp(jd_text)
+
+# Extraer skills mencionadas
+skills = [ent.text for ent in doc.ents if ent.label_ == "SKILL"]
+Ventaja: Auto-detectar skills nuevas sin hardcodear en keyword-cache.
+
+3. LLM Structured Outputs (Instructor + GPT-4o-mini)
+python
+
+import instructor
+from openai import OpenAI
+from pydantic import BaseModel
+
+client = instructor.from_openai(OpenAI())
+
+class JDExtraction(BaseModel):
+    required_skills: list[str]
+    preferred_skills: list[str]
+    years_required: int | None
+    modality: str  # remote-global, remote-eu, etc.
+
+result = client.chat.completions.create(
+    model="gpt-4o-mini",
+    response_model=JDExtraction,
+    messages=[{"role": "user", "content": f"Extract from JD:\n{jd_text}"}]
+)
+Ventaja: Reemplazar regex/prompt engineering manual → output estructurado confiable.
+
+4. Keyword Extraction (TF-IDF + spaCy)
+python
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Corpus de JDs exitosos
+corpus = [job['description'] for job in successful_matches]
+
+vectorizer = TfidfVectorizer(max_features=50)
+tfidf_matrix = vectorizer.fit_transform(corpus)
+
+# Top keywords → actualizar keyword-cache.json automáticamente
+top_keywords = vectorizer.get_feature_names_out()[:20]
+Ventaja: Keyword discovery automática → no necesitas Tavily semanal.
+
+5. Portal Quality Learning
+Trackea match_score promedio por portal:
+
+sql
+
+SELECT
+  source_portal,
+  AVG(match_score) as avg_score,
+  COUNT(*) as total_matches,
+  SUM(CASE WHEN status = 'applied' THEN 1 ELSE 0 END) as applied_count
+FROM matches
+GROUP BY source_portal
+ORDER BY avg_score DESC;
+Ventaja: Ajustar S_portal en portal-tiers dinámicamente.
+
+📦 Migration Path (Incremental)
+No necesitas reescribir todo. Estrategia híbrida:
+
+Fase 1: API Wrapper (2-3 semanas)
+FastAPI con endpoints que replican tu workflow actual:
+POST /cv/judge → llama sequential-thinking, retorna JSON
+POST /jobs/search → orquesta Tavily + gates + scoring
+Sigue usando tus JSON caches (job-search-cache.json)
+Frontend básico: upload CV, ver tabla de matches
+Fase 2: PostgreSQL + Embeddings (3-4 semanas)
+Migra caches a Postgres
+Implementa sentence-transformers para scoring S real
+Mantén lógica de gates (G1-G4) igual
+Fase 3: Background Jobs + Analytics (2-3 semanas)
+Celery para job search async
+Dashboard con métricas (portal performance, keyword trends)
+A/B testing de scoring formulas
+Fase 4: ML Enhancements (ongoing)
+NER para skill extraction
+Fine-tune Sentence-Transformers en tu dataset
+Anomaly detection (detectar JDs fake/spam)
+
+Después:
+
+Keywords faltantes
+------------------
+TypeScript
+Docker
+AWS
+
+
+Recomendaciones
+---------------
+Añade experiencia con Docker...
+Menciona proyectos con APIs…
+de acuerdo a otros skills observados en las busquedas
+💰 Estimación de Esfuerzo
+Tech Stack	Setup Time	AI/NLP Quality	Escalabilidad	Costo Mensual (hosting)
+FastAPI + Python	4-6 semanas	⭐⭐⭐⭐⭐ (embeddings, spaCy, Transformers)	⭐⭐⭐⭐⭐ (async, Celery)	$50-100 (Railway/Render)
+Laravel + AI SDK	6-8 semanas	⭐⭐⭐ (dependes de OpenAI API)	⭐⭐⭐ (Octane OK, pero no Python-level)	$50-150 (Forge + OpenAI)
+🎯 Recomendación Final
+Ve con FastAPI + React porque:
+
+✅ Python domina AI/NLP → embeddings, NER, ML están maduros
+✅ Tu lógica ya es funcional → puedes migrar incremental (wrapper → DB → ML)
+✅ Async nativo → tu pipeline tiene I/O pesado (Tavily, Firecrawl)
+✅ Comunidad activa → LangChain, Instructor, HuggingFace → constante innovación
+✅ Pydantic everywhere → tus schemas ya son estructurados
+Laravel sería viable SI:
+
+Ya tienes equipo PHP fuerte
+Necesitas auth/billing complejo (Laravel es superior aquí)
+Estás OK pagando OpenAI API para embeddings (sin local ML)
+Pero para match scoring robusto, NLP avanzado, y escalabilidad AI, Python/FastAPI es la elección correcta en 2026.
+
+¿Quieres que te genere un boilerplate de FastAPI con tu arquitectura de scoring (H/S/D + gates) + un ejemplo de embeddings con Sentence-Transformers?
+
+Y TABLA PROFILE tu CV maestro lo mantendría estructurado:
+{
+  "profile": {},
+  "experience": [],
+  "skills": [],
+  "projects": [],
+  "education": [],
+  "certifications": [],
+  "achievements": [],
+  "languages": []
+}
+projects que se actualice desde tabla portfolio

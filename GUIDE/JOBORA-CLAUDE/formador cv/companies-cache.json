@@ -1,0 +1,247 @@
+{
+  "version": 1,
+  "mode": "formador-fundae",
+  "updated_at": "2026-08-04T02:20:00+01:00",
+  "companies": {
+    "https://es.linkedin.com/jobs/view/formador-a-freelance-ia-productividad-copilot-gemini-chatgpt-at-be-skiller-4445036257": {
+      "name": "Be-skiller",
+      "country": "España",
+      "application_channel": "hola@be-skiller.com — asunto 'IA + [nombre]' + enlace vídeo 2-3 min (obligatorio)",
+      "tech_focus": ["Microsoft Copilot", "Google Gemini", "ChatGPT Enterprise", "IA & productividad", "reskilling corporativo"],
+      "modality": "freelance por sesión/jornada; corporativo (base Barcelona)",
+      "language": "es (inglés valorado como segundo idioma)",
+      "fundae": false,
+      "notes": "Ronda 4. Vacante real LinkedIn. Aceptan perfiles monotemáticos de Copilot. Sin vídeo no revisan. Gap: Gemini no impartido como curso cerrado. Marca personal / redes = plus (Argenis tiene).",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://nanfor.com": {
+      "name": "Nanfor (Nanfor Ibérica)",
+      "country": "España",
+      "application_channel": "cristina@nanforiberica.com (empleo/operaciones) · info@nanforiberica.com (bolsa de trabajo)",
+      "tech_focus": ["Claude AI", "Microsoft 365 Copilot", "GitHub Copilot", "Copilot Studio", "Azure AI", "Agentes IA", "Microsoft Learning Partner"],
+      "modality": "virtual / telepresencial / presencial / self-learning",
+      "language": "es",
+      "fundae": true,
+      "notes": "Ronda 3. Mejor fit de stack: catálogo IA idéntico a experiencia Imagina (Claude, M365 Copilot, GitHub Copilot). Microsoft Learning Partner. Bolsa admite especialidad Desarrollo.",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://www.corenetworks.es/empleo": {
+      "name": "Core Networks",
+      "country": "España",
+      "application_channel": "seleccion@corenetworks.es (bolsa) · lmateo@corenetworks.es (vacante PHP Sevilla si abierta)",
+      "tech_focus": ["Oracle", "Microsoft", "Red Hat", "PHP", "Java", "Core IA School", "formación IT FUNDAE"],
+      "modality": "presencial (Sevilla/Madrid) / aula virtual",
+      "language": "es",
+      "fundae": true,
+      "notes": "Ronda 3. Página Empleo con vacantes de formadores (PHP presencial Sevilla = gap geográfico; Oracle Java aula virtual; FP DAM Madrid presencial). Enviar CV a bolsa genérica para remoto/aula virtual.",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://formagesting.com/talento": {
+      "name": "Formagesting",
+      "country": "España",
+      "application_channel": "https://formagesting.com/talento (puesto Docencia) · info@formagesting.com",
+      "tech_focus": ["Gestión FUNDAE", "formadores freelance", "consultoría formativa", "e-learning"],
+      "modality": "colaboración con docentes freelance (gestión administrativa FUNDAE)",
+      "language": "es",
+      "fundae": true,
+      "notes": "Ronda 3. Modelo distinto: entidad organizadora que gestiona FUNDAE para formadores freelance que comercializan sus cursos. Página dedicada consultoras/docentes + formulario talento con puesto Docencia.",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://imaginaformacion.com": {
+      "name": "Imagina Formación",
+      "country": "España",
+      "application_channel": "contacto directo (ya colaborador) / imaginaformacion.com/contacto",
+      "tech_focus": ["IA generativa", "Claude", "Claude Code", "Microsoft Copilot", "Gemini", "Power BI", "Excel", "Python", "Desarrollo"],
+      "modality": "online / aula virtual",
+      "language": "es",
+      "fundae": true,
+      "notes": "Ya es colaborador freelance activo desde enero 2026 (Claude AI, M365 Copilot, GitHub Copilot). No se encontró formulario público de reclutamiento de formadores.",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://formadoresit.es": {
+      "name": "Formadores IT (Grupo Digitalent)",
+      "country": "España",
+      "application_channel": "https://jobs.smartrecruiters.com/FormadoresIT/743999977872663-formador-de-ia (vacante concreta 'Formador de IA' — verificar si sigue abierta; alternativa: https://formadoresit.es/_quienes_somos_/empleo)",
+      "tech_focus": ["Inteligencia Artificial (ML/redes neuronales/PLN/visión por computadora)", "Python", "Laravel", "Django", "Power BI", "UX/UI", "Microsoft"],
+      "modality": "in-company / online / remoto posible",
+      "language": "es + en (piden inglés escrito y verbal)",
+      "fundae": true,
+      "notes": "Ronda 2: vacante real 'Formador de IA' en SmartRecruiters (Pl. de España, Madrid), fecha detectada 2024-04-03 (verificar vigencia). Requisitos: titulación CS/Ing/Matemáticas (cumple), 3+ años en IA (parcial, más aplicada que ML puro), ML/redes neuronales/PLN/visión (gap real), docencia previa en IA (cumple), inglés alto (gap: B1). Consultora B2B (clientes: Banco Cetelem, Fundación Oxfam Intermón, ERSHIP).",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://openwebinars.net/ser-formador-en-openwebinars": {
+      "name": "OpenWebinars",
+      "country": "España",
+      "application_channel": "https://teamtailor.openwebinars.net/",
+      "tech_focus": ["Inteligencia Artificial", "Desarrollo", "Cloud", "DevOps", "Ciberseguridad", "Data Science"],
+      "modality": "grabación de cursos + colaboraciones recurrentes",
+      "language": "es",
+      "fundae": false,
+      "notes": "Programa 'Top Teacher'. Formulario pide LinkedIn, experiencia previa como formador y experiencia en cámara/audiencia en vivo, más áreas de interés. Proceso de 4 fases incl. prueba audiovisual.",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://keepcoding.io/sobre-nosotros/trabaja-con-nosotros": {
+      "name": "KeepCoding",
+      "country": "España",
+      "application_channel": "https://keepcoding.io/sobre-nosotros/trabaja-con-nosotros",
+      "tech_focus": ["Inteligencia Artificial", "Data", "Ciberseguridad", "DevOps", "Desarrollo Web Full Stack"],
+      "modality": "bootcamps online / presencial Madrid",
+      "language": "es",
+      "fundae": false,
+      "notes": "+100 instructores activos, muchos son profesionales senior en la industria dando clase part-time. No se detectó formulario específico de instructor en la página rastreada (solo landing genérica).",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://grupohedimacorporate.com": {
+      "name": "Grupo Hedima Corporate L&D",
+      "country": "España",
+      "application_channel": "LinkedIn (https://www.linkedin.com/company/grupohedima-corporate/) — reclutan docentes vía vacantes puntuales, no hay formulario en su web corporativa",
+      "tech_focus": ["Formación corporativa multisectorial", "gestión integral FUNDAE", "sin vacante de IA/desarrollo detectada esta ronda"],
+      "modality": "presencial / aula virtual / online, gran escala",
+      "language": "es",
+      "fundae": true,
+      "notes": "Ronda 2. 'La mayor empresa de servicios de formación corporativa en España' (autodescripción). Clientes: Vithas, SERVEO, Grupo Social ONCE, +300 grandes organizaciones. Ejemplo real de vacante vista en LinkedIn: 'Profesor Arquitectura - Revit (BIM)'. Mensaje es prospección, no respuesta a oferta concreta de IA/desarrollo.",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    },
+    "https://www.adecco.com/es-es/empresas/formacion/formadores": {
+      "name": "Adecco Learning & Consulting",
+      "country": "España",
+      "application_channel": "https://www.adecco.com/es-es/empresas/formacion/formadores",
+      "tech_focus": ["Competencias digitales", "Habilidades profesionales", "Liderazgo", "sin curso de IA específico visible en catálogo rastreado"],
+      "modality": "presencial / blended / online",
+      "language": "es",
+      "fundae": true,
+      "notes": "Ronda 2. Página propia 'Conviértete en formador' con CTA y formulario directo. +25 años, homologan formadores, gestionan crédito FUNDAE. +230 cursos, 9 áreas de formación.",
+      "status": "researched",
+      "first_seen": "2026-08-04",
+      "last_seen": "2026-08-04"
+    }
+  },
+  "explored_no_channel": {
+    "Deusto Formación Empresas": {
+      "notes": "Solo se encontró info general (InfoJobs, LinkedIn de la universidad homónima, no relacionada). Sin página de 'sé formador' ni vacante de IA/desarrollo detectada en esta ronda.",
+      "last_checked": "2026-08-04"
+    },
+    "Femxa": {
+      "notes": "Femxa respalda XFP (grados de FP oficial con IA integrada), pero es un modelo de centro educativo/FP, no un marketplace de formadores freelance. Sin canal de reclutamiento de formadores freelance detectado.",
+      "last_checked": "2026-08-04"
+    },
+    "Mainfor": {
+      "notes": "Solo aparece mencionada indirectamente (bio de LinkedIn de una ex-empleada: 'Directora de Cuentas - Mainfor Learning Services'). Sin web ni canal propio identificado en esta ronda.",
+      "last_checked": "2026-08-04"
+    },
+    "IMF Smart Education": {
+      "notes": "Escuela de negocios (másteres oficiales en IA/Big Data con Indra). No se detectó bolsa pública de formadores freelance en esta ronda — probablemente reclutan profesorado por vía interna/LinkedIn.",
+      "last_checked": "2026-08-04"
+    },
+    "Euroinnova Empresas": {
+      "notes": "Ronda 3: sigue sin canal 'sé formador'. Vende cursos de Formador de Formación para el Empleo (B2C), no recluta formadores freelance de IA.",
+      "last_checked": "2026-08-04"
+    },
+    "Qlcube": {
+      "notes": "Catálogo FUNDAE Claude/Copilot/ChatGPT excelente fit de contenido, pero es proveedor que imparte con su propio equipo — sin canal público de reclutamiento de formadores. Partner QLGUARD = consultoría, no docencia.",
+      "last_checked": "2026-08-04"
+    },
+    "Growit School": {
+      "notes": "Formación ChatGPT/Claude & IA bonificable FUNDAE (B2B). Escuela con mentores propios; sin página 'sé formador' detectada. Canal = admisiones HubSpot para empresas-cliente, no formadores.",
+      "last_checked": "2026-08-04"
+    },
+    "Structuralia / Tokio School / AprenderIA / Ironhack / The Bridge / 4Geeks": {
+      "notes": "Bootcamps/escuelas B2C o STEM — fuera del modelo principal FUNDAE 'cursos para empresas + formador freelance'. No priorizar en próximas rondas salvo keyword específico de instructor.",
+      "last_checked": "2026-08-04"
+    },
+    "Acelera 360 / Aulaformación": {
+      "notes": "Entidades FUNDAE genéricas (catálogo amplio). Sin canal claro de reclutamiento de formadores IA en esta ronda.",
+      "last_checked": "2026-08-04"
+    },
+    "DIGNITAE": {
+      "notes": "Microsoft Learning Partner desde 1992; catálogo Copilot/Foundry. Sin página 'sé formador' detectada en ronda 4 — formadores certificados internos. Pendiente LinkedIn/contacto genérico si se prioriza.",
+      "last_checked": "2026-08-04"
+    },
+    "Technova Partners": {
+      "notes": "Vende cursos IA FUNDAE con 'formadores expertos' propios. Sin canal de reclutamiento freelance. Empresa pequeña (2-10).",
+      "last_checked": "2026-08-04"
+    },
+    "AIbility": {
+      "notes": "Vacante Formadores IA & Soft Skills (rrhh@aibility.es) marcada en LinkedIn como 'Ya no se aceptan solicitudes'. Además pide mínimo 5 años experiencia docente (gap).",
+      "last_checked": "2026-08-04"
+    }
+  },
+  "runs": [
+    {
+      "date": "2026-08-04",
+      "queries": [
+        "empresas España formación bonificada FUNDAE formador freelance tecnología IA",
+        "colabora con nosotros OR bolsa de formadores formador Copilot Claude IA cursos bonificados empresas España",
+        "KeepCoding Deusto Formación Femxa Mainfor Hedima Euroinnova formador freelance colabora IA Copilot Claude",
+        "site:formadoresit.es formador OR colabora OR trabaja OR bolsa",
+        "KeepCoding trabaja con nosotros formador docente instructor requisitos"
+      ],
+      "companies_found": 4,
+      "target_role": "Formador de Inteligencia Artificial / Formador Tecnológico freelance (España, FUNDAE)",
+      "ats_score": 81,
+      "notes": "Ronda 1. No limitado a las 3 empresas iniciales — se añadió KeepCoding tras la búsqueda ampliada."
+    },
+    {
+      "date": "2026-08-04",
+      "queries": [
+        "Deusto Formación Empresas \"formador freelance\" OR colaborador OR \"trabaja con nosotros\" FUNDAE",
+        "Femxa OR Mainfor formador freelance colabora bolsa de formadores IA tecnologia España",
+        "\"IMF Smart Education\" OR \"Euroinnova Empresas\" formador freelance colaborador docente IA tecnologia",
+        "\"Grupo Hedima\" OR \"Core Networks\" OR \"Adecco Learning\" formador freelance FUNDAE colabora docente",
+        "\"instructor GitHub Copilot\" OR \"formador Microsoft Copilot\" freelance España centro de formación bonificada",
+        "academia de formación España \"buscamos formadores\" OR \"buscamos docentes\" bonificado FUNDAE tecnología IA"
+      ],
+      "companies_found": 2,
+      "target_role": "Formador de Inteligencia Artificial / Formador Tecnológico freelance (España, FUNDAE)",
+      "ats_score": 81,
+      "notes": "Ronda 2 (keywords nuevos, distintos de la ronda 1). Empresas nuevas con canal real confirmado: Grupo Hedima Corporate L&D (LinkedIn), Adecco Learning & Consulting (formulario propio 'Conviértete en formador'). Se encontró además una vacante REAL y concreta de Formadores IT ('Formador de IA' en SmartRecruiters) que reemplaza el canal genérico usado en la ronda 1. Se investigaron sin éxito de canal: Deusto Formación, Femxa, Mainfor, IMF Smart Education, Euroinnova Empresas (ver 'explored_no_channel'). Grounding adicional: qlcube.com/blog/formadores-fundae-requisitos confirma que para IT/tecnología no se exige acreditación docente específica, solo titulación afín + 3 años de experiencia + competencia docente documentable — el perfil de Argenis cumple."
+    },
+    {
+      "date": "2026-08-04",
+      "queries": [
+        "\"buscamos formadores\" OR \"sé formador\" OR \"bolsa de formadores\" España FUNDAE tecnología IA Copilot",
+        "Structuralia OR Core Networks OR Tokio School OR Campus Training formación formador freelance FUNDAE",
+        "Nanfor formador OR docente OR \"trabaja con nosotros\" Copilot Claude España",
+        "\"Aulaformación\" OR \"Acelera 360\" OR Formagesting formador freelance bolsa FUNDAE",
+        "formador Claude OR \"GitHub Copilot\" OR \"Microsoft Copilot\" freelance España academia",
+        "site:nanfor.com empleo OR formador OR contacto",
+        "site:corenetworks.es empleo OR formador"
+      ],
+      "companies_found": 3,
+      "target_role": "Formador de Inteligencia Artificial / Formador Tecnológico freelance (España, FUNDAE)",
+      "ats_score": 81,
+      "notes": "Ronda 3 (Tavily + Firecrawl + sequentialthinking). Nuevas con canal real: Nanfor (mejor fit stack Claude/Copilot/GitHub Copilot), Core Networks (empleo formadores + seleccion@), Formagesting (talento Docencia + gestión FUNDAE para freelance). Sin canal formador: Qlcube, Growit, Euroinnova, Acelera/Aulaformación, bootcamps. CV maestro sin reescritura — score se mantiene 81."
+    },
+    {
+      "date": "2026-08-04",
+      "queries": [
+        "Microsoft Learning Partner España formador OR docente Copilot Azure GitHub",
+        "Technova Partners OR XMS Academy formador freelance FUNDAE IA",
+        "buscamos formadores OR bolsa de formadores IA Copilot Claude España 2025 OR 2026",
+        "Be-skiller Formador Copilot ChatGPT freelance contacto"
+      ],
+      "companies_found": 1,
+      "target_role": "Formador de Inteligencia Artificial / Formador Tecnológico freelance (España, FUNDAE)",
+      "ats_score": 81,
+      "notes": "Ronda 4. Variante CV Nanfor creada. Nueva con canal real: Be-skiller (hola@be-skiller.com + vídeo 2-3 min obligatorio). Explored: DIGNITAE (sin canal), Technova (sin canal), AIbility (cerrada + gap 5 años docencia)."
+    }
+  ]
+}

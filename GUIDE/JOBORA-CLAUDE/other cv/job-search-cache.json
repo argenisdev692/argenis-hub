@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "mode": "other",
+  "updated_at": "2026-09-11T22:00:00+01:00",
+  "seen_urls": {},
+  "runs": [
+    {
+      "date": "2026-09-11",
+      "type": "stack_measurement",
+      "purpose": "Compare entry chances for Laravel+Vue, Laravel+React, Next.js, NestJS and FastAPI for the fullstack CV owner (Covilhã, Portugal, EN B1, 4+ yrs PHP/Laravel). Measurement only — no applications, no CV rewrite.",
+      "gate_config": {
+        "role_keywords": ["full stack", "backend", "frontend"],
+        "stack_must": ["Laravel+Vue", "Laravel+React", "Next.js", "NestJS", "FastAPI"],
+        "modality_allowed": ["remote-global", "remote-eu", "remote-pt-es", "hybrid-lisbon"],
+        "remote_residency": ["worldwide", "EU", "Portugal", "Spain"],
+        "geography": "Covilhã, Portugal",
+        "search_languages": ["en", "es"],
+        "approved_by_user": "2026-09-11 ('ok haz las mediciones de esos stack')"
+      },
+      "sources": ["tecnoempleo.com", "itjobs.pt", "remoterocketship.com", "linkedin.com/jobs (via Tavily)", "wearedevelopers.com", "jobleads.com"],
+      "tool_notes": "Firecrawl refuses LinkedIn search pages and hit its free daily limit mid-run; remaining pages read via Tavily extract. Tecnoempleo FastAPI total not captured. ITJobs keyword search is fuzzy.",
+      "demand": {
+        "tecnoempleo_es": {"laravel": {"total": 10, "remote": 3}, "php": {"total": 36}, "vue": {"total": 27, "remote": 9}, "react": {"total": 129, "remote": 18}, "nextjs": {"total": 10, "remote": 2}, "nestjs": {"total": 8, "remote": 1}, "fastapi": {"total": null, "remote_seen": 2}},
+        "itjobs_pt": {"laravel": {"total": 3, "remote": 1}, "php": {"total": 14}, "vue": {"total": 21}, "react": {"total": 63, "remote_in_first_16": 4}, "nextjs": {"total": 9, "remote_companies": 2}, "nestjs": {"total": 5, "remote_companies": 1}, "fastapi": {"total": 8, "remote": 3}},
+        "remoterocketship_global": {"laravel": {"total": 269, "added_week": 17, "open_to_europe_in_first_10": 2}, "php": {"total": 703}, "vue": {"total": 835, "added_week": 65, "open_to_europe_in_first_10": 1}, "react": {"total": 722, "added_week": 66, "open_to_europe_in_first_10": 0}, "nextjs": {"total": 712, "added_week": 52, "open_to_europe_in_first_10": 1}}
+      },
+      "competition": [
+        {"stack": "react", "posting": "PANEL Frontend React/TS/IA (remoto, residir ES)", "applicants": 561, "age_days": 8, "url": "https://www.tecnoempleo.com/frontend-developer-react-typescript-ia-panel-siste/azure-rest-apis/rf-d8d4151b22a543997947"},
+        {"stack": "react_next", "posting": "Baoss Senior Frontend (remoto)", "applicants": 249, "age_days": null, "url": "https://www.tecnoempleo.com/senior-frontend-developer-baoss/react-typescript/rf-38df1e6a12aef3f1c04e"},
+        {"stack": "nextjs", "posting": "YTEC Senior Next.js (remote from Portugal)", "applicants": 106, "age_days": 1, "url": "https://pt.linkedin.com/jobs/view/senior-next-js-remote-from-portugal-at-ytec-4465630835"},
+        {"stack": "vue", "posting": "Grupo Digital Frontend Vue3 (remoto)", "applicants": 176, "age_days": 8, "url": "https://www.tecnoempleo.com/desarrollador-frontend-vue3-remoto-grupo-digital/azure-ci-cd/rf-31bf141cf296b36b6c43"},
+        {"stack": "vue", "posting": "Social You Senior Nuxt/Vue3 (remoto, residir ES)", "applicants": 62, "age_days": null, "url": "https://www.tecnoempleo.com/senior-frontend-engineer-nuxtjs-vue-3-social-you/nuxtjs-composition-api/rf-59231099629673896c4e"},
+        {"stack": "php_laravel", "posting": "Michael Page PHP Freelance (remoto ES)", "applicants": 325, "age_days": 7, "url": "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"},
+        {"stack": "laravel_vue", "posting": "IN MANAS Full Stack (residir ES)", "applicants": 104, "age_days": 2, "url": "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549"},
+        {"stack": "laravel", "posting": "Twelve Full Stack PHP/Laravel (UK, 1 day/month onsite)", "applicants": 145, "age_days": 1, "url": "https://uk.linkedin.com/jobs/view/full-stack-engineer-at-twelve-4465677341"},
+        {"stack": "nestjs", "posting": "Grupo Sermicro Node/Angular Senior (residir ES, 5 openings)", "applicants": 109, "age_days": null, "url": "https://www.tecnoempleo.com/nodejs-angular-senior-fullstack-grupo-sermicro/nodejs-mongodb/rf-3f831c9432a2c339f14a"},
+        {"stack": "node", "posting": "Zero to One Backend Node.js (remote, must be in PT)", "applicants": 54, "age_days": 0.5, "url": "https://pt.linkedin.com/jobs/view/backend-developer-node-js-portugal-remote-at-zero-to-one-search-recruitment-agency-4463961555"},
+        {"stack": "fastapi", "posting": "Recann Platform Engineer Python/FastAPI (EU remote, senior)", "applicants": 92, "age_days": 0.5, "url": "https://www.linkedin.com/jobs/view/platform-engineer-at-recann-4466061295"},
+        {"stack": "fastapi", "posting": "Sopra Steria Senior Python/React/FastAPI (hybrid Valencia)", "applicants": 37, "age_days": 9, "url": "https://www.tecnoempleo.com/senior-fullstack-developer-python-react-sopra-ster/typescript-fastapi/rf-14db1130a2ab2345cb4b"}
+      ],
+      "fit_scores_heuristic": [
+        {"stack": "laravel", "posting": "Tomplay", "H": 81, "S": 83, "D": 94, "raw": 85, "final": 85, "cap": null},
+        {"stack": "laravel_vue", "posting": "IN MANAS SPAIN", "H": 87, "S": 72, "D": 94, "raw": 85, "final": 85, "cap": null},
+        {"stack": "laravel_vue_or_react", "posting": "ve2.ventures", "H": 92, "S": 85, "D": 76, "raw": 85, "final": 65, "cap": "lang_cap_b2"},
+        {"stack": "laravel_react", "posting": "LucidHorizon", "H": 91, "S": 78, "D": 75, "raw": 83, "final": 55, "cap": "years_cap"},
+        {"stack": "nextjs", "posting": "YTEC", "H": 67, "S": 33, "D": 87, "raw": 64, "final": 55, "cap": "lang_cap_c1"},
+        {"stack": "fastapi", "posting": "Infoser", "H": 50, "S": 45, "D": 84, "raw": 59, "final": 59, "cap": null},
+        {"stack": "nestjs", "posting": "Capitole", "H": 42, "S": 40, "D": 94, "raw": 57, "final": 57, "cap": null},
+        {"stack": "nestjs", "posting": "Grupo Sermicro", "H": 38, "S": 40, "D": 79, "raw": 51, "final": 51, "cap": null}
+      ],
+      "findings": [
+        "CV fit is 83-86 raw on Laravel-based roles (Vue or React front end) vs 51-64 raw on Next.js/NestJS/FastAPI roles.",
+        "Applicants per posting are not lower in React/Next/Node/FastAPI (dated rates ~70-180/day) than in PHP/Laravel remote ES (~46-50/day).",
+        "React vs Vue (remote ES, N=2 each): React 561 and 249 applicants vs Vue 176 and 62 — directional only; Vue also has ~5x fewer postings in ES and ~3x fewer in PT.",
+        "PHP postings are 3.6x Laravel in ES (36 vs 10) and 4.7x in PT (14 vs 3).",
+        "4 of 7 Spanish '100% remoto' ads read require residing in Spain.",
+        "English 'alto/excelente/fluent' appears across every stack sampled."
+      ],
+      "recommendation": "Stay PHP/Laravel, backend-leaning, front end presented as 'Vue or React'. English B2, Symfony, and FastAPI+LLM as a secondary track. No Next.js/NestJS pivot now.",
+      "report_file": "other cv/output/Medicion_Stacks_2026-09-11.md"
+    }
+  ]
+}

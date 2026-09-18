@@ -25,6 +25,30 @@ pest()->extend(TestCase::class)
 
 /*
 |--------------------------------------------------------------------------
+| Supabase guard (spec 003-lead-scout, T003)
+|--------------------------------------------------------------------------
+|
+| The `pgsql_testing` connection is local-only. If its host ever points at
+| Supabase, RefreshDatabase would wipe the cloud database — abort before any
+| test touches it. Checked on every test because it costs one config read.
+|
+*/
+
+beforeEach(function (): void {
+    ensureLocalPostgres();
+});
+
+function ensureLocalPostgres(): void
+{
+    $host = strtolower((string) config('database.connections.pgsql_testing.host', ''));
+
+    if (str_contains($host, 'supabase.co') || str_contains($host, 'supabase.com')) {
+        abort(500, 'Refusing to run tests against Supabase. Point pgsql_testing at local PostgreSQL.');
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Expectations
 |--------------------------------------------------------------------------
 |

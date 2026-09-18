@@ -1,0 +1,1218 @@
+{
+  "version": 3,
+  "mode": "fullstack",
+  "updated_at": "2026-09-11T15:00:00+01:00",
+  "seen_urls": {
+    "https://www.linkedin.com/jobs/view/highly-skilled-full-stack-laravel-vue-developer-at-reputation-arm-4446814950": {
+      "title": "Highly Skilled Full-Stack Laravel & Vue Developer",
+      "company": "Reputation Arm",
+      "source": "tavily",
+      "match_score": 90,
+      "status": "applied",
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "applied_at": "2026-07-30",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://www.motorsportjobs.com/en/job/laravel-back-end-developer-0": {
+      "title": "Laravel Back End Developer",
+      "company": "Nuweb Group",
+      "source": "tavily",
+      "match_score": 85,
+      "status": "applied",
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "applied_at": "2026-07-30",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://www.remoterocketship.com/company/pixelmatters-2/jobs/senior-full-stack-engineer-portugal-remote": {
+      "title": "Senior Full-Stack Engineer",
+      "company": "Pixelmatters",
+      "source": "tavily",
+      "match_score": 78,
+      "status": "applied",
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "applied_at": "2026-07-30",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://jobgether.com/offer/6a63e7841b23f4f87b37c681-remote-senior-laravel-backend-or-full-stack-developer": {
+      "title": "Remote Senior Laravel Backend or Full-stack Developer",
+      "company": "DigitalTolk",
+      "source": "tavily",
+      "match_score": 76,
+      "status": "applied",
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "applied_at": "2026-07-30",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://www.remoterocketship.com/us/company/corinthian-capital-group/jobs/software-developer-united-states-remote": {
+      "title": "Software Developer",
+      "company": "Corinthian Capital Group",
+      "source": "tavily",
+      "match_score": 72,
+      "status": "applied",
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "applied_at": "2026-07-30",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://ca.linkedin.com/jobs/view/php-developer-backend-remote-at-hired-4446592090": {
+      "title": "PHP Developer - BackEnd (Remote)",
+      "company": "Hired (for a client)",
+      "source": "tavily",
+      "match_score": 65,
+      "status": "applied",
+      "first_seen": "2026-07-30",
+      "last_seen": "2026-07-30",
+      "applied_at": "2026-07-30",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://jobs.secureit.ch/jobs/saas-app-developer-laravel": {
+      "title": "SaaS Application Developer (Laravel)",
+      "company": "SecureIT Swiss AG",
+      "source": "firecrawl",
+      "match_score": 89,
+      "score_breakdown": {
+        "H": 92,
+        "S": 90,
+        "D": 85,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-global",
+      "location": "Fully remote (Swiss employer)",
+      "status": "applied",
+      "first_seen": "2026-08-01",
+      "last_seen": "2026-08-01",
+      "applied_at": "2026-08-01",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://www.mailerlite.com/jobs/php-engineer": {
+      "title": "PHP Engineer",
+      "company": "MailerLite",
+      "source": "firecrawl",
+      "match_score": 84,
+      "score_breakdown": {
+        "H": 90,
+        "S": 78,
+        "D": 80,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-eu",
+      "location": "Remote EMEA / Central Asia",
+      "status": "applied",
+      "first_seen": "2026-08-01",
+      "last_seen": "2026-08-01",
+      "applied_at": "2026-08-01",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://www.linkedin.com/jobs/view/php-developer-backend-remote-at-hired-4447275374": {
+      "title": "PHP Developer - BackEnd (Remote)",
+      "company": "Hired (for a client)",
+      "source": "tavily",
+      "match_score": 80,
+      "score_breakdown": {
+        "H": 86,
+        "S": 80,
+        "D": 72,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-global",
+      "location": "Remote (Work from Anywhere) · EMEA listing",
+      "status": "applied",
+      "first_seen": "2026-08-07",
+      "last_seen": "2026-08-07",
+      "applied_at": "2026-08-07",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://www.jobleads.com/pt/job/senior-full-stack-engineer-react-laravel-hybrid--lisboa--ec380946cde2aca2cf88dd02baec9a9e8": {
+      "title": "Senior Full-Stack Engineer — React & Laravel (Hybrid)",
+      "company": "MOZAYDO",
+      "source": "firecrawl",
+      "match_score": 75,
+      "score_breakdown": {
+        "H": 78,
+        "S": 82,
+        "D": 66,
+        "semantic_note": "proxy"
+      },
+      "modality": "hybrid-lisbon",
+      "location": "Lisbon, Portugal (hybrid)",
+      "status": "applied",
+      "first_seen": "2026-08-07",
+      "last_seen": "2026-08-07",
+      "applied_at": "2026-08-07",
+      "score_note": "Scored on 2026-08-07 run BEFORE D_disc/G4/soft-cap fixes — numbers frozen as historical.",
+      "post_mortem": "Employer/ATS match ~35% after apply. Likely drivers: React-first JD vs Vue-first CV headline; Senior title vs ~4y Mid; Bamboo/Odoo absent. Our ROI 75 was apply-gate fit (hybrid Lisbon + Laravel), not vendor ATS equivalence. Do not rewrite H/S/D.",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://es.linkedin.com/jobs/view/senior-backend-engineer-php-8-x-laravel-teletrabajo-at-iahorro-com-4445094107": {
+      "title": "Senior Backend Engineer | PHP 8.x / Laravel | Teletrabajo",
+      "company": "iAhorro.com",
+      "source": "tavily",
+      "match_score": 75,
+      "score_breakdown": {
+        "H": 72,
+        "S": 78,
+        "D": 76,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "Teletrabajo (Madrid / Spain remote)",
+      "status": "applied",
+      "first_seen": "2026-08-07",
+      "last_seen": "2026-08-07",
+      "applied_at": "2026-08-07",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://justjoin.it/job-offer/happy-team-php-fullstack-developer-laravel-vue-js--bielsko-biala-php-976d8c97": {
+      "title": "PHP Fullstack Developer (Laravel + Vue.js)",
+      "company": "Happy Team",
+      "source": "firecrawl",
+      "match_score": 84,
+      "score_breakdown": {
+        "H": 90,
+        "S": 88,
+        "D": 72,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-unclear",
+      "location": "Remote (PL firm · Bielsko-Biała listing · no country lock stated)",
+      "status": "applied",
+      "first_seen": "2026-08-07",
+      "last_seen": "2026-08-07",
+      "posted": "2026-08-04",
+      "why": "Near-perfect Laravel + Vue mid stack (PHP 8, MySQL, Redis, REST, PHPUnit, CI/CD). Maintenance/refactor focus fits shipped CRM/booking work.",
+      "gaps": "Residency unclear (PL B2B common); confirm hire-from-Portugal before applying. Legacy + jQuery in stack.",
+      "applied_at": "2026-08-07",
+      "outcome": "no_reply",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User confirmed on 2026-08-25 that no reply was received and none is expected. Recorded as a stated outcome, not as an aging inference."
+    },
+    "https://justjoin.it/job-offer/coalition-technologies-remote-laravel-developer-los-angeles-php-61bb59da": {
+      "title": "Remote Laravel Developer",
+      "company": "Coalition Technologies",
+      "source": "firecrawl",
+      "match_score": 70,
+      "score_breakdown": {
+        "H": 74,
+        "S": 78,
+        "D": 58,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-global",
+      "location": "Worldwide remote · must overlap Pacific 09:00–18:00",
+      "status": "applied",
+      "first_seen": "2026-08-07",
+      "last_seen": "2026-08-07",
+      "posted": "2026-08-06",
+      "why": "Worldwide remote Laravel/PHP/MySQL/API/testing; Vue/Livewire/TALL listed as preferred.",
+      "gaps": "Agency Magento/WordPress/jQuery daily work; excellent English required (CV B1); PT hours ≈ late evening in Covilhã.",
+      "applied_at": "2026-08-07",
+      "outcome": "screening",
+      "outcome_at": "2026-08-25",
+      "outcome_note": "User reported \"en revision\" on 2026-08-25 - application under review, no interview scheduled yet."
+    },
+    "https://justjoin.it/job-offer/boldare-php-developer-gliwice-php-bae0d671": {
+      "title": "PHP Developer",
+      "company": "Boldare",
+      "source": "firecrawl",
+      "match_score": 66,
+      "score_breakdown": {
+        "H": 78,
+        "S": 70,
+        "D": 48,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-unclear",
+      "location": "Remote (PL offices · Gliwice/Kraków/Warszawa/Wrocław)",
+      "status": "skipped",
+      "first_seen": "2026-08-07",
+      "last_seen": "2026-08-07",
+      "posted": "2026-08-07",
+      "why": "PHP 8 / Laravel-or-Symfony mid role ~3y; Docker/CI nice-to-have.",
+      "gaps": "English B2 + communicative Polish required — soft dealbreaker vs CV English B1 / no Polish."
+    },
+    "https://www.linkedin.com/jobs/view/senior-shopify-laravel-developer-at-proxify-4448856079": {
+      "title": "Senior Shopify & Laravel developer",
+      "company": "Proxify",
+      "source": "tavily",
+      "match_score": 67,
+      "score_breakdown": {
+        "H": 60,
+        "S": 65,
+        "D": 80,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-eu",
+      "location": "Remote EMEA / Proxify network",
+      "status": "skipped",
+      "first_seen": "2026-08-07",
+      "last_seen": "2026-08-07",
+      "why": "Remote EMEA Laravel + Cloudflare/Stripe nice-to-haves overlap CV.",
+      "gaps": "Shopify is core; Senior title vs ~4y Mid; incomplete JD extract."
+    },
+    "https://www.wearedevelopers.com/jobs/ext/2136846-analista-programador-a-fullstack-senior-php-laravel-vue-js-100-remoto": {
+      "title": "Analista / Programador/a Fullstack Senior | PHP + Laravel + Vue.js | 100% REMOTO",
+      "company": "Quental",
+      "source": "firecrawl",
+      "match_score": 88,
+      "score_breakdown": {
+        "H": 82,
+        "S": 89,
+        "D": 95.5,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "A Coruna, Spain - 100% teletrabajo",
+      "status": "applied",
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "posted": "2026-08-19",
+      "outcome": "rejected",
+      "outcome_at": "2026-08-25",
+      "notes": "3-5 anos (floor 3, no cap). English = reading technical docs only -> B2 preferred, no G4b cap. Duplicate posting of the same role at wearedevelopers ext/2162985. Apply via buscojobs.com.es.",
+      "applied_at": "2026-08-25",
+      "outcome_note": "User reported the rejection on 2026-08-25. applied_at is INFERRED from that report, not confirmed by the user - correct it if the application went out on a different date. No reason for the rejection was given, so none is recorded. match_score stays 88: scoring is CV-vs-JD and is never revised by an outcome."
+    },
+    "https://remotive.com/remote/jobs/software-development/senior-php-developer-5575745": {
+      "title": "Senior PHP Developer",
+      "company": "REIZ TECH UAB",
+      "source": "firecrawl",
+      "match_score": 87,
+      "score_breakdown": {
+        "H": 84,
+        "S": 82,
+        "D": 94,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-global",
+      "location": "Worldwide (Lithuanian employer)",
+      "status": "applied",
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "posted": "~2026-08-18",
+      "applied_at": null,
+      "applied_at_note": "User confirmed on 2026-09-11 that the application was sent in August 2026; exact date not given, so none is recorded.",
+      "outcome": "no_reply",
+      "outcome_at": "2026-09-11",
+      "outcome_note": "User confirmed on 2026-09-11: application sent, no reply received. Recorded as a stated outcome, not as an aging inference.",
+      "notes": "5+ yrs floor = exactly 5 -> no cap per the years table (CV 4+, real gap noted in Why/gaps). EUR 5500-7000/mo fintech band. Async written English -> B2 preferred, no cap. Apply: reiztech.recruitee.com.",
+      "apply_url": "https://reiztech.recruitee.com/o/sr-php-developer-laravel-or-symfony-3",
+      "apply_note": "Direct ATS (Recruitee). The Remotive URL is discovery only. Apply link confirmed on the Remotive page 2026-08-25."
+    },
+    "https://hotremotejobs.co/remote-de/senior-full-stack-developer-php-fully-remote-within-europe-m-f-d-9523bb05-a4f4-49cc-89c0-2c121f532335": {
+      "title": "Senior Full Stack Developer (PHP) - fully remote within Europe (m/f/d)",
+      "company": "JobLeads",
+      "source": "tavily",
+      "match_score": 81,
+      "score_breakdown": {
+        "H": 76,
+        "S": 76,
+        "D": 94,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-eu",
+      "location": "Fully remote within Europe",
+      "status": "applied",
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "applied_at": null,
+      "applied_at_note": "User confirmed on 2026-09-11 that the application was sent in August 2026; exact date not given, so none is recorded.",
+      "outcome": "no_reply",
+      "outcome_at": "2026-09-11",
+      "outcome_note": "User confirmed on 2026-09-11: application sent, no reply received. Recorded as a stated outcome, not as an aging inference.",
+      "notes": "PARTIAL extract (Nice-If-You-Have truncated). Symfony extensive = REQUIRED and absent from the CV -> single biggest gap. Vue + SSR: SSR only partial (Astro output:server on AquaShield; Vidula disables SSR). No language cap. | 2026-08-25 follow-up: official title names Symfony explicitly. Application requires a written agent-usage statement (setup + one agent-written feature + one failure the candidate caught) - a strong fit for the Claude Code / AI-trainer evidence, and it changes what the cover letter must contain.",
+      "apply_url": "https://www.linkedin.com/jobs/view/senior-full-stack-developer-php-symfony-vue-js-at-jobleads-4391566112",
+      "apply_note": "hotremotejobs.co is an aggregator mirror. Official listing found 2026-08-25 on LinkedIn, where the real title is \"Senior Full Stack Developer (PHP/Symfony/Vue.js)\" - Symfony is named in the TITLE, which confirms the H gap. Alternate mirror: startup.jobs/senior-full-stack-developer-php-fully-remote-within-europe-m-f-d-jobleads-company-8246715",
+      "application_requirement": "APPLICATION ASKS FOR MORE THAN A CV: \"Apply now with your CV in English, and add a few lines on how you work with agents: your setup, one feature the agent mostly wrote, and one case where it went wrong and how you caught it.\" Found 2026-08-25 in the BeBee mirror of the full posting - this text was truncated out of the original extract."
+    },
+    "https://weworkremotely.com/remote-jobs/newrich-network-senior-full-stack-developer-php-laravel": {
+      "title": "Senior Full Stack Developer - PHP Laravel",
+      "company": "Newrich Network",
+      "source": "firecrawl",
+      "match_score": 65,
+      "raw_score": 83,
+      "cap_reason": "lang_cap_b2",
+      "score_breakdown": {
+        "H": 78,
+        "S": 83,
+        "D": 91,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-global",
+      "location": "Anywhere in the World",
+      "status": "skipped",
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "posted": "2026-08-21",
+      "notes": "Fluency in English (written and spoken) REQUIRED -> G4b cap 65. Uncapped 83. PHP 8.2 / Laravel 10 + React 18 + TS + AWS. Best blocked-by-language example of the run."
+    },
+    "https://justjoin.it/job-offer/pmt-mid-php-laravel-developer-m-k--poznan-php-8702ca3b": {
+      "title": "Mid PHP & Laravel Developer (m/k)",
+      "company": "PMT",
+      "source": "tavily",
+      "match_score": 65,
+      "raw_score": 80,
+      "cap_reason": "lang_cap_b2",
+      "score_breakdown": {
+        "H": 90,
+        "S": 85,
+        "D": 76,
+        "semantic_note": "proxy - snippet-based estimate"
+      },
+      "modality": "remote-unclear",
+      "location": "Remote (Poland, B2B)",
+      "status": "skipped",
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "notes": "English min B2 stated in the tech-stack badge and the body text -> G4b cap 65, extract: skipped_g4_snippet. Raw 80 is a SNIPPET-BASED ESTIMATE, not a full extract. Stack (Laravel/Blade/Livewire/Tailwind/React/TS) is otherwise an excellent match."
+    },
+    "https://justjoin.it/job-offer/rublon-php-laravel-developer-cybersecurity--krakow-php-78ef2dab": {
+      "title": "PHP Laravel Developer (Cybersecurity)",
+      "company": "Rublon",
+      "source": "tavily",
+      "match_score": 66,
+      "score_breakdown": {
+        "H": 59,
+        "S": 68,
+        "D": 73.5,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-unclear",
+      "location": "100% remote or Krakow / Zielona Gora, Poland",
+      "status": "skipped",
+      "first_seen": "2026-08-25",
+      "last_seen": "2026-08-25",
+      "notes": "No cap - a genuine skills gap (Angular, AWS, SAML/OIDC/LDAP/Entra ID, cloud IAM all absent). PHP 8.3 / Laravel 12 / Docker / CI-CD / AI-assisted dev do match."
+    },
+    "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538": {
+      "title": "Full-Stack Laravel Developer",
+      "company": "Globaltize",
+      "source": "tavily",
+      "match_score": 96,
+      "score_breakdown": {
+        "H": 100,
+        "S": 92,
+        "D": 94,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-global",
+      "location": "Remote – Open Worldwide (LinkedIn region label: Latin America) · significant overlap 9:00–17:00 US Central",
+      "status": "new",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "~2026-09-07",
+      "why": "Every listed hard skill is in the CV: 3+ yrs PHP/Laravel, Tailwind CSS UIs, working inside an existing Laravel codebase, AI-assisted development. Responsibilities (feature requests from non-technical business users, enhancements, bug fixes) mirror Servispin and the Restoration Control client work.",
+      "gaps": "The heuristic score is high because the JD is short; the economics are not. PART-TIME with 'potential' full-time, $10–20 USD/h (both 'pending final confirmation'), overlap with 9–17 CT = 15:00–23:00 in Covilhã. LinkedIn tags the region as Latin America although the body says open worldwide – confirm hiring from Portugal and the final rate before investing time.",
+      "notes": "extract: tavily_advanced. No CEFR line; 'strong written and verbal communication' scored as B2-preferred (no cap)."
+    },
+    "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel": {
+      "title": "Back-End Developer (PHP / Laravel)",
+      "company": "Tomplay",
+      "source": "firecrawl",
+      "match_score": 85,
+      "score_breakdown": {
+        "H": 81,
+        "S": 83,
+        "D": 94,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-eu",
+      "location": "Europe, time zone within 1 hour of CET/CEST (Portugal = CET-1 qualifies) · company listed in Castro-Urdiales, Spain",
+      "status": "new",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "2026-09-08",
+      "why": "1–3 yrs PHP+Laravel floor, Laravel 10 / PHP 8.2 site plus a plain-PHP high-traffic API: the vanilla-PHP CRM years and the Laravel 13 projects cover both halves. Required SQL/EXPLAIN, Git, REST and daily AI-assisted development all match; 'plus' list hits Claude Code/Cursor, Docker, CI/CD, Redis, queues, caching.",
+      "gaps": "Plus items absent: AWS, memcached, Solr/search engine; webpack only adjacent (Vite). 'Good written and spoken English' (B2-preferred, no cap). Permanent contract: confirm the hiring vehicle for a Portugal resident. Application wants a cover note: something you built recently, how you used AI while building it, one thing you would change.",
+      "apply_url": "https://www.buscojobs.com.es/back-end-developer-php-laravel-en-castro-urdiales-ID-369394948",
+      "notes": "extract: firecrawl (full JD). Posted date from job:posted_time metadata."
+    },
+    "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549": {
+      "title": "(Remote/Located) Full Stack Dev",
+      "company": "IN MANAS SPAIN",
+      "source": "firecrawl",
+      "match_score": 85,
+      "score_breakdown": {
+        "H": 87,
+        "S": 72,
+        "D": 94,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "100% remote from Spain (office Las Palmas, HQ Innsbruck) · €39–42k + €4.5k team bonus",
+      "status": "new",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "~2026-09-09 (updated 2026-09-11)",
+      "why": "Component JS framework (Vue/React), Claude Code-style AI tooling, Git, AI-agent work and security all evidenced; PHP/Laravel/MySQL are listed as a plus and are the CV's core. Salary published.",
+      "gaps": "Frontend-focused role building an AI orchestrator, with 'strong focus on infrastructure, automation and security' – infra is only adjacent (Docker, GitHub Actions, Cloudflare). 'Work remotely from Spain' passes the career taxonomy but likely means Spanish payroll/residency – VERIFY hiring from Portugal first. Team language English ('good English skills required', no CEFR, scored as B2-preferred).",
+      "mirror": "https://remotolist.com/programacion/remotelocated-full-stack-dev-23671",
+      "notes": "extract: firecrawl (RemotoList mirror, full JD)."
+    },
+    "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e": {
+      "title": "PHP Freelance Developer (remoto Spain)",
+      "company": "Michael Page (client: Spanish GRC SaaS)",
+      "source": "firecrawl",
+      "match_score": 83,
+      "score_breakdown": {
+        "H": 75,
+        "S": 77,
+        "D": 99,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "100% remoto (Spain) · freelance, contrato temporal · 325 CVs registered",
+      "status": "new",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "2026-09-04",
+      "why": "Laravel/Symfony backend on a SaaS moving from monolith to services, with DDD + hexagonal architecture explicitly asked – exactly the Vidula architecture. API integrations, Docker, CI/CD and AI tooling also match. 1-year experience floor, no English line.",
+      "gaps": "Kubernetes, Kafka/RabbitMQ, observability absent; AWS, microservices, event-driven only adjacent. Freelance 'remoto Spain': confirm invoicing from Portugal is accepted. Posted 7 days ago with 325 applicants – apply early or skip.",
+      "notes": "extract: firecrawl (full JD)."
+    },
+    "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer": {
+      "title": "Senior PHP/Laravel Developer",
+      "company": "Interaction Design Foundation (IxDF)",
+      "source": "firecrawl",
+      "match_score": 78,
+      "score_breakdown": {
+        "H": 76,
+        "S": 70,
+        "D": 89,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-global",
+      "location": "Fully remote, time zones UTC-5 to UTC+8 (includes Portugal) · annual team trips",
+      "status": "new",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "evergreen careers page (no date shown)",
+      "why": "Laravel modular monolith with bounded contexts, Inertia + Vue + Tailwind, Redis, Docker, GitHub Actions – the CV's own stack. English bar is explicitly 'acceptable, not perfect' (B1 OK, language sub-score 100). Strong automated-testing culture matches the 96-file PHPUnit gate.",
+      "gaps": "Senior-only team asking for 'expert' PHP, SOLID/algorithms and mastered unit testing; TDD, Event Sourcing, open-source contributions, AWS cert absent. Their CI uses PHPStan/Psalm/Rector (not in the CV today). No posting date – IxDF recruits continuously; older NoDesk/LinkedIn copies are expired.",
+      "apply_url": "https://ixdf.org/about/careers/senior-php-laravel-developer",
+      "notes": "extract: firecrawl (NoDesk mirror). Apply only via the IxDF careers page."
+    },
+    "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php": {
+      "title": "Senior PHP Developer - fully remote within Europe (m/f/d)",
+      "company": "JobLeads GmbH",
+      "source": "firecrawl",
+      "match_score": 76,
+      "score_breakdown": {
+        "H": 70,
+        "S": 65,
+        "D": 94,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-eu",
+      "location": "Fully remote within Europe · 65–75 EUR/h gross, permanent",
+      "status": "new",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "2026-09-09",
+      "why": "Agentic engineering is the core ask (Claude Code/Codex/Cursor on production code, spec-and-verification discipline, blocking CI checks) – the CV's AI-trainer + CI-gated Vidula evidence is unusually relevant. 5+ yrs floor, fully remote Europe, high published rate.",
+      "gaps": "Extensive Symfony experience is REQUIRED and absent – the single biggest H miss; Doctrine and MCP/agent-friendly legacy work also absent. Same company as the cached 'Senior Full Stack Developer (PHP/Symfony/Vue.js)' entry – you already applied to that JobLeads role in August 2026 with no reply, so a second application to the same company is low ROI.",
+      "notes": "extract: firecrawl (full JD, published 09.09.2026, open until 08.10.2026)."
+    },
+    "https://www.itjobs.pt/oferta/516770/php-software-engineer": {
+      "title": "PHP Software Engineer",
+      "company": "Neotalent Conclusion",
+      "source": "firecrawl",
+      "match_score": 65,
+      "raw_score": 78,
+      "cap_reason": "lang_cap_b2",
+      "score_breakdown": {
+        "H": 69,
+        "S": 77,
+        "D": 91,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "Portugal · Remoto · contrato sem termo",
+      "status": "skipped",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "2026-09-10",
+      "notes": "'Fluent in English' listed as a requirement -> G4b cap 65 (uncapped 78). Legacy monolith + Laravel components, unit testing, MySQL, Continuous Delivery all match; jQuery, SOAP integrations, AWS/IaC absent. Best residency fit of the run (Portugal remote, permanent) blocked only by the English line. extract: firecrawl."
+    },
+    "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157": {
+      "title": "Senior Backend PHP Engineer, EMEA",
+      "company": "Apryse (Xodo Sign)",
+      "source": "tavily",
+      "match_score": 65,
+      "raw_score": 71,
+      "cap_reason": "lang_cap_b2",
+      "score_breakdown": {
+        "H": 69,
+        "S": 65,
+        "D": 78,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-unclear",
+      "location": "EMEA (LinkedIn listing: Ghent) – remote scope not confirmed",
+      "status": "skipped",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "notes": "5+ yrs; modern PHP, MySQL, REST, Docker match; AWS EC2/S3/RDS REQUIRED and absent; Symfony an asset; Scrum team. 'Excellent interpersonal and communication skills, both written and verbal' -> B2 required, cap 65 (uncapped 71). extract: tavily_advanced (partial)."
+    },
+    "https://es.linkedin.com/jobs/view/full-stack-developer-php-%2B-modern-javascript-at-inveert-4464480520": {
+      "title": "Full Stack Developer (PHP + Modern JavaScript)",
+      "company": "Inveert",
+      "source": "tavily",
+      "match_score": 69,
+      "raw_score": 69,
+      "cap_reason": "evidence_cap",
+      "score_breakdown": {
+        "H": 50,
+        "S": 67,
+        "D": 99,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "Full remote – requires Spanish tax residency · €30–35k",
+      "status": "skipped",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "notes": "Extract returned mission/benefits but no readable skill list -> H=50 fallback + evidence cap 69. 5 yrs floor, fintech white-label platforms. 'Residencia fiscal en España' is a real wall for a Portugal resident even though the taxonomy passes Spain-remote. extract: tavily_advanced (partial)."
+    },
+    "https://www.net-empregos.com/15934192/senior-wordpress-developer-freelancer": {
+      "title": "Senior WordPress Developer Freelancer",
+      "company": "QUARZAZATE LDA",
+      "source": "firecrawl",
+      "match_score": 60,
+      "score_breakdown": {
+        "H": 58,
+        "S": 33,
+        "D": 84,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "100% remoto · residente em Portugal · prestação de serviços",
+      "status": "skipped",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "2026-09-11",
+      "notes": "Skills gap, no cap: senior WordPress + WooCommerce, certified invoicing integration, multilingual sites absent. PHP/JS/APIs/performance/security/Git/tests match. English 'mínimo B1' (meets CV) but 'português fluente' required vs CV 'resident level' – verify. extract: firecrawl."
+    },
+    "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476": {
+      "title": "Senior Backend Engineer (PHP/Laravel)",
+      "company": "LucidHorizon",
+      "source": "tavily",
+      "match_score": 55,
+      "raw_score": 83,
+      "cap_reason": "years_cap",
+      "score_breakdown": {
+        "H": 91,
+        "S": 78,
+        "D": 75,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "Remoto em Portugal ou presencial Porto/Lisboa · residência em Portugal obrigatória · €50–70k + stock options",
+      "status": "skipped",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "~2026-09-08",
+      "notes": "'Mais de 8 anos de PHP em produção' -> G4 cap 55 (uncapped 83). Otherwise a near-bullseye: Laravel core, ERP/CRM/vendor API integrations, queues and events, PostgreSQL + Redis, React/TypeScript/Tailwind, AI APIs bonus, no English requirement, Portugal residency required. Mirror: jobleads.com/pt (LaraBench relabel). extract: firecrawl (JobLeads mirror) + tavily_advanced (LinkedIn)."
+    },
+    "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350": {
+      "title": "Senior PHP Engineer",
+      "company": "Airalo",
+      "source": "tavily",
+      "match_score": 55,
+      "raw_score": 68,
+      "cap_reason": "years_cap",
+      "score_breakdown": {
+        "H": 72,
+        "S": 57,
+        "D": 70,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "Remote, anywhere in Spain · permanent via Deel (EOR Spain) · €79.2–114k",
+      "status": "skipped",
+      "first_seen": "2026-09-11",
+      "last_seen": "2026-09-11",
+      "posted": "~2026-09-09",
+      "notes": "7+ yrs backend PHP + 4+ Laravel/Symfony -> G4 cap 55 (uncapped 68, would not enter the table anyway). Distributed/event-driven with SQS/PubSub, AWS, NoSQL at scale absent or adjacent. English is the working language (comfortable, no cap). extract: tavily_advanced (partial)."
+    }
+  },
+  "runs": [
+    {
+      "date": "2026-07-30",
+      "queries": [
+        "remote Laravel developer job PHP Inertia Vue Europe",
+        "remote full stack developer PHP Laravel Vue.js hiring Spain Portugal",
+        "remote Laravel Livewire developer job posting USA UK",
+        "PHP backend developer remote Canada Laravel",
+        "remote Laravel Vue developer job worldwide"
+      ],
+      "new_matches": 6,
+      "ats_score": 83,
+      "target_job_title": "Senior Full Stack Developer (Laravel / Vue / Inertia)",
+      "notes": "Excluded DeterTech Holdings (UK, PHP/Laravel+AWS) despite strong stack match: a same-company LinkedIn listing required onsite presence in Telford a few days/month -- hybrid outside Lisbon, against the modality rule. Also excluded low-quality/garbled scrapes, aggregator listing pages with no single-job URL, and postings older than ~7 days where a day-count was shown."
+    },
+    {
+      "date": "2026-08-01",
+      "queries": [
+        "remote Laravel developer PHP Vue Inertia Spain Portugal",
+        "remote full stack Laravel PHP Vue.js job Europe",
+        "desarrollador Laravel remoto PHP Vue España Portugal",
+        "oferta empleo full stack Laravel PHP remoto Europa",
+        "Laravel Livewire developer remote Europe hiring",
+        "empleo híbrido Laravel Lisboa Portugal"
+      ],
+      "new_matches": 2,
+      "excluded_count": 14,
+      "ats_score": 84,
+      "target_job_title": "Full Stack Developer (Laravel / Vue)",
+      "notes": "Targeting Mid Full Stack Laravel/Vue (4y), not Senior 5+. Excluded: Wild Neighbors (stale 2022 + North America lock); Greenwood Capital (applications closed + hybrid Manchester); Lumion USA-only; HelpBnk Senior Laravel (5+ years hard → dealbreaker cap 55); Joppy hybrid Madrid; Madrid hybrid scrapes; aggregators; LatAm-only Somewhere; .NET-primary Lisbon hybrid; Nest/Angular noise. EN+ES seeds. Cache skip of 6 prior URLs."
+    },
+    {
+      "date": "2026-08-07",
+      "queries": [
+        "remote Laravel developer PHP Vue Inertia Spain Portugal",
+        "remote full stack Laravel PHP Vue.js job Europe",
+        "Laravel Livewire developer remote Europe hiring",
+        "remote PHP Laravel backend developer Portugal Spain",
+        "hybrid Laravel developer Lisbon Lisboa Portugal",
+        "desarrollador Laravel remoto PHP Vue España Portugal",
+        "oferta empleo full stack Laravel PHP remoto Europa",
+        "desarrollador backend PHP Laravel remoto España",
+        "site:linkedin.com/jobs remote Laravel PHP developer Spain OR Portugal OR Europe",
+        "site:linkedin.com/jobs desarrollador Laravel OR desarrollador PHP remoto España OR Portugal",
+        "site:linkedin.com/jobs PHP OR Laravel developer remote",
+        "site:linkedin.com/jobs software engineer PHP OR Laravel remote Europe OR EMEA"
+      ],
+      "new_matches": 3,
+      "excluded_count": 24,
+      "ats_score": 85,
+      "target_job_title": "Full Stack Developer (PHP / Laravel + Vue / Inertia)",
+      "notes": "GitHub enrichment: vidula, aquashield-web, servispin. ATS rewrite corrected Vidula usage to ~1–2×/month; added ~8 landings/CRMs and Servispin ~25 clients/month. Excluded: Storyteq (closed + SA lock); TRIBBU hybrid Madrid; Atlantic Partners US TZ; Omnispear/Business Draft US-only; Oliver Bernard UK; Slashmobility/InnoIT Madrid; Hostaway stale ~2mo; Coinspaid 5+y+Russian (cap); micro1 closed; CStore Poland-only; Ecuador/LATAM aggregators; Nest/Angular/Node primaries; Instagram/HN noise. extract: firecrawl MOZAYDO; tavily_advanced iAhorro+Hired. Prior SecureIT/MailerLite skipped as already seen."
+    },
+    {
+      "date": "2026-08-07",
+      "time": "22:15+01:00",
+      "queries": [
+        "remote Laravel developer PHP Vue Inertia Spain OR Portugal OR Europe",
+        "desarrollador Laravel remoto PHP Vue España OR Portugal teletrabajo",
+        "site:weworkremotely.com OR site:remoteok.com OR site:remotive.com Laravel OR PHP",
+        "site:landing.jobs OR site:itjobs.pt OR site:remoterocketship.com Laravel OR PHP",
+        "site:linkedin.com/jobs remote Laravel PHP developer Spain OR Portugal OR Europe OR EMEA",
+        "site:linkedin.com/jobs desarrollador Laravel OR desarrollador PHP remoto España OR Portugal",
+        "site:pt.indeed.com OR site:es.indeed.com OR site:infojobs.net Laravel PHP remoto",
+        "site:honeypot.io OR site:justjoin.it OR site:nofluffjobs.com OR site:europeremotely.com Laravel OR PHP remote",
+        "Hostaway Senior Backend Guest Portal remote EMEA",
+        "hybrid Laravel Lisbon Landing.Jobs",
+        "JustJoin Happy Team / Boldare / Coalition deep extract"
+      ],
+      "new_matches": 2,
+      "skipped_60_69": 2,
+      "excluded_count": 18,
+      "ats_score": 86,
+      "target_job_title": "Full Stack Developer (PHP / Laravel / Vue / Inertia)",
+      "portal_tiers": "cache_hit",
+      "keywords": "cache_hit",
+      "rotation_bucket": "europe_core",
+      "notes": "Evening re-run after metric answers. ATS rewrite: Vidula Founder personal-ops (appointments/invoice/classroom content/video); freelance 2022–2024 BA modules for restorationcontrol.com; Servispin Meta Ads converts; AquaShield company landing + spam/Lighthouse kept. Excluded: Hired 4447880183/4449998560 closed; Robert Walters 7y PHP; Stafiz closed; TRIBBU Madrid; Oliver Bernard UK; Remotive USA-only; Jaggaer Serbia; US-citizen Omnispear; Nest/Angular noise; aggregators. Skipped 60–69: Boldare (EN B2+Polish), Proxify (Shopify). Deep extract: Firecrawl Coalition/Happy Team/Boldare; Tavily advanced Hired/Proxify/RW."
+    },
+    {
+      "date": "2026-08-25",
+      "time": "12:40+01:00",
+      "queries": [
+        "\"mid-level\" OR \"mid level\" full stack developer Laravel Vue remote Europe",
+        "\"PHP developer\" Vue OR \"Laravel Vue developer\" remote Europe hiring",
+        "\"desarrollador full stack Laravel Vue\" OR \"desarrollador PHP Vue\" remoto OR teletrabajo Espana Portugal (country: Spain)",
+        "site:linkedin.com/jobs Laravel PHP developer remote Spain OR Portugal OR Europe OR EMEA",
+        "site:weworkremotely.com OR site:remoteok.com OR site:remotive.com OR site:landing.jobs OR site:itjobs.pt Laravel PHP developer",
+        "site:justjoin.it OR site:nofluffjobs.com OR site:honeypot.io OR site:europeremotely.com OR site:welcometothejungle.com Laravel PHP remote",
+        "\"Quik Hire Staffing\" \"PHP Developer\" BackEnd Remote European Union requirements English (raw-content boost)"
+      ],
+      "new_matches": 3,
+      "skipped_60_69": 3,
+      "excluded_count": 14,
+      "ats_score": 88,
+      "target_job_title": "Full Stack Developer (PHP / Laravel + Vue / Inertia)",
+      "portal_tiers": "cache_hit",
+      "keywords": "cache_hit",
+      "rotation_bucket": "europe_east_dach_fr",
+      "github_enrichment": [
+        "servispin",
+        "vidula",
+        "aquashield-web",
+        "video-cleanup-api"
+      ],
+      "notes": "ATS rewrite 2026-08-25: Vidula reframed as a self-built MVP (user correction - no SaaS-subscription savings claim exists); Restoration Control 2022-2024 promoted to a dated role (vanilla PHP CRM maintenance + new modules) and Smart Finance 365 2024 (Laravel+Livewire MVP) - this fixes the 4+ years timeline legibility, the biggest rejection risk in the judge pass. Removed the star glyphs. Added 6 wording wins from the GitHub READMEs (OpenAPI/Scramble, N+1 strict mode, queues/async workers, Reverb WebSockets, RBAC, Docker/Sail) plus video-cleanup-api as a 4th project. AquaShield CI/CD claim VERIFIED (.github/workflows/deploy.yml exists in the repo). Excluded: Quik Hire Staffing (G3 - \"No longer accepting applications\", discovered only via the raw-content boost; would have topped the table at 94); Snappy Shopper (UK lock); Nexthire (US/IST timezone lock + 7+ yrs); Storyteq (South Africa lock); Knak (Canada lock); Opus IT (UK lock + closed); New Consulting itjobs.pt (onsite Porto - the stack was a bullseye); PRIME GROUP and PrimeIT/jobijoba (hybrid Barcelona, x2); Scale Army (LatAm); Airalo (G3 - posted 1mth ago per Remotive); ITDS (G2 Java/Spring); aggregator index pages (dailyremote, codingjobboard, arc.dev, indeed q- pages, wearedevelopers /ls/ listing); 2 spam LinkedIn results. Extract: firecrawl (Quental, Newrich, REIZ TECH); tavily_advanced (JobLeads, Quik Hire); raw-content boost (Quik Hire - caught the closed listing); skipped_g4_snippet (PMT - English B2). lang_cap: EN B2 required x2 (Newrich, PMT).",
+      "market_insights": {
+        "jds_analyzed": 9,
+        "sample_note": "5 full or near-full JD texts (Quental, Newrich, REIZ TECH, Quik Hire, JobLeads-partial) plus 4 substantive snippets (PMT, Rublon, Nexthire, New Consulting). Excluded Airalo and Snappy Shopper (headings only, no readable bullets) and ITDS (G2 stack fail).",
+        "requirements": [
+          {
+            "name": "English B2+ required",
+            "bucket": "language",
+            "seen": 3,
+            "of": 9,
+            "required": 3,
+            "preferred": 0,
+            "in_cv": false,
+            "verdict": "recurring_gap",
+            "evidence_urls": [
+              "https://weworkremotely.com/remote-jobs/newrich-network-senior-full-stack-developer-php-laravel",
+              "https://justjoin.it/job-offer/pmt-mid-php-laravel-developer-m-k--poznan-php-8702ca3b"
+            ]
+          },
+          {
+            "name": "English B2 preferred / docs-level",
+            "bucket": "language",
+            "seen": 3,
+            "of": 9,
+            "required": 0,
+            "preferred": 3,
+            "in_cv": true,
+            "verdict": "covered",
+            "evidence_urls": [
+              "https://www.wearedevelopers.com/jobs/ext/2136846-analista-programador-a-fullstack-senior-php-laravel-vue-js-100-remoto",
+              "https://remotive.com/remote/jobs/software-development/senior-php-developer-5575745"
+            ]
+          },
+          {
+            "name": "Git / PR / code review",
+            "bucket": "process",
+            "seen": 5,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "blocking_covered"
+          },
+          {
+            "name": "Docker / containers",
+            "bucket": "infra",
+            "seen": 4,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "CI/CD pipelines",
+            "bucket": "infra",
+            "seen": 4,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "MySQL/PostgreSQL + query optimisation",
+            "bucket": "data",
+            "seen": 4,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "TypeScript",
+            "bucket": "frontend",
+            "seen": 4,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "AWS / cloud platform",
+            "bucket": "infra",
+            "seen": 3,
+            "of": 9,
+            "in_cv": false,
+            "verdict": "recurring_gap",
+            "evidence_urls": [
+              "https://weworkremotely.com/remote-jobs/newrich-network-senior-full-stack-developer-php-laravel",
+              "https://justjoin.it/job-offer/rublon-php-laravel-developer-cybersecurity--krakow-php-78ef2dab"
+            ]
+          },
+          {
+            "name": "Symfony",
+            "bucket": "backend",
+            "seen": 3,
+            "of": 9,
+            "in_cv": false,
+            "verdict": "recurring_gap",
+            "evidence_urls": [
+              "https://hotremotejobs.co/remote-de/senior-full-stack-developer-php-fully-remote-within-europe-m-f-d-9523bb05-a4f4-49cc-89c0-2c121f532335"
+            ]
+          },
+          {
+            "name": "Caching / Redis",
+            "bucket": "architecture",
+            "seen": 3,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "PHPUnit / Pest",
+            "bucket": "testing",
+            "seen": 3,
+            "of": 9,
+            "in_cv": "partial",
+            "verdict": "reframe"
+          },
+          {
+            "name": "Security / OWASP",
+            "bucket": "architecture",
+            "seen": 3,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "Vue 3",
+            "bucket": "frontend",
+            "seen": 3,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "React",
+            "bucket": "frontend",
+            "seen": 3,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "PHP 8.x explicit floor",
+            "bucket": "backend",
+            "seen": 3,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "5+ years floor",
+            "bucket": "process",
+            "seen": 3,
+            "of": 9,
+            "in_cv": false,
+            "verdict": "recurring_gap"
+          },
+          {
+            "name": "Pest specifically",
+            "bucket": "testing",
+            "seen": 2,
+            "of": 9,
+            "in_cv": false,
+            "verdict": "cheap_to_close"
+          },
+          {
+            "name": "Kubernetes",
+            "bucket": "infra",
+            "seen": 2,
+            "of": 9,
+            "in_cv": false,
+            "verdict": "noise"
+          },
+          {
+            "name": "Angular",
+            "bucket": "frontend",
+            "seen": 2,
+            "of": 9,
+            "in_cv": false,
+            "verdict": "noise"
+          },
+          {
+            "name": "AI-assisted dev / Copilot / Claude Code",
+            "bucket": "process",
+            "seen": 2,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "differentiator"
+          },
+          {
+            "name": "Message queues / background jobs",
+            "bucket": "architecture",
+            "seen": 2,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "Clean architecture / SOLID / patterns",
+            "bucket": "architecture",
+            "seen": 2,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "covered"
+          },
+          {
+            "name": "Microservices",
+            "bucket": "architecture",
+            "seen": 1,
+            "of": 9,
+            "in_cv": "partial",
+            "verdict": "noise"
+          },
+          {
+            "name": "Agile / Scrum / Jira",
+            "bucket": "process",
+            "seen": 1,
+            "of": 9,
+            "in_cv": false,
+            "verdict": "noise"
+          },
+          {
+            "name": "Inertia.js",
+            "bucket": "frontend",
+            "seen": 0,
+            "of": 9,
+            "in_cv": true,
+            "verdict": "zero_demand_this_run"
+          }
+        ],
+        "reach": [
+          {
+            "blocker": "lang_cap_b2",
+            "jds_blocked": 2,
+            "uncapped": [
+              83,
+              80
+            ],
+            "would_enter_table": 2,
+            "note": "PMT uncapped is a snippet-based estimate, not a full extract"
+          },
+          {
+            "blocker": "lang_cap_c1",
+            "jds_blocked": 0,
+            "uncapped": [],
+            "would_enter_table": 0
+          },
+          {
+            "blocker": "years_cap",
+            "jds_blocked": 0,
+            "uncapped": [],
+            "would_enter_table": 0,
+            "note": "Nexthire had a 7+ floor but failed G1 first, so closing it unlocks nothing"
+          },
+          {
+            "blocker": "evidence_cap",
+            "jds_blocked": 0,
+            "uncapped": [],
+            "would_enter_table": 0
+          },
+          {
+            "blocker": "skills_only",
+            "jds_blocked": 1,
+            "uncapped": [
+              66
+            ],
+            "would_enter_table": 0,
+            "note": "Rublon - Angular/AWS/SAML gap, not an administrative cap"
+          }
+        ],
+        "cross_run": "No prior run stored a market_insights block (checked all 4). Nothing can be marked persistent this run; this entry is the baseline for future trend lines.",
+        "outcome_correlation": "PARTIAL - counts only, no per-requirement correlation possible. As of 2026-08-25 all 14 applied entries carry a user-stated outcome: 12 no_reply, 1 rejected (Quental), 1 screening (Coalition Technologies). The n>=8 usable-outcome threshold is met, BUT the responded group is n=1, which cannot separate a real signal from chance - no direction column is reported. Structural blocker: the per-requirement table (requirement frequency in responded vs silent) cannot be built, because runs before 2026-08-25 did not store market_insights requirement lists. Rebuilding it would mean re-reading 13 older JDs, several of which are now closed. From 2026-08-25 onward every run stores its requirement lists, so this section becomes computable once ~8 more applications carry outcomes. Observed response rate: 1 of 14 = 7%. The single response came from the lowest-scoring application in the set (Coalition, 70) - with n=1 this is noise and must NOT be read as \"lower scores get more replies\".",
+        "recommendations": [
+          {
+            "type": "wording",
+            "text": "Reword testing as \"feature and unit tests per module, CI-gated\" - the vocabulary 3/9 JDs used. Add Pest ONLY if actually used; never write it in otherwise."
+          },
+          {
+            "type": "wording",
+            "text": "Surface the AI-tooling experience higher: 2/9 JDs asked for AI-assisted development and one named Claude Code explicitly. The CV has trainer-level evidence - that is a differentiator, not a footnote."
+          },
+          {
+            "type": "wording",
+            "text": "Keep leading with Laravel+Vue and Laravel+React rather than Inertia. Inertia appeared in 0/9 JDs this run - real experience, but not what the market searches on."
+          },
+          {
+            "type": "skill_gap",
+            "text": "English B1 -> B2 is the highest-return gap: it blocked 2 otherwise-qualifying postings this week at uncapped 83 and 80. Honest counter-argument: a CV edit cannot fix this.",
+            "effort": "3-6 months to a certifiable B2"
+          },
+          {
+            "type": "skill_gap",
+            "text": "AWS fundamentals (3/9 JDs). Cloudflare R2/Workers + Railway + Docker transfer conceptually but the CV cannot claim AWS today.",
+            "effort": "4-6 weeks to a real ECS/RDS/S3 deployment worth naming"
+          },
+          {
+            "type": "skill_gap",
+            "text": "Symfony (3/9 JDs, required-extensive in one). A Laravel developer reaches working Symfony quickly, and it closes the largest single H miss of the run.",
+            "effort": "4-8 weeks"
+          }
+        ],
+        "outcome_summary": {
+          "applied_total": 14,
+          "with_stated_outcome": 14,
+          "tally": {
+            "no_reply": 12,
+            "screening": 1,
+            "rejected": 1
+          },
+          "response_rate": "1/14 (7%)",
+          "by_score_band": {
+            "85-90": {
+              "applications": 4,
+              "responded": 0
+            },
+            "80-84": {
+              "applications": 3,
+              "responded": 0
+            },
+            "75-79": {
+              "applications": 4,
+              "responded": 0
+            },
+            "70-74": {
+              "applications": 2,
+              "responded": 1
+            },
+            "65-69": {
+              "applications": 1,
+              "responded": 0
+            }
+          },
+          "caveat": "match_score is CV-vs-JD compatibility and is never revised by an outcome. These bands describe the market response, not the scoring."
+        }
+      }
+    },
+    {
+      "date": "2026-09-11",
+      "time": "14:10+01:00",
+      "queries": [
+        "\"mid-level\" OR \"mid level\" full stack developer Laravel Vue remote Europe",
+        "\"PHP developer\" Vue OR \"Laravel Vue developer\" remote Europe",
+        "\"Laravel Inertia\" OR \"Laravel TypeScript Vue\" OR \"Laravel React TypeScript\" developer remote",
+        "PHP Laravel backend developer remote Spain OR Portugal OR EU",
+        "\"desarrollador full stack Laravel Vue\" remoto OR teletrabajo (country: Spain)",
+        "\"desarrollador PHP Vue\" OR \"desarrollador Vue Laravel\" OR \"programador Laravel\" remoto España OR Portugal (country: Spain)",
+        "\"desarrollador web Laravel\" OR \"desarrollador full stack PHP\" teletrabajo (country: Spain)",
+        "site:linkedin.com/jobs \"mid-level\" OR \"full stack developer\" Laravel Vue remote Europe OR EMEA",
+        "site:linkedin.com/jobs desarrollador Laravel OR \"desarrollador PHP\" OR \"full stack PHP\" remoto España OR Portugal",
+        "site:linkedin.com/jobs \"PHP developer\" OR \"Laravel developer\" remote Europe OR EMEA OR Portugal",
+        "site:weworkremotely.com OR site:remoteok.com OR site:remotive.com Laravel OR PHP developer",
+        "site:landing.jobs OR site:itjobs.pt OR site:remoterocketship.com Laravel OR PHP developer",
+        "site:pt.indeed.com OR site:es.indeed.com OR site:infojobs.net Laravel PHP remoto teletrabajo",
+        "site:tecnoempleo.com Laravel OR PHP teletrabajo",
+        "site:getonbrd.com OR site:remoteo.es OR site:remotolist.com OR site:weremoto.com Laravel OR PHP remoto",
+        "site:net-empregos.com OR site:randstad.pt OR site:randstad.es programador PHP OR Laravel remoto",
+        "\"senior\" (Laravel OR \"PHP developer\" OR \"full stack PHP\") remote Europe OR EMEA",
+        "\"desarrollador PHP Laravel junior\" OR \"programador Laravel junior\" OR \"desarrollador senior\" Laravel remoto",
+        "pivots: CyberArrow Laravel remote Portugal; TRIGÉNIUS PHP Laravel; FYUL/LucidHorizon/TechRivo LinkedIn; LucidHorizon Senior Backend; IxDF careers; Quik Hire raw-content boost; UserGems Greenhouse; Tecnoempleo Laravel index"
+      ],
+      "new_matches": 6,
+      "skipped_60_69": 4,
+      "capped_g4": 2,
+      "excluded_count": 57,
+      "ats_score": null,
+      "ats_note": "Judge pass done this run. User decided on 2026-09-11 to keep the CV as it is: no ATS rewrite produced, metric questions withdrawn. Job scoring used the base CV.",
+      "target_job_title": "Full Stack Developer (PHP / Laravel + Vue / Inertia)",
+      "portal_tiers": "cache_hit",
+      "keywords": "cache_hit",
+      "rotation_bucket": "iberia_es_pt",
+      "github_enrichment": [
+        "argenis-hub",
+        "vidula",
+        "servispin",
+        "aquashield-web",
+        "video-cleanup-api"
+      ],
+      "notes": "Friday weekday run, both caches populated -> portal/keyword research skipped (last_weekly_refresh 2026-08-03 is stale by weeks; next Sunday run or a 'refresh portals/keywords' will update it). No low-yield rescue (6 new matches, 12 gate-passed). G1 FAIL (31): Relocity, Constructor, Damco (USA), Veracity (EST/CST), In All Media (LATAM), SynergisticIT, Händlerbund + ECOMMERCE ONE + Juskys (Germany + German), Platinumlist (GE/AM/KZ/RS/KG), Triibe (SG), AIApply (hybrid Prague), Hospitable (OR), Business Draft (US), SOLTECH (US), SnappyCX (PST overlap), UserGems (Greenhouse location Brazil; also 'fluent English'), PrimeIT Valladolid/Valencia/Madrid PHP+IA (hybrid), Cegid Manresa (onsite), knowmad mood Madrid, INTEGRACIÓN TECNOLÓGICA Rivas, Akuaro BCN, N-iX/LaraBench Braga (hybrid), Libertex Limassol, TRIGÉNIUS (presencial Fátima, €1.2–1.65k/mo), WayOps/SlashMobility/cdmon/HAYS Girona (hybrid). G2 FAIL (5): Hired x2 (Node/Nest AI-trainer template), ITDS (Java), Mr. Landon (WordPress-only), EWOR (no stack). G3 FAIL (15): Dyncep (inactive), Agent Legend (closed), Confidential Laravel EMEA x5 (month-old reposts), Proxify old ID, Airalo Backend/PHP 4456044030 (stale), HAYS Freelance Laravel (404 closed), Adecco PHP remoto (2023), HAYS Valencia (2024), Gestionet (2023), CyberArrow Laravel [Remote] (posted 2026-07-29; would have scored ~91 – still live on Recruitee if the user wants to widen freshness), Quik Hire Staffing PHP BackEnd ES (recycled contract-payout template; two sibling posts already 'Ya no se aceptan solicitudes'). Ambiguous/no JD text (6): Clicars, Ailin.health, ThinkUPC (Catalan required, BCN), Prime Insights (Cyprus office), Bet On Talent (lead), Appcast Fullstack Laravel BCN. Extract: firecrawl (Tomplay, IN MANAS, Michael Page, IxDF, JobLeads, Neotalent, QUARZAZATE, PrimeIT, UserGems, SnappyCX, LucidHorizon mirror); tavily_advanced (Globaltize, Apryse, Inveert, Airalo, LucidHorizon, Ailin, ThinkUPC, Prime Insights, Clicars); raw-content boost (Quik Hire – caught the closed template). Structural finding: 4 of 16 JDs read are 'remote' but bound to Spanish residency/tax/EOR (IN MANAS, Inveert, Airalo, Michael Page) – they pass the career taxonomy but need a 'hires from Portugal?' check before applying. GitHub security note raised to the user: video-cleanup-api public README prints a concrete default API token.",
+      "market_insights": {
+        "jds_analyzed": 16,
+        "sample_note": "12 gate-passed JDs (6 table, 4 skipped 60–69, 2 G4-capped) with full or near-full text, plus 4 G1-fail JDs counted for requirements only (UserGems, SnappyCX, PrimeIT Backend PHP+IA, TRIGÉNIUS). Inveert and Apryse/Airalo are partial extracts. G2 fails, stale/closed G3 listings and ambiguous-modality pages excluded.",
+        "requirements": [
+          {"name": "AI-assisted development tools (Claude Code / Cursor / agentic)", "bucket": "process", "seen": 9, "of": 16, "required": 7, "preferred": 2, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php", "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
+          {"name": "Laravel named", "bucket": "backend", "seen": 11, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.itjobs.pt/oferta/516770/php-software-engineer"]},
+          {"name": "AWS", "bucket": "infra", "seen": 7, "of": 16, "required": 3, "preferred": 4, "in_cv": "adjacent", "verdict": "recurring", "persistent": true, "evidence_urls": ["https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350", "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
+          {"name": "Docker", "bucket": "infra", "seen": 6, "of": 16, "required": 3, "preferred": 3, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157", "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel"]},
+          {"name": "Automated / unit testing", "bucket": "testing", "seen": 6, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
+          {"name": "MySQL", "bucket": "data", "seen": 6, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.itjobs.pt/oferta/516770/php-software-engineer"]},
+          {"name": "Third-party / ERP / CRM API integrations", "bucket": "backend", "seen": 6, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
+          {"name": "Symfony", "bucket": "backend", "seen": 5, "of": 16, "required": 2, "preferred": 3, "in_cv": false, "verdict": "recurring", "persistent": true, "evidence_urls": ["https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php", "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
+          {"name": "CI/CD", "bucket": "infra", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
+          {"name": "Queues / background jobs / events", "bucket": "architecture", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel"]},
+          {"name": "SQL performance / EXPLAIN / query optimisation", "bucket": "data", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
+          {"name": "REST APIs", "bucket": "backend", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
+          {"name": "English B2+ required (fluent / excellent / strong written & verbal)", "bucket": "language", "seen": 4, "of": 16, "required": 4, "preferred": 0, "in_cv": false, "verdict": "recurring", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
+          {"name": "English good / comfortable, no CEFR (no cap)", "bucket": "language", "seen": 4, "of": 16, "required": 0, "preferred": 4, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549"]},
+          {"name": "English B1 or lower explicitly accepted", "bucket": "language", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer", "https://www.net-empregos.com/15934192/senior-wordpress-developer-freelancer", "https://www.wearedevelopers.com/jobs/ext/2785466-desarrollador-a-backend-php-ia"]},
+          {"name": "Remote bound to Spanish residency / tax / EOR", "bucket": "process", "seen": 4, "of": 16, "in_cv": false, "verdict": "recurring", "persistent": false, "evidence_urls": ["https://es.linkedin.com/jobs/view/full-stack-developer-php-%2B-modern-javascript-at-inveert-4464480520", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350", "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549"]},
+          {"name": "Portugal residency required (fits the candidate)", "bucket": "process", "seen": 2, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.net-empregos.com/15934192/senior-wordpress-developer-freelancer"]},
+          {"name": "Legacy PHP codebases", "bucket": "backend", "seen": 4, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.itjobs.pt/oferta/516770/php-software-engineer"]},
+          {"name": "Code review", "bucket": "process", "seen": 4, "of": 16, "in_cv": "adjacent", "verdict": "recurring", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php"]},
+          {"name": "Timezone overlap demand", "bucket": "process", "seen": 4, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
+          {"name": "Redis / caching", "bucket": "architecture", "seen": 4, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
+          {"name": "5-year floor (exactly 5, no cap)", "bucket": "process", "seen": 4, "of": 16, "in_cv": false, "verdict": "recurring", "persistent": true, "evidence_urls": ["https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php", "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
+          {"name": "DDD / hexagonal / design patterns", "bucket": "architecture", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
+          {"name": "Event-driven / distributed systems", "bucket": "architecture", "seen": 3, "of": 16, "in_cv": "adjacent", "verdict": "noise", "persistent": false, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"]},
+          {"name": "Vue", "bucket": "frontend", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
+          {"name": "Tailwind CSS", "bucket": "frontend", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
+          {"name": "React", "bucket": "frontend", "seen": 2, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
+          {"name": "TypeScript", "bucket": "frontend", "seen": 2, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
+          {"name": "Kubernetes", "bucket": "infra", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": true, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
+          {"name": "Message brokers (Kafka / RabbitMQ / SQS / PubSub)", "bucket": "architecture", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": false, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"]},
+          {"name": "Microservices / SOA", "bucket": "architecture", "seen": 2, "of": 16, "in_cv": "adjacent", "verdict": "noise", "persistent": true, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
+          {"name": "TDD / BDD", "bucket": "testing", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer", "https://www.wearedevelopers.com/jobs/ext/2785466-desarrollador-a-backend-php-ia"]},
+          {"name": "7+ years floor", "bucket": "process", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"]},
+          {"name": "Freelance / contract (not employee)", "bucket": "process", "seen": 3, "of": 16, "in_cv": true, "verdict": "noise", "persistent": false, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
+          {"name": "Static analysis (PHPStan / Psalm / Rector)", "bucket": "testing", "seen": 1, "of": 16, "in_cv": "pending_user_confirmation", "verdict": "noise", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
+          {"name": "Inertia.js", "bucket": "frontend", "seen": 1, "of": 16, "in_cv": true, "verdict": "noise", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
+          {"name": "Pest", "bucket": "testing", "seen": 0, "of": 16, "in_cv": "pending_user_confirmation", "verdict": "noise", "persistent": false, "evidence_urls": []}
+        ],
+        "reach": [
+          {"blocker": "lang_cap_b2", "jds_blocked": 2, "uncapped": [78, 71], "would_enter_table": 2, "two_run_total": {"jds_blocked": 4, "uncapped": [83, 80, 78, 71], "would_enter_table": 4}, "note": "Neotalent (78) is a Portugal-remote permanent role – the only blocker was 'Fluent in English'."},
+          {"blocker": "lang_cap_c1", "jds_blocked": 0, "uncapped": [], "would_enter_table": 0},
+          {"blocker": "years_cap", "jds_blocked": 2, "uncapped": [83, 68], "would_enter_table": 1, "note": "LucidHorizon (83, 8+ yrs, Portugal residency) would top the Portugal list; Airalo (68) would not enter even uncapped."},
+          {"blocker": "evidence_cap", "jds_blocked": 1, "uncapped": [69], "would_enter_table": 0},
+          {"blocker": "skills_only", "jds_blocked": 1, "uncapped": [60], "would_enter_table": 0, "note": "QUARZAZATE – WordPress/WooCommerce gap, not a cap."}
+        ],
+        "cross_run": "Two runs now store market_insights (2026-08-25 N=9, 2026-09-11 N=16); 'persistent' = present in both. English B2+ required: 3/9 -> 4/16 (persistent). AWS: 3/9 -> 7/16 (persistent, rising). Symfony: 3/9 -> 5/16 (persistent). AI-assisted development: 2/9 -> 9/16 (persistent, sharply rising). Pest: 2/9 -> 0/16.",
+        "outcome_correlation": "Updated 2026-09-11 after user confirmation: REIZ TECH and JobLeads Senior Full Stack (both first seen 2026-08-25) were applied in August with no reply. Totals: 16 applied, 14 no_reply, 1 rejected (Quental), 1 screening (Coalition, last reported 2026-08-25, left unchanged because no new outcome was stated). Usable outcomes 16 >= 8, but the responded group is n=1, so counts only and no direction column. Response rate 1/16 (6%).",
+        "recommendations": [
+          {"type": "wording", "text": "Move AI-assisted development from the trainer roles into the engineering bullets: Vidula was built with coding agents under enforced architecture/security rule files (laravel/boost MCP, .claude skills) behind CI gates – evidence already in the selected Vidula README. 9/16 JDs asked for this; Tomplay's application literally asks how you used AI while building something."},
+          {"type": "wording", "text": "Use the market's vocabulary for evidence the CV already has: 'third-party API integrations' (Google Calendar, SumUp, DocuSign, Resend – 6/16), 'background jobs and event-driven processing' (Horizon queues, domain events, Reverb – 5/16 + 3/16), 'legacy PHP maintenance' (4/16), 'S3-compatible object storage (Cloudflare R2)'. Never write AWS."},
+          {"type": "skill_gap", "text": "English B1 -> B2 (certifiable). Blocked 2 otherwise-qualifying JDs this run (78, 71) and 4 across the last two runs – all four would have entered the table. A CV edit cannot fix this.", "effort": "3–6 months of structured study to a B2 certificate"},
+          {"type": "skill_gap", "text": "AWS fundamentals: 7/16 JDs, required in 3 (Apryse, Airalo, Michael Page). Deploy one existing Laravel project (Servispin or Vidula) on ECS/RDS/S3 so it can be written honestly.", "effort": "4–6 weeks part-time"},
+          {"type": "skill_gap", "text": "Symfony: 5/16 JDs, required-extensive at JobLeads (twice across runs). A Laravel developer ramps fast; build one small Symfony + Doctrine service to have real evidence.", "effort": "4–8 weeks part-time"}
+        ]
+      }
+    }
+  ],
+  "outcome_policy": {
+    "values": [
+      "unknown",
+      "pending",
+      "no_reply",
+      "rejected",
+      "screening",
+      "interview",
+      "offer",
+      "withdrawn"
+    ],
+    "default_on_apply": "pending",
+    "aging_rule": "An entry still `unknown`/`pending` more than 21 days after applied_at is COUNTED AS no_reply by the market-insights correlation, but the stored value is NOT overwritten - only the user marks a real outcome.",
+    "note": "Set only for status=applied. Added 2026-08-24 so the market-insights report can cross recurring requirements against real responses."
+  }
+}

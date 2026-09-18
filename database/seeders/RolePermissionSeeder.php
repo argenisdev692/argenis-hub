@@ -106,6 +106,16 @@ class RolePermissionSeeder extends Seeder
     ];
 
     /**
+     * LeadScout (spec 003-lead-scout, T005): the exact six permissions the
+     * route table uses. No RESTORE / BULK pair — the MVP bandeja has no row
+     * selection and outreaches are never restored, so seeding them would only
+     * create dead permissions (same reasoning as the FORCE_DELETE omission).
+     *
+     * @var list<string>
+     */
+    private const array LEAD_SCOUT_ACTIONS = ['VIEW_ANY', 'VIEW', 'CREATE', 'UPDATE', 'DELETE', 'EXPORT'];
+
+    /**
      * Pipeline tools the ADMIN role can run (no DB catalog CRUD shape).
      *
      * @var list<string>
@@ -324,6 +334,7 @@ class RolePermissionSeeder extends Seeder
             ...$this->matrix(['BACKUPS'], self::BACKUP_ACTIONS),
             ...$this->matrix(['VIDEO_EDITS'], self::VIDEO_EDIT_ACTIONS),
             ...$this->matrix(['COURSE_SCRIPTS'], self::COURSE_SCRIPT_ACTIONS),
+            ...$this->matrix(['LEAD_SCOUT'], self::LEAD_SCOUT_ACTIONS),
             ...$this->matrix(self::SYSTEM_MONITORING_MODULES, self::SYSTEM_MONITORING_ACTIONS),
             ...$this->matrix(self::SELF_SERVICE_MODULES, self::SELF_SERVICE_ACTIONS),
         ];
@@ -399,6 +410,7 @@ class RolePermissionSeeder extends Seeder
             ...$this->matrix(self::ADMIN_NO_EXPORT_MODULES, self::NO_EXPORT_ACTIONS),
             ...$this->matrix(self::ADMIN_TOOL_MODULES, self::VIDEO_EDIT_ACTIONS),
             ...$this->matrix(['COURSE_SCRIPTS'], self::COURSE_SCRIPT_ACTIONS),
+            ...$this->matrix(['LEAD_SCOUT'], self::LEAD_SCOUT_ACTIONS),
             ...$this->matrix(['RESUME_STUDIOS'], self::RESUME_STUDIOS_RUN_ACTIONS),
             ...$this->matrix(['PRODUCTS'], self::PRODUCTS_GENERATE_ACTIONS),
             ...$this->matrix(['PRODUCTS'], self::PRODUCTS_DOWNLOAD_ACTIONS),

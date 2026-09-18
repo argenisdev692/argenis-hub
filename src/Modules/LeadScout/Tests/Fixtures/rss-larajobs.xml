@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>LaraJobs</title>
+    <link>https://larajobs.example.com</link>
+    <item>
+      <title>Senior Laravel Developer at Nebula Labs</title>
+      <link>https://larajobs.example.com/jobs/1</link>
+      <dc:creator>Nebula Labs</dc:creator>
+      <pubDate>Mon, 14 Sep 2026 09:00:00 +0000</pubDate>
+      <description>Laravel + Vue, remote freelance. Buscamos desarrollador Laravel con experiencia en Vue e Inertia.</description>
+    </item>
+    <item>
+      <title>Vue Frontend Engineer - Orbita Studio</title>
+      <link>https://larajobs.example.com/jobs/2</link>
+      <pubDate>Sun, 13 Sep 2026 12:00:00 +0000</pubDate>
+      <description>Vue 3 + Tailwind, hybrid in Madrid.</description>
+    </item>
+  </channel>
+</rss>
