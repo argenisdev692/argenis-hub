@@ -7,43 +7,46 @@
  * names track the backend automatically.
  */
 
+import type { PaginatedPage } from '@/common/table';
+
 export type StudioPosting =
     Modules.CvJobStudio.Application.DTOs.StudioPostingData;
 export type StudioPostingFilter =
     Modules.CvJobStudio.Application.DTOs.StudioPostingFilterData;
 export type StudioProfile =
     Modules.CvJobStudio.Application.DTOs.StudioProfileData;
-export type StudioScore =
-    Modules.CvJobStudio.Application.DTOs.StudioScoreData;
+export type StudioScore = Modules.CvJobStudio.Application.DTOs.StudioScoreData;
 export type StudioScoreInput =
     Modules.CvJobStudio.Application.DTOs.ScorePostingInputData;
 export type StudioBand = Modules.CvJobStudio.Domain.Enums.ScoreBand;
 export type StudioRemoteScope = Modules.CvJobStudio.Domain.Enums.RemoteScope;
 
-export type StudioPostingPage = {
-    data: StudioPosting[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    from: number | null;
-    to: number | null;
-    total: number;
-    first_page_url: string;
-    last_page_url: string;
-    next_page_url: string | null;
-    prev_page_url: string | null;
-    path: string;
-    links: { url: string | null; label: string; active: boolean }[];
-};
+export type StudioPostingPage = PaginatedPage<StudioPosting>;
 
+/** The soft-delete axis (`StudioPostingFilterData::rules()` → `status`). */
 export type StudioStatusFilter = 'all' | 'active' | 'suspended';
 
+/** The pipeline axis (`StudioPostingFilterData::STAGES`). */
+export type StudioPostingStage =
+    'new' | 'saved' | 'applied' | 'dismissed' | 'skipped';
+
+/** `StudioPostingFilterData::SORTABLE`. */
+export type StudioPostingSortField =
+    'created_at' | 'title' | 'employer_name' | 'fit';
+
+/**
+ * The toolbar's working copy of `StudioPostingFilter`, narrowed to the
+ * literal unions the backend `in:` rules accept, plus paging.
+ */
 export type StudioPostingFilters = {
     search: string;
     status: StudioStatusFilter;
-    remote_scope: string;
+    remote_scope: StudioRemoteScope | '';
+    stages: StudioPostingStage[];
     date_from: string | null;
     date_to: string | null;
+    sort_field: StudioPostingSortField;
+    sort_order: 1 | -1;
     page: number;
     per_page: number;
 };

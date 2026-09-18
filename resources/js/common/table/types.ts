@@ -66,3 +66,11 @@ export type PaginationMeta = {
     to: number | null;
     total: number;
 };
+
+/**
+ * One page of rows as `response()->json($paginator)` flattens it: the meta
+ * fields at the top level beside `data`. Not the generated
+ * `Illuminate.LengthAwarePaginator` stub, which models Inertia's nested
+ * `{ data, links, meta }` shape instead.
+ */
+export type PaginatedPage<TRow> = PaginationMeta & { data: TRow[] };

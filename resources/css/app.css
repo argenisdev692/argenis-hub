@@ -511,7 +511,8 @@
       theme instead of hardcoding a tint at each call site. Applied via the
       table's `rowClass` callback.
     */
-    .course-row-deleted {
+    .course-row-deleted,
+    .data-row-deleted {
         background-color: var(--deleted-row-bg);
         opacity: var(--deleted-row-opacity);
     }

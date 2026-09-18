@@ -58,8 +58,6 @@ final readonly class StudioPostingExportController
             ->applyFilters($filters)
             ->with('scores')
             ->select(self::EXPORT_COLUMNS)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
             ->lazy();
 
         return match ($format) {

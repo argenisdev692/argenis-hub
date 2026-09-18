@@ -32,23 +32,24 @@ use Shared\Application\DTOs\BulkUuidsData;
  */
 final readonly class StudioPostingController
 {
+    /**
+     * The page shell renders prop-less: the table is Pinia Colada server state
+     * and fetches this same route as JSON, so paginating here for Inertia
+     * would run the query twice and discard the first result.
+     */
     public function index(Request $request, StudioPostingFilterData $filters, ListPostingsHandler $list): InertiaResponse|JsonResponse
     {
+        if (! $request->expectsJson()) {
+            return Inertia::render('cv-studio/Postings/Index');
+        }
+
         $postings = $list->handle(
             $filters,
             $this->ownerId($request),
             min(max($request->integer('per_page', 15), 1), 100),
         );
 
-        $props = [
-            'postings' => StudioPostingData::collect($postings),
-            'filters' => $filters,
-        ];
-
-        return match ($request->expectsJson()) {
-            true => response()->json($props['postings']),
-            false => Inertia::render('cv-studio/Postings/Index', $props),
-        };
+        return response()->json(StudioPostingData::collect($postings));
     }
 
     public function show(Request $request, string $uuid, GetPostingHandler $get): InertiaResponse|JsonResponse
@@ -108,32 +109,32 @@ final readonly class StudioPostingController
         return response()->json(['data' => StudioScoreData::fromModel($result)], 200);
     }
 
-    public function destroy(Request $request, string $uuid, DeletePostingHandler $delete): RedirectResponse
+    public function destroy(Request $request, string $uuid, DeletePostingHandler $delete): RedirectResponse|JsonResponse
     {
         (void) $delete->handle($uuid, $this->ownerId($request));
 
-        return back()->with('success', __('Posting suspended.'));
+        return $this->respond($request, __('Posting suspended.'));
     }
 
-    public function restore(Request $request, string $uuid, RestorePostingHandler $restore): RedirectResponse
+    public function restore(Request $request, string $uuid, RestorePostingHandler $restore): RedirectResponse|JsonResponse
     {
         (void) $restore->handle($uuid, $this->ownerId($request));
 
-        return back()->with('success', __('Posting restored.'));
+        return $this->respond($request, __('Posting restored.'));
     }
 
-    public function bulkDelete(Request $request, BulkUuidsData $data, BulkDeletePostingsHandler $handler): RedirectResponse
+    public function bulkDelete(Request $request, BulkUuidsData $data, BulkDeletePostingsHandler $handler): RedirectResponse|JsonResponse
     {
         $count = $handler->handle($data, $this->ownerId($request));
 
-        return back()->with('success', __(':count postings suspended.', ['count' => $count]));
+        return $this->respond($request, __(':count postings suspended.', ['count' => $count]), ['count' => $count]);
     }
 
-    public function bulkRestore(Request $request, BulkUuidsData $data, BulkRestorePostingsHandler $handler): RedirectResponse
+    public function bulkRestore(Request $request, BulkUuidsData $data, BulkRestorePostingsHandler $handler): RedirectResponse|JsonResponse
     {
         $count = $handler->handle($data, $this->ownerId($request));
 
-        return back()->with('success', __(':count postings restored.', ['count' => $count]));
+        return $this->respond($request, __(':count postings restored.', ['count' => $count]), ['count' => $count]);
     }
 
     public function dismissRequirement(Request $request, string $uuid, string $ruuid, DismissRequirementHandler $handler): RedirectResponse
@@ -141,6 +142,21 @@ final readonly class StudioPostingController
         (void) $handler->handle($ruuid, $this->ownerId($request));
 
         return back()->with('success', __('Requirement dismissed — rescore to apply.'));
+    }
+
+    /**
+     * The list writes through `fetch()` (Pinia Colada), which follows a 302
+     * while keeping DELETE/PATCH — a `back()` there lands on a GET-only route
+     * and reports a 405 for a write that succeeded. JSON callers get JSON;
+     * Inertia callers keep the flash redirect.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function respond(Request $request, string $message, array $payload = []): RedirectResponse|JsonResponse
+    {
+        return $request->expectsJson()
+            ? response()->json(['message' => $message, ...$payload])
+            : back()->with('success', $message);
     }
 
     private function ownerId(Request $request): int

@@ -5,8 +5,11 @@ declare(strict_types=1);
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Modules\CvJobStudio\Infrastructure\Http\Export\StudioPostingExportTransformer;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
 
 uses(RefreshDatabase::class);
 
@@ -204,4 +207,120 @@ it('rejects unauthenticated, cross-user and invalid input', function (): void {
     $this->actingAs($other)->getJson("/cv-studio/postings/{$posting->uuid}")->assertNotFound();
 
     $this->actingAs($admin)->post('/cv-studio/postings', ['title' => 'Missing fields'])->assertSessionHasErrors();
+});
+
+/**
+ * Two ingested postings for one admin; the first one scored.
+ *
+ * @return array{0: User, 1: StudioPostingEloquentModel, 2: StudioPostingEloquentModel}
+ */
+function studioTwoPostings(object $test): array
+{
+    $admin = studioAdmin();
+    $test->actingAs($admin)->post('/cv-studio/profiles', studioProfilePayload())->assertRedirect();
+    $profile = StudioProfileEloquentModel::query()->where('slug', 'fullstack')->firstOrFail();
+
+    $second = studioPostingPayload($profile->uuid);
+    $second['title'] = 'Another Laravel Role';
+    $second['canonical_url'] = 'https://boards.greenhouse.io/acme/jobs/4243';
+
+    $test->actingAs($admin)->post('/cv-studio/postings', studioPostingPayload($profile->uuid))->assertRedirect();
+    $test->actingAs($admin)->post('/cv-studio/postings', $second)->assertRedirect();
+
+    $scored = StudioPostingEloquentModel::query()->where('canonical_url', 'like', '%4242')->firstOrFail();
+    $unscored = StudioPostingEloquentModel::query()->where('canonical_url', 'like', '%4243')->firstOrFail();
+
+    $test->actingAs($admin)->postJson("/cv-studio/postings/{$scored->uuid}/score", scoreInput())->assertCreated();
+
+    return [$admin, $scored, $unscored];
+}
+
+it('renders the postings page shell without running the list query', function (): void {
+    $this->withoutVite()->actingAs(studioAdmin())->get('/cv-studio/postings')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('cv-studio/Postings/Index')->missing('postings'));
+});
+
+it('lists postings with the latest score so the fit column is populated', function (): void {
+    [$admin, $scored] = studioTwoPostings($this);
+
+    $rows = collect($this->actingAs($admin)->getJson('/cv-studio/postings')->assertOk()->json('data'));
+    $row = $rows->firstWhere('uuid', $scored->uuid);
+
+    expect($row['band'])->not->toBeNull()
+        ->and($row['total_score'])->toBeNumeric();
+});
+
+it('sorts by fit with unscored postings last in both directions', function (): void {
+    [$admin, $scored, $unscored] = studioTwoPostings($this);
+
+    foreach ([-1, 1] as $order) {
+        $uuids = $this->actingAs($admin)
+            ->getJson("/cv-studio/postings?sort_field=fit&sort_order={$order}")
+            ->assertOk()
+            ->json('data.*.uuid');
+
+        expect($uuids)->toBe([$scored->uuid, $unscored->uuid]);
+    }
+
+    $this->actingAs($admin)->getJson('/cv-studio/postings?sort_field=password')->assertUnprocessable();
+});
+
+it('filters by pipeline stage and changes stage over JSON', function (): void {
+    [$admin, $scored, $unscored] = studioTwoPostings($this);
+
+    $this->actingAs($admin)
+        ->putJson("/cv-studio/postings/{$scored->uuid}/status", ['status' => 'saved'])
+        ->assertOk()
+        ->assertJson(['status' => 'saved']);
+
+    $uuids = $this->actingAs($admin)->getJson('/cv-studio/postings?stages[]=saved')->assertOk()->json('data.*.uuid');
+
+    expect($uuids)->toBe([$scored->uuid]);
+
+    $this->actingAs($admin)->getJson('/cv-studio/postings?stages[]=hacked')->assertUnprocessable();
+});
+
+it('answers JSON writes with JSON instead of a redirect a fetch client cannot follow', function (): void {
+    [$admin, $scored] = studioTwoPostings($this);
+
+    $this->actingAs($admin)->deleteJson("/cv-studio/postings/{$scored->uuid}")->assertOk()->assertJsonStructure(['message']);
+    $this->actingAs($admin)->patchJson("/cv-studio/postings/{$scored->uuid}/restore")->assertOk();
+    $this->actingAs($admin)
+        ->postJson('/cv-studio/postings/bulk-delete', ['uuids' => [$scored->uuid]])
+        ->assertOk()
+        ->assertJson(['count' => 1]);
+});
+
+it('shows, lists and exports the newest score when a posting has several', function (): void {
+    [$admin, $scored] = studioTwoPostings($this);
+
+    // The original score becomes the older one; a newer row is inserted after
+    // it (higher id), so an unordered `scores->first()` would pick the stale one.
+    $older = StudioScoreEloquentModel::query()->where('posting_id', $scored->id)->firstOrFail();
+    $older->forceFill(['computed_at' => now()->subDay(), 'band' => 'strong', 'total_score' => 91])->save();
+
+    $newer = $older->replicate();
+    $newer->forceFill([
+        'uuid' => (string) Str::uuid(),
+        'computed_at' => now(),
+        'band' => 'skip',
+        'total_score' => 12.5,
+    ])->save();
+
+    $show = $this->actingAs($admin)->getJson("/cv-studio/postings/{$scored->uuid}")->assertOk();
+
+    expect($show->json('score.band'))->toBe('skip')
+        ->and($show->json('posting.band'))->toBe('skip');
+
+    $listed = collect($this->actingAs($admin)->getJson('/cv-studio/postings')->json('data'))
+        ->firstWhere('uuid', $scored->uuid);
+
+    expect($listed['band'])->toBe('skip');
+
+    $exported = StudioPostingExportTransformer::transformForExcel(
+        StudioPostingEloquentModel::query()->with('scores')->findOrFail($scored->id),
+    );
+
+    expect($exported['Band'])->toBe('skip');
 });

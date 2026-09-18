@@ -34,11 +34,14 @@ final readonly class StudioApplicationController
         };
     }
 
-    public function updateStatus(Request $request, string $uuid, UpdatePostingStatusData $data, UpdatePostingStatusHandler $handler): RedirectResponse
+    /** JSON for the postings table's row menu (`fetch`), a flash redirect for Inertia. */
+    public function updateStatus(Request $request, string $uuid, UpdatePostingStatusData $data, UpdatePostingStatusHandler $handler): RedirectResponse|JsonResponse
     {
         (void) $handler->handle($uuid, $data->status, $this->ownerId($request));
 
-        return back()->with('success', __('Posting status updated.'));
+        return $request->expectsJson()
+            ? response()->json(['message' => __('Posting status updated.'), 'status' => $data->status])
+            : back()->with('success', __('Posting status updated.'));
     }
 
     public function recordOutcome(Request $request, string $uuid, RecordOutcomeData $data, RecordOutcomeHandler $handler): RedirectResponse

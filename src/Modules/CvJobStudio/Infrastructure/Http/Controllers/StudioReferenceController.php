@@ -16,21 +16,25 @@ use Modules\CvJobStudio\Application\Queries\ListReferencesHandler;
 /** References + paste-JD dialog (T-158, T-138): open manually, then paste. */
 final readonly class StudioReferenceController
 {
+    /** The Inertia branch only picks the tab — the list itself is fetched as JSON by Pinia Colada. */
     public function index(Request $request, ListReferencesHandler $list): InertiaResponse|JsonResponse
     {
-        $references = $list->handle($this->ownerId($request));
+        if (! $request->expectsJson()) {
+            return Inertia::render('cv-studio/Postings/Index', ['tab' => 'manual']);
+        }
 
-        return match ($request->expectsJson()) {
-            true => response()->json($references),
-            false => Inertia::render('cv-studio/Postings/Index', ['references' => $references, 'tab' => 'manual']),
-        };
+        return response()->json($list->handle($this->ownerId($request)));
     }
 
-    public function paste(Request $request, string $uuid, PasteJobTextData $data, PasteJobTextHandler $handler): RedirectResponse
+    public function paste(Request $request, string $uuid, PasteJobTextData $data, PasteJobTextHandler $handler): RedirectResponse|JsonResponse
     {
-        $posting = $handler->handle($uuid, $data->text, $this->ownerId($request));
+        (void) $handler->handle($uuid, $data->text, $this->ownerId($request));
 
-        return back()->with('success', __('Posting text saved — scored as supplied by you.'));
+        $message = __('Posting text saved — scored as supplied by you.');
+
+        return $request->expectsJson()
+            ? response()->json(['message' => $message])
+            : back()->with('success', $message);
     }
 
     private function ownerId(Request $request): int

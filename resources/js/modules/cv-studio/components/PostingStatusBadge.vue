@@ -1,39 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { cn } from '@/lib/utils';
+import {
+    postingStageLabel,
+    postingStageTone,
+} from '../helpers/studioPresentation';
 
 const { status, deletedAt = null } = defineProps<{
     status: string;
     deletedAt?: string | null;
 }>();
 
-const label = computed(() => {
-    if (deletedAt !== null) {
-        return 'Suspended';
-    }
-
-    switch (status) {
-        case 'new':
-            return 'New';
-        case 'saved':
-            return 'Saved';
-        case 'applied':
-            return 'Applied';
-        case 'dismissed':
-            return 'Dismissed';
-        case 'skipped':
-            return 'Skipped';
-        case 'reference':
-            return 'Open manually';
-        default:
-            return status;
-    }
-});
+const isSuspended = computed(() => deletedAt !== null);
 </script>
 
 <template>
     <span
-        class="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+        :class="
+            cn(
+                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                isSuspended
+                    ? 'bg-destructive/10 text-destructive'
+                    : postingStageTone(status),
+            )
+        "
     >
-        {{ label }}
+        {{ isSuspended ? 'Suspended' : postingStageLabel(status) }}
     </span>
 </template>

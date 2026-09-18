@@ -9,8 +9,14 @@ import {
     rescore,
     restore,
     score,
+    status,
 } from '@/routes/cv-studio/postings';
-import type { StudioScore, StudioScoreInput } from '../types';
+import { postingStageLabel } from '../helpers/studioPresentation';
+import type {
+    StudioPostingStage,
+    StudioScore,
+    StudioScoreInput,
+} from '../types';
 import { STUDIO_POSTINGS_KEY } from './usePostings';
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -21,34 +27,47 @@ function pluralize(count: number, singular: string, plural: string): string {
     return `${count} ${count === 1 ? singular : plural}`;
 }
 
+/**
+ * Every posting write: toast on success, a server message (or fallback) on
+ * failure, and a list refetch either way (`onSettled`).
+ */
 export function usePostingMutations() {
     const queryCache = useQueryCache();
 
-    const invalidate = async () =>
-        await queryCache.invalidateQueries({ key: STUDIO_POSTINGS_KEY });
+    function feedback<TData>(
+        success: (data: TData) => string,
+        failure: string,
+    ) {
+        return {
+            onSuccess(data: TData) {
+                toast.success(success(data));
+            },
+            onError(error: unknown) {
+                toast.error(errorMessage(error, failure));
+            },
+            onSettled: async () =>
+                await queryCache.invalidateQueries({
+                    key: STUDIO_POSTINGS_KEY,
+                }),
+        };
+    }
 
     const deletePosting = useMutation({
         mutation: (uuid: string) =>
             httpJson<unknown>(toUrl(destroy(uuid)), { method: 'DELETE' }),
-        onSuccess() {
-            toast.success('Posting suspended.');
-        },
-        onError(error: unknown) {
-            toast.error(errorMessage(error, 'Failed to suspend the posting.'));
-        },
-        onSettled: invalidate,
+        ...feedback(
+            () => 'Posting suspended.',
+            'Failed to suspend the posting.',
+        ),
     });
 
     const restorePosting = useMutation({
         mutation: (uuid: string) =>
             httpJson<unknown>(toUrl(restore(uuid)), { method: 'PATCH' }),
-        onSuccess() {
-            toast.success('Posting restored.');
-        },
-        onError(error: unknown) {
-            toast.error(errorMessage(error, 'Failed to restore the posting.'));
-        },
-        onSettled: invalidate,
+        ...feedback(
+            () => 'Posting restored.',
+            'Failed to restore the posting.',
+        ),
     });
 
     const bulkDeletePostings = useMutation({
@@ -60,15 +79,11 @@ export function usePostingMutations() {
 
             return uuids.length;
         },
-        onSuccess(count: number) {
-            toast.success(`${pluralize(count, 'Posting', 'Postings')} suspended.`);
-        },
-        onError(error: unknown) {
-            toast.error(
-                errorMessage(error, 'Failed to suspend the selected postings.'),
-            );
-        },
-        onSettled: invalidate,
+        ...feedback(
+            (count: number) =>
+                `${pluralize(count, 'Posting', 'Postings')} suspended.`,
+            'Failed to suspend the selected postings.',
+        ),
     });
 
     const bulkRestorePostings = useMutation({
@@ -80,45 +95,67 @@ export function usePostingMutations() {
 
             return uuids.length;
         },
-        onSuccess(count: number) {
-            toast.success(`${pluralize(count, 'Posting', 'Postings')} restored.`);
+        ...feedback(
+            (count: number) =>
+                `${pluralize(count, 'Posting', 'Postings')} restored.`,
+            'Failed to restore the selected postings.',
+        ),
+    });
+
+    /** Moves a posting along the pipeline (save / applied / dismiss …). */
+    const updatePostingStage = useMutation({
+        mutation: async ({
+            uuid,
+            stage,
+        }: {
+            uuid: string;
+            stage: StudioPostingStage;
+        }) => {
+            await httpJson<unknown>(toUrl(status(uuid)), {
+                method: 'PUT',
+                body: { status: stage },
+            });
+
+            return stage;
         },
-        onError(error: unknown) {
-            toast.error(
-                errorMessage(error, 'Failed to restore the selected postings.'),
-            );
-        },
-        onSettled: invalidate,
+        ...feedback(
+            (stage: StudioPostingStage) =>
+                `Moved to “${postingStageLabel(stage)}”.`,
+            'Failed to update the posting stage.',
+        ),
     });
 
     const scorePosting = useMutation({
-        mutation: ({ uuid, input }: { uuid: string; input: StudioScoreInput }) =>
+        mutation: ({
+            uuid,
+            input,
+        }: {
+            uuid: string;
+            input: StudioScoreInput;
+        }) =>
             httpJson<{ data: StudioScore }>(toUrl(score(uuid)), {
                 method: 'POST',
                 body: input,
             }),
-        onSuccess() {
-            toast.success('Posting scored.');
-        },
-        onError(error: unknown) {
-            toast.error(errorMessage(error, 'Failed to score the posting.'));
-        },
-        onSettled: invalidate,
+        ...feedback(() => 'Posting scored.', 'Failed to score the posting.'),
     });
 
     const rescorePosting = useMutation({
-        mutation: ({ uuid, input }: { uuid: string; input: StudioScoreInput }) =>
+        mutation: ({
+            uuid,
+            input,
+        }: {
+            uuid: string;
+            input: StudioScoreInput;
+        }) =>
             httpJson<{ data: StudioScore }>(toUrl(rescore(uuid)), {
                 method: 'POST',
                 body: input,
             }),
-        onSuccess() {
-            toast.success('Posting rescored from stored rows.');
-        },
-        onError(error: unknown) {
-            toast.error(errorMessage(error, 'Failed to rescore the posting.'));
-        },
-        onSettled: invalidate,
+        ...feedback(
+            () => 'Posting rescored from stored rows.',
+            'Failed to rescore the posting.',
+        ),
     });
 
     return {
@@ -126,6 +163,7 @@ export function usePostingMutations() {
         restorePosting,
         bulkDeletePostings,
         bulkRestorePostings,
+        updatePostingStage,
         scorePosting,
         rescorePosting,
     };

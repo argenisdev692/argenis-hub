@@ -49,10 +49,13 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
         return StudioPostingEloquentModel::query()
             ->ownedBy($userId)
             ->applyFilters($filters)
-            ->with('profile:uuid,name,slug')
+            // Only the newest score per posting (the relation orders newest
+            // first) — `StudioPostingData::fromModel()` reads `scores->first()`
+            // for the Fit column.
+            ->with(['scores' => static fn ($scores) => $scores
+                ->select(['id', 'posting_id', 'total_score', 'band', 'cap_reason'])
+                ->limit(1)])
             ->select(self::LIST_COLUMNS)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
     }

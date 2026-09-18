@@ -24,6 +24,7 @@ export type {
     DataTableSort,
     DateRange,
     ExportFormat,
+    PaginatedPage,
     PaginationMeta,
     SortDirection,
 } from './types';

@@ -120,10 +120,18 @@ final class StudioPostingEloquentModel extends Model
         return $this->hasMany(StudioGateResultEloquentModel::class, 'posting_id');
     }
 
-    /** @return HasMany<StudioScoreEloquentModel, $this> */
+    /**
+     * Newest first — the same order as `EloquentStudioScoreRepository::latestForPosting()`.
+     * Every consumer (list DTO, Show, export) reads `scores->first()` as "the
+     * latest score", so the order lives here once instead of at each call site.
+     *
+     * @return HasMany<StudioScoreEloquentModel, $this>
+     */
     public function scores(): HasMany
     {
-        return $this->hasMany(StudioScoreEloquentModel::class, 'posting_id');
+        return $this->hasMany(StudioScoreEloquentModel::class, 'posting_id')
+            ->orderByDesc('computed_at')
+            ->orderByDesc('id');
     }
 
     /** @return HasMany<StudioPostingSourceEloquentModel, $this> */
@@ -180,7 +188,39 @@ final class StudioPostingEloquentModel extends Model
             ->when(
                 $filters->dateTo !== null && $filters->dateFrom === null,
                 fn ($q) => $q->where('created_at', '<=', CarbonImmutable::parse($filters->dateTo)->endOfDay()),
-            );
+            )
+            ->when($filters->stages !== null && $filters->stages !== [], fn ($q) => $q->whereIn('status', $filters->stages))
+            ->applySort($filters);
+    }
+
+    /**
+     * Whitelisted sort with a stable `id` tiebreak so paging never repeats or
+     * skips a row. `fit` orders by the latest score through a correlated
+     * subquery; unscored postings always sink to the bottom (`nulls last`)
+     * whichever direction is chosen, because "no score" is not "score 0".
+     *
+     * @param  Builder<StudioPostingEloquentModel>  $query
+     * @return Builder<StudioPostingEloquentModel>
+     */
+    public function scopeApplySort(Builder $query, StudioPostingFilterData $filters): Builder
+    {
+        $direction = $filters->sortOrder === 1 ? 'asc' : 'desc';
+        $field = in_array($filters->sortField, StudioPostingFilterData::SORTABLE, true) ? $filters->sortField : 'created_at';
+
+        if ($field === 'fit') {
+            $latestTotal = StudioScoreEloquentModel::query()
+                ->select('total_score')
+                ->whereColumn('posting_id', $query->qualifyColumn('id'))
+                ->orderByDesc('computed_at')
+                ->orderByDesc('id')
+                ->limit(1);
+
+            $query->orderByRaw("({$latestTotal->toSql()}) {$direction} nulls last", $latestTotal->getBindings());
+        } else {
+            $query->orderBy($field, $direction);
+        }
+
+        return $query->orderBy('id', $direction);
     }
 
     /**

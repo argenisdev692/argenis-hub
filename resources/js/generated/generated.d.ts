@@ -1042,6 +1042,9 @@ declare namespace Modules {
                 };
                 export type StudioPostingFilterData = {
                     remote_scope: string | null;
+                    stages: string[] | null;
+                    sort_field: string;
+                    sort_order: number;
                     search: string | null;
                     status: string | null;
                     date_from: string | null;

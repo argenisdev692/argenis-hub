@@ -3103,6 +3103,7 @@
         "/cv-studio/postings/{uuid}/status": {
             "put": {
                 "operationId": "cv-studio.postings.status",
+                "summary": "JSON for the postings table's row menu (`fetch`), a flash redirect for Inertia",
                 "tags": [
                     "StudioApplication"
                 ],
@@ -3132,7 +3133,27 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Posting status updated."
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "message",
+                                                "status"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -3834,6 +3855,7 @@
         "/cv-studio/postings": {
             "get": {
                 "operationId": "cv-studio.postings.index",
+                "summary": "The page shell renders prop-less: the table is Pinia Colada server state\nand fetches this same route as JSON, so paginating here for Inertia\nwould run the query twice and discard the first result",
                 "tags": [
                     "StudioPosting"
                 ],
@@ -3905,6 +3927,54 @@
                                 "remote_unclear",
                                 "hybrid_local",
                                 null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "stages[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "new",
+                                "saved",
+                                "applied",
+                                "dismissed",
+                                "skipped"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "new",
+                                    "saved",
+                                    "applied",
+                                    "dismissed",
+                                    "skipped"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort_field",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created_at",
+                                "title",
+                                "employer_name",
+                                "fit"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                "1",
+                                "-1"
                             ]
                         }
                     },
@@ -4110,7 +4180,27 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Posting suspended."
+                                                },
+                                                "": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "message",
+                                                null
+                                            ]
+                                        },
+                                        {
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -4243,7 +4333,27 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Posting restored."
+                                                },
+                                                "": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "message",
+                                                null
+                                            ]
+                                        },
+                                        {
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -4328,6 +4438,54 @@
                                 "remote_unclear",
                                 "hybrid_local",
                                 null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "stages[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "new",
+                                "saved",
+                                "applied",
+                                "dismissed",
+                                "skipped"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "new",
+                                    "saved",
+                                    "applied",
+                                    "dismissed",
+                                    "skipped"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "sort_field",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "created_at",
+                                "title",
+                                "employer_name",
+                                "fit"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                "1",
+                                "-1"
                             ]
                         }
                     },
@@ -4493,6 +4651,7 @@
         "/cv-studio/references": {
             "get": {
                 "operationId": "cv-studio.references.index",
+                "summary": "The Inertia branch only picks the tab \u2014 the list itself is fetched as JSON by Pinia Colada",
                 "tags": [
                     "StudioReference"
                 ],
@@ -4545,7 +4704,23 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Posting text saved \u2014 scored as supplied by you."
+                                                }
+                                            },
+                                            "required": [
+                                                "message"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
