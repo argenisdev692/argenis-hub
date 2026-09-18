@@ -37,8 +37,15 @@ const {
 } = defineProps<{
     /** Absolute path of the export route, e.g. `/data/admin/services/export`. */
     endpoint: string;
-    /** Current filter state — serialised onto the query string beside `format`. */
-    params?: Record<string, string | number | boolean | null | undefined>;
+    /**
+     * Current filter state — serialised onto the query string beside `format`.
+     * Array values repeat as `key[]` (keys already suffixed pass through), so
+     * the export always matches exactly what the user is looking at.
+     */
+    params?: Record<
+        string,
+        string | number | boolean | (string | number)[] | null | undefined
+    >;
     formats?: readonly ExportFormat[];
     label?: string;
     disabled?: boolean;
@@ -57,9 +64,21 @@ function buildUrl(format: ExportFormat): string {
     const query = new URLSearchParams({ format });
 
     for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined && value !== null && value !== '') {
-            query.set(key, String(value));
+        if (value === undefined || value === null || value === '') {
+            continue;
         }
+
+        if (Array.isArray(value)) {
+            const repeated = key.endsWith('[]') ? key : `${key}[]`;
+
+            for (const entry of value) {
+                query.append(repeated, String(entry));
+            }
+
+            continue;
+        }
+
+        query.set(key, String(value));
     }
 
     return `${endpoint}?${query.toString()}`;

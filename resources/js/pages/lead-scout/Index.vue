@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { EyeIcon, Settings2Icon, WalletIcon } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
@@ -13,6 +13,8 @@ import type {
 import {
     DataTable,
     DataTableDateRangeFilter,
+    DataTableExportMenu,
+    DataTableRowAction,
     DataTableSearch,
     DataTableToolbar,
     Paginator,
@@ -34,14 +36,26 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
 import LeadTierBadge from '@/modules/lead-scout/components/LeadTierBadge.vue';
 import { useLeadMutations } from '@/modules/lead-scout/composables/useLeadMutations';
-import { useLeads } from '@/modules/lead-scout/composables/useLeads';
-import { useAiSettings, useBudgets } from '@/modules/lead-scout/composables/useSettings';
 import {
+    defaultLeadFilters,
+    useLeads,
+} from '@/modules/lead-scout/composables/useLeads';
+import {
+    useAiSettings,
+    useBudgets,
+} from '@/modules/lead-scout/composables/useSettings';
+import { buildLeadListQueryParams } from '@/modules/lead-scout/helpers/buildLeadQueryParams';
+import {
+    LEAD_COUNTRY_OPTIONS,
     LEAD_ORIGIN_OPTIONS,
+    LEAD_SIGNAL_OPTIONS,
     LEAD_TIER_OPTIONS,
     LEAD_TYPE_OPTIONS,
+    NEEDS_RESEARCH_OPTIONS,
+    OUTREACH_STAGE_OPTIONS,
 } from '@/modules/lead-scout/helpers/leadPresentation';
 import type { LeadListItem } from '@/modules/lead-scout/types';
 import { exportMethod, index, show } from '@/routes/lead-scout/leads';
@@ -57,9 +71,12 @@ const { updateBudgets, updateAiSettings } = useLeadMutations();
 const { settings: aiSettings } = useAiSettings();
 const { budgets } = useBudgets();
 
-// NOTE: filters stay in-memory on purpose — `useUrlSyncedFilters` only
-// supports scalar values, and the tier/type/origin facets are arrays.
-// The export buttons reuse the same builder, so exports always match.
+// Shareable URLs: every facet survives reloads and pastes (arrays ride
+// `key[]`, scalars ride `key`; `per_page` stays out to keep links short).
+useUrlSyncedFilters(filters, {
+    defaults: defaultLeadFilters(),
+    exclude: ['per_page'],
+});
 
 const meta = computed<PaginationMeta>(
     () =>
@@ -90,7 +107,8 @@ const columns: DataTableColumn<LeadListItem>[] = [
     {
         key: 'lead_score',
         header: 'Score',
-        value: (row) => (row.lead_score === null ? '—' : String(row.lead_score)),
+        value: (row) =>
+            row.lead_score === null ? '—' : String(row.lead_score),
         align: 'right',
     },
     {
@@ -109,7 +127,15 @@ const searchTerm = computed<string>({
     },
 });
 
-function multiModel(key: 'tier' | 'country' | 'company_type' | 'origin') {
+function multiModel(
+    key:
+        | 'tier'
+        | 'country'
+        | 'company_type'
+        | 'signal_type'
+        | 'stage'
+        | 'origin',
+) {
     return computed<string[]>({
         get: () => filters.value[key],
         set: (value) => {
@@ -120,8 +146,63 @@ function multiModel(key: 'tier' | 'country' | 'company_type' | 'origin') {
 }
 
 const tierModel = multiModel('tier');
+const countryModel = multiModel('country');
 const typeModel = multiModel('company_type');
+const signalModel = multiModel('signal_type');
+const stageModel = multiModel('stage');
 const originModel = multiModel('origin');
+
+/** Tri-state research facet: `'1'` → true, `'0'` → false, `null` → all. */
+const researchModel = computed<FilterSelectOption['value'] | null>({
+    get: () =>
+        filters.value.needs_research === null
+            ? null
+            : filters.value.needs_research
+              ? '1'
+              : '0',
+    set: (value) => {
+        filters.value.needs_research =
+            value === null || value === undefined
+                ? null
+                : String(value) === '1';
+        filters.value.page = 1;
+    },
+});
+
+const hasActiveFilters = computed<boolean>(() => {
+    const pristine = defaultLeadFilters();
+
+    return (
+        filters.value.search.trim() !== '' ||
+        filters.value.tier.length > 0 ||
+        filters.value.country.length > 0 ||
+        filters.value.company_type.length > 0 ||
+        filters.value.signal_type.length > 0 ||
+        filters.value.stage.length > 0 ||
+        filters.value.origin.length > 0 ||
+        filters.value.needs_research !== pristine.needs_research ||
+        filters.value.date_from !== pristine.date_from ||
+        filters.value.date_to !== pristine.date_to
+    );
+});
+
+function clearFilters(): void {
+    const perPage = filters.value.per_page;
+    filters.value = { ...defaultLeadFilters(), per_page: perPage };
+}
+
+/**
+ * Export params — the SAME builder the list query uses, plus the dataset
+ * override, so a spreadsheet can never show different rows than the table.
+ */
+function exportParams(dataset: 'leads' | 'funnel') {
+    return {
+        ...buildLeadListQueryParams(filters.value),
+        dataset,
+        page: 1,
+        per_page: 100,
+    };
+}
 
 const dateRange = computed<DateRange>({
     get: () => ({ from: filters.value.date_from, to: filters.value.date_to }),
@@ -141,42 +222,6 @@ function facetValues(value: FilterSelectModel): string[] {
     }
 
     return value === null ? [] : [String(value)];
-}
-
-/** Export URL with repeated array keys (`tier[]=A&tier[]=B`), never comma-joined. */
-function exportUrl(dataset: 'leads' | 'funnel', format: 'xlsx' | 'csv' | 'pdf'): string {
-    const query = new URLSearchParams({ dataset, format });
-    query.set('page', '1');
-    query.set('per_page', '100');
-
-    const appendAll = (key: string, values: string[]): void => {
-        for (const value of values) {
-            query.append(`${key}[]`, value);
-        }
-    };
-
-    appendAll('tier', filters.value.tier);
-    appendAll('country', filters.value.country);
-    appendAll('company_type', filters.value.company_type);
-    appendAll('origin', filters.value.origin);
-
-    if (filters.value.search.trim() !== '') {
-        query.set('search', filters.value.search.trim());
-    }
-
-    if (filters.value.date_from !== null) {
-        query.set('date_from', filters.value.date_from);
-    }
-
-    if (filters.value.date_to !== null) {
-        query.set('date_to', filters.value.date_to);
-    }
-
-    return `${exportMethod.url()}?${query.toString()}`;
-}
-
-function download(dataset: 'leads' | 'funnel', format: 'xlsx' | 'csv' | 'pdf'): void {
-    window.location.assign(exportUrl(dataset, format));
 }
 
 // --- Budgets dialog state (editable limits, read-only spend). ---
@@ -256,39 +301,29 @@ async function saveAiSettings(purpose: string): Promise<void> {
             </h1>
 
             <PermissionGuard permission="UPDATE_LEAD_SCOUT">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="openBudgets"
-                >
+                <Button variant="outline" size="sm" @click="openBudgets">
                     <WalletIcon class="size-4" aria-hidden="true" />
                     Budgets
                 </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="openAiSettings"
-                >
+                <Button variant="outline" size="sm" @click="openAiSettings">
                     <Settings2Icon class="size-4" aria-hidden="true" />
                     AI defaults
                 </Button>
             </PermissionGuard>
 
             <PermissionGuard permission="EXPORT_LEAD_SCOUT">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="download('leads', 'xlsx')"
-                >
-                    Export leads
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="download('funnel', 'xlsx')"
-                >
-                    Export funnel
-                </Button>
+                <DataTableExportMenu
+                    :endpoint="exportMethod.url()"
+                    :params="exportParams('leads')"
+                    :formats="['xlsx', 'csv', 'pdf']"
+                    label="Export leads"
+                />
+                <DataTableExportMenu
+                    :endpoint="exportMethod.url()"
+                    :params="exportParams('funnel')"
+                    :formats="['xlsx', 'csv', 'pdf']"
+                    label="Export funnel"
+                />
             </PermissionGuard>
         </div>
 
@@ -321,6 +356,39 @@ async function saveAiSettings(purpose: string): Promise<void> {
                 "
             />
             <FilterSelect
+                :model-value="countryModel"
+                :options="LEAD_COUNTRY_OPTIONS"
+                :multiple="true"
+                placeholder="Country"
+                @update:model-value="
+                    (value: FilterSelectModel) => {
+                        countryModel = facetValues(value);
+                    }
+                "
+            />
+            <FilterSelect
+                :model-value="signalModel"
+                :options="LEAD_SIGNAL_OPTIONS"
+                :multiple="true"
+                placeholder="Signal"
+                @update:model-value="
+                    (value: FilterSelectModel) => {
+                        signalModel = facetValues(value);
+                    }
+                "
+            />
+            <FilterSelect
+                :model-value="stageModel"
+                :options="OUTREACH_STAGE_OPTIONS"
+                :multiple="true"
+                placeholder="Stage"
+                @update:model-value="
+                    (value: FilterSelectModel) => {
+                        stageModel = facetValues(value);
+                    }
+                "
+            />
+            <FilterSelect
                 :model-value="originModel"
                 :options="LEAD_ORIGIN_OPTIONS"
                 :multiple="true"
@@ -331,7 +399,27 @@ async function saveAiSettings(purpose: string): Promise<void> {
                     }
                 "
             />
+            <FilterSelect
+                :model-value="researchModel"
+                :options="NEEDS_RESEARCH_OPTIONS"
+                placeholder="Research"
+                @update:model-value="
+                    (value: FilterSelectModel) => {
+                        researchModel = Array.isArray(value)
+                            ? (value[0] ?? null)
+                            : value;
+                    }
+                "
+            />
             <DataTableDateRangeFilter v-model="dateRange" />
+            <Button
+                v-if="hasActiveFilters"
+                variant="ghost"
+                size="sm"
+                @click="clearFilters"
+            >
+                Clear all
+            </Button>
         </DataTableToolbar>
 
         <DataTable
@@ -347,16 +435,12 @@ async function saveAiSettings(purpose: string): Promise<void> {
             </template>
             <template #actions="{ row }">
                 <PermissionGuard permission="VIEW_LEAD_SCOUT">
-                    <Button
-                        as-child
-                        variant="ghost"
-                        size="icon"
-                        :aria-label="`Open ${row.name}`"
-                    >
-                        <Link :href="show.url(row.uuid)">
-                            <EyeIcon class="size-4" aria-hidden="true" />
-                        </Link>
-                    </Button>
+                    <DataTableRowAction
+                        :label="`Open ${row.name}`"
+                        :icon="EyeIcon"
+                        :href="show.url(row.uuid)"
+                        prefetch
+                    />
                 </PermissionGuard>
             </template>
         </DataTable>
@@ -429,9 +513,13 @@ async function saveAiSettings(purpose: string): Promise<void> {
                             @update:model-value="
                                 (value) => {
                                     if (aiDraft[purpose]) {
-                                        aiDraft[purpose].provider = String(value);
+                                        aiDraft[purpose].provider =
+                                            String(value);
                                         aiDraft[purpose].model =
-                                            aiModelsFor(purpose, String(value))[0]?.model ?? '';
+                                            aiModelsFor(
+                                                purpose,
+                                                String(value),
+                                            )[0]?.model ?? '';
                                     }
                                 }
                             "
@@ -472,8 +560,9 @@ async function saveAiSettings(purpose: string): Promise<void> {
                                     :value="option.model"
                                     :disabled="!option.available"
                                 >
-                                    {{ option.label }} ·
-                                    ${{ option.est_cost_per_100_usd.toFixed(4) }}/100
+                                    {{ option.label }} · ${{
+                                        option.est_cost_per_100_usd.toFixed(4)
+                                    }}/100
                                     {{ option.available ? '' : '(no key)' }}
                                 </SelectItem>
                             </SelectContent>

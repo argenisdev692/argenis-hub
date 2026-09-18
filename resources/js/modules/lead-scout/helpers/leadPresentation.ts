@@ -23,6 +23,61 @@ export const LEAD_TYPE_OPTIONS: { value: string; label: string }[] = [
     { value: 'other', label: 'Other' },
 ];
 
+/**
+ * Country facet — mirrors the discovery waves in `config/lead-scout.php`.
+ * If a wave gains a country there, add it here so the facet stays complete.
+ */
+export const LEAD_COUNTRY_OPTIONS: { value: string; label: string }[] = [
+    { value: 'PT', label: 'Portugal' },
+    { value: 'ES', label: 'Spain' },
+    { value: 'IE', label: 'Ireland' },
+    { value: 'GB', label: 'United Kingdom' },
+    { value: 'NL', label: 'Netherlands' },
+    { value: 'DE', label: 'Germany' },
+    { value: 'BE', label: 'Belgium' },
+    { value: 'FR', label: 'France' },
+    { value: 'IT', label: 'Italy' },
+    { value: 'AT', label: 'Austria' },
+    { value: 'DK', label: 'Denmark' },
+    { value: 'SE', label: 'Sweden' },
+    { value: 'PL', label: 'Poland' },
+    { value: 'CZ', label: 'Czechia' },
+    { value: 'GR', label: 'Greece' },
+    { value: 'LT', label: 'Lithuania' },
+    { value: 'LV', label: 'Latvia' },
+    { value: 'EE', label: 'Estonia' },
+    { value: 'RO', label: 'Romania' },
+    { value: 'FI', label: 'Finland' },
+    { value: 'CH', label: 'Switzerland' },
+    { value: 'NO', label: 'Norway' },
+    { value: 'US', label: 'United States' },
+    { value: 'CA', label: 'Canada' },
+    { value: 'AR', label: 'Argentina' },
+    { value: 'UY', label: 'Uruguay' },
+    { value: 'CL', label: 'Chile' },
+    { value: 'CO', label: 'Colombia' },
+    { value: 'MX', label: 'Mexico' },
+    { value: 'UA', label: 'Ukraine' },
+    { value: 'AU', label: 'Australia' },
+    { value: 'NZ', label: 'New Zealand' },
+];
+
+/** Signal-dimension facet — mirrors `SignalDimension` values. */
+export const LEAD_SIGNAL_OPTIONS: { value: string; label: string }[] = [
+    { value: 'technical', label: 'Technical' },
+    { value: 'commercial', label: 'Commercial' },
+    { value: 'recurrent', label: 'Recurrent' },
+    { value: 'vitality', label: 'Vitality' },
+    { value: 'communication', label: 'Communication' },
+    { value: 'geo_contract', label: 'Geo + contract' },
+    { value: 'remote', label: 'Remote' },
+];
+
+export const NEEDS_RESEARCH_OPTIONS: { value: string; label: string }[] = [
+    { value: '1', label: 'Needs research' },
+    { value: '0', label: 'Reviewed' },
+];
+
 export const OUTREACH_STAGE_OPTIONS: { value: string; label: string }[] = [
     { value: 'draft', label: 'Draft' },
     { value: 'ready', label: 'Ready' },

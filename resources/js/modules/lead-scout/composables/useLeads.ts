@@ -14,6 +14,8 @@ export function defaultLeadFilters(): LeadFilters {
         tier: [],
         country: [],
         company_type: [],
+        signal_type: [],
+        stage: [],
         origin: [],
         needs_research: null,
         search: '',
@@ -36,7 +38,8 @@ export function useLeads() {
 
     const { data, ...query } = useQuery<LeadPage>({
         key: () => ['lead-scout', 'leads', { ...queryParams.value }],
-        query: () => httpJson<LeadPage>(index.url({ query: queryParams.value })),
+        query: () =>
+            httpJson<LeadPage>(index.url({ query: queryParams.value })),
         staleTime: 1000 * 60 * 2,
         gcTime: 1000 * 60 * 5,
         placeholderData: (previousData) => previousData,

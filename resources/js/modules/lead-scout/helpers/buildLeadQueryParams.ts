@@ -31,6 +31,14 @@ export function buildLeadListQueryParams(
         params['company_type[]'] = filters.company_type;
     }
 
+    if (filters.signal_type.length > 0) {
+        params['signal_type[]'] = filters.signal_type;
+    }
+
+    if (filters.stage.length > 0) {
+        params['stage[]'] = filters.stage;
+    }
+
     if (filters.origin.length > 0) {
         params['origin[]'] = filters.origin;
     }

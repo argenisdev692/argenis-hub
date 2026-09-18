@@ -7,19 +7,15 @@
  * names track the backend automatically.
  */
 
-export type LeadListItem =
-    Modules.LeadScout.Application.DTOs.LeadListItemData;
-export type LeadDetail =
-    Modules.LeadScout.Application.DTOs.LeadDetailData;
-export type LeadDecisor =
-    Modules.LeadScout.Application.DTOs.ContactData;
-export type LeadChannel = Modules.LeadScout.Application.DTOs.LeadDetailData['channels'][number];
-export type LeadOutreach =
-    Modules.LeadScout.Application.DTOs.OutreachData;
+export type LeadListItem = Modules.LeadScout.Application.DTOs.LeadListItemData;
+export type LeadDetail = Modules.LeadScout.Application.DTOs.LeadDetailData;
+export type LeadDecisor = Modules.LeadScout.Application.DTOs.ContactData;
+export type LeadChannel =
+    Modules.LeadScout.Application.DTOs.LeadDetailData['channels'][number];
+export type LeadOutreach = Modules.LeadScout.Application.DTOs.OutreachData;
 export type LeadScoreReason =
     Modules.LeadScout.Application.DTOs.LeadDetailData['reasons'][number];
-export type AiSettings =
-    Modules.LeadScout.Application.DTOs.AiSettingsData;
+export type AiSettings = Modules.LeadScout.Application.DTOs.AiSettingsData;
 export type AiCatalogOption = {
     provider: string;
     model: string;
@@ -29,8 +25,7 @@ export type AiCatalogOption = {
     est_cost_per_100_usd: number;
     price_expired: boolean;
 };
-export type BudgetStatus =
-    Modules.LeadScout.Application.DTOs.BudgetStatusData;
+export type BudgetStatus = Modules.LeadScout.Application.DTOs.BudgetStatusData;
 
 export type LeadTier = 'A' | 'B' | 'C' | 'discarded' | null;
 
@@ -48,6 +43,8 @@ export type LeadFilters = {
     tier: string[];
     country: string[];
     company_type: string[];
+    signal_type: string[];
+    stage: string[];
     origin: string[];
     needs_research: boolean | null;
     search: string;

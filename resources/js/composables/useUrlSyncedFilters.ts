@@ -3,9 +3,12 @@ import { watch } from 'vue';
 
 type Primitive = string | number | boolean;
 
+type FilterValue = Primitive | Primitive[] | null;
+
 type Options<T> = {
     /** The pristine filter state. Its keys define what is read/written, and
-     *  each value's runtime type drives how the query param is coerced back. */
+     *  each value's runtime type drives how the query param is coerced back.
+     *  Array defaults sync as repeated `key[]` params (backend convention). */
     defaults: T;
     /** Keys to leave out of the URL entirely (e.g. `per_page`). */
     exclude?: readonly (keyof T & string)[];
@@ -25,7 +28,7 @@ type Options<T> = {
  * Module-agnostic: it only needs the shape of `defaults`. Call it once per
  * index page, right after the list composable that creates `filters`.
  */
-export function useUrlSyncedFilters<T extends Record<string, Primitive | null>>(
+export function useUrlSyncedFilters<T extends Record<string, FilterValue>>(
     filters: Ref<T>,
     options: Options<T>,
 ): void {
@@ -55,10 +58,22 @@ export function useUrlSyncedFilters<T extends Record<string, Primitive | null>>(
 
     // ---- hydrate from the current URL ---------------------------------------
     const incoming = new URLSearchParams(window.location.search);
-    const hydrated: Record<string, Primitive | null> = { ...filters.value };
+    const hydrated: Record<string, FilterValue> = { ...filters.value };
 
     for (const key of keys) {
         if (excluded.has(key)) {
+            continue;
+        }
+
+        const fallback = defaults[key];
+
+        if (Array.isArray(fallback)) {
+            const raw = incoming.getAll(`${key}[]`);
+
+            if (raw.length > 0) {
+                hydrated[key] = raw;
+            }
+
             continue;
         }
 
@@ -85,12 +100,32 @@ export function useUrlSyncedFilters<T extends Record<string, Primitive | null>>(
                 }
 
                 const value = current[key];
+                const fallback = defaults[key];
 
-                if (value === defaults[key] || value === null || value === '') {
-                    params.delete(key);
-                } else {
-                    params.set(key, String(value));
+                params.delete(key);
+                params.delete(`${key}[]`);
+
+                if (Array.isArray(fallback)) {
+                    const list = Array.isArray(value) ? value : [];
+                    const pristine =
+                        list.length === 0 ||
+                        (list.length === fallback.length &&
+                            list.every((entry) => fallback.includes(entry)));
+
+                    if (!pristine) {
+                        for (const entry of list) {
+                            params.append(`${key}[]`, String(entry));
+                        }
+                    }
+
+                    continue;
                 }
+
+                if (value === fallback || value === null || value === '') {
+                    continue;
+                }
+
+                params.set(key, String(value));
             }
 
             const query = params.toString();
