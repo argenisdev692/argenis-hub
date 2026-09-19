@@ -7,6 +7,7 @@ namespace Modules\LeadScout\Application\DTOs;
 use Modules\LeadScout\Domain\Enums\OpportunityStatus;
 use Modules\LeadScout\Domain\Enums\OpportunityType;
 use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
@@ -15,6 +16,7 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * opportunities can hang off one contact (trial first, then retainer).
  */
 #[MapInputName(SnakeCaseMapper::class)]
+#[MapOutputName(SnakeCaseMapper::class)]
 final class UpsertOpportunityData extends Data
 {
     public function __construct(

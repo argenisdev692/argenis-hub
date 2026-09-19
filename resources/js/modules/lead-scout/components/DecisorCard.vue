@@ -2,6 +2,7 @@
 import { ShieldCheckIcon, StarIcon } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { safeExternalUrl } from '@/lib/utils';
 import type { LeadDecisor } from '../types';
 
 const { decisor, canManage } = defineProps<{
@@ -42,8 +43,8 @@ const emit = defineEmits<{
             </p>
 
             <a
-                v-if="decisor.public_profile_url"
-                :href="decisor.public_profile_url"
+                v-if="safeExternalUrl(decisor.public_profile_url) !== null"
+                :href="safeExternalUrl(decisor.public_profile_url) ?? undefined"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="text-xs text-primary underline"

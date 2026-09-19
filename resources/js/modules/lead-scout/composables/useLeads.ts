@@ -46,18 +46,23 @@ export function useLeads() {
     });
 
     const leads = computed(() => data.value?.data ?? []);
-    const meta = computed<PaginationMeta | undefined>(() =>
-        data.value
-            ? {
-                  current_page: data.value.current_page,
-                  last_page: data.value.last_page,
-                  per_page: data.value.per_page,
-                  from: data.value.from,
-                  to: data.value.to,
-                  total: data.value.total,
-              }
-            : undefined,
-    );
+    const meta = computed<PaginationMeta | undefined>(() => {
+        if (data.value === undefined) {
+            return undefined;
+        }
+
+        const { current_page, per_page, total } = data.value.meta;
+        const from = total === 0 ? null : (current_page - 1) * per_page + 1;
+
+        return {
+            current_page,
+            per_page,
+            total,
+            last_page: Math.max(1, Math.ceil(total / per_page)),
+            from,
+            to: from === null ? null : from + data.value.data.length - 1,
+        };
+    });
 
     return { ...query, data, leads, meta, filters };
 }

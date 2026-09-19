@@ -6,6 +6,7 @@ namespace Modules\LeadScout\Application\DTOs;
 
 use Modules\LeadScout\Domain\Enums\MessageVariant;
 use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
@@ -14,6 +15,7 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * language and selector-chosen provider/model (validated vs catalog).
  */
 #[MapInputName(SnakeCaseMapper::class)]
+#[MapOutputName(SnakeCaseMapper::class)]
 final class GenerateDraftData extends Data
 {
     public function __construct(

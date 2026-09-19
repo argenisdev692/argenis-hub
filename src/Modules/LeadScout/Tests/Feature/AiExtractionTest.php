@@ -8,7 +8,9 @@ use Database\Seeders\LeadScoutAiSettingsSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Modules\LeadScout\Application\Commands\ExtractSignalsHandler;
 use Modules\LeadScout\Application\Commands\UpdateBudgetsHandler;
 use Modules\LeadScout\Application\DTOs\UpdateBudgetsData;
@@ -163,6 +165,62 @@ it('falls back to the secondary model when the primary fails', function (): void
         ->and($report['model'])->toBe('claude-sonnet-5')
         ->and($flaky->calls)->toBe(2)
         ->and($inner->calls)->toHaveCount(1);
+});
+
+it('redacts personal data echoed by a failing provider before logging the fallback', function (): void {
+    config()->set('ai.providers.gemini.key', 'test-gemini-key');
+    config()->set('ai.providers.anthropic.key', 'test-anthropic-key');
+    Log::spy();
+
+    $inner = new RecordingAiClient([ExtractCompanySignalsAgent::class => ['signals' => [], 'company_type' => 'other']]);
+    app()->instance(AIClientInterface::class, new class($inner) implements AIClientInterface
+    {
+        private bool $failed = false;
+
+        public function __construct(private readonly RecordingAiClient $inner) {}
+
+        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
+        {
+            if (! $this->failed) {
+                $this->failed = true;
+
+                throw new RuntimeException('Invalid request near "contact ana@example.com".');
+            }
+
+            return $this->inner->generateStructured($agentClass, $prompt, $provider, $model, $timeoutSeconds);
+        }
+
+        public function generateImage(string $prompt, ?string $provider = null, string $size = '1:1', string $quality = 'high'): array
+        {
+            return $this->inner->generateImage($prompt, $provider, $size, $quality);
+        }
+    });
+
+    $report = app(ExtractSignalsHandler::class)->handle(signalCompany()->uuid);
+
+    expect($report['provider'])->toBe('anthropic');
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        fn (string $event, array $context): bool => $event === 'lead-scout.ai_extraction_failed'
+            && $context['provider'] === 'gemini'
+            && str_contains($context['error'], '[email]')
+            && ! str_contains($context['error'], 'ana@example.com'),
+    );
+});
+
+it('drops non-web evidence urls proposed by the model', function (): void {
+    config()->set('ai.providers.gemini.key', 'test-gemini-key');
+    $payload = extractionPayload();
+    $payload['signals'][0]['source_url'] = 'javascript:alert(document.cookie)';
+    RecordingAiClient::install([ExtractCompanySignalsAgent::class => $payload]);
+    $company = signalCompany();
+
+    app(ExtractSignalsHandler::class)->handle($company->uuid);
+
+    $signal = ScoutSignalEloquentModel::query()
+        ->where('company_id', $company->id)->where('signal_key', 'remote')->firstOrFail();
+
+    expect($signal->evidence_url)->toBeNull();
 });
 
 it('skips the model when rules already cover every dimension', function (): void {

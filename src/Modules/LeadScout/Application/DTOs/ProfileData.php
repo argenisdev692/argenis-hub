@@ -25,14 +25,14 @@ final class ProfileData extends Data
         public readonly array $confirmedSkills,
         /** @var list<string> */
         public readonly array $potentialSkills,
-        /** @var list<array<string, mixed>> */
+        /** @var list<array{title: string, summary: string, technologies: list<string>, sector: ?string, result: ?string, url: ?string, order: int}> */
         public readonly array $proofPoints,
         /** @var array<string, string> */
         public readonly array $languages,
         public readonly ?int $minRateCents,
         /** @var list<string>|null */
         public readonly ?array $targetCountries,
-        /** @var array<string, mixed>|null */
+        /** @var array<string, int>|null */
         public readonly ?array $weights,
         public readonly bool $stale,
         public readonly ?string $updatedAt,

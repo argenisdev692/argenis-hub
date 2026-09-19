@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Infrastructure\Ai;
 
-use Illuminate\Support\Facades\Log;
-use Modules\LeadScout\Domain\Enums\BudgetCategory;
-use Modules\LeadScout\Domain\Ports\AiModelCatalogPort;
 use Modules\LeadScout\Domain\Ports\SignalExtractorPort;
 use Modules\LeadScout\Domain\ValueObjects\SignalKey;
-use Modules\LeadScout\Infrastructure\Budgets\BudgetLedger;
-use Shared\Infrastructure\AI\AIClientInterface;
-use Throwable;
+use Uri\WhatWg\InvalidUrlException;
+use Uri\WhatWg\Url;
 
 /**
  * Verified LLM extraction (spec FR-10, T056): the agent proposes, the code
@@ -22,11 +18,7 @@ use Throwable;
  */
 final readonly class LaravelAiSignalExtractor implements SignalExtractorPort
 {
-    public function __construct(
-        private AIClientInterface $ai,
-        private AiModelCatalogPort $catalog,
-        private BudgetLedger $budgets,
-    ) {}
+    public function __construct(private MeteredAiCall $metered) {}
 
     /**
      * @return array{signals: list<array{signal_key: string, nature: string, excerpt: string, confidence: int, source_url: string}>, discarded: int, provider: string, model: string, company_type: ?string, team_size_observed: ?int}
@@ -38,46 +30,10 @@ final readonly class LaravelAiSignalExtractor implements SignalExtractorPort
         ?string $provider = null,
         ?string $model = null,
     ): array {
-        $resolved = $this->catalog->resolve('extraction', $provider, $model);
+        // Planning estimate ~8k in / ~1k out; real usage settles the ledger.
+        $call = $this->metered->generate('extraction', ExtractCompanySignalsAgent::class, $prompt, $provider, $model, 120, 8000, 1000);
 
-        // Pre-flight against the monthly AI budget with the planning
-        // estimate (~8k in / ~1k out); real usage settles the ledger after.
-        $this->budgets->ensure(BudgetCategory::Ai, $this->estimateMicros($resolved['model']));
-
-        $attempts = [
-            [$resolved['provider'], $resolved['model']],
-        ];
-
-        if (is_string($resolved['fallback_provider']) && is_string($resolved['fallback_model'])) {
-            $attempts[] = [$resolved['fallback_provider'], $resolved['fallback_model']];
-        }
-
-        $lastError = null;
-
-        foreach ($attempts as [$attemptProvider, $attemptModel]) {
-            try {
-                $response = $this->ai->generateStructured(
-                    ExtractCompanySignalsAgent::class,
-                    $prompt,
-                    $attemptProvider,
-                    $attemptModel,
-                    120,
-                );
-
-                $this->spend($attemptModel, $response->usage->promptTokens ?? 0, $response->usage->completionTokens ?? 0);
-
-                return $this->verified($response, $sourceText, $attemptProvider, $attemptModel);
-            } catch (Throwable $e) {
-                $lastError = $e;
-                Log::warning('lead-scout.signal_extraction_failed', [
-                    'provider' => $attemptProvider,
-                    'model' => $attemptModel,
-                    'error' => mb_substr($e->getMessage(), 0, 300),
-                ]);
-            }
-        }
-
-        throw $lastError ?? new \RuntimeException('Signal extraction failed without a fallback.');
+        return $this->verified($call['response'], $sourceText, $call['provider'], $call['model']);
     }
 
     /**
@@ -105,7 +61,7 @@ final readonly class LaravelAiSignalExtractor implements SignalExtractorPort
                 'nature' => $nature,
                 'excerpt' => mb_substr($excerpt, 0, 2000),
                 'confidence' => max(0, min(100, (int) ($candidate['confidence'] ?? 50))),
-                'source_url' => mb_substr((string) ($candidate['source_url'] ?? ''), 0, 2048),
+                'source_url' => self::webUrlOrEmpty((string) ($candidate['source_url'] ?? '')),
             ];
         }
 
@@ -122,33 +78,21 @@ final readonly class LaravelAiSignalExtractor implements SignalExtractorPort
         ];
     }
 
-    private function estimateMicros(string $model): int
+    /**
+     * LLM output is untrusted (OWASP LLM05): the evidence URL is rendered as a
+     * clickable link, so anything but an absolute http(s) URL is dropped —
+     * a prompt-injected `javascript:` value must never reach the bandeja.
+     */
+    private static function webUrlOrEmpty(string $candidate): string
     {
-        $catalog = (array) config('lead-scout.ai_catalog', []);
+        $candidate = mb_substr(trim($candidate), 0, 2048);
 
-        if (! isset($catalog[$model])) {
-            return 0;
+        try {
+            $scheme = new Url($candidate)->getScheme();
+        } catch (InvalidUrlException) {
+            return '';
         }
 
-        return (int) round(
-            8000 * (float) ($catalog[$model]['input_per_mtok_usd'] ?? 0)
-            + 1000 * (float) ($catalog[$model]['output_per_mtok_usd'] ?? 0),
-        );
-    }
-
-    private function spend(string $model, int $promptTokens, int $completionTokens): void
-    {
-        $catalog = (array) config('lead-scout.ai_catalog', []);
-
-        if (! isset($catalog[$model])) {
-            return;
-        }
-
-        $micros = (int) round(
-            $promptTokens * (float) ($catalog[$model]['input_per_mtok_usd'] ?? 0)
-            + $completionTokens * (float) ($catalog[$model]['output_per_mtok_usd'] ?? 0),
-        );
-
-        $this->budgets->spend(BudgetCategory::Ai, $micros);
+        return in_array($scheme, ['http', 'https'], true) ? $candidate : '';
     }
 }

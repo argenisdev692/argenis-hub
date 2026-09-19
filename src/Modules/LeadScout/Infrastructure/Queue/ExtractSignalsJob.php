@@ -13,10 +13,10 @@ use Illuminate\Queue\Attributes\Timeout;
 use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Modules\LeadScout\Application\Commands\ExtractSignalsHandler;
 use Modules\LeadScout\Domain\Exceptions\BudgetExceededException;
+use Modules\LeadScout\Domain\Ports\PipelineLoggerPort;
 
 /**
  * Signal extraction (queue `lead-scout-llm`). LLM spend is rate-limited;
@@ -38,7 +38,7 @@ final class ExtractSignalsJob implements ShouldQueue
     /**
      * @return array{rules: int, ai: int, discarded: int, provider: ?string, model: ?string}
      */
-    public function handle(ExtractSignalsHandler $extract): array
+    public function handle(ExtractSignalsHandler $extract, PipelineLoggerPort $logger): array
     {
         if (RateLimiter::tooManyAttempts('lead-scout-llm:extract', 10)) {
             $this->release(60);
@@ -51,7 +51,7 @@ final class ExtractSignalsJob implements ShouldQueue
         try {
             $report = $extract->handle($this->companyUuid);
         } catch (BudgetExceededException $e) {
-            Log::info('lead-scout.ai_budget_exhausted', ['company' => $this->companyUuid]);
+            $logger->pipeline('ai_budget_exhausted', ['company' => $this->companyUuid]);
 
             return ['rules' => 0, 'ai' => 0, 'discarded' => 0, 'provider' => null, 'model' => null];
         }

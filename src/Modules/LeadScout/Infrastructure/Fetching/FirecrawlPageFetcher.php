@@ -11,6 +11,7 @@ use InvalidArgumentException;
 use Modules\LeadScout\Domain\Enums\FetchStatus;
 use Modules\LeadScout\Domain\Ports\PageFetcherPort;
 use Modules\LeadScout\Domain\ValueObjects\FetchResult;
+use Modules\LeadScout\Infrastructure\Logging\ApplicationLogger;
 use RuntimeException;
 use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerInterface;
 use Throwable;
@@ -43,7 +44,7 @@ final readonly class FirecrawlPageFetcher implements PageFetcherPort
     public static function disable(string $reason): void
     {
         Cache::forever(self::DISABLED_KEY, true);
-        Log::warning('lead-scout.firecrawl_disabled', ['reason' => $reason]);
+        Log::warning('lead-scout.firecrawl_disabled', ApplicationLogger::redact(['reason' => $reason]));
     }
 
     public static function enable(): void

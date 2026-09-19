@@ -8,6 +8,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { safeExternalUrl } from '@/lib/utils';
 import type { LeadScoreReason } from '../types';
 
 const { reasons, subscores } = defineProps<{
@@ -76,8 +77,8 @@ function pointsVariant(points: number): 'default' | 'secondary' | 'destructive' 
                     </p>
 
                     <a
-                        v-if="reason.evidence_url"
-                        :href="reason.evidence_url"
+                        v-if="safeExternalUrl(reason.evidence_url) !== null"
+                        :href="safeExternalUrl(reason.evidence_url) ?? undefined"
                         target="_blank"
                         rel="noopener noreferrer"
                         class="text-xs text-primary underline"

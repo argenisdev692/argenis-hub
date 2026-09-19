@@ -1452,19 +1452,19 @@ declare namespace Modules {
                     readonly importable: boolean;
                 };
                 export type DecisionRuleData = {
-                    sampleSize: number | null;
-                    windowDays: number | null;
+                    sample_size: number | null;
+                    window_days: number | null;
                     thresholds: Record<string, number> | null;
                 };
                 export type GenerateDraftData = {
-                    jobPostingId: string | null;
+                    job_posting_id: string | null;
                     variant: string | null;
                     language: string | null;
                     provider: string | null;
                     model: string | null;
                 };
                 export type ImportCvData = {
-                    cvUuid: string;
+                    cv_uuid: string;
                 };
                 export type LeadDetailData = {
                     readonly company: {
@@ -1556,7 +1556,7 @@ declare namespace Modules {
                 export type MetricsFilterData = {
                     from: string | null;
                     to: string | null;
-                    groupBy: string | null;
+                    group_by: string | null;
                 };
                 export type OpportunityData = {
                     readonly uuid: string;
@@ -1601,17 +1601,25 @@ declare namespace Modules {
                     readonly source_cv_uuid: string | null;
                     readonly confirmed_skills: string[];
                     readonly potential_skills: string[];
-                    readonly proof_points: Record<string, any>[];
+                    readonly proof_points: {
+                        title: string;
+                        summary: string;
+                        technologies: string[];
+                        sector: string | null;
+                        result: string | null;
+                        url: string | null;
+                        order: number;
+                    }[];
                     readonly languages: Record<string, string>;
                     readonly min_rate_cents: number | null;
                     readonly target_countries: string[] | null;
-                    readonly weights: Record<string, any> | null;
+                    readonly weights: Record<string, number> | null;
                     readonly stale: boolean;
                     readonly updated_at: string | null;
                 };
                 export type RecordReplyData = {
                     outcome: string;
-                    repliedAt: string | null;
+                    replied_at: string | null;
                     notes: string | null;
                 };
                 export type ScoreResultData = {
@@ -1650,8 +1658,8 @@ declare namespace Modules {
                     purpose: string;
                     provider: string;
                     model: string;
-                    fallbackProvider: string | null;
-                    fallbackModel: string | null;
+                    fallback_provider: string | null;
+                    fallback_model: string | null;
                 };
                 export type UpdateBudgetsData = {
                     budgets: {
@@ -1663,42 +1671,42 @@ declare namespace Modules {
                     status: string;
                 };
                 export type UpdateOutreachData = {
-                    draftBody: string | null;
+                    draft_body: string | null;
                     stage: string | null;
                     notes: string | null;
-                    contactChannelId: string | null;
-                    sendMedium: string | null;
-                    senderKind: string | null;
-                    acknowledgePendingLegal: boolean | null;
+                    contact_channel_id: string | null;
+                    send_medium: string | null;
+                    sender_kind: string | null;
+                    acknowledge_pending_legal: boolean | null;
                 };
                 export type UpdateProfileData = {
                     weights: Record<string, number> | null;
                     languages: Record<string, string> | null;
-                    minRateCents: number | null;
-                    targetCountries: string[] | null;
+                    min_rate_cents: number | null;
+                    target_countries: string[] | null;
                 };
                 export type UpdateSourceData = {
                     status: string | null;
-                    frequencyMinutes: number | null;
-                    termsReviewedAt: string | null;
+                    frequency_minutes: number | null;
+                    terms_reviewed_at: string | null;
                 };
                 export type UpsertContactData = {
-                    fullName: string;
-                    roleTitle: string;
-                    roleCategory: string;
-                    publishedEmail: string | null;
-                    publicProfileUrl: string | null;
-                    isPrimary: boolean | null;
+                    full_name: string;
+                    role_title: string;
+                    role_category: string;
+                    published_email: string | null;
+                    public_profile_url: string | null;
+                    is_primary: boolean | null;
                 };
                 export type UpsertOpportunityData = {
                     type: string | null;
-                    hoursPerMonth: number | null;
-                    hourlyRateCents: number | null;
-                    amountCents: number | null;
+                    hours_per_month: number | null;
+                    hourly_rate_cents: number | null;
+                    amount_cents: number | null;
                     currency: string | null;
                     status: string | null;
-                    startedAt: string | null;
-                    endedAt: string | null;
+                    started_at: string | null;
+                    ended_at: string | null;
                 };
             }
         }

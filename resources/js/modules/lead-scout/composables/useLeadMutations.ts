@@ -13,7 +13,16 @@ import {
 import { drafts, rescore } from '@/routes/lead-scout/leads';
 import { reply, update as updateOutreachRoute } from '@/routes/lead-scout/outreaches';
 import { store as storeSuppression } from '@/routes/lead-scout/suppressions';
-import type { DraftPayload, StagePayload } from '../types';
+import type {
+    AiSettingsPayload,
+    BudgetLimit,
+    ChannelStatusUpdate,
+    ContactPayload,
+    DraftPayload,
+    ReplyOutcome,
+    StagePayload,
+    SuppressPayload,
+} from '../types';
 import { LEAD_KEY } from './useLead';
 import { LEADS_KEY } from './useLeads';
 
@@ -97,7 +106,7 @@ export function useLeadMutations() {
             notes,
         }: {
             uuid: string;
-            outcome: 'interested' | 'not_interested' | 'unsubscribe';
+            outcome: ReplyOutcome;
             notes?: string;
         }) =>
             httpJson<unknown>(toUrl(reply(uuid)), {
@@ -121,7 +130,7 @@ export function useLeadMutations() {
         }: {
             companyUuid: string;
             contactUuid?: string;
-            payload: Record<string, unknown>;
+            payload: ContactPayload;
         }) =>
             contactUuid === undefined
                 ? httpJson<unknown>(toUrl(storeContact(companyUuid)), {
@@ -155,7 +164,7 @@ export function useLeadMutations() {
     });
 
     const updateChannel = useMutation({
-        mutation: ({ uuid, status }: { uuid: string; status: 'active' | 'broken' }) =>
+        mutation: ({ uuid, status }: { uuid: string; status: ChannelStatusUpdate }) =>
             httpJson<unknown>(toUrl(updateChannelRoute(uuid)), {
                 method: 'PATCH',
                 body: { status },
@@ -170,7 +179,7 @@ export function useLeadMutations() {
     });
 
     const updateBudgets = useMutation({
-        mutation: (budgets: { category: string; limit_eur: number }[]) =>
+        mutation: (budgets: BudgetLimit[]) =>
             httpJson<unknown>(toUrl(updateBudgetsRoute()), {
                 method: 'PUT',
                 body: { budgets },
@@ -184,7 +193,7 @@ export function useLeadMutations() {
     });
 
     const updateAiSettings = useMutation({
-        mutation: (payload: Record<string, unknown>) =>
+        mutation: (payload: AiSettingsPayload) =>
             httpJson<unknown>(toUrl(updateAiSettingsRoute()), {
                 method: 'PUT',
                 body: payload,
@@ -198,7 +207,7 @@ export function useLeadMutations() {
     });
 
     const suppressCompany = useMutation({
-        mutation: (payload: { domain: string; reason: string }) =>
+        mutation: (payload: SuppressPayload) =>
             httpJson<unknown>(toUrl(storeSuppression()), {
                 method: 'POST',
                 body: payload,

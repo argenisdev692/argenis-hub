@@ -34,7 +34,7 @@ import LeadTierBadge from '@/modules/lead-scout/components/LeadTierBadge.vue';
 import { useLead } from '@/modules/lead-scout/composables/useLead';
 import { useLeadMutations } from '@/modules/lead-scout/composables/useLeadMutations';
 import { useAiSettings } from '@/modules/lead-scout/composables/useSettings';
-import type { LeadOutreach } from '@/modules/lead-scout/types';
+import type { LeadOutreach, ReplyOutcome } from '@/modules/lead-scout/types';
 import { index } from '@/routes/lead-scout';
 
 const { uuid } = defineProps<{
@@ -188,7 +188,7 @@ function markSent(): void {
     });
 }
 
-function reply(outcome: 'interested' | 'not_interested' | 'unsubscribe'): void {
+function reply(outcome: ReplyOutcome): void {
     if (selectedOutreach.value === null) {
         return;
     }

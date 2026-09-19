@@ -566,7 +566,7 @@ scout_companies  [LogsActivity: company_type, resolution_status]
   · tax_id string null (NIF/NIPC) · registry_info string null · founded_year smallint null · services jsonb · sectors jsonb
   · site_languages jsonb · client_companies jsonb · public_urls jsonb ({page_type: url}) · public_data_evidence jsonb
   ([{field, url, excerpt, captured_at, method}])
-- first_seen_at · last_enriched_at null · softDeletes
+- first_seen_at · last_enriched_at null · **sin softDeletes**: el ciclo de vida es supresión + tier (§5, sin BulkDelete/BulkRestore); el derecho de supresión se cumple anonimizando contactos con `lead-scout:privacy erase` (RGPD art. 17)
   idx: (company_type, country) · (tax_id) · (resolution_status) · (origin) · (needs_research) · (activity_status) · (discovery_wave)
 
 scout_job_postings

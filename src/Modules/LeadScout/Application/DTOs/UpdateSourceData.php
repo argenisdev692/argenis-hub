@@ -6,6 +6,7 @@ namespace Modules\LeadScout\Application\DTOs;
 
 use Modules\LeadScout\Domain\Enums\SourceStatus;
 use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
@@ -15,6 +16,7 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * the DB CHECK — never trust the client (spec FR-13).
  */
 #[MapInputName(SnakeCaseMapper::class)]
+#[MapOutputName(SnakeCaseMapper::class)]
 final class UpdateSourceData extends Data
 {
     public function __construct(

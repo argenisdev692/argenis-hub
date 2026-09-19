@@ -7,6 +7,7 @@ namespace Modules\LeadScout\Infrastructure\Fetching;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Modules\LeadScout\Infrastructure\Logging\ApplicationLogger;
 
 /**
  * Own robots.txt policy (spec D1, FR-13): `*` and own-agent groups,
@@ -81,7 +82,7 @@ final readonly class RobotsTxtPolicy
 
             return self::parse($response->body());
         } catch (\Throwable $e) {
-            Log::info('lead-scout.robots_unreachable', ['host' => $host, 'error' => mb_substr($e->getMessage(), 0, 200)]);
+            Log::info('lead-scout.robots_unreachable', ApplicationLogger::redact(['host' => $host, 'error' => mb_substr($e->getMessage(), 0, 200)]));
 
             return [];
         }

@@ -2,6 +2,7 @@
 import { ExternalLinkIcon, TriangleAlertIcon } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { safeExternalUrl } from '@/lib/utils';
 import type { LeadChannel } from '../types';
 
 const { channels, recommendedUuid, canManage } = defineProps<{
@@ -64,13 +65,13 @@ function channelLabel(type: string): string {
 
             <div class="flex flex-wrap gap-2 pt-1">
                 <Button
-                    v-if="channel.url"
+                    v-if="safeExternalUrl(channel.url) !== null"
                     as-child
                     variant="outline"
                     size="sm"
                 >
                     <a
-                        :href="channel.url"
+                        :href="safeExternalUrl(channel.url) ?? undefined"
                         target="_blank"
                         rel="noopener noreferrer"
                     >

@@ -2979,7 +2979,7 @@
                             "null"
                         ],
                         "items": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     },
                     "stale": {
