@@ -9,21 +9,14 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\CvJobStudio\Application\Commands\ConfirmRelationHandler;
 use Modules\CvJobStudio\Application\Commands\RejectRelationHandler;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSkillRelationEloquentModel;
+use Modules\CvJobStudio\Application\Queries\ListPendingRelationsHandler;
 
 /** Relations inbox (T-124, T-135): confirm / reject pending proposals. */
 final readonly class StudioRelationController
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListPendingRelationsHandler $list): JsonResponse
     {
-        $relations = StudioSkillRelationEloquentModel::query()
-            ->where('user_id', $this->ownerId($request))
-            ->where('status', 'pending')
-            ->select(['uuid', 'from_skill', 'to_skill', 'kind', 'origin', 'status', 'created_at'])
-            ->orderByDesc('created_at')
-            ->paginate(15);
-
-        return response()->json($relations);
+        return response()->json($list->handle($this->ownerId($request)));
     }
 
     public function confirm(Request $request, string $uuid, ConfirmRelationHandler $handler): RedirectResponse

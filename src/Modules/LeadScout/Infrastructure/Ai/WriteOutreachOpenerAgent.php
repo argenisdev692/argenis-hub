@@ -6,9 +6,7 @@ namespace Modules\LeadScout\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
-use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
-use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
 use Stringable;
@@ -19,10 +17,9 @@ use Stringable;
  * the prompt — never the CV. One sentence, no tools, no claims beyond the
  * evidence (claims are validated downstream before `ready`).
  */
-final class WriteOutreachOpenerAgent implements Agent, Conversational, HasStructuredOutput
+final class WriteOutreachOpenerAgent implements Agent, HasStructuredOutput
 {
     use Promptable;
-    use RemembersConversations;
 
     public function instructions(): Stringable|string
     {

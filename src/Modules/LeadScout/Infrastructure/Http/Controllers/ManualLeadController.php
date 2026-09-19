@@ -19,6 +19,6 @@ final readonly class ManualLeadController
     {
         $company = $create->handle($data, (int) $request->user()->id);
 
-        return response()->json(['data' => CompanyData::fromModel($company)], 201);
+        return response()->json(['data' => CompanyData::fromEntity($company)], 201);
     }
 }

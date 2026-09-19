@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Infrastructure\Logging;
 
 use Illuminate\Support\Facades\Log;
+use Modules\LeadScout\Domain\Ports\PipelineLoggerPort;
 
 /**
  * Structured pipeline logger (spec T076): every LeadScout log line goes
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  * connection string can never reach the logs. Suspicious keys are blanked,
  * emails inside string values are masked, connection-like values dropped.
  */
-final readonly class ApplicationLogger
+final readonly class ApplicationLogger implements PipelineLoggerPort
 {
     private const array REDACTED_KEYS = [
         'password', 'passwd', 'secret', 'token', 'bearer', 'authorization',

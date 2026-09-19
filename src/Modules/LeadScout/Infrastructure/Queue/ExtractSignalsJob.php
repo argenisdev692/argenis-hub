@@ -21,8 +21,6 @@ use Modules\LeadScout\Domain\Exceptions\BudgetExceededException;
 /**
  * Signal extraction (queue `lead-scout-llm`). LLM spend is rate-limited;
  * an exhausted AI budget ends the job quietly (free evidence stands).
- *
- * @return array{rules: int, ai: int, discarded: int, provider: ?string, model: ?string}
  */
 #[Queue('lead-scout-llm')]
 #[Tries(3)]
@@ -30,13 +28,16 @@ use Modules\LeadScout\Domain\Exceptions\BudgetExceededException;
 #[Backoff([60, 300])]
 final class ExtractSignalsJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, ReportsPipelineFailure, SerializesModels;
 
     public function __construct(
         public readonly string $companyUuid,
         public readonly bool $extraRoundDone = false,
     ) {}
 
+    /**
+     * @return array{rules: int, ai: int, discarded: int, provider: ?string, model: ?string}
+     */
     public function handle(ExtractSignalsHandler $extract): array
     {
         if (RateLimiter::tooManyAttempts('lead-scout-llm:extract', 10)) {

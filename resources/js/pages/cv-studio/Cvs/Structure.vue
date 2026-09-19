@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { useMutation } from '@pinia/colada';
 import { ref } from 'vue';
-import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
-import { httpJson } from '@/lib/http';
-import { toUrl } from '@/lib/utils';
-import { parse } from '@/routes/cv-studio/cvs';
+import { useParseCvStructure } from '@/modules/cv-studio/composables/useCvStructure';
 import { index as postingsIndex } from '@/routes/cv-studio/postings';
 import { confirm } from '@/routes/cv-studio/structures';
 
@@ -20,25 +16,10 @@ defineOptions({
 });
 
 const cvUuid = ref('');
-const parsedUuid = ref<string | null>(null);
-
-const parseCvMutation = useMutation({
-    mutation: () =>
-        httpJson<{ data: { uuid: string } }>(toUrl(parse()), {
-            method: 'POST',
-            body: cvUuid.value ? { cv_uuid: cvUuid.value } : {},
-        }),
-    onSuccess(response: { data: { uuid: string } }) {
-        parsedUuid.value = response.data.uuid;
-        toast.success('CV parsed into addressable rows.');
-    },
-    onError() {
-        toast.error('Failed to parse the CV.');
-    },
-});
+const { parseCv: parseCvMutation, parsedUuid } = useParseCvStructure();
 
 function parseCv(): void {
-    void parseCvMutation.mutateAsync(undefined);
+    parseCvMutation.mutate(cvUuid.value.trim() || null);
 }
 
 const confirmForm = useForm({});

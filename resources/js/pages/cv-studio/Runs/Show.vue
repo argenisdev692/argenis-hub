@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import { Button } from '@/components/ui/button';
 import { useRunStatus } from '@/modules/cv-studio/composables/useRuns';
@@ -29,6 +29,37 @@ const STAGES = [
     { key: 'finished', label: 'Finished' },
 ] as const;
 
+type StageState = 'done' | 'current' | 'pending';
+
+/**
+ * Stages before the current one are done; `finished` marks every stage done.
+ * `failed` matches no stage (the backend does not record which one broke),
+ * so the stages render pending and the failure banner carries the message.
+ */
+const currentIndex = computed(() =>
+    STAGES.findIndex((stage) => stage.key === run.value?.status),
+);
+
+function stageState(index: number): StageState {
+    if (run.value?.status === 'finished') {
+        return 'done';
+    }
+
+    if (index < currentIndex.value) {
+        return 'done';
+    }
+
+    return index === currentIndex.value ? 'current' : 'pending';
+}
+
+const STAGE_DOT: Record<StageState, string> = {
+    done: 'bg-success',
+    current: 'bg-primary animate-pulse motion-reduce:animate-none',
+    pending: 'bg-muted-foreground/30',
+};
+
+const isFailed = computed(() => run.value?.status === 'failed');
+
 function openReport(): void {
     router.visit(report(uuid).url);
 }
@@ -50,24 +81,31 @@ function openReport(): void {
         </div>
 
         <template v-else-if="run">
+            <div
+                v-if="isFailed"
+                role="alert"
+                class="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+            >
+                This run failed after its retries were exhausted. Postings it
+                already collected are kept — start a new run to continue.
+            </div>
+
             <ol class="flex flex-col gap-2" aria-label="Pipeline stages">
                 <li
-                    v-for="stage in STAGES"
+                    v-for="(stage, index) in STAGES"
                     :key="stage.key"
                     class="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm"
+                    :aria-current="
+                        stageState(index) === 'current' ? 'step' : undefined
+                    "
                 >
                     <span
                         class="size-2.5 rounded-full"
-                        :class="
-                            run.status === stage.key ||
-                            (stage.key === 'finished' &&
-                                run.status === 'finished')
-                                ? 'bg-emerald-500'
-                                : 'bg-muted'
-                        "
+                        :class="STAGE_DOT[stageState(index)]"
                         aria-hidden="true"
                     />
                     {{ stage.label }}
+                    <span class="sr-only">— {{ stageState(index) }}</span>
                 </li>
             </ol>
 
@@ -88,9 +126,9 @@ function openReport(): void {
                     </dd>
                 </div>
                 <div class="rounded-lg bg-muted p-3">
-                    <dt class="text-xs text-muted-foreground">Scored</dt>
+                    <dt class="text-xs text-muted-foreground">Extracted</dt>
                     <dd class="text-xl font-semibold tabular-nums">
-                        {{ run.scored_count }}
+                        {{ run.extracted_count }}
                     </dd>
                 </div>
                 <div class="rounded-lg bg-muted p-3">

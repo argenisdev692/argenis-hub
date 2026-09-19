@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\DTOs;
 
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutScoreResultEloquentModel;
+use Modules\LeadScout\Domain\Entities\ScoreResult;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -31,24 +31,22 @@ final class ScoreResultData extends Data
         public readonly string $rulesVersion,
     ) {}
 
-    /**
-     * @param  list<array{signal_key: string, points: int, explanation: string}>  $reasons
-     */
-    public static function fromResult(
-        ScoutScoreResultEloquentModel $result,
-        string $companyUuid,
-        array $reasons,
-    ): self {
+    public static function fromEntity(ScoreResult $result, string $companyUuid): self
+    {
         return new self(
             uuid: $result->uuid,
             companyUuid: $companyUuid,
-            subscores: $result->subscores ?? [],
-            leadScore: $result->lead_score,
+            subscores: $result->subscores,
+            leadScore: $result->leadScore,
             confidence: $result->confidence,
             tier: $result->tier->value,
-            discardReason: $result->discard_reason?->value,
-            reasons: $reasons,
-            rulesVersion: $result->rules_version,
+            discardReason: $result->discardReason?->value,
+            reasons: array_map(static fn (array $reason): array => [
+                'signal_key' => $reason['signal_key'] ?? 'unconfirmed_tech',
+                'points' => $reason['points'],
+                'explanation' => $reason['explanation'],
+            ], $result->reasons),
+            rulesVersion: $result->rulesVersion,
         );
     }
 }

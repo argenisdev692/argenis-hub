@@ -12,8 +12,10 @@ use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 /**
- * Fused create/update input for a CV upload. File is required on create
- * (enforced in CreateCvHandler); optional on update to replace the stored file.
+ * Fused create/update input for a CV upload. Either a `file` or pasted
+ * `content` (Markdown from the agent chat) is required on create — enforced
+ * in CreateCvHandler so metadata-only updates keep working; both stay
+ * optional on update to replace the stored file or leave it untouched.
  *
  * The response allowlist is {@see CvData} — this class never leaves the module.
  */
@@ -26,6 +28,7 @@ final class UploadCvData extends Data
         public CvNiche $niche = CvNiche::Fullstack,
         public bool $isPrimary = false,
         public ?UploadedFile $file = null,
+        public ?string $content = null,
     ) {}
 
     /**
@@ -44,6 +47,7 @@ final class UploadCvData extends Data
                 'extensions:pdf,md,markdown',
                 'mimetypes:text/markdown,text/plain,text/x-markdown,application/pdf',
             ],
+            'content' => ['nullable', 'string', 'max:500000'],
         ];
     }
 

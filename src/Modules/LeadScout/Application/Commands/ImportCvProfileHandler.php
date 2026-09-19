@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
+use Illuminate\Contracts\Config\Repository as Config;
+use Modules\LeadScout\Domain\Entities\Profile;
 use Modules\LeadScout\Domain\Exceptions\CvNotFoundException;
 use Modules\LeadScout\Domain\Exceptions\CvNotImportableException;
 use Modules\LeadScout\Domain\Ports\CvSourcePort;
+use Modules\LeadScout\Domain\Ports\ProfileRepositoryPort;
 use Modules\LeadScout\Domain\Services\CvProfileParser;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutProfileEloquentModel;
 
 /**
  * Imports a versioned matching profile from one of the operator's CVs
@@ -22,9 +23,11 @@ final readonly class ImportCvProfileHandler
     public function __construct(
         private CvSourcePort $cvs,
         private CvProfileParser $parser,
+        private ProfileRepositoryPort $profiles,
+        private Config $config,
     ) {}
 
-    public function handle(string $cvUuid, int $userId): ScoutProfileEloquentModel
+    public function handle(string $cvUuid, int $userId): Profile
     {
         $snapshot = $this->cvs->cvForUser($cvUuid, $userId) ?? throw new CvNotFoundException;
 
@@ -34,28 +37,17 @@ final readonly class ImportCvProfileHandler
 
         $parsed = $this->parser->parse(
             (string) $snapshot->rawText,
-            (array) config('lead-scout.skills.watch_list', []),
+            (array) $this->config->get('lead-scout.skills.watch_list', []),
         );
 
-        return DB::transaction(function () use ($snapshot, $userId, $parsed): ScoutProfileEloquentModel {
-            ScoutProfileEloquentModel::query()
-                ->where('user_id', $userId)
-                ->where('is_current', true)
-                ->update(['is_current' => false]);
-
-            $version = (int) (ScoutProfileEloquentModel::query()->where('user_id', $userId)->max('version') ?? 0) + 1;
-
-            return ScoutProfileEloquentModel::query()->create([
-                'user_id' => $userId,
-                'version' => $version,
-                'source_cv_uuid' => $snapshot->uuid,
-                'cv_hash' => $snapshot->contentHash,
-                'confirmed_skills' => $parsed['confirmed'],
-                'potential_skills' => $parsed['potential'],
-                'proof_points' => $parsed['proofPoints'],
-                'languages' => $parsed['languages'],
-                'is_current' => true,
-            ]);
-        });
+        return $this->profiles->publishVersion(
+            userId: $userId,
+            sourceCvUuid: $snapshot->uuid,
+            cvHash: $snapshot->contentHash,
+            confirmedSkills: $parsed['confirmed'],
+            potentialSkills: $parsed['potential'],
+            proofPoints: $parsed['proofPoints'],
+            languages: $parsed['languages'],
+        );
     }
 }

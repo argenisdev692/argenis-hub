@@ -7,158 +7,118 @@ namespace Modules\LeadScout\Application\Queries;
 use Modules\LeadScout\Application\DTOs\ContactData;
 use Modules\LeadScout\Application\DTOs\LeadDetailData;
 use Modules\LeadScout\Application\DTOs\OutreachData;
+use Modules\LeadScout\Domain\Entities\Contact;
+use Modules\LeadScout\Domain\Entities\ContactChannel;
+use Modules\LeadScout\Domain\Entities\JobPosting;
 use Modules\LeadScout\Domain\Enums\ContractType;
 use Modules\LeadScout\Domain\Exceptions\CompanyNotFoundException;
-use Modules\LeadScout\Domain\Services\ChannelAdvisor;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressionEloquentModel;
+use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactChannelRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactRepositoryPort;
+use Modules\LeadScout\Domain\Ports\JobPostingRepositoryPort;
+use Modules\LeadScout\Domain\Ports\OutreachRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ScoreResultRepositoryPort;
 
 /**
- * Single bandeja detail read (spec US-5, T060): the whole graph in ≤ 5
- * queries — company, postings, current score + reasons (+signals),
- * decisors, channels, outreaches (+opportunities). Relations load on
- * explicit columns with the user-facing DTOs as the only shape.
+ * Single bandeja detail read (spec US-5, T060): company, postings, current
+ * score + reasons (with their signal evidence), decisors, ranked channels
+ * and outreaches (+ opportunities), each read through its repository.
  */
 final readonly class GetLeadHandler
 {
-    public function __construct(private ChannelAdvisor $advisor) {}
+    public function __construct(
+        private CompanyRepositoryPort $companies,
+        private JobPostingRepositoryPort $postings,
+        private ScoreResultRepositoryPort $scores,
+        private ContactRepositoryPort $contacts,
+        private ContactChannelRepositoryPort $channels,
+        private OutreachRepositoryPort $outreaches,
+        private AdviseContactChannelsHandler $channelAdvice,
+    ) {}
 
     public function handle(string $uuid): LeadDetailData
     {
-        $company = ScoutCompanyEloquentModel::query()
-            ->where('uuid', $uuid)
-            ->with([
-                'postings:id,company_id,uuid,title,status,source_url,contract_type',
-                'scoreResults' => fn ($query) => $query->where('is_current', true),
-                'scoreResults.reasons' => fn ($query) => $query->orderBy('id'),
-                'scoreResults.reasons.signal:id,signal_key,evidence_url,evidence_excerpt',
-                'contacts' => fn ($query) => $query->whereNull('anonymized_at')->orderByDesc('is_primary'),
-                'contactChannels' => fn ($query) => $query->orderBy('id'),
-                'outreaches' => fn ($query) => $query->orderByDesc('created_at'),
-                'outreaches.opportunities' => fn ($query) => $query->orderBy('id'),
-                'outreaches.contactChannel' => fn ($query) => $query->select(['id', 'uuid']),
-                'outreaches.opportunities:id,outreach_id',
-            ])
-            ->first([
-                'id', 'uuid', 'name', 'canonical_domain', 'country', 'company_type', 'origin',
-                'origin_ref', 'discovery_wave', 'employee_range', 'team_size_observed',
-                'has_decision_maker', 'needs_research', 'activity_status', 'tax_id',
-                'legal_name', 'city', 'founded_year', 'services', 'sectors', 'created_at', 'updated_at',
-            ])
-            ?? throw new CompanyNotFoundException($uuid);
+        $company = $this->companies->byUuid($uuid) ?? throw new CompanyNotFoundException($uuid);
 
-        $score = $company->scoreResults->first();
+        $postings = $this->postings->forCompany($company->id);
+        $score = $this->scores->currentFor($company->id);
+        $channels = $this->channels->forCompany($company->id);
 
-        $primary = $company->contacts->firstWhere('is_primary', true) ?? $company->contacts->first();
+        // Primary decisor first; the sort is stable, so the rest keep their order.
+        $contacts = $this->contacts->liveForCompany($company->id);
+        usort($contacts, static fn (Contact $a, Contact $b): int => $b->isPrimary <=> $a->isPrimary);
 
-        $advice = $this->advisor->advise(
-            $company->contactChannels->map(static fn ($channel): array => [
-                'uuid' => $channel->uuid,
-                'type' => $channel->channel_type->value,
-                'url' => $channel->url,
-                'generic_email' => $channel->generic_email,
-                'status' => $channel->status->value,
-                'audience' => $channel->audience?->value,
-            ])->all(),
-            [
-                'country' => $company->country,
-                'has_offer' => $company->postings->isNotEmpty(),
-                'is_employment_offer' => $company->postings->contains(
-                    static fn ($posting): bool => $posting->contract_type === ContractType::Employment,
-                ),
-                'discovery_without_offer' => $company->origin->value === 'discovery' && $company->postings->isEmpty(),
-                'has_decisor' => $company->contacts->isNotEmpty(),
-                'nominative_email' => $primary?->email_kind?->value === 'nominative' ? $primary->published_email : null,
-                'dgc_listed' => $this->dgcListed($company),
-                'dgc_list_stale' => $this->dgcListStale(),
-            ],
-            (array) config('lead-scout.contact_rules', []),
+        $advice = $this->channelAdvice->handle(
+            $company,
+            $channels,
+            $contacts,
+            $postings !== [],
+            array_any($postings, static fn (JobPosting $posting): bool => $posting->contractType === ContractType::Employment),
         );
 
-        $channelAudience = $company->contactChannels->keyBy('uuid');
+        $channelsByUuid = array_column(
+            array_map(static fn (ContactChannel $channel): array => ['uuid' => $channel->uuid, 'channel' => $channel], $channels),
+            'channel',
+            'uuid',
+        );
 
         return new LeadDetailData(
             company: [
                 'uuid' => $company->uuid,
                 'name' => $company->name,
-                'domain' => $company->canonical_domain,
+                'domain' => $company->canonicalDomain,
                 'country' => $company->country,
-                'company_type' => $company->company_type?->value,
+                'company_type' => $company->companyType?->value,
                 'origin' => $company->origin->value,
-                'origin_ref' => $company->origin_ref,
-                'discovery_wave' => $company->discovery_wave,
-                'employee_range' => $company->employee_range->value,
-                'team_size_observed' => $company->team_size_observed,
-                'has_decision_maker' => (bool) $company->has_decision_maker,
-                'needs_research' => (bool) $company->needs_research,
-                'activity_status' => $company->activity_status->value,
-                'legal_name' => $company->legal_name,
+                'origin_ref' => $company->originRef,
+                'discovery_wave' => $company->discoveryWave,
+                'employee_range' => $company->employeeRange->value,
+                'team_size_observed' => $company->teamSizeObserved,
+                'has_decision_maker' => $company->hasDecisionMaker,
+                'needs_research' => $company->needsResearch,
+                'activity_status' => $company->activityStatus->value,
+                'legal_name' => $company->legalName,
                 'city' => $company->city,
-                'founded_year' => $company->founded_year,
+                'founded_year' => $company->foundedYear,
                 'services' => $company->services,
                 'sectors' => $company->sectors,
             ],
-            postings: $company->postings->map(static fn ($posting): array => [
+            postings: array_map(static fn (JobPosting $posting): array => [
                 'uuid' => $posting->uuid,
                 'title' => $posting->title,
                 'status' => $posting->status->value,
-                'source_url' => $posting->source_url,
-            ])->all(),
+                'source_url' => $posting->sourceUrl,
+            ], $postings),
             score: $score === null ? null : [
-                'subscores' => $score->subscores ?? [],
-                'lead_score' => $score->lead_score,
+                'subscores' => $score->subscores,
+                'lead_score' => $score->leadScore,
                 'confidence' => $score->confidence,
                 'tier' => $score->tier->value,
-                'discard_reason' => $score->discard_reason?->value,
-                'rules_version' => $score->rules_version,
+                'discard_reason' => $score->discardReason?->value,
+                'rules_version' => $score->rulesVersion,
             ],
-            reasons: $score === null ? [] : $score->reasons->map(static fn ($reason): array => [
-                'points' => $reason->points,
-                'explanation' => $reason->explanation,
-                'signal_key' => $reason->signal?->signal_key,
-                'evidence_url' => $reason->signal?->evidence_url,
-                'evidence_excerpt' => $reason->signal?->evidence_excerpt,
-            ])->all(),
-            decisors: $company->contacts->map(
-                static fn ($contact): ContactData => ContactData::fromModel($contact),
-            )->all(),
+            reasons: $score === null ? [] : array_map(static fn (array $reason): array => [
+                'points' => $reason['points'],
+                'explanation' => $reason['explanation'],
+                'signal_key' => $reason['signal_key'],
+                'evidence_url' => $reason['evidence_url'],
+                'evidence_excerpt' => $reason['evidence_excerpt'],
+            ], $score->reasons),
+            decisors: array_map(ContactData::fromEntity(...), $contacts),
             channels: array_map(
-                static fn (array $ranked): array => $ranked + [
-                    'audience' => $channelAudience->get($ranked['uuid'])?->audience?->value,
-                    'evidence_url' => $channelAudience->get($ranked['uuid'])?->evidence_url,
-                ],
+                static function (array $ranked) use ($channelsByUuid): array {
+                    $channel = $ranked['uuid'] === null ? null : ($channelsByUuid[$ranked['uuid']] ?? null);
+
+                    return $ranked + [
+                        'audience' => $channel?->audience?->value,
+                        'evidence_url' => $channel?->evidenceUrl,
+                    ];
+                },
                 $advice['ranked'],
             ),
-            outreaches: $company->outreaches->map(
-                static fn ($outreach): OutreachData => OutreachData::fromModel($outreach, $company->uuid),
-            )->all(),
-            coldEmailAllowed: (bool) $advice['cold_email_allowed'],
-            employmentApplication: (bool) $advice['employment_application'],
+            outreaches: array_map(OutreachData::fromEntity(...), $this->outreaches->forCompany($company->id)),
+            coldEmailAllowed: $advice['cold_email_allowed'],
+            employmentApplication: $advice['employment_application'],
         );
-    }
-
-    private function dgcListed(ScoutCompanyEloquentModel $company): bool
-    {
-        return ScoutSuppressionEloquentModel::query()
-            ->where('source', 'dgc_list')
-            ->where(function ($query) use ($company): void {
-                $query->where('canonical_domain', $company->canonical_domain);
-
-                if ($company->tax_id !== null) {
-                    $query->orWhere('tax_id', $company->tax_id);
-                }
-
-                $query->orWhere('name', $company->name);
-            })
-            ->exists();
-    }
-
-    private function dgcListStale(): bool
-    {
-        $latest = ScoutSuppressionEloquentModel::query()
-            ->where('source', 'dgc_list')
-            ->max('created_at');
-
-        return $latest === null || $latest < now()->subMonths(3)->toDateTimeString();
     }
 }

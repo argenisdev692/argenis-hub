@@ -15,7 +15,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Modules\LeadScout\Application\Commands\IngestSourceHandler;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloquentModel;
 
 /**
  * Async source ingest (queue `lead-scout`). Idempotent per run; the
@@ -28,11 +27,11 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloq
 #[Backoff([30, 120, 300])]
 final class IngestSourceJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, ReportsPipelineFailure, SerializesModels;
 
     public function __construct(public readonly string $sourceUuid) {}
 
-    #[\NoDiscard('Ingest counts must be captured')]
+    #[\NoDiscard('The running-marker key must be used')]
     public static function runningKey(string $sourceUuid): string
     {
         return "scout:source:running:{$sourceUuid}";
@@ -43,18 +42,12 @@ final class IngestSourceJob implements ShouldQueue
      */
     public function handle(IngestSourceHandler $ingest): array
     {
-        $source = ScoutSourceEloquentModel::query()->where('uuid', $this->sourceUuid)->first();
-
-        if ($source === null) {
-            return ['created' => 0, 'linked' => 0, 'irrelevant' => 0, 'suppressed' => 0, 'expired' => 0];
-        }
-
-        Cache::put(self::runningKey($source->uuid), true, now()->addMinutes(30));
+        Cache::put(self::runningKey($this->sourceUuid), true, now()->addMinutes(30));
 
         try {
-            return $ingest->handle($source);
+            return $ingest->handle($this->sourceUuid);
         } finally {
-            Cache::forget(self::runningKey($source->uuid));
+            Cache::forget(self::runningKey($this->sourceUuid));
         }
     }
 }

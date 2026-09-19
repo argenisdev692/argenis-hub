@@ -6,6 +6,7 @@ namespace Modules\Cvs\Application\DTOs;
 
 use Modules\Cvs\Domain\Enums\CvFileType;
 use Modules\Cvs\Domain\Enums\CvNiche;
+use Modules\Cvs\Domain\Enums\CvSource;
 use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
@@ -30,6 +31,10 @@ final class CvData extends Data
         public readonly bool $isPrimary,
         public readonly CvFileType $fileType,
         public readonly string $originalFilename,
+        public readonly CvSource $source,
+        public readonly ?string $language,
+        public readonly ?string $parentCvUuid,
+        public readonly ?string $studioVersionUuid,
         public readonly ?string $ownerName,
         public readonly ?string $downloadUrl,
         public readonly ?string $createdAt,
@@ -46,6 +51,10 @@ final class CvData extends Data
             isPrimary: $cv->is_primary,
             fileType: $cv->file_type,
             originalFilename: $cv->original_filename,
+            source: $cv->source,
+            language: $cv->language,
+            parentCvUuid: $cv->parent_cv_uuid,
+            studioVersionUuid: $cv->studio_version_uuid,
             ownerName: self::ownerName($cv),
             downloadUrl: $downloadUrl,
             createdAt: $cv->created_at?->toIso8601String(),

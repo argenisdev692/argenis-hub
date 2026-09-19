@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\DTOs;
 
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachEloquentModel;
+use Modules\LeadScout\Domain\Entities\Opportunity;
+use Modules\LeadScout\Domain\Entities\Outreach;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -37,36 +38,32 @@ final class OutreachData extends Data
         public readonly array $opportunities = [],
     ) {}
 
-    public static function fromModel(ScoutOutreachEloquentModel $outreach, string $companyUuid): self
+    public static function fromEntity(Outreach $outreach): self
     {
-        $channel = $outreach->relationLoaded('contactChannel') ? $outreach->contactChannel : null;
-
         return new self(
             uuid: $outreach->uuid,
-            companyUuid: $companyUuid,
+            companyUuid: $outreach->companyUuid,
             stage: $outreach->stage->value,
-            sendMedium: $outreach->send_medium?->value,
-            outreachKind: $outreach->outreach_kind?->value,
-            senderKind: $outreach->sender_kind,
+            sendMedium: $outreach->sendMedium?->value,
+            outreachKind: $outreach->outreachKind?->value,
+            senderKind: $outreach->senderKind,
             variant: $outreach->variant?->value,
-            draftBody: $outreach->draft_body,
-            aiProvider: $outreach->ai_provider,
-            aiModel: $outreach->ai_model,
-            channelWarning: $outreach->channel_warning,
-            legalRuleStatus: $outreach->legal_rule_status?->value,
-            sentAt: $outreach->sent_at?->toIso8601String(),
-            replyOutcome: $outreach->reply_outcome?->value,
-            stageChangedAt: $outreach->stage_changed_at?->toIso8601String(),
-            contactChannelId: $channel?->uuid,
-            opportunities: $outreach->relationLoaded('opportunities')
-                ? $outreach->opportunities->map(static fn ($opportunity): array => [
-                    'uuid' => $opportunity->uuid,
-                    'type' => $opportunity->type->value,
-                    'status' => $opportunity->status->value,
-                    'hours_per_month' => $opportunity->hours_per_month,
-                    'amount_cents' => $opportunity->amount_cents,
-                ])->all()
-                : [],
+            draftBody: $outreach->draftBody,
+            aiProvider: $outreach->aiProvider,
+            aiModel: $outreach->aiModel,
+            channelWarning: $outreach->channelWarning,
+            legalRuleStatus: $outreach->legalRuleStatus?->value,
+            sentAt: $outreach->sentAt?->format(DATE_ATOM),
+            replyOutcome: $outreach->replyOutcome?->value,
+            stageChangedAt: $outreach->stageChangedAt?->format(DATE_ATOM),
+            contactChannelId: $outreach->contactChannelUuid,
+            opportunities: array_map(static fn (Opportunity $opportunity): array => [
+                'uuid' => $opportunity->uuid,
+                'type' => $opportunity->type->value,
+                'status' => $opportunity->status->value,
+                'hours_per_month' => $opportunity->hoursPerMonth,
+                'amount_cents' => $opportunity->amountCents,
+            ], $outreach->opportunities),
         );
     }
 }

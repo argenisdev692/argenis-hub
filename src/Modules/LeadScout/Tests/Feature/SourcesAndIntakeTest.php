@@ -7,6 +7,7 @@ use Database\Seeders\LeadScoutSourcesSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Modules\LeadScout\Application\Commands\ImportLeadsHandler;
 use Modules\LeadScout\Domain\Exceptions\SuppressedException;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachEloquentModel;
@@ -146,4 +147,41 @@ it('imports an icp csv with history and reports bad rows', function (): void {
         ->and(ScoutOutreachStageEventEloquentModel::query()->count())->toBe(1);
 
     unlink($path);
+});
+
+it('keeps the reviewed-terms date when only the frequency changes', function (): void {
+    $admin = sourcesAdmin();
+    $this->seed(LeadScoutSourcesSeeder::class);
+    $uuid = ScoutSourceEloquentModel::query()->where('name', 'LaraJobs')->value('uuid');
+
+    $this->actingAs($admin)
+        ->patchJson("/data/admin/lead-scout/sources/{$uuid}", ['status' => 'active', 'terms_reviewed_at' => '2026-09-01T10:00:00+00:00'])
+        ->assertOk();
+
+    $this->actingAs($admin)
+        ->patchJson("/data/admin/lead-scout/sources/{$uuid}", ['frequency_minutes' => 720])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'active')
+        ->assertJsonPath('data.frequency_minutes', 720);
+
+    expect(ScoutSourceEloquentModel::query()->where('uuid', $uuid)->value('terms_reviewed_at'))->not->toBeNull();
+});
+
+it('imports prior contacts with the stage they reached and reports each skipped row', function (): void {
+    $admin = sourcesAdmin();
+
+    $report = app(ImportLeadsHandler::class)->handle([
+        ['Prior Agency', 'https://prior-agency.example', 'phase zero', '2026-09-01 10:00:00', 'email', 'stack', 'positive'],
+        ['Bad Date', 'https://bad-date.example', null, 'not-a-date'],
+        ['Only name'],
+    ], $admin->id, 'icp.csv');
+
+    $outreach = ScoutOutreachEloquentModel::query()->sole();
+
+    expect($report)->toMatchArray(['created' => 2, 'merged' => 0, 'invalid' => 2, 'suppressed' => 0, 'outreaches' => 1])
+        ->and($report['warnings'])->toHaveCount(2)
+        ->and($outreach->stage->value)->toBe('positive')
+        ->and($outreach->sent_at?->format('Y-m-d'))->toBe('2026-09-01')
+        ->and(ScoutOutreachStageEventEloquentModel::query()->where('outreach_id', $outreach->id)->pluck('to_stage')->map->value->all())
+        ->toBe(['sent', 'positive']);
 });

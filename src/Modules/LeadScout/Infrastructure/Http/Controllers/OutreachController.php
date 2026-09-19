@@ -19,10 +19,9 @@ final readonly class OutreachController
     public function update(Request $request, string $uuid, UpdateOutreachData $data, UpdateOutreachStageHandler $update): JsonResponse
     {
         $result = $update->handle($uuid, $data, (int) $request->user()->id);
-        $result['outreach']->loadMissing(['company', 'contactChannel']);
 
         return response()->json([
-            'data' => OutreachData::fromModel($result['outreach'], $result['outreach']->company->uuid),
+            'data' => OutreachData::fromEntity($result['outreach']),
             'meta' => [
                 'daily_sent' => $result['daily_sent'],
                 'daily_limit_warning' => $result['daily_limit_warning'],

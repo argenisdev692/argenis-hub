@@ -25,6 +25,8 @@ export function buildCvQueryParams(filters: CvFilters): CvQueryParams {
         search: filters.search || undefined,
         status: filters.status,
         niche: filters.niche || undefined,
+        source: filters.source || undefined,
+        language: filters.language || undefined,
         date_from: filters.date_from ?? undefined,
         date_to: filters.date_to ?? undefined,
     };

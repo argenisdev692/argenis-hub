@@ -18,4 +18,10 @@ interface SearchPort
      * @return list<SearchResult>
      */
     public function search(SearchQuery $query): array;
+
+    /**
+     * Credits the companies a query surfaced, for the per-query
+     * effectiveness metric (spec US-7, T066).
+     */
+    public function recordNewCompanies(SearchQuery $query, int $count): void;
 }

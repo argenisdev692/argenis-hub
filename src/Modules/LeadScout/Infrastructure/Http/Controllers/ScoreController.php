@@ -19,18 +19,6 @@ final readonly class ScoreController
      */
     public function rescore(string $uuid, ScoreCompanyHandler $score): JsonResponse
     {
-        $result = $score->handle($uuid);
-
-        $reasons = $result->reasons()
-            ->orderBy('id')
-            ->get(['signal_id', 'points', 'explanation'])
-            ->map(static fn ($reason): array => [
-                'signal_key' => $reason->signal?->signal_key ?? 'unconfirmed_tech',
-                'points' => $reason->points,
-                'explanation' => $reason->explanation,
-            ])
-            ->all();
-
-        return response()->json(['data' => ScoreResultData::fromResult($result, $uuid, $reasons)]);
+        return response()->json(['data' => ScoreResultData::fromEntity($score->handle($uuid), $uuid)]);
     }
 }

@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Fetching;
 
 use Modules\CvJobStudio\Domain\Ports\PostingTextFetcherPort;
-use Modules\CvJobStudio\Domain\Services\NeverFetchHostPolicy;
-use Modules\CvJobStudio\Domain\Services\OutboundUrlGuard;
 use Modules\CvJobStudio\Domain\Services\RobotsTxtPolicy;
 use Shared\Infrastructure\Research\FirecrawlClientInterface;
 
@@ -25,7 +23,6 @@ final readonly class FirecrawlPostingFetcher implements PostingTextFetcherPort
         private FirecrawlClientInterface $firecrawl,
         private OutboundUrlGuard $guard,
         private RobotsTxtPolicy $robots,
-        private NeverFetchHostPolicy $access,
     ) {
         $configured = (string) config('services.firecrawl.proxy', self::PROXY_MODE);
 
@@ -51,6 +48,6 @@ final readonly class FirecrawlPostingFetcher implements PostingTextFetcherPort
             return null;
         }
 
-        return ['text' => $text, 'completeness' => 'full', 'cost_micros' => 0];
+        return ['text' => $text, 'completeness' => 'full', 'cost_micros' => (int) round((float) config('cv-job-studio.firecrawl_scrape_eur', 0) * 1_000_000)];
     }
 }

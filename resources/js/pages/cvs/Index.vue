@@ -33,6 +33,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
 import CvFormDialog from '@/modules/cvs/components/CvFormDialog.vue';
 import CvNicheBadge from '@/modules/cvs/components/CvNicheBadge.vue';
+import CvSourceBadge from '@/modules/cvs/components/CvSourceBadge.vue';
 import CvStatusBadge from '@/modules/cvs/components/CvStatusBadge.vue';
 import CvSummaryList from '@/modules/cvs/components/CvSummaryList.vue';
 import { useCvMutations } from '@/modules/cvs/composables/useCvMutations';
@@ -40,10 +41,12 @@ import { defaultCvFilters, useCvs } from '@/modules/cvs/composables/useCvs';
 import { buildCvQueryParams } from '@/modules/cvs/helpers/buildCvQueryParams';
 import {
     CV_NICHE_OPTIONS,
+    CV_SOURCE_OPTIONS,
     cvFileTypePresentation,
     cvLabel,
     formatDate,
     isCvNiche,
+    isCvSource,
 } from '@/modules/cvs/helpers/cvPresentation';
 import type { Cv, CvStatusFilter } from '@/modules/cvs/types';
 import { exportMethod, index, show } from '@/routes/cvs';
@@ -146,6 +149,27 @@ function onNicheChange(value: FilterSelectModel): void {
     });
 }
 
+const languageOptions: FilterSelectOption[] = [
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Español' },
+    { value: 'pt-PT', label: 'Português (PT)' },
+];
+
+/** Clearing the source drops the param entirely — "any source". */
+function onSourceChange(value: FilterSelectModel): void {
+    applyFacet(() => {
+        filters.value.source = isCvSource(value) ? value : '';
+    });
+}
+
+/** Clearing the language drops the param entirely — "any language". */
+function onLanguageChange(value: FilterSelectModel): void {
+    applyFacet(() => {
+        filters.value.language =
+            typeof value === 'string' && value !== '' ? value : null;
+    });
+}
+
 const columns: DataTableColumn<Cv>[] = [
     {
         key: 'title',
@@ -153,6 +177,13 @@ const columns: DataTableColumn<Cv>[] = [
         align: 'left',
     },
     { key: 'niche', header: 'Niche' },
+    { key: 'source', header: 'Source', hideOnMobile: true },
+    {
+        key: 'language',
+        header: 'Lang',
+        value: (row) => row.language ?? '—',
+        hideOnMobile: true,
+    },
     {
         key: 'file',
         header: 'File',
@@ -330,6 +361,22 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <FilterSelect
                     class="w-40"
+                    :options="CV_SOURCE_OPTIONS"
+                    placeholder="Any source"
+                    :model-value="filters.source || null"
+                    @update:model-value="onSourceChange"
+                />
+
+                <FilterSelect
+                    class="w-40"
+                    :options="languageOptions"
+                    placeholder="Any language"
+                    :model-value="filters.language"
+                    @update:model-value="onLanguageChange"
+                />
+
+                <FilterSelect
+                    class="w-40"
                     :options="statusOptions"
                     :clearable="false"
                     :model-value="filters.status"
@@ -405,6 +452,10 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <template #[`cell:niche`]="{ row }">
                     <CvNicheBadge :niche="row.niche" />
+                </template>
+
+                <template #[`cell:source`]="{ row }">
+                    <CvSourceBadge :source="row.source" />
                 </template>
 
                 <template #[`cell:file`]="{ row }">

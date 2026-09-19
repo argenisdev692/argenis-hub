@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Infrastructure\JobSources;
 
 use Illuminate\Support\Facades\Http;
-use Modules\LeadScout\Application\DTOs\RawPostingData;
+use Modules\LeadScout\Domain\Entities\Source;
 use Modules\LeadScout\Domain\Enums\SourceType;
 use Modules\LeadScout\Domain\Ports\JobSourcePort;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloquentModel;
+use Modules\LeadScout\Domain\ValueObjects\RawPosting;
 
 /**
  * Arbeitnow public job-board API (spec US-2, research R5). Follows `links`
@@ -17,12 +17,12 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloq
  */
 final readonly class ArbeitnowApiSource implements JobSourcePort
 {
-    public function supports(ScoutSourceEloquentModel $source): bool
+    public function supports(Source $source): bool
     {
         return $source->type === SourceType::JobApi && $source->name === 'Arbeitnow';
     }
 
-    public function fetchSince(ScoutSourceEloquentModel $source, ?string $cursor): iterable
+    public function fetchSince(Source $source, ?string $cursor): iterable
     {
         $base = (string) config('lead-scout.job_sources.arbeitnow_url', 'https://www.arbeitnow.com/api/job-board-api');
         $maxPages = (int) config('lead-scout.job_sources.arbeitnow_max_pages', 4);
@@ -50,11 +50,11 @@ final readonly class ArbeitnowApiSource implements JobSourcePort
     /**
      * @param  array<string, mixed>  $job
      */
-    public static function fromApiJob(array $job): RawPostingData
+    public static function fromApiJob(array $job): RawPosting
     {
         $types = implode(' ', array_map(strtolower(...), (array) ($job['job_types'] ?? [])));
 
-        return new RawPostingData(
+        return new RawPosting(
             title: (string) ($job['title'] ?? 'Untitled'),
             companyName: (string) ($job['company_name'] ?? 'Unknown'),
             location: isset($job['location']) ? (string) $job['location'] : null,

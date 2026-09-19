@@ -4,32 +4,45 @@ import { toast } from 'vue-sonner';
 import { HttpError, httpJson } from '@/lib/http';
 import { toUrl } from '@/lib/utils';
 import { report, show, store } from '@/routes/cv-studio/runs';
-import type { StudioRun } from '../types';
+import type { StudioRun, StudioRunTerminalStatus } from '../types';
 
 export const STUDIO_RUNS_KEY = ['studio-runs'];
 
-const ACTIVE_STATUSES = ['queued', 'harvesting', 'harvested', 'extracted'];
+const TERMINAL_STATUSES: readonly StudioRunTerminalStatus[] = [
+    'finished',
+    'failed',
+];
+
+export function isTerminalRunStatus(
+    status: string,
+): status is StudioRunTerminalStatus {
+    return (TERMINAL_STATUSES as readonly string[]).includes(status);
+}
 
 /**
- * Run start + polled status. A 3s interval refetches while the run is
- * active and stops when it finishes; the timer is cleaned up with
- * `onWatcherCleanup`, and the report query stays disabled until then, so a
- * zero-match run still produces its report (SC-1) without extra requests.
+ * Polled run status: a 3s refetch while the run is not finished/failed.
+ *
+ * The watcher tracks the fetched payload (a new object on every response),
+ * not `run.status` — a status that stays `harvesting` across two polls would
+ * not re-trigger a status watcher, and the page would freeze mid-run. The
+ * timer is cleared with `onWatcherCleanup` on every new payload and unmount.
  */
 export function useRunStatus(uuid: string) {
     const { data, refetch, ...query } = useQuery<{ run: StudioRun }>({
-        key: () => ['studio-runs', uuid],
+        key: () => [...STUDIO_RUNS_KEY, uuid],
         query: () => httpJson<{ run: StudioRun }>(toUrl(show(uuid))),
-        staleTime: 1000 * 5,
+        staleTime: 1000 * 2,
         gcTime: 1000 * 60 * 5,
     });
 
     const run = computed(() => data.value?.run);
 
     watch(
-        () => run.value?.status,
-        (status) => {
-            if (!status || !ACTIVE_STATUSES.includes(status)) {
+        data,
+        (payload) => {
+            const status = payload?.run.status;
+
+            if (!status || isTerminalRunStatus(status)) {
                 return;
             }
 

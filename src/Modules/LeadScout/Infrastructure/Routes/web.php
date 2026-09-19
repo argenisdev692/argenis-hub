@@ -24,12 +24,12 @@ use Modules\LeadScout\Infrastructure\Http\Controllers\SourceController;
 use Modules\LeadScout\Infrastructure\Http\Controllers\SuppressionController;
 
 // Session-authenticated JSON surface (plan §5). No api.php in the MVP.
-// Controllers land per phase; routes are added here as they do.
-Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('lead-scout')->name('lead-scout.')->group(function (): void {
+// The provider already wraps this file in the `web` middleware group.
+Route::middleware(['auth', 'throttle:60,1'])->prefix('lead-scout')->name('lead-scout.')->group(function (): void {
     Route::get('/', [LeadPageController::class, 'index'])->middleware('permission:VIEW_ANY_LEAD_SCOUT')->name('index');
 });
 
-Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('data/admin/lead-scout')->name('lead-scout.')->group(function (): void {
+Route::middleware(['auth', 'throttle:60,1'])->prefix('data/admin/lead-scout')->name('lead-scout.')->group(function (): void {
     Route::get('/status', LeadScoutStatusController::class)
         ->middleware('permission:VIEW_ANY_LEAD_SCOUT')
         ->name('status');

@@ -26,6 +26,9 @@ export type CvNiche = Modules.Cvs.Domain.Enums.CvNiche;
 /** Derived from the uploaded file's extension by `CvFileType::fromExtension()`. */
 export type CvFileType = Modules.Cvs.Domain.Enums.CvFileType;
 
+/** Which pipeline produced the row: direct `upload`, promoted Studio version (`studio`), or agent-chat paste (`chat`). */
+export type CvSource = Modules.Cvs.Domain.Enums.CvSource;
+
 /**
  * One page of the list, exactly as `CvController::index()` serializes it.
  *
@@ -64,6 +67,9 @@ export type CvStatusFilter = 'all' | 'active' | 'suspended';
 /** The niche facet, where the empty string means "no niche filter". */
 export type CvNicheFilter = '' | CvNiche;
 
+/** The source facet, where the empty string means "no source filter". */
+export type CvSourceFilter = '' | CvSource;
+
 /**
  * The query params `GET /cvs` accepts.
  *
@@ -81,6 +87,10 @@ export type CvFilters = {
     search: string;
     status: CvStatusFilter;
     niche: CvNicheFilter;
+    /** Which pipeline produced the row — `$source`. Empty means unfiltered. */
+    source: CvSourceFilter;
+    /** Version language (`en`, `es`, `pt-PT`) — `$language`. Null means unfiltered. */
+    language: string | null;
     /** Inclusive `created_at` lower bound, `YYYY-MM-DD` — `$dateFrom`. */
     date_from: string | null;
     /** Inclusive `created_at` upper bound, `YYYY-MM-DD` — `$dateTo`. */
@@ -104,5 +114,7 @@ export type CvWritePayload = {
     niche: CvNiche;
     is_primary: boolean;
     file?: File;
+    /** Pasted Markdown alternative to `file` (agent chat) — `UploadCvData::$content`. */
+    content?: string;
     _method?: 'put';
 };

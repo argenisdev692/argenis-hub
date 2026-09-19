@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Modules\LeadScout\Application\DTOs\SuppressData;
+use Modules\LeadScout\Domain\Entities\Suppression;
 use Modules\LeadScout\Domain\Enums\SuppressionSource;
+use Modules\LeadScout\Domain\Exceptions\InvalidInputException;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
 use Modules\LeadScout\Domain\ValueObjects\CanonicalDomain;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressionEloquentModel;
 
 /**
  * Manual suppression (spec FR-17, T029). Idempotent: re-suppressing the
@@ -17,7 +17,9 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressio
  */
 final readonly class SuppressCompanyHandler
 {
-    public function handle(SuppressData $data): ScoutSuppressionEloquentModel
+    public function __construct(private SuppressionRepositoryPort $suppressions) {}
+
+    public function handle(SuppressData $data): Suppression
     {
         // Bare domains travel the same normalization as posting URLs
         // (scheme assumed, `www.` stripped) so `WWW.Acme.ES` and
@@ -31,21 +33,13 @@ final readonly class SuppressCompanyHandler
         try {
             $domain = CanonicalDomain::fromUrl($input)->value;
         } catch (\InvalidArgumentException $e) {
-            throw ValidationException::withMessages(['domain' => $e->getMessage()]);
+            throw InvalidInputException::withMessages(['domain' => $e->getMessage()]);
         }
 
-        return DB::transaction(static function () use ($data, $domain): ScoutSuppressionEloquentModel {
-            $existing = ScoutSuppressionEloquentModel::query()->where('canonical_domain', $domain)->first();
-
-            if ($existing !== null) {
-                return $existing;
-            }
-
-            return ScoutSuppressionEloquentModel::query()->create([
-                'canonical_domain' => $domain,
-                'source' => SuppressionSource::Manual->value,
-                'reason' => mb_substr(trim($data->reason), 0, 500),
-            ]);
-        });
+        return $this->suppressions->suppressDomain(
+            $domain,
+            SuppressionSource::Manual,
+            mb_substr(trim($data->reason), 0, 500),
+        );
     }
 }

@@ -85,7 +85,7 @@ const correlation = computed(
                         {{ row.name }}
                         <span
                             v-if="row.covered"
-                            class="text-xs text-emerald-600 dark:text-emerald-400"
+                            class="text-xs text-success"
                         >
                             · covered
                         </span>

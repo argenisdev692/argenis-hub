@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Modules\LeadScout\Domain\Enums\DecisionOutcome;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * Decision rule fixed BEFORE the first measured contact (spec US-6 CA-3,
@@ -34,7 +36,7 @@ use Modules\LeadScout\Domain\Enums\DecisionOutcome;
 ])]
 final class ScoutDecisionRuleEloquentModel extends Model
 {
-    use HasUuids;
+    use HasUuids, LogsActivity;
 
     /** @var list<string> */
     protected $hidden = ['id'];
@@ -61,5 +63,14 @@ final class ScoutDecisionRuleEloquentModel extends Model
             'period_starts_at' => 'date',
             'period_ends_at' => 'date',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['sample_size', 'window_days', 'thresholds', 'locked_at', 'result'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('lead-scout.decision-rule');
     }
 }

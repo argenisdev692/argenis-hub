@@ -18,8 +18,6 @@ use Modules\LeadScout\Application\Commands\EnrichCompanyHandler;
 /**
  * Company enrichment (queue `lead-scout`). Idempotent — re-runs reuse
  * fresh cached pages and never duplicate stored rows.
- *
- * @return array{status: string, pages: int}
  */
 #[Queue('lead-scout')]
 #[Tries(2)]
@@ -27,10 +25,13 @@ use Modules\LeadScout\Application\Commands\EnrichCompanyHandler;
 #[Backoff([60, 300])]
 final class EnrichCompanyJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, ReportsPipelineFailure, SerializesModels;
 
     public function __construct(public readonly string $companyUuid) {}
 
+    /**
+     * @return array{status: string, pages: int}
+     */
     public function handle(EnrichCompanyHandler $enrich): array
     {
         return $enrich->handle($this->companyUuid);

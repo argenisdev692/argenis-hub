@@ -16,11 +16,13 @@ use Modules\CvJobStudio\Application\Commands\DismissRequirementHandler;
 use Modules\CvJobStudio\Application\Commands\IngestPostingHandler;
 use Modules\CvJobStudio\Application\Commands\RestorePostingHandler;
 use Modules\CvJobStudio\Application\Commands\ScorePostingHandler;
+use Modules\CvJobStudio\Application\Commands\TailorCvHandler;
 use Modules\CvJobStudio\Application\DTOs\IngestPostingData;
 use Modules\CvJobStudio\Application\DTOs\ScorePostingInputData;
 use Modules\CvJobStudio\Application\DTOs\StudioPostingData;
 use Modules\CvJobStudio\Application\DTOs\StudioPostingFilterData;
 use Modules\CvJobStudio\Application\DTOs\StudioScoreData;
+use Modules\CvJobStudio\Application\DTOs\TailorCvData;
 use Modules\CvJobStudio\Application\Queries\GetPostingHandler;
 use Modules\CvJobStudio\Application\Queries\ListPostingsHandler;
 use Shared\Application\DTOs\BulkUuidsData;
@@ -107,6 +109,27 @@ final readonly class StudioPostingController
         $result = $score->handle($uuid, $input, $this->ownerId($request));
 
         return response()->json(['data' => StudioScoreData::fromModel($result)], 200);
+    }
+
+    /**
+     * Agent-chat tailoring: the panel sends a confirmed structure UUID plus
+     * language and operator notes — CV content always resolves server-side,
+     * never from the client.
+     */
+    public function tailor(Request $request, string $uuid, TailorCvData $data, TailorCvHandler $tailor): JsonResponse
+    {
+        /** @var array{structure_uuid?: string} $validated */
+        $validated = $request->validate(['structure_uuid' => ['required', 'string', 'uuid']]);
+
+        $version = $tailor->handle(
+            $uuid,
+            $validated['structure_uuid'],
+            $data->language,
+            $this->ownerId($request),
+            $data->notes,
+        );
+
+        return response()->json(['data' => ['uuid' => $version->uuid]], 201);
     }
 
     public function destroy(Request $request, string $uuid, DeletePostingHandler $delete): RedirectResponse|JsonResponse

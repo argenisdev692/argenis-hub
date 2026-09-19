@@ -84,6 +84,7 @@ function scoringRules(): array
     return [
         'weights' => ['technical' => 20, 'commercial' => 20, 'recurrent' => 20, 'vitality' => 15, 'communication' => 10, 'geo_contract' => 10, 'remote' => 5],
         'inference_weight' => 0.6,
+        'overlap_hours' => ['ES' => 8, 'NL' => 8],
     ];
 }
 

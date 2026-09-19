@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\LeadScout\Domain\Enums\OpportunityStatus;
 use Modules\LeadScout\Domain\Enums\OpportunityType;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * Revenue attached to an outreach (spec US-6 CA-2: hours and euros billed).
@@ -39,7 +41,7 @@ use Modules\LeadScout\Domain\Enums\OpportunityType;
 ])]
 final class ScoutOpportunityEloquentModel extends Model
 {
-    use HasUuids;
+    use HasUuids, LogsActivity;
 
     /** @var list<string> */
     protected $hidden = ['id'];
@@ -74,5 +76,14 @@ final class ScoutOpportunityEloquentModel extends Model
     public function outreach(): BelongsTo
     {
         return $this->belongsTo(ScoutOutreachEloquentModel::class, 'outreach_id');
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['type', 'status', 'hours_per_month', 'hourly_rate_cents', 'amount_cents', 'currency', 'started_at', 'ended_at'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('lead-scout.opportunity');
     }
 }

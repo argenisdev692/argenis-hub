@@ -54,6 +54,9 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cv-studio')->name('
     Route::post('/postings/{uuid}/rescore', [StudioPostingController::class, 'rescore'])
         ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.rescore');
 
+    Route::post('/postings/{uuid}/tailor', [StudioPostingController::class, 'tailor'])
+        ->middleware('permission:CREATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.tailor');
+
     Route::delete('/postings/{uuid}', [StudioPostingController::class, 'destroy'])
         ->middleware('permission:DELETE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.destroy');
 
@@ -73,7 +76,7 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cv-studio')->name('
         ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.unlink');
 
     Route::post('/postings/{uuid}/requirements/{ruuid}/dismiss', [StudioPostingController::class, 'dismissRequirement'])
-        ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.requirements.dismiss');
+        ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid(['uuid', 'ruuid'])->name('postings.requirements.dismiss');
 
     Route::get('/references', [StudioReferenceController::class, 'index'])
         ->middleware('permission:VIEW_ANY_STUDIO_POSTINGS')->name('references.index');
@@ -134,4 +137,7 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cv-studio')->name('
 
     Route::get('/versions/{uuid}/export', [StudioCvController::class, 'export'])
         ->middleware('permission:EXPORT_STUDIO_POSTINGS')->whereUuid('uuid')->name('versions.export');
+
+    Route::post('/versions/{uuid}/promote', [StudioCvController::class, 'promote'])
+        ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('versions.promote');
 });

@@ -12,13 +12,16 @@ use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\TransactionPort;
 use Modules\CvJobStudio\Domain\Services\JdTextTrimmer;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
+use Throwable;
 
 /**
  * Requirement extraction (T-057): runs on JD text trimmed by `JdTextTrimmer`,
  * skipped entirely when requirements already exist for the same
  * `source_text_hash` — the same text is extracted exactly once. Stores
  * `extracted_by_provider`, `extracted_by_model` and `prompt_version` per row.
- * Tags/nature are validated against enums on the way out.
+ * Tags/nature are validated against enums on the way out. Requirements are
+ * embedded best-effort after commit — an embedding outage delays RAG,
+ * never the extraction (NFR-17).
  */
 final readonly class ExtractRequirementsHandler
 {
@@ -27,6 +30,7 @@ final readonly class ExtractRequirementsHandler
         private JdTextTrimmer $trimmer,
         private StudioPostingRepositoryPort $postings,
         private TransactionPort $db,
+        private StoreEmbeddingHandler $embeddings,
     ) {}
 
     /** @return list<StudioRequirementEloquentModel> */
@@ -52,9 +56,9 @@ final readonly class ExtractRequirementsHandler
             return $existing->all();
         }
 
-        $extracted = $this->extractor->extract($this->trimmer->trim($text, $maxInputChars));
+        $extracted = $this->extractor->extract($this->trimmer->trim($text, $maxInputChars), $userId);
 
-        return $this->db->atomic(function () use ($posting, $userId, $hash, $extracted): array {
+        $rows = $this->db->atomic(function () use ($posting, $userId, $hash, $extracted): array {
             $rows = [];
 
             foreach ($extracted['requirements'] as $requirement) {
@@ -81,5 +85,21 @@ final readonly class ExtractRequirementsHandler
 
             return $rows;
         });
+
+        foreach ($rows as $row) {
+            $text = trim((string) ($row->raw_text !== '' ? $row->raw_text : $row->canonical_name));
+
+            if ($text === '') {
+                continue;
+            }
+
+            try {
+                (void) $this->embeddings->handle('posting_requirement', $row->id, $text, $userId);
+            } catch (Throwable) {
+                break;
+            }
+        }
+
+        return $rows;
     }
 }

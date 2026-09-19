@@ -7,6 +7,7 @@ namespace Modules\LeadScout\Infrastructure\Ai;
 use Illuminate\Support\Facades\Log;
 use Modules\LeadScout\Domain\Enums\BudgetCategory;
 use Modules\LeadScout\Domain\Ports\AiModelCatalogPort;
+use Modules\LeadScout\Domain\Ports\DraftWriterPort;
 use Modules\LeadScout\Infrastructure\Budgets\BudgetLedger;
 use Shared\Infrastructure\AI\AIClientInterface;
 use Throwable;
@@ -16,7 +17,7 @@ use Throwable;
  * (or the selector override), fallback on failure, real usage priced.
  * Receives evidence + public proof summary only — never the CV (FR-35).
  */
-final readonly class LaravelAiDraftWriter
+final readonly class LaravelAiDraftWriter implements DraftWriterPort
 {
     public function __construct(
         private AIClientInterface $ai,

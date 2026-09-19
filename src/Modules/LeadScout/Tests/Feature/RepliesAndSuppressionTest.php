@@ -133,3 +133,17 @@ it('lifts suppressions only from console with evidence', function (): void {
 
     expect(ScoutSuppressionEloquentModel::query()->where('canonical_domain', 'vuelta.example')->exists())->toBeFalse();
 });
+
+it('keeps the reply date the operator entered', function (): void {
+    $admin = replyAdmin();
+    $outreach = sentOutreach(ScoutCompanyFactory::new()->spanishAgency()->create(), $admin);
+
+    $this->actingAs($admin)
+        ->postJson("/data/admin/lead-scout/outreaches/{$outreach->uuid}/reply", [
+            'outcome' => 'interested',
+            'replied_at' => '2026-09-01 10:30:00',
+        ])
+        ->assertOk();
+
+    expect($outreach->refresh()->replied_at?->format('Y-m-d H:i'))->toBe('2026-09-01 10:30');
+});

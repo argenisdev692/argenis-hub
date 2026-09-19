@@ -280,3 +280,30 @@ it('warns past fifteen manual sends a day', function (): void {
         ->assertJsonPath('meta.daily_limit_warning', true)
         ->assertJsonPath('meta.daily_sent', 17);
 });
+
+it('leaves no trace when a send is rejected for a missing legal acknowledgement', function (): void {
+    $admin = draftsAdmin();
+    $company = tierACompany();
+    $draft = ScoutOutreachFactory::new()->create([
+        'company_id' => $company->id,
+        'operator_id' => $admin->id,
+        'stage' => 'ready',
+    ]);
+    $channel = draftChannel($company);
+
+    $this->actingAs($admin)
+        ->patchJson("/data/admin/lead-scout/outreaches/{$draft->uuid}", [
+            'stage' => 'sent',
+            'contact_channel_id' => $channel->uuid,
+            'send_medium' => 'contact_form',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('acknowledge_pending_legal');
+
+    $draft->refresh();
+
+    expect($draft->stage->value)->toBe('ready')
+        ->and($draft->sent_at)->toBeNull()
+        ->and($draft->contact_channel_id)->toBeNull()
+        ->and($channel->refresh()->status->value)->toBe('active');
+});

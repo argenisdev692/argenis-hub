@@ -138,7 +138,10 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
     public function ingest(array $posting, ?string $text, array $requirements, array $verdicts): StudioPostingEloquentModel
     {
         return DB::transaction(static function () use ($posting, $text, $requirements, $verdicts): StudioPostingEloquentModel {
-            $model = StudioPostingEloquentModel::query()
+            // withTrashed: a soft-deleted posting still owns its URL (unique
+            // index). Re-discovery refreshes it but never resurrects it — the
+            // user deleted it on purpose; restore is an explicit action.
+            $model = StudioPostingEloquentModel::withTrashed()
                 ->ownedBy($posting['user_id'])
                 ->where('url_hash', $posting['url_hash'])
                 ->lockForUpdate()

@@ -13,6 +13,7 @@ use Modules\LeadScout\Domain\Services\DecisionRuleEvaluator;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOpportunityEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachEloquentModel;
+use Spatie\Activitylog\Models\Activity;
 
 uses(RefreshDatabase::class);
 
@@ -148,4 +149,25 @@ it('locks decision rules once and branches on the sample', function (): void {
         ->and($evaluator->evaluate($rule, 150, 2)['outcome']->value)->toBe('iterate')
         ->and($evaluator->evaluate($rule, 150, 5)['outcome']->value)->toBe('iterate')
         ->and($evaluator->evaluate($rule, 150, 8)['outcome']->value)->toBe('scale');
+});
+
+it('audits opportunity amounts in the activity log', function (): void {
+    $admin = funnelAdmin();
+    $outreach = sentOutreachFor(funnelCompany($admin), $admin);
+
+    $uuid = $this->actingAs($admin)
+        ->postJson("/data/admin/lead-scout/outreaches/{$outreach->uuid}/opportunities", [
+            'type' => 'retainer', 'hours_per_month' => 80, 'amount_cents' => 280000, 'status' => 'open',
+        ])
+        ->assertCreated()
+        ->json('data.uuid');
+
+    $this->actingAs($admin)
+        ->patchJson("/data/admin/lead-scout/opportunities/{$uuid}", ['status' => 'won'])
+        ->assertOk();
+
+    $logs = Activity::query()->where('log_name', 'lead-scout.opportunity')->oldest('id')->get();
+
+    expect($logs)->toHaveCount(2)
+        ->and($logs->last()->attribute_changes['attributes'])->toBe(['status' => 'won']);
 });

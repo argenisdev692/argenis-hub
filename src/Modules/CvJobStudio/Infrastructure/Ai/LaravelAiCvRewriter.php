@@ -12,11 +12,11 @@ final readonly class LaravelAiCvRewriter implements CvRewriterPort
 {
     public function __construct(private AiCallExecutor $calls) {}
 
-    public function rewrite(array $structure, array $protectedBlock, string $language): array
+    public function rewrite(array $structure, array $protectedBlock, string $language, int $userId): array
     {
         $prompt = json_encode(['structure' => $structure, 'protected_block' => $protectedBlock, 'language' => $language], JSON_THROW_ON_ERROR);
 
-        $result = $this->calls->call(AiPurpose::CvRewrite, RewriteCvAgent::class, $prompt, 0);
+        $result = $this->calls->call(AiPurpose::CvRewrite, RewriteCvAgent::class, $prompt, $userId);
 
         /** @var array<string, mixed> $data */
         $data = (array) $result['response'];

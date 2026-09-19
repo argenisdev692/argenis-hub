@@ -20,12 +20,12 @@ final readonly class ContactController
     {
         $contact = $upsert->handleByCompany($uuid, $data);
 
-        return response()->json(['data' => ContactData::fromModel($contact)], 201);
+        return response()->json(['data' => ContactData::fromEntity($contact)], 201);
     }
 
     public function update(UpsertContactData $data, string $uuid, UpsertContactHandler $upsert): JsonResponse
     {
-        return response()->json(['data' => ContactData::fromModel($upsert->handleUpdate($uuid, $data))]);
+        return response()->json(['data' => ContactData::fromEntity($upsert->handleUpdate($uuid, $data))]);
     }
 
     public function objection(string $uuid, ObjectContactHandler $object): Response

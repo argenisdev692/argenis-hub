@@ -13,7 +13,7 @@ use Modules\LeadScout\Domain\ValueObjects\CvSnapshot;
  */
 interface CvSourcePort
 {
-    public function primaryMarkdownCv(int $userId): ?CvSnapshot;
+    public function primaryImportableCv(int $userId): ?CvSnapshot;
 
     public function cvForUser(string $uuid, int $userId): ?CvSnapshot;
 

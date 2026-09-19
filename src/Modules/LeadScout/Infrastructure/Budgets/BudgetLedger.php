@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Modules\LeadScout\Domain\Enums\BudgetCategory;
 use Modules\LeadScout\Domain\Exceptions\BudgetExceededException;
+use Modules\LeadScout\Domain\Ports\BudgetLedgerPort;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutBudgetEloquentModel;
 
 /**
@@ -15,7 +16,7 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutBudgetEloq
  * (editable via PUT budgets); spend moves only through atomic increments
  * on every paid search/extraction/AI call.
  */
-final readonly class BudgetLedger
+final readonly class BudgetLedger implements BudgetLedgerPort
 {
     public static function period(?\DateTimeInterface $at = null): string
     {
@@ -25,6 +26,23 @@ final readonly class BudgetLedger
     public static function limitMicros(BudgetCategory $category): int
     {
         return (int) ((float) config("lead-scout.budgets.{$category->value}.limit_eur", 0) * 1_000_000);
+    }
+
+    public function currentPeriod(): string
+    {
+        return self::period();
+    }
+
+    public function updateLimits(array $limitMicrosByCategory): void
+    {
+        DB::transaction(static function () use ($limitMicrosByCategory): void {
+            foreach ($limitMicrosByCategory as $category => $limitMicros) {
+                ScoutBudgetEloquentModel::query()->updateOrCreate(
+                    ['period' => self::period(), 'category' => $category],
+                    ['limit_micros' => $limitMicros],
+                );
+            }
+        });
     }
 
     /**

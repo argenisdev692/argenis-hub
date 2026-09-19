@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 use Modules\Cvs\Application\DTOs\CvFilterData;
 use Modules\Cvs\Domain\Enums\CvFileType;
 use Modules\Cvs\Domain\Enums\CvNiche;
+use Modules\Cvs\Domain\Enums\CvSource;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -33,6 +34,10 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property CvFileType $file_type
  * @property string $original_filename
  * @property string|null $raw_text
+ * @property CvSource $source
+ * @property string|null $language
+ * @property string|null $parent_cv_uuid
+ * @property string|null $studio_version_uuid
  * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -53,6 +58,10 @@ use Spatie\Activitylog\Support\LogOptions;
     'file_type',
     'original_filename',
     'raw_text',
+    'source',
+    'language',
+    'parent_cv_uuid',
+    'studio_version_uuid',
 ])]
 final class CvEloquentModel extends Model
 {
@@ -110,6 +119,14 @@ final class CvEloquentModel extends Model
                 fn ($q) => $q->where('niche', $filters->niche),
             )
             ->when(
+                $filters->source !== null,
+                fn ($q) => $q->where('source', $filters->source),
+            )
+            ->when(
+                $filters->language !== null,
+                fn ($q) => $q->where('language', $filters->language),
+            )
+            ->when(
                 $filters->dateFrom !== null && $filters->dateTo !== null,
                 fn ($q) => $q->whereBetween('created_at', [
                     CarbonImmutable::parse($filters->dateFrom)->startOfDay(),
@@ -151,6 +168,7 @@ final class CvEloquentModel extends Model
             'is_primary' => 'boolean',
             'niche' => CvNiche::class,
             'file_type' => CvFileType::class,
+            'source' => CvSource::class,
         ];
     }
 
@@ -163,6 +181,8 @@ final class CvEloquentModel extends Model
                 'is_primary',
                 'file_type',
                 'original_filename',
+                'source',
+                'language',
             ])
             ->logOnlyDirty()
             ->dontLogEmptyChanges()

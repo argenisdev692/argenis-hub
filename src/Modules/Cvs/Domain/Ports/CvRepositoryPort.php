@@ -26,6 +26,18 @@ interface CvRepositoryPort
     public function findByUuidForUser(string $uuid, int $userId): ?CvEloquentModel;
 
     /**
+     * Owner-scoped lookup by internal id — for cross-module reads that only
+     * hold the legacy `cv_id` reference (e.g. Studio version lineage).
+     */
+    public function findByIdForUser(int $id, int $userId): ?CvEloquentModel;
+
+    /**
+     * The owner's current primary CV, if any — used to inherit attributes
+     * (niche) when the originating CV is gone.
+     */
+    public function findPrimaryForUser(int $userId): ?CvEloquentModel;
+
+    /**
      * Persists a CV. When `is_primary` is true, the owner's other CVs are
      * demoted in the same transaction so a user never holds two primaries.
      *

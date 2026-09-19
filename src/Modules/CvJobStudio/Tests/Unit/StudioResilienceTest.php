@@ -9,14 +9,13 @@ use Modules\CvJobStudio\Domain\Exceptions\BudgetExceededException;
 use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\TransactionPort;
 use Modules\CvJobStudio\Domain\Services\ApplyDestinationClassifier;
-use Modules\CvJobStudio\Domain\Services\NeverFetchHostPolicy;
-use Modules\CvJobStudio\Domain\Services\OutboundUrlGuard;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
 use Modules\CvJobStudio\Domain\Services\RobotsTxtPolicy;
 use Modules\CvJobStudio\Domain\Services\TrigramSimilarity;
 use Modules\CvJobStudio\Infrastructure\Ai\NarrateMatchAgent;
 use Modules\CvJobStudio\Infrastructure\Budgets\StudioBudgetLedger;
 use Modules\CvJobStudio\Infrastructure\Fetching\FirecrawlPostingFetcher;
+use Modules\CvJobStudio\Infrastructure\Fetching\OutboundUrlGuard;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioBudgetEloquentModel;
 use Shared\Infrastructure\AI\ProviderFailover;
 use Shared\Infrastructure\Research\FirecrawlClientInterface;
@@ -57,9 +56,8 @@ it('always requests the basic proxy and never auto or stealth (T-159, SC-20)', f
 
     $fetcher = new FirecrawlPostingFetcher(
         $fake,
-        new OutboundUrlGuard,
+        new OutboundUrlGuard(resolver: static fn (string $host): array => ['93.184.215.14']),
         new RobotsTxtPolicy,
-        new NeverFetchHostPolicy,
     );
 
     $result = $fetcher->fetch('https://boards.greenhouse.io/acme/jobs/1');

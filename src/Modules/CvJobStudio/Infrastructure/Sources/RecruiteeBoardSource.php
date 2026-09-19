@@ -17,6 +17,12 @@ final readonly class RecruiteeBoardSource implements PostingSourcePort
 
     public function harvest(string $query, int $limit): array
     {
+        // The slug becomes the HOSTNAME: anything but a DNS label could point
+        // the request elsewhere (`evil.test/#` → SSRF), so refuse it here too.
+        if (preg_match('/^[a-z0-9-]{1,63}$/', $query) !== 1) {
+            return ['postings' => [], 'query' => $query, 'cost_micros' => 0];
+        }
+
         try {
             $response = Http::timeout(5)->retry(2, 200)->get("https://{$query}.recruitee.com/api/offers");
         } catch (\Throwable) {

@@ -9,18 +9,16 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Modules\CvJobStudio\Application\Commands\StartRunHandler;
+use Modules\CvJobStudio\Application\DTOs\StartRunData;
 use Modules\CvJobStudio\Application\Queries\GetInsightReportHandler;
 use Modules\CvJobStudio\Application\Queries\GetRunHandler;
 
 /** Runs: start (queued), per-stage progress, insight report (T-043, T-085). */
 final readonly class StudioRunController
 {
-    public function store(Request $request, StartRunHandler $start): JsonResponse
+    public function store(Request $request, StartRunData $data, StartRunHandler $start): JsonResponse
     {
-        /** @var array{profile_uuid: string} $validated */
-        $validated = $request->validate(['profile_uuid' => ['required', 'string', 'uuid']]);
-
-        $run = $start->handle($validated['profile_uuid'], $this->ownerId($request));
+        $run = $start->handle($data->profileUuid, $this->ownerId($request));
 
         return response()->json(['data' => ['uuid' => $run->uuid, 'status' => $run->status]], 202);
     }

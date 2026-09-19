@@ -7,16 +7,23 @@ namespace Modules\CvJobStudio\Infrastructure\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Modules\CvJobStudio\Application\Commands\AuditCvHandler;
 use Modules\CvJobStudio\Application\Commands\ConfirmCvStructureHandler;
 use Modules\CvJobStudio\Application\Commands\ExportCvVersionHandler;
 use Modules\CvJobStudio\Application\Commands\ParseCvStructureHandler;
+use Modules\CvJobStudio\Application\Commands\PromoteVersionToCvsHandler;
 use Modules\CvJobStudio\Application\Commands\RewriteCvHandler;
 use Modules\CvJobStudio\Application\Commands\SubmitMetricAnswersHandler;
+use Modules\CvJobStudio\Application\DTOs\AuditCvData;
+use Modules\CvJobStudio\Application\DTOs\ExportCvVersionData;
+use Modules\CvJobStudio\Application\DTOs\RewriteCvData;
+use Modules\CvJobStudio\Application\DTOs\SelectCvData;
 use Modules\CvJobStudio\Application\DTOs\SubmitMetricAnswersData;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersionEloquentModel;
+use Modules\CvJobStudio\Application\Queries\ListCvVersionsHandler;
+use Shared\Domain\Ports\StoragePort;
 
 /**
  * CV lifecycle: parse → confirm → audit → answers → rewrite → export
@@ -24,12 +31,9 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersi
  */
 final readonly class StudioCvController
 {
-    public function parse(Request $request, ParseCvStructureHandler $parse): JsonResponse
+    public function parse(Request $request, SelectCvData $data, ParseCvStructureHandler $parse): JsonResponse
     {
-        /** @var array{cv_uuid?: string} $validated */
-        $validated = $request->validate(['cv_uuid' => ['nullable', 'string', 'uuid']]);
-
-        $structure = $parse->handle($validated['cv_uuid'] ?? null, $this->ownerId($request));
+        $structure = $parse->handle($data->cvUuid, $this->ownerId($request));
 
         return response()->json(['data' => ['uuid' => $structure->uuid]], 201);
     }
@@ -41,15 +45,9 @@ final readonly class StudioCvController
         return back()->with('success', __('Structure confirmed.'));
     }
 
-    public function audit(Request $request, AuditCvHandler $audit): InertiaResponse|JsonResponse
+    public function audit(Request $request, AuditCvData $data, AuditCvHandler $audit): InertiaResponse|JsonResponse
     {
-        /** @var array{cv_uuid?: string, target_job_title?: string} $validated */
-        $validated = $request->validate([
-            'cv_uuid' => ['nullable', 'string', 'uuid'],
-            'target_job_title' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $result = $audit->handle($validated['cv_uuid'] ?? null, $validated['target_job_title'] ?? null, $this->ownerId($request));
+        $result = $audit->handle($data->cvUuid, $data->targetJobTitle, $this->ownerId($request));
 
         return match ($request->expectsJson()) {
             true => response()->json(['data' => $result], 201),
@@ -64,34 +62,49 @@ final readonly class StudioCvController
         return back()->with('success', __(':count answer(s) saved.', ['count' => $count]));
     }
 
-    public function rewrite(Request $request, string $uuid, RewriteCvHandler $handler): JsonResponse
+    public function rewrite(Request $request, string $uuid, RewriteCvData $data, RewriteCvHandler $handler): JsonResponse
     {
-        /** @var array{language?: string} $validated */
-        $validated = $request->validate(['language' => ['nullable', 'string', 'in:es,en,pt-PT']]);
-
-        $version = $handler->handle($uuid, $validated['language'] ?? 'en', $this->ownerId($request));
+        $version = $handler->handle($uuid, $data->language, $this->ownerId($request));
 
         return response()->json(['data' => ['uuid' => $version->uuid]], 201);
     }
 
-    public function export(Request $request, string $uuid, ExportCvVersionHandler $handler): JsonResponse
+    /**
+     * Generates the file into private R2 storage and hands back a 5-minute
+     * signed URL to it (OWASP §15: R2 only through signed URLs). The page
+     * follows `download_url`; `download_name` is the ATS-friendly suggested
+     * filename (`Firstname-Lastname-Resume.pdf`, never `resume_final_v4`).
+     */
+    public function export(Request $request, string $uuid, ExportCvVersionData $data, ExportCvVersionHandler $handler, StoragePort $storage): JsonResponse
     {
-        /** @var array{format?: string} $validated */
-        $validated = $request->validate(['format' => ['nullable', 'string', 'in:docx,pdf']]);
+        $export = $handler->handle($uuid, $data->format, $this->ownerId($request));
 
-        $export = $handler->handle($uuid, $validated['format'] ?? 'pdf', $this->ownerId($request));
-
-        return response()->json(['data' => ['uuid' => $export->uuid, 'verified' => $export->text_extraction_verified]], 201);
+        return response()->json(['data' => [
+            'uuid' => $export->uuid,
+            'verified' => $export->text_extraction_verified,
+            'download_url' => $storage->temporaryUrl($export->path, now()->addMinutes(5)),
+            'download_name' => self::downloadName($request, $data->format),
+        ]], 201);
     }
 
-    public function versions(Request $request): InertiaResponse|JsonResponse
+    /**
+     * The "set as primary CV" confirmation: promotes the version to a new
+     * canonical `cvs` row (supersede, never overwrite) and re-parses it so
+     * every RAG consumer sees it immediately.
+     */
+    public function promote(Request $request, string $uuid, PromoteVersionToCvsHandler $promote): JsonResponse
     {
-        $versions = StudioCvVersionEloquentModel::query()
-            ->ownedBy($this->ownerId($request))
-            ->select(['uuid', 'user_id', 'purpose', 'language', 'posting_id', 'created_at'])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->paginate(min(max($request->integer('per_page', 15), 1), 100));
+        /** @var array{title?: string} $validated */
+        $validated = $request->validate(['title' => ['sometimes', 'nullable', 'string', 'max:255']]);
+
+        $cv = $promote->handle($uuid, $this->ownerId($request), $validated['title'] ?? null);
+
+        return response()->json(['data' => ['uuid' => $cv->uuid]], 201);
+    }
+
+    public function versions(Request $request, ListCvVersionsHandler $list): InertiaResponse|JsonResponse
+    {
+        $versions = $list->handle($this->ownerId($request), $request->integer('per_page', 15));
 
         return match ($request->expectsJson()) {
             true => response()->json($versions),
@@ -102,5 +115,17 @@ final readonly class StudioCvController
     private function ownerId(Request $request): int
     {
         return (int) $request->user()->id;
+    }
+
+    private static function downloadName(Request $request, string $format): string
+    {
+        $user = $request->user();
+        $slug = Str::slug(trim(sprintf(
+            '%s %s',
+            (string) ($user->first_name ?? ''),
+            (string) ($user->last_name ?? ''),
+        )));
+
+        return ($slug !== '' ? $slug : 'cv').'-Resume.'.$format;
     }
 }

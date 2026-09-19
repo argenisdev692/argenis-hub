@@ -82,7 +82,7 @@ it('extracts requirements once per text hash (T-057)', function (): void {
     {
         public int $calls = 0;
 
-        public function extract(string $postingText): array
+        public function extract(string $postingText, int $userId): array
         {
             $this->calls++;
 
@@ -180,9 +180,9 @@ it('shows own rates with uncertainty and gate flags (T-134)', function (): void 
     $rows = app(GetOwnRatesHandler::class)->handle($admin->id);
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]['bucket'])->toBe('board')
-        ->and($rows[0]['rate'])->toBe(1.0)
-        ->and($rows[0]['gate_passed'])->toBeFalse();
+        ->and($rows[0]->bucket)->toBe('board')
+        ->and($rows[0]->rate)->toBe(1.0)
+        ->and($rows[0]->gatePassed)->toBeFalse();
 });
 
 it('materialises apply_priority and reproduces fit order in neutral mode (T-131, SC-13)', function (): void {

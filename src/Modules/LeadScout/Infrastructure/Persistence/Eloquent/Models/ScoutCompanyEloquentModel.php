@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models;
 
-use Carbon\CarbonImmutable;
 use Database\Factories\ScoutCompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -13,11 +12,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Modules\LeadScout\Application\DTOs\LeadFilterData;
 use Modules\LeadScout\Domain\Enums\ActivityStatus;
 use Modules\LeadScout\Domain\Enums\CompanyOrigin;
 use Modules\LeadScout\Domain\Enums\CompanyType;
 use Modules\LeadScout\Domain\Enums\EmployeeRange;
+use Modules\LeadScout\Domain\ValueObjects\LeadCriteria;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -185,33 +184,33 @@ final class ScoutCompanyEloquentModel extends Model
      * @param  Builder<ScoutCompanyEloquentModel>  $query
      * @return Builder<ScoutCompanyEloquentModel>
      */
-    public function scopeApplyFilters(Builder $query, LeadFilterData $f): Builder
+    public function scopeApplyFilters(Builder $query, LeadCriteria $criteria): Builder
     {
+        // Qualified: the bandeja joins `scout_score_results`, which also has `created_at`.
+        $createdAt = $this->qualifyColumn('created_at');
+        $values = static fn (array $cases): array => array_map(static fn (\BackedEnum $case): string|int => $case->value, $cases);
+
         return $query
-            ->when($f->search !== null && trim($f->search) !== '', fn (Builder $q): Builder => $q->where(function (Builder $q) use ($f): void {
-                $term = '%'.trim((string) $f->search).'%';
+            ->when($criteria->search !== null, fn (Builder $q): Builder => $q->where(function (Builder $q) use ($criteria): void {
+                $term = '%'.$criteria->search.'%';
                 $q->where('name', 'like', $term)->orWhere('canonical_domain', 'like', $term);
             }))
-            ->when($f->country !== null, fn (Builder $q): Builder => $q->whereIn('country', $f->country))
-            ->when($f->companyType !== null, fn (Builder $q): Builder => $q->whereIn('company_type', $f->companyType))
-            ->when($f->origin !== null, fn (Builder $q): Builder => $q->whereIn('origin', $f->origin))
-            ->when($f->needsResearch !== null, fn (Builder $q): Builder => $q->where('needs_research', $f->needsResearch))
-            ->when($f->tier !== null, fn (Builder $q): Builder => $q->whereHas('scoreResults', fn (Builder $q): Builder => $q
-                ->where('is_current', true)->whereIn('tier', $f->tier)))
-            ->when($f->signalType !== null, fn (Builder $q): Builder => $q->whereHas('signals', fn (Builder $q): Builder => $q
-                ->whereIn('dimension', $f->signalType)))
-            ->when($f->stage !== null, fn (Builder $q): Builder => $q->whereHas('outreaches', fn (Builder $q): Builder => $q
-                ->whereIn('stage', $f->stage)))
-            ->when($f->dateFrom !== null && $f->dateTo !== null, fn (Builder $q): Builder => $q->whereBetween('created_at', [
-                CarbonImmutable::parse($f->dateFrom)->startOfDay(),
-                CarbonImmutable::parse($f->dateTo)->endOfDay(),
-            ]))
-            ->when($f->dateFrom !== null && $f->dateTo === null, fn (Builder $q): Builder => $q->where(
-                'created_at', '>=', CarbonImmutable::parse($f->dateFrom)->startOfDay(),
-            ))
-            ->when($f->dateFrom === null && $f->dateTo !== null, fn (Builder $q): Builder => $q->where(
-                'created_at', '<=', CarbonImmutable::parse($f->dateTo)->endOfDay(),
-            ));
+            ->when($criteria->countries !== null, fn (Builder $q): Builder => $q->whereIn('country', $criteria->countries))
+            ->when($criteria->companyTypes !== null, fn (Builder $q): Builder => $q->whereIn('company_type', $values($criteria->companyTypes)))
+            ->when($criteria->origins !== null, fn (Builder $q): Builder => $q->whereIn('origin', $values($criteria->origins)))
+            ->when($criteria->needsResearch !== null, fn (Builder $q): Builder => $q->where('needs_research', $criteria->needsResearch))
+            ->when($criteria->tiers !== null, fn (Builder $q): Builder => $q->whereHas('scoreResults', fn (Builder $q): Builder => $q
+                ->where('is_current', true)->whereIn('tier', $values($criteria->tiers))))
+            ->when($criteria->signalDimensions !== null, fn (Builder $q): Builder => $q->whereHas('signals', fn (Builder $q): Builder => $q
+                ->whereIn('dimension', $values($criteria->signalDimensions))))
+            ->when($criteria->stages !== null, fn (Builder $q): Builder => $q->whereHas('outreaches', fn (Builder $q): Builder => $q
+                ->whereIn('stage', $values($criteria->stages))))
+            ->when($criteria->createdFrom !== null && $criteria->createdTo !== null, fn (Builder $q): Builder => $q
+                ->whereBetween($createdAt, [$criteria->createdFrom, $criteria->createdTo]))
+            ->when($criteria->createdFrom !== null && $criteria->createdTo === null, fn (Builder $q): Builder => $q
+                ->where($createdAt, '>=', $criteria->createdFrom))
+            ->when($criteria->createdFrom === null && $criteria->createdTo !== null, fn (Builder $q): Builder => $q
+                ->where($createdAt, '<=', $criteria->createdTo));
     }
 
     protected static function newFactory(): ScoutCompanyFactory

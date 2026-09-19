@@ -26,17 +26,20 @@ final readonly class AuditCvHandler
     #[\NoDiscard]
     public function handle(?string $cvUuid, ?string $targetJobTitle, int $userId): StudioCvAuditEloquentModel
     {
-        return $this->db->atomic(function () use ($cvUuid, $targetJobTitle, $userId): StudioCvAuditEloquentModel {
-            $cv = $cvUuid !== null
-                ? $this->cvs->findForUser($cvUuid, $userId)
-                : $this->cvs->primaryForUser($userId);
+        $cv = $cvUuid !== null
+            ? $this->cvs->findForUser($cvUuid, $userId)
+            : $this->cvs->primaryForUser($userId);
 
-            if ($cv === null || ($cv['raw_text'] ?? null) === null) {
-                throw new PostingNotFoundException('No CV with extracted text found.');
-            }
+        if ($cv === null || ($cv['raw_text'] ?? null) === null) {
+            throw new PostingNotFoundException('No CV with extracted text found.');
+        }
 
-            $judgement = $this->judge->judge((string) $cv['raw_text'], $targetJobTitle);
+        // The LLM call stays OUTSIDE the transaction: a 90 s provider call must
+        // not hold a connection open, and a later rollback must not erase the
+        // spend the ledger already recorded.
+        $judgement = $this->judge->judge((string) $cv['raw_text'], $targetJobTitle, $userId);
 
+        return $this->db->atomic(static function () use ($cv, $judgement, $targetJobTitle, $userId): StudioCvAuditEloquentModel {
             return StudioCvAuditEloquentModel::query()->create([
                 'user_id' => $userId,
                 'cv_id' => $cv['cv_id'],

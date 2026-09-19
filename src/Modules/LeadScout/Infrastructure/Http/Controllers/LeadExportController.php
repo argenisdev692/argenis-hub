@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Infrastructure\Http\Controllers;
 
 use Dedoc\Scramble\Attributes\QueryParameter;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
@@ -28,12 +29,6 @@ final readonly class LeadExportController
     /** @var list<string> */
     private const array FUNNEL_HEADERS = ['Company', 'Stage', 'Medium', 'Kind', 'SentAt', 'Variant', 'Opportunities', 'Hours', 'Amount', 'Created'];
 
-    /** @var list<string> */
-    private const array FORMATS = ['csv', 'xlsx', 'pdf'];
-
-    /** @var list<string> */
-    private const array DATASETS = ['leads', 'funnel'];
-
     public function __construct(private ExportPort $export) {}
 
     #[QueryParameter('dataset', description: 'Export dataset: `leads` (bandeja) or `funnel` (outreaches + stages + deals).', type: 'string', default: 'leads', example: 'leads')]
@@ -42,8 +37,8 @@ final readonly class LeadExportController
     {
         /** @var array{dataset?: string, format?: string} $validated */
         $validated = $request->validate([
-            'dataset' => ['sometimes', 'string', Rule::in(self::DATASETS)],
-            'format' => ['sometimes', 'string', Rule::in(self::FORMATS)],
+            'dataset' => ['sometimes', 'string', Rule::in(['leads', 'funnel'])],
+            'format' => ['sometimes', 'string', Rule::in(['csv', 'xlsx', 'pdf'])],
         ]);
 
         $dataset = $validated['dataset'] ?? 'leads';
@@ -58,8 +53,10 @@ final readonly class LeadExportController
     private function leads(LeadFilterData $filters, string $format): StreamedResponse|Response
     {
         $rows = ScoutCompanyEloquentModel::query()
-            ->applyFilters($filters)
-            ->with(['scoreResults' => fn ($q) => $q->where('is_current', true)])
+            ->applyFilters($filters->toCriteria())
+            ->with(['scoreResults' => fn (HasMany $query): HasMany => $query
+                ->where('is_current', true)
+                ->select(['id', 'company_id', 'tier', 'lead_score', 'confidence', 'is_current'])])
             ->select(['id', 'uuid', 'canonical_domain', 'name', 'country', 'origin', 'company_type', 'needs_research', 'created_at'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -84,9 +81,10 @@ final readonly class LeadExportController
 
     private function funnel(LeadFilterData $filters, string $format): StreamedResponse|Response
     {
+        // Subquery, not pluck(): the filtered id set never lands in PHP memory.
         $companyIds = ScoutCompanyEloquentModel::query()
-            ->applyFilters($filters)
-            ->pluck('id');
+            ->applyFilters($filters->toCriteria())
+            ->select('id');
 
         $rows = ScoutOutreachEloquentModel::query()
             ->whereIn('company_id', $companyIds)

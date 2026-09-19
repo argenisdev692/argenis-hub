@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Application\DTOs;
 
 use Modules\LeadScout\Domain\Enums\BudgetCategory;
-use Modules\LeadScout\Infrastructure\Budgets\BudgetLedger;
+use Modules\LeadScout\Domain\Ports\BudgetLedgerPort;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -27,7 +27,7 @@ final class BudgetStatusData extends Data
     /**
      * @param  list<BudgetCategory>  $categories
      */
-    public static function current(array $categories, BudgetLedger $ledger): self
+    public static function current(array $categories, BudgetLedgerPort $ledger): self
     {
         $rows = [];
 
@@ -35,6 +35,6 @@ final class BudgetStatusData extends Data
             $rows[] = ['category' => $category->value, ...$ledger->status($category)];
         }
 
-        return new self(BudgetLedger::period(), $rows);
+        return new self($ledger->currentPeriod(), $rows);
     }
 }

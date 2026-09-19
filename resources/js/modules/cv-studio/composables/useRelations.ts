@@ -4,15 +4,7 @@ import { toast } from 'vue-sonner';
 import { HttpError, httpJson } from '@/lib/http';
 import { toUrl } from '@/lib/utils';
 import { confirm, index, reject } from '@/routes/cv-studio/relations';
-
-export type StudioRelation = {
-    uuid: string;
-    from_skill: string;
-    to_skill: string;
-    kind: string;
-    origin: string;
-    status: string;
-};
+import type { StudioRelation } from '../types';
 
 export const STUDIO_RELATIONS_KEY = ['studio-relations'];
 

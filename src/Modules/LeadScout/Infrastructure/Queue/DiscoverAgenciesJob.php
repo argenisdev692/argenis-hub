@@ -18,8 +18,6 @@ use Modules\LeadScout\Application\Commands\DiscoverAgenciesHandler;
 /**
  * Weekly agency discovery (queue `lead-scout`). Idempotent per cache
  * window — re-runs skip already-executed combinations.
- *
- * @return array{queries: int, new_companies: int, skipped: int}
  */
 #[Queue('lead-scout')]
 #[Tries(2)]
@@ -27,7 +25,7 @@ use Modules\LeadScout\Application\Commands\DiscoverAgenciesHandler;
 #[Backoff([60, 300])]
 final class DiscoverAgenciesJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, ReportsPipelineFailure, SerializesModels;
 
     public function __construct(
         public readonly ?string $wave = null,
@@ -35,6 +33,9 @@ final class DiscoverAgenciesJob implements ShouldQueue
         public readonly ?string $family = null,
     ) {}
 
+    /**
+     * @return array{queries: int, new_companies: int, skipped: int}
+     */
     public function handle(DiscoverAgenciesHandler $discover): array
     {
         return $discover->handle($this->wave, $this->country, $this->family);

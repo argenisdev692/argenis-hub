@@ -19,7 +19,7 @@ final readonly class SuppressionController
 
         return response()->json(['data' => [
             'uuid' => $row->uuid,
-            'domain' => $row->canonical_domain,
+            'domain' => $row->canonicalDomain,
             'source' => $row->source->value,
         ]], 201);
     }

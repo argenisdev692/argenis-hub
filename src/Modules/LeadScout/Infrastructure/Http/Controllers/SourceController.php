@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Modules\LeadScout\Application\Commands\UpdateSourceHandler;
 use Modules\LeadScout\Application\DTOs\SourceData;
 use Modules\LeadScout\Application\DTOs\UpdateSourceData;
-use Modules\LeadScout\Domain\Enums\SourceStatus;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloquentModel;
+use Modules\LeadScout\Application\Queries\ListSourcesHandler;
+use Modules\LeadScout\Domain\Exceptions\SourceNotFoundException;
+use Modules\LeadScout\Domain\Ports\SourceRepositoryPort;
 use Modules\LeadScout\Infrastructure\Queue\IngestSourceJob;
 
 /**
@@ -16,39 +18,23 @@ use Modules\LeadScout\Infrastructure\Queue\IngestSourceJob;
  */
 final readonly class SourceController
 {
-    public function index(): JsonResponse
+    public function index(ListSourcesHandler $list): JsonResponse
     {
-        $sources = ScoutSourceEloquentModel::query()
-            ->orderByDesc('priority')
-            ->orderBy('name')
-            ->get();
-
-        return response()->json(['data' => SourceData::collect($sources)]);
+        return response()->json(['data' => array_map(SourceData::fromEntity(...), $list->handle())]);
     }
 
-    public function update(string $uuid, UpdateSourceData $data): JsonResponse
+    public function update(string $uuid, UpdateSourceData $data, UpdateSourceHandler $update): JsonResponse
     {
-        $source = ScoutSourceEloquentModel::query()->where('uuid', $uuid)->firstOrFail();
-
-        $status = $data->status === null ? $source->status : SourceStatus::from($data->status);
-        $termsAt = $data->termsReviewedAt ?? $source->terms_reviewed_at?->toDateTimeString();
-
-        if ($status === SourceStatus::Active && $termsAt === null) {
-            return response()->json(['message' => 'Review the source terms before activating it.', 'code' => 'TERMS_NOT_REVIEWED'], 422);
-        }
-
-        $source->update([
-            'status' => $status->value,
-            'frequency_minutes' => $data->frequencyMinutes ?? $source->frequency_minutes,
-            'terms_reviewed_at' => $data->termsReviewedAt,
-        ]);
-
-        return response()->json(['data' => SourceData::fromModel($source->refresh())]);
+        return response()->json(['data' => SourceData::fromEntity($update->handle($uuid, $data))]);
     }
 
-    public function run(string $uuid): JsonResponse
+    /**
+     * Queues an ingest run; the queue's running marker answers 409 while
+     * one is in flight (T028).
+     */
+    public function run(string $uuid, SourceRepositoryPort $sources): JsonResponse
     {
-        $source = ScoutSourceEloquentModel::query()->where('uuid', $uuid)->firstOrFail();
+        $source = $sources->byUuid($uuid) ?? throw new SourceNotFoundException($uuid);
 
         if (cache()->has(IngestSourceJob::runningKey($source->uuid))) {
             return response()->json(['message' => 'This source is already running.', 'code' => 'SOURCE_RUNNING'], 409);

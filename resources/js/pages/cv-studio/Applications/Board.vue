@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { useQuery } from '@pinia/colada';
-import { computed } from 'vue';
-import { httpJson } from '@/lib/http';
-import { toUrl } from '@/lib/utils';
+import { useApplications } from '@/modules/cv-studio/composables/useApplications';
 import { formatDate } from '@/modules/cv-studio/helpers/studioPresentation';
 import type { StudioApplication } from '@/modules/cv-studio/types';
-import { index } from '@/routes/cv-studio/applications';
 import { index as postingsIndex } from '@/routes/cv-studio/postings';
 
 defineOptions({
@@ -18,49 +14,64 @@ defineOptions({
     },
 });
 
-type ApplicationPage = {
-    data: StudioApplication[];
-    total: number;
+const { applications, total, truncated } = useApplications();
+
+type Column = {
+    key: string;
+    label: string;
+    matches: (application: StudioApplication) => boolean;
 };
 
-const { data } = useQuery<ApplicationPage>({
-    key: () => ['studio-applications'],
-    query: () => httpJson<ApplicationPage>(toUrl(index())),
-    staleTime: 1000 * 60 * 2,
-    gcTime: 1000 * 60 * 5,
-});
+const AWAITING_OUTCOMES = ['unknown', 'pending', 'no_reply'];
 
-const applications = computed(() => data.value?.data ?? []);
-
-const COLUMNS = ['saved', 'applied', 'screening', 'interview', 'offer'] as const;
-
-function columnItems(status: string): StudioApplication[] {
-    if (status === 'saved') {
-        return applications.value.filter((application) =>
+/**
+ * Every application lands in exactly one column. `rejected` / `withdrawn`
+ * get their own "Closed" column — without it a rejection made the card
+ * vanish from the board.
+ */
+const COLUMNS: readonly Column[] = [
+    {
+        key: 'saved',
+        label: 'Saved',
+        matches: (application) =>
             ['saved', 'new'].includes(application.status),
-        );
-    }
+    },
+    {
+        key: 'applied',
+        label: 'Applied',
+        matches: (application) =>
+            application.status === 'applied' &&
+            AWAITING_OUTCOMES.includes(application.outcome),
+    },
+    {
+        key: 'screening',
+        label: 'Screening',
+        matches: (application) => application.outcome === 'screening',
+    },
+    {
+        key: 'interview',
+        label: 'Interview',
+        matches: (application) => application.outcome === 'interview',
+    },
+    {
+        key: 'offer',
+        label: 'Offer',
+        matches: (application) => application.outcome === 'offer',
+    },
+    {
+        key: 'closed',
+        label: 'Closed',
+        matches: (application) =>
+            ['rejected', 'withdrawn'].includes(application.outcome),
+    },
+];
 
-    if (status === 'applied') {
-        return applications.value.filter(
-            (application) =>
-                application.status === 'applied' &&
-                ['unknown', 'pending', 'no_reply'].includes(
-                    application.outcome,
-                ),
-        );
-    }
-
-    return applications.value.filter(
-        (application) => application.outcome === status,
-    );
+function columnItems(column: Column): StudioApplication[] {
+    return applications.value.filter(column.matches);
 }
 
 function outcomeLabel(application: StudioApplication): string {
-    if (
-        ['screening', 'interview', 'offer'].includes(application.outcome) ||
-        application.outcome === 'rejected'
-    ) {
+    if (!AWAITING_OUTCOMES.includes(application.outcome)) {
         return application.outcome;
     }
 
@@ -88,14 +99,28 @@ function outcomeLabel(application: StudioApplication): string {
             </p>
         </header>
 
-        <div class="grid gap-3 md:grid-cols-5">
+        <p
+            v-if="truncated"
+            role="status"
+            class="rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground"
+        >
+            Showing the {{ applications.length }} most recently updated of
+            {{ total }} applications.
+        </p>
+
+        <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
             <section
                 v-for="column in COLUMNS"
-                :key="column"
+                :key="column.key"
                 class="flex flex-col gap-2 rounded-xl border border-border bg-card p-3"
-                :aria-label="`${column} column`"
+                :aria-label="`${column.label} column`"
             >
-                <h2 class="text-sm font-semibold capitalize">{{ column }}</h2>
+                <h2 class="text-sm font-semibold">
+                    {{ column.label }}
+                    <span class="font-normal text-muted-foreground tabular-nums">
+                        ({{ columnItems(column).length }})
+                    </span>
+                </h2>
                 <article
                     v-for="application in columnItems(column)"
                     :key="application.uuid"

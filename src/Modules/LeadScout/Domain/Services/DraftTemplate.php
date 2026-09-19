@@ -87,11 +87,6 @@ final readonly class DraftTemplate
         ];
     }
 
-    public static function version(string $variant): int
-    {
-        return (int) config("lead-scout.draft_templates.{$variant}.version", 1);
-    }
-
     private static function greeting(string $language, string $firstName): string
     {
         return match ($language) {

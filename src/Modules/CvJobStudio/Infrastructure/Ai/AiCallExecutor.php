@@ -15,9 +15,10 @@ use Shared\Infrastructure\AI\ProviderFailover;
 /**
  * Every LLM call in the module runs through here (T-152, CHG-20): the
  * CourseScripts loop over [provider, ...fallbacks] through the Shared AI
- * client, with `SpendGuardPort::ensure()` per attempt. Only the exception
- * class is logged, never payloads. Records which provider + model answered
- * (NFR-17, SC-19).
+ * client, with `SpendGuardPort::ensure()` before and `record()` after every
+ * attempt, and the purpose's `max_input_chars` as a hard ceiling (LLM10).
+ * Only the exception class is logged, never payloads. Records which
+ * provider + model answered (NFR-17, SC-19).
  */
 final readonly class AiCallExecutor
 {
@@ -40,6 +41,9 @@ final readonly class AiCallExecutor
     public function call(AiPurpose $purpose, string $agentClass, string $prompt, int $userId, ?int $runId = null, ?CacheablePrompt $cached = null): array
     {
         $purposeConfig = (array) config("ai.purposes.{$purpose->value}", []);
+        $maxInputChars = (int) ($purposeConfig['max_input_chars'] ?? 0);
+        $prompt = $maxInputChars > 0 ? mb_substr($prompt, 0, $maxInputChars) : $prompt;
+        $callCostMicros = (int) round((float) config('cv-job-studio.llm_call_estimate_eur', 0) * 1_000_000);
         $lastException = null;
 
         if ($cached !== null) {
@@ -48,9 +52,10 @@ final readonly class AiCallExecutor
 
         try {
             foreach ($this->failover->attempts($purposeConfig['provider'] ?? null) as $provider) {
-                try {
-                    $this->spend->ensure('llm', $userId, $runId);
+                // A spent budget is terminal for every provider — never failed over.
+                $this->spend->ensure('llm', $userId, $runId);
 
+                try {
                     $response = $this->ai->generateStructured(
                         $agentClass,
                         $prompt,
@@ -59,9 +64,12 @@ final readonly class AiCallExecutor
                         $purposeConfig['timeout'] ?? null,
                     );
 
+                    $this->spend->record('llm', $userId, $provider, $purpose->value, $callCostMicros, true, $runId);
+
                     return ['response' => $response, 'provider' => $provider, 'model' => $purposeConfig['models'][$provider] ?? null];
                 } catch (\Throwable $exception) {
                     $lastException = $exception;
+                    $this->spend->record('llm', $userId, $provider, $purpose->value, $callCostMicros, false, $runId);
 
                     if (! $this->policy->isRetryable($exception)) {
                         throw $exception;

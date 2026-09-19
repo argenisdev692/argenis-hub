@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\DTOs;
 
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOpportunityEloquentModel;
+use Modules\LeadScout\Domain\Entities\Opportunity;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -28,19 +28,19 @@ final class OpportunityData extends Data
         public readonly ?string $endedAt,
     ) {}
 
-    public static function fromModel(ScoutOpportunityEloquentModel $opportunity, string $outreachUuid): self
+    public static function fromEntity(Opportunity $opportunity): self
     {
         return new self(
             uuid: $opportunity->uuid,
-            outreachUuid: $outreachUuid,
+            outreachUuid: $opportunity->outreachUuid,
             type: $opportunity->type->value,
-            hoursPerMonth: $opportunity->hours_per_month,
-            hourlyRateCents: $opportunity->hourly_rate_cents,
-            amountCents: $opportunity->amount_cents,
+            hoursPerMonth: $opportunity->hoursPerMonth,
+            hourlyRateCents: $opportunity->hourlyRateCents,
+            amountCents: $opportunity->amountCents,
             currency: $opportunity->currency,
             status: $opportunity->status->value,
-            startedAt: $opportunity->started_at?->toDateString(),
-            endedAt: $opportunity->ended_at?->toDateString(),
+            startedAt: $opportunity->startedAt?->format('Y-m-d'),
+            endedAt: $opportunity->endedAt?->format('Y-m-d'),
         );
     }
 }

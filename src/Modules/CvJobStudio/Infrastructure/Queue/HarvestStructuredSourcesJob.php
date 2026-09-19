@@ -7,8 +7,12 @@ namespace Modules\CvJobStudio\Infrastructure\Queue;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\Attributes\Backoff;
+use Illuminate\Queue\Attributes\Timeout;
+use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Modules\CvJobStudio\Application\Commands\IngestPostingHandler;
 use Modules\CvJobStudio\Application\DTOs\IngestPostingData;
 use Modules\CvJobStudio\Domain\Exceptions\BudgetExceededException;
@@ -27,9 +31,12 @@ use Modules\CvJobStudio\Infrastructure\Sources\SourceResolver;
  * counters and spend recorded on the run. `BudgetLedger::ensure()` runs
  * BEFORE each provider call (FR-33, SC-8).
  */
+#[Tries(3)]
+#[Timeout(600)]
+#[Backoff([10, 60, 300])]
 final class HarvestStructuredSourcesJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, MarksRunFailed, Queueable, SerializesModels;
 
     public function __construct(public int $runId, public int $userId)
     {
@@ -61,6 +68,7 @@ final class HarvestStructuredSourcesJob implements ShouldQueue
             ])
             ->all();
 
+        $sourceIds = StudioSourceEloquentModel::query()->ownedBy($this->userId)->pluck('id', 'name')->all();
         $adapters = $resolver->adaptersFor($registry);
         $candidates = 0;
         $spendMicros = 0;
@@ -80,7 +88,9 @@ final class HarvestStructuredSourcesJob implements ShouldQueue
 
             try {
                 $harvest = $adapter->harvest($run->profile->slug, 20);
-            } catch (\Throwable) {
+            } catch (\Throwable $exception) {
+                $this->reportSkipped('harvest', $name, $exception);
+
                 continue;
             }
 
@@ -107,12 +117,14 @@ final class HarvestStructuredSourcesJob implements ShouldQueue
                     StudioPostingSightingEloquentModel::query()->create([
                         'user_id' => $this->userId,
                         'posting_id' => $posting->id,
-                        'source_id' => StudioSourceEloquentModel::query()->ownedBy($this->userId)->where('name', $name)->value('id'),
+                        'source_id' => $sourceIds[$name] ?? null,
                         'observed_at' => now(),
                     ]);
 
                     $candidates++;
-                } catch (\Throwable) {
+                } catch (\Throwable $exception) {
+                    $this->reportSkipped('ingest', $name, $exception);
+
                     continue;
                 }
             }
@@ -125,5 +137,20 @@ final class HarvestStructuredSourcesJob implements ShouldQueue
         ]);
 
         CanonicalizeAndDedupeJob::dispatch($run->id, $this->userId);
+    }
+
+    /**
+     * A dead source or a malformed candidate degrades the run instead of
+     * killing it (NFR-6) — but never silently (OWASP A09). Class only: the
+     * message may echo provider payloads or posting text.
+     */
+    private function reportSkipped(string $stage, string $source, \Throwable $exception): void
+    {
+        Log::warning('cv_studio.harvest.skipped', [
+            'stage' => $stage,
+            'source' => $source,
+            'run_id' => $this->runId,
+            'exception' => $exception::class,
+        ]);
     }
 }

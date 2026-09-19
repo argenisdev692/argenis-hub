@@ -9,7 +9,10 @@ use Uri\Rfc3986\Uri;
 /**
  * Robots-conformance gate (FR-34, T-120): a fetcher asked for a path its
  * site disallows for `*` refuses before any request. Rules are injectable so
- * tests pin fixtures; production loads them from the fetched robots.txt.
+ * tests pin fixtures. GAP: nothing loads a live robots.txt yet — the
+ * container builds this with no rules, so production allows every path.
+ * LeadScout's `RobotsTxtPolicy` fetches and caches real files; consolidating
+ * into Shared is the intended fix (DRY), not a second copy.
  */
 final readonly class RobotsTxtPolicy
 {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Cvs\Application\DTOs;
 
 use Modules\Cvs\Domain\Enums\CvNiche;
+use Modules\Cvs\Domain\Enums\CvSource;
 use Shared\Application\DTOs\SoftDeleteFilterData;
 use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapOutputName;
@@ -24,6 +25,8 @@ final class CvFilterData extends SoftDeleteFilterData
         ?string $dateFrom = null,
         ?string $dateTo = null,
         public ?CvNiche $niche = null,
+        public ?CvSource $source = null,
+        public ?string $language = null,
     ) {
         parent::__construct($search, $status, $dateFrom, $dateTo);
     }
@@ -48,6 +51,10 @@ final class CvFilterData extends SoftDeleteFilterData
             'status' => ['nullable', 'string', 'in:all,active,suspended'],
             // The specialisation a CV is written for. Omit for any niche.
             'niche' => ['nullable', 'string', 'in:'.implode(',', CvNiche::values())],
+            // Which pipeline produced the row. Omit for any source.
+            'source' => ['nullable', 'string', 'in:'.implode(',', CvSource::values())],
+            // Version language (en, es, pt-PT). Omit for any language.
+            'language' => ['nullable', 'string', 'max:8'],
         ];
     }
 }

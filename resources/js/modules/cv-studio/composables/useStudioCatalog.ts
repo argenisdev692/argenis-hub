@@ -4,7 +4,7 @@ import { httpJson } from '@/lib/http';
 import { toUrl } from '@/lib/utils';
 import { index as budgetsIndex, ownRates } from '@/routes/cv-studio/budgets';
 import { index as sourcesIndex } from '@/routes/cv-studio/sources';
-import type { StudioBudget, StudioOwnRate } from '../types';
+import type { StudioBudget, StudioOwnRate, StudioSource } from '../types';
 
 export function useBudgets() {
     const { data, ...query } = useQuery<{ data: StudioBudget[] }>({
@@ -28,22 +28,11 @@ export function useOwnRates() {
     return { ...query, rates: computed(() => data.value?.data ?? []) };
 }
 
-export type StudioSourceRow = {
-    uuid: string;
-    name: string;
-    kind: string;
-    tier: number;
-    layer: string;
-    status: string;
-    access_mode: string;
-    resolution_tier: number;
-};
-
 export function useSources() {
-    const { data, ...query } = useQuery<{ data: StudioSourceRow[] }>({
+    const { data, ...query } = useQuery<{ data: StudioSource[] }>({
         key: () => ['studio-sources'],
         query: () =>
-            httpJson<{ data: StudioSourceRow[] }>(toUrl(sourcesIndex())),
+            httpJson<{ data: StudioSource[] }>(toUrl(sourcesIndex())),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
     });

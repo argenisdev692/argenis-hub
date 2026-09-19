@@ -24,6 +24,7 @@ import {
     Paginator,
 } from '@/common/table';
 import { Button } from '@/components/ui/button';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermissions } from '@/composables/usePermissions';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
@@ -39,7 +40,9 @@ import {
     POSTINGS_PER_PAGE_OPTIONS,
     usePostings,
 } from '@/modules/cv-studio/composables/usePostings';
+import { useProfiles } from '@/modules/cv-studio/composables/useProfiles';
 import { useReferences } from '@/modules/cv-studio/composables/useReferences';
+import { useStartRun } from '@/modules/cv-studio/composables/useRuns';
 import { buildPostingQueryParams } from '@/modules/cv-studio/helpers/buildPostingQueryParams';
 import {
     formatDate,
@@ -56,7 +59,8 @@ import type {
 } from '@/modules/cv-studio/types';
 import { index as studioIndex } from '@/routes/cv-studio';
 import { exportMethod, index, show } from '@/routes/cv-studio/postings';
-import { store as storeRun } from '@/routes/cv-studio/runs';
+import { index as profilesIndex } from '@/routes/cv-studio/profiles';
+import { show as showRun } from '@/routes/cv-studio/runs';
 
 type PostingsTab = 'postings' | 'manual';
 
@@ -343,13 +347,41 @@ function openPasteDialog(reference: StudioReference): void {
     pasteOpen.value = true;
 }
 
-const startingRun = ref(false);
+/**
+ * A run needs a profile (`profile_uuid` is required) and answers JSON 202,
+ * so it goes through `useStartRun` — not an Inertia visit — and then opens
+ * the polled Runs page. With several profiles the owner picks one.
+ */
+const { profiles } = useProfiles();
+const { startRun: startRunMutation } = useStartRun();
 
-function startRun(): void {
-    router.post(storeRun.url(), undefined, {
-        onStart: () => (startingRun.value = true),
-        onFinish: () => (startingRun.value = false),
-    });
+const runProfiles = computed(() =>
+    profiles.value.flatMap((profile) =>
+        profile.uuid ? [{ uuid: profile.uuid, name: profile.name }] : [],
+    ),
+);
+const chosenRunProfile = ref<string | null>(null);
+const runProfileUuid = computed(
+    () => chosenRunProfile.value ?? runProfiles.value[0]?.uuid ?? null,
+);
+const runProfileModel = computed<string>({
+    get: () => runProfileUuid.value ?? '',
+    set: (value) => {
+        chosenRunProfile.value = value || null;
+    },
+});
+
+async function startRun(): Promise<void> {
+    if (!runProfileUuid.value) {
+        return;
+    }
+
+    try {
+        const uuid = await startRunMutation.mutateAsync(runProfileUuid.value);
+        router.visit(showRun(uuid).url);
+    } catch {
+        // Surfaced by the mutation's toast.
+    }
 }
 </script>
 
@@ -369,10 +401,39 @@ function startRun(): void {
             </div>
 
             <PermissionGuard permission="CREATE_STUDIO_POSTINGS">
-                <Button :disabled="startingRun" @click="startRun">
-                    <PlayIcon class="size-4" aria-hidden="true" />
-                    {{ startingRun ? 'Starting…' : 'Start discovery run' }}
-                </Button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <NativeSelect
+                        v-if="runProfiles.length > 1"
+                        v-model="runProfileModel"
+                        aria-label="Profile to run"
+                    >
+                        <NativeSelectOption
+                            v-for="profile in runProfiles"
+                            :key="profile.uuid"
+                            :value="profile.uuid"
+                        >
+                            {{ profile.name }}
+                        </NativeSelectOption>
+                    </NativeSelect>
+                    <Button
+                        :disabled="!runProfileUuid || startRunMutation.isLoading.value"
+                        @click="startRun"
+                    >
+                        <PlayIcon class="size-4" aria-hidden="true" />
+                        {{
+                            startRunMutation.isLoading.value
+                                ? 'Starting…'
+                                : 'Start discovery run'
+                        }}
+                    </Button>
+                    <Link
+                        v-if="runProfiles.length === 0"
+                        :href="profilesIndex()"
+                        class="text-sm text-muted-foreground underline underline-offset-4"
+                    >
+                        Create a profile first
+                    </Link>
+                </div>
             </PermissionGuard>
         </header>
 

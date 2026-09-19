@@ -5,17 +5,18 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Application\Commands;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Contracts\Config\Repository as Config;
+use Modules\LeadScout\Domain\Entities\Company;
 use Modules\LeadScout\Domain\Enums\CompanyOrigin;
 use Modules\LeadScout\Domain\Exceptions\RejectedSearchQueryException;
 use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\PipelineLoggerPort;
+use Modules\LeadScout\Domain\Ports\PipelineQueuePort;
 use Modules\LeadScout\Domain\Ports\SearchPort;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
 use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Domain\ValueObjects\CanonicalDomain;
 use Modules\LeadScout\Domain\ValueObjects\SearchQuery;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSearchQueryEloquentModel;
-use Modules\LeadScout\Infrastructure\Queue\EnrichCompanyJob;
 
 /**
  * Agency discovery without vacancies (spec US-7, US-9, T044): systematic
@@ -37,6 +38,10 @@ final readonly class DiscoverAgenciesHandler
         private CompanyRepositoryPort $companies,
         private SearchPort $search,
         private SuppressionGate $gate,
+        private SuppressionRepositoryPort $suppressions,
+        private PipelineQueuePort $queue,
+        private PipelineLoggerPort $log,
+        private Config $config,
     ) {}
 
     public function handle(?string $wave = null, ?string $country = null, ?string $family = null): array
@@ -48,7 +53,7 @@ final readonly class DiscoverAgenciesHandler
             $report['queries']++;
 
             try {
-                $results = $this->search->search(new SearchQuery(
+                $query = new SearchQuery(
                     text: $plan['text'],
                     purpose: 'discovery',
                     wave: $plan['wave'],
@@ -56,7 +61,8 @@ final readonly class DiscoverAgenciesHandler
                     country: $plan['country'],
                     depth: 'advanced',
                     maxResults: 10,
-                ));
+                );
+                $results = $this->search->search($query);
             } catch (RejectedSearchQueryException) {
                 $report['skipped']++;
 
@@ -94,13 +100,13 @@ final readonly class DiscoverAgenciesHandler
 
                 $created++;
                 $report['new_companies']++;
-                EnrichCompanyJob::dispatch($company->uuid);
+                $this->queue->enrichCompany($company->uuid);
             }
 
-            $this->recordEffectiveness($plan, $created);
+            $this->search->recordNewCompanies($query, $created);
         }
 
-        Log::info('lead-scout.discover_finished', [
+        $this->log->pipeline('discover_finished', [
             'wave' => $wave,
             'queries' => $report['queries'],
             'new_companies' => $report['new_companies'],
@@ -118,10 +124,10 @@ final readonly class DiscoverAgenciesHandler
     #[\NoDiscard('Planned queries must be captured')]
     public function planQueries(?string $wave, ?string $country, ?string $family): array
     {
-        $weights = (array) config('lead-scout.discovery.weights', ['wave1' => 60, 'wave2' => 30, 'wave3' => 10]);
-        $perRun = (int) config('lead-scout.discovery.queries_per_run', 15);
-        $countries = (array) config('lead-scout.discovery.countries', []);
-        $families = (array) config('lead-scout.discovery.families', []);
+        $weights = (array) $this->config->get('lead-scout.discovery.weights', ['wave1' => 60, 'wave2' => 30, 'wave3' => 10]);
+        $perRun = (int) $this->config->get('lead-scout.discovery.queries_per_run', 15);
+        $countries = (array) $this->config->get('lead-scout.discovery.countries', []);
+        $families = (array) $this->config->get('lead-scout.discovery.families', []);
 
         $waves = $wave !== null ? [$wave] : array_keys($weights);
         $planned = [];
@@ -194,33 +200,27 @@ final readonly class DiscoverAgenciesHandler
         return $planned;
     }
 
-    private function register(string $domain, array $plan, string $title): ?ScoutCompanyEloquentModel
+    private function register(string $domain, array $plan, string $title): ?Company
     {
-        if ($this->companies->findByDomain($domain) !== null) {
+        if ($this->companies->byDomain($domain) !== null) {
             return null;
         }
 
-        $candidates = $this->companies->suppressionsMatching($domain, null, null)
-            ->map(static fn ($row): array => [
-                'canonical_domain' => $row->canonical_domain,
-                'tax_id' => $row->tax_id,
-                'name' => $row->name,
-            ])
-            ->all();
+        $candidates = $this->suppressions->matching($domain, null, null);
 
         if ($this->gate->isSuppressed($domain, null, null, $candidates)) {
             return null;
         }
 
-        return $this->companies->create([
-            'canonical_domain' => $domain,
-            'name' => mb_substr(trim($title) !== '' ? trim($title) : $domain, 0, 255),
-            'country' => $plan['country'],
-            'origin' => CompanyOrigin::Discovery->value,
-            'origin_ref' => mb_substr($plan['text'], 0, 255),
-            'discovery_wave' => $plan['wave'],
-            'timezone_overlap_hours' => $this->overlapHours($plan['country']),
-        ]);
+        return $this->companies->register(
+            canonicalDomain: $domain,
+            name: mb_substr(trim($title) !== '' ? trim($title) : $domain, 0, 255),
+            origin: CompanyOrigin::Discovery,
+            originRef: mb_substr($plan['text'], 0, 255),
+            country: $plan['country'],
+            discoveryWave: $plan['wave'],
+            timezoneOverlapHours: $this->overlapHours($plan['country']),
+        );
     }
 
     private function isDeniedHost(string $url): bool
@@ -231,7 +231,7 @@ final readonly class DiscoverAgenciesHandler
 
         $bare = (string) preg_replace('/^www\./', '', mb_strtolower($m[1]));
 
-        foreach ((array) config('lead-scout.result_domain_denylist', []) as $denied) {
+        foreach ((array) $this->config->get('lead-scout.result_domain_denylist', []) as $denied) {
             $denied = mb_strtolower(trim((string) $denied));
 
             if ($denied !== '' && ($bare === $denied || str_ends_with($bare, '.'.$denied))) {
@@ -250,7 +250,7 @@ final readonly class DiscoverAgenciesHandler
 
         $zone = null;
 
-        foreach ((array) config('lead-scout.discovery.countries', []) as $waveCountries) {
+        foreach ((array) $this->config->get('lead-scout.discovery.countries', []) as $waveCountries) {
             foreach ($waveCountries as $row) {
                 if (mb_strtoupper((string) ($row['iso'] ?? '')) === mb_strtoupper($iso)) {
                     $zone = (string) $row['timezone'];
@@ -275,16 +275,5 @@ final readonly class DiscoverAgenciesHandler
         } catch (\Exception) {
             return null;
         }
-    }
-
-    private function recordEffectiveness(array $plan, int $created): void
-    {
-        $hash = hash('sha256', mb_strtolower(trim($plan['text'])).'|advanced|'.($plan['country'] ?? ''));
-
-        ScoutSearchQueryEloquentModel::query()
-            ->where('query_hash', $hash)
-            ->orderByDesc('id')
-            ->first()
-            ?->increment('new_companies_count', $created);
     }
 }

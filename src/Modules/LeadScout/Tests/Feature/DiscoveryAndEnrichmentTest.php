@@ -112,13 +112,13 @@ it('resolves postings from the payload, then search, then gives up unpaid', func
     $company = app(ResolveCompanyHandler::class)->handle($withUrl->uuid);
 
     expect($company)->not->toBeNull()
-        ->and($company->canonical_domain)->toBe('nebula-labs.pt')
+        ->and($company->canonicalDomain)->toBe('nebula-labs.pt')
         ->and($withUrl->refresh()->company_id)->toBe($company->id);
 
     $searchable = ScoutJobPostingFactory::new()->unresolved()->create(['company_name' => 'Orbita Studio']);
     $resolved = app(ResolveCompanyHandler::class)->handle($searchable->uuid);
 
-    expect($resolved?->canonical_domain)->toBe('orbita.example');
+    expect($resolved?->canonicalDomain)->toBe('orbita.example');
 
     $hopeless = ScoutJobPostingFactory::new()->unresolved()->create(['company_name' => 'Ghost Studio']);
     expect(app(ResolveCompanyHandler::class)->handle($hopeless->uuid))->toBeNull()

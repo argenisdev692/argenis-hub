@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\DTOs;
 
+use Modules\LeadScout\Domain\Entities\Profile;
 use Modules\LeadScout\Domain\Ports\CvSourcePort;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutProfileEloquentModel;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -38,32 +38,32 @@ final class ProfileData extends Data
         public readonly ?string $updatedAt,
     ) {}
 
-    public static function fromModel(ScoutProfileEloquentModel $profile, CvSourcePort $cvs, int $userId): self
+    public static function fromEntity(Profile $profile, CvSourcePort $cvs, int $userId): self
     {
         return new self(
             uuid: $profile->uuid,
             version: $profile->version,
-            sourceCvUuid: $profile->source_cv_uuid,
-            confirmedSkills: $profile->confirmed_skills ?? [],
-            potentialSkills: $profile->potential_skills ?? [],
-            proofPoints: $profile->proof_points ?? [],
-            languages: $profile->languages ?? [],
-            minRateCents: $profile->min_rate_cents,
-            targetCountries: $profile->target_countries,
+            sourceCvUuid: $profile->sourceCvUuid,
+            confirmedSkills: $profile->confirmedSkills,
+            potentialSkills: $profile->potentialSkills,
+            proofPoints: $profile->proofPoints,
+            languages: $profile->languages,
+            minRateCents: $profile->minRateCents,
+            targetCountries: $profile->targetCountries,
             weights: $profile->weights,
             stale: self::isStale($profile, $cvs, $userId),
-            updatedAt: $profile->updated_at?->toIso8601String(),
+            updatedAt: $profile->updatedAt?->format(DATE_ATOM),
         );
     }
 
-    private static function isStale(ScoutProfileEloquentModel $profile, CvSourcePort $cvs, int $userId): bool
+    private static function isStale(Profile $profile, CvSourcePort $cvs, int $userId): bool
     {
-        if ($profile->source_cv_uuid === null) {
+        if ($profile->sourceCvUuid === null) {
             return false;
         }
 
-        $current = $cvs->cvForUser($profile->source_cv_uuid, $userId);
+        $current = $cvs->cvForUser($profile->sourceCvUuid, $userId);
 
-        return $current === null || $current->contentHash !== $profile->cv_hash;
+        return $current === null || $current->contentHash !== $profile->cvHash;
     }
 }

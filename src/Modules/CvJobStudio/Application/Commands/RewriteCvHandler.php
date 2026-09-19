@@ -43,6 +43,7 @@ final readonly class RewriteCvHandler
             $structure->toArray(),
             (array) $structure->profile_facts,
             $language,
+            $userId,
         );
 
         return $this->db->atomic(static fn (): StudioCvVersionEloquentModel => StudioCvVersionEloquentModel::query()->create([

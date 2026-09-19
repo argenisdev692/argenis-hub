@@ -4,19 +4,25 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
-use Modules\LeadScout\Domain\Enums\PostingStatus;
+use Illuminate\Contracts\Config\Repository as Config;
+use Modules\LeadScout\Domain\Entities\JobPosting;
+use Modules\LeadScout\Domain\Entities\ScoreResult;
+use Modules\LeadScout\Domain\Entities\Signal;
+use Modules\LeadScout\Domain\Enums\SignalNature;
 use Modules\LeadScout\Domain\Exceptions\CompanyNotFoundException;
 use Modules\LeadScout\Domain\Exceptions\SuppressedException;
 use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\JobPostingRepositoryPort;
+use Modules\LeadScout\Domain\Ports\PipelineLoggerPort;
+use Modules\LeadScout\Domain\Ports\ProfileRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ScoreResultRepositoryPort;
+use Modules\LeadScout\Domain\Ports\SignalRepositoryPort;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
+use Modules\LeadScout\Domain\Ports\TransactionPort;
 use Modules\LeadScout\Domain\Services\ScoringEngine;
 use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Domain\Services\TierClassifier;
 use Modules\LeadScout\Domain\ValueObjects\SkillTaxonomy;
-use Modules\LeadScout\Infrastructure\Logging\ApplicationLogger;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutProfileEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutScoreResultEloquentModel;
 
 /**
  * Scores a company from its STORED signals (spec US-4, FR-8, T034):
@@ -30,139 +36,115 @@ final readonly class ScoreCompanyHandler
         private ScoringEngine $engine,
         private TierClassifier $tiers,
         private CompanyRepositoryPort $companies,
+        private SignalRepositoryPort $signals,
+        private JobPostingRepositoryPort $postings,
+        private ProfileRepositoryPort $profiles,
+        private ScoreResultRepositoryPort $scores,
         private SuppressionGate $gate,
-        private ApplicationLogger $log,
+        private SuppressionRepositoryPort $suppressions,
+        private TransactionPort $transaction,
+        private PipelineLoggerPort $log,
+        private Config $config,
     ) {}
 
-    public function handle(string $companyUuid, ?int $userId = null, bool $extraRoundDone = false): ScoutScoreResultEloquentModel
+    public function handle(string $companyUuid, ?int $userId = null, bool $extraRoundDone = false): ScoreResult
     {
-        $company = ScoutCompanyEloquentModel::query()->where('uuid', $companyUuid)->first()
-            ?? throw new CompanyNotFoundException($companyUuid);
+        $company = $this->companies->byUuid($companyUuid) ?? throw new CompanyNotFoundException($companyUuid);
 
         // An unsubscribe prevails over any re-score (spec FR-43, T084).
-        $candidates = $this->companies->suppressionsMatching($company->canonical_domain, $company->tax_id, $company->name)
-            ->map(static fn ($row): array => [
-                'canonical_domain' => $row->canonical_domain,
-                'tax_id' => $row->tax_id,
-                'name' => $row->name,
-            ])
-            ->all();
+        $candidates = $this->suppressions->matching($company->canonicalDomain, $company->taxId, $company->name);
 
-        if ($this->gate->isSuppressed($company->canonical_domain, $company->tax_id, $company->name, $candidates)) {
+        if ($this->gate->isSuppressed($company->canonicalDomain, $company->taxId, $company->name, $candidates)) {
             throw new SuppressedException;
         }
 
-        $hadFlag = (bool) $company->needs_research;
+        $signals = $this->signals->forCompany($company->id);
+        $profile = $this->profiles->current($userId);
 
-        $signals = $company->signals()->orderBy('id')->get();
-        $profile = $this->profile($userId);
-        $required = $this->requiredTechs($company);
-
-        $signalArrays = $signals->map(static fn ($signal): array => [
+        $signalArrays = array_map(static fn (Signal $signal): array => [
             'id' => $signal->id,
-            'signal_key' => $signal->signal_key,
+            'signal_key' => $signal->signalKey,
             'dimension' => $signal->dimension->value,
             'nature' => $signal->nature->value,
             'confidence' => $signal->confidence,
-            'evidence_url' => $signal->evidence_url,
-            'captured_at' => $signal->captured_at?->toDateTimeString() ?? '',
-            'value_text' => $signal->value_text,
-        ])->all();
-
-        $rules = [
-            'weights' => (array) config('lead-scout.scoring.weights'),
-            'inference_weight' => (float) config('lead-scout.scoring.inference_weight', 0.6),
-        ];
+            'evidence_url' => $signal->evidenceUrl,
+            'captured_at' => $signal->capturedAt?->format('Y-m-d H:i:s') ?? '',
+            'value_text' => $signal->valueText,
+        ], $signals);
 
         $scored = $this->engine->score(
             $signalArrays,
-            $profile?->confirmed_skills ?? [],
-            $required,
-            $rules,
+            $profile === null ? [] : $profile->confirmedSkills,
+            $this->requiredTechs($company->id),
+            [
+                'weights' => (array) $this->config->get('lead-scout.scoring.weights'),
+                'inference_weight' => (float) $this->config->get('lead-scout.scoring.inference_weight', 0.6),
+                'overlap_hours' => (array) $this->config->get('lead-scout.geo.overlap_hours', []),
+            ],
             $company->country,
         );
 
         $factKeys = array_values(array_unique(array_map(
-            static fn (array $signal): string => $signal['signal_key'],
-            array_filter($signalArrays, static fn (array $signal): bool => $signal['nature'] === 'fact'),
+            static fn (Signal $signal): string => $signal->signalKey,
+            array_filter($signals, static fn (Signal $signal): bool => $signal->nature === SignalNature::Fact),
         )));
 
         $classified = $this->tiers->classify(
             $scored['leadScore'],
             $scored['confidence'],
             $scored['subscores']['technical'],
-            $company->activity_status->value,
-            $company->employee_range->value,
-            $company->team_size_observed,
+            $company->activityStatus->value,
+            $company->employeeRange->value,
+            $company->teamSizeObserved,
             $factKeys,
             $scored['flags'],
             $company->country,
-            (array) config('lead-scout.scoring.tiers') + ['needs_research' => (array) config('lead-scout.scoring.needs_research', [])],
+            (array) $this->config->get('lead-scout.scoring.tiers')
+                + ['needs_research' => (array) $this->config->get('lead-scout.scoring.needs_research', [])],
         );
 
-        return DB::transaction(function () use ($company, $profile, $scored, $classified, $signals, $hadFlag, $extraRoundDone): ScoutScoreResultEloquentModel {
-            ScoutScoreResultEloquentModel::query()
-                ->where('company_id', $company->id)
-                ->where('is_current', true)
-                ->update(['is_current' => false]);
+        $signalIdByKey = [];
 
-            $result = ScoutScoreResultEloquentModel::query()->create([
-                'company_id' => $company->id,
-                'profile_id' => $profile?->id,
-                'rules_version' => (string) config('lead-scout.rules_version'),
-                'subscores' => $scored['subscores'],
-                'lead_score' => $scored['leadScore'],
-                'confidence' => $scored['confidence'],
-                'tier' => $classified['tier']->value,
-                'discard_reason' => $classified['discardReason']?->value,
-                'is_current' => true,
-            ]);
+        foreach ($signals as $signal) {
+            $signalIdByKey[$signal->signalKey] ??= $signal->id;
+        }
 
-            $byKey = [];
+        // A pre-existing flag clears once its extra round was consumed
+        // (the dispatch paths always fetch first); otherwise the fresh
+        // verdict applies. A manual rescore without fetching keeps it.
+        $hadFlag = $company->needsResearch;
+        $needsResearch = $hadFlag ? ! $extraRoundDone : $classified['needsResearch'];
 
-            foreach ($signals as $signal) {
-                $byKey[$signal->signal_key] ??= $signal->id;
-            }
-
-            foreach ($scored['reasons'] as $reason) {
-                $result->reasons()->create([
-                    'signal_id' => $byKey[$reason['signal_key']] ?? null,
+        $result = $this->transaction->run(function () use ($company, $profile, $scored, $classified, $signalIdByKey, $needsResearch): ScoreResult {
+            $result = $this->scores->recordCurrent(
+                companyId: $company->id,
+                profileId: $profile?->id,
+                rulesVersion: (string) $this->config->get('lead-scout.rules_version'),
+                subscores: $scored['subscores'],
+                leadScore: $scored['leadScore'],
+                confidence: $scored['confidence'],
+                tier: $classified['tier'],
+                discardReason: $classified['discardReason'],
+                reasons: array_map(static fn (array $reason): array => [
+                    'signal_id' => $signalIdByKey[$reason['signal_key']] ?? null,
                     'points' => $reason['points'],
                     'explanation' => $reason['explanation'],
-                ]);
-            }
+                ], $scored['reasons']),
+            );
 
-            // A pre-existing flag clears once its extra round was consumed
-            // (the dispatch paths always fetch first); otherwise the fresh
-            // verdict applies. A manual rescore without fetching keeps it.
-            $needsResearch = $hadFlag && ! $extraRoundDone
-                ? true
-                : ($hadFlag ? false : $classified['needsResearch']);
-
-            $company->update(['needs_research' => $needsResearch]);
-
-            $result = $result->refresh();
-
-            $this->log->pipeline('scored', [
-                'company' => $company->uuid,
-                'score' => $result->lead_score,
-                'tier' => $result->tier->value,
-                'rules' => $result->rules_version,
-            ]);
+            $this->companies->setNeedsResearch($company, $needsResearch);
 
             return $result;
         });
-    }
 
-    private function profile(?int $userId): ?ScoutProfileEloquentModel
-    {
-        $query = ScoutProfileEloquentModel::query()->where('is_current', true);
+        $this->log->pipeline('scored', [
+            'company' => $company->uuid,
+            'score' => $result->leadScore,
+            'tier' => $result->tier->value,
+            'rules' => $result->rulesVersion,
+        ]);
 
-        if ($userId !== null) {
-            $query->where('user_id', $userId);
-        }
-
-        return $query->orderByDesc('id')->first();
+        return $result;
     }
 
     /**
@@ -171,22 +153,16 @@ final readonly class ScoreCompanyHandler
      *
      * @return list<string>
      */
-    private function requiredTechs(ScoutCompanyEloquentModel $company): array
+    private function requiredTechs(int $companyId): array
     {
-        $haystack = $company->postings()
-            ->where('status', PostingStatus::Active->value)
-            ->get(['title', 'body_text'])
-            ->map(static fn ($posting): string => $posting->title.' '.($posting->body_text ?? ''))
-            ->implode("\n");
+        $haystack = implode("\n", array_map(
+            static fn (JobPosting $posting): string => $posting->title.' '.($posting->bodyText ?? ''),
+            $this->postings->activeForCompany($companyId),
+        ));
 
-        $required = [];
-
-        foreach (array_keys(SkillTaxonomy::TERMS) as $term) {
-            if (SkillTaxonomy::mentions($haystack, $term)) {
-                $required[] = $term;
-            }
-        }
-
-        return $required;
+        return array_values(array_filter(
+            array_keys(SkillTaxonomy::TERMS),
+            static fn (string $term): bool => SkillTaxonomy::mentions($haystack, $term),
+        ));
     }
 }

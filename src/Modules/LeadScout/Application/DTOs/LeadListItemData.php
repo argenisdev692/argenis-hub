@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\DTOs;
 
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
+use Modules\LeadScout\Domain\Entities\Company;
+use Modules\LeadScout\Domain\Enums\Tier;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -33,27 +34,28 @@ final class LeadListItemData extends Data
         public readonly ?string $updatedAt,
     ) {}
 
-    public static function fromModel(ScoutCompanyEloquentModel $company): self
+    /**
+     * @param  array{company: Company, tier: ?Tier, leadScore: ?int, confidence: ?int}  $lead
+     */
+    public static function fromLead(array $lead): self
     {
-        $current = $company->relationLoaded('scoreResults')
-            ? $company->scoreResults->firstWhere('is_current', true)
-            : null;
+        $company = $lead['company'];
 
         return new self(
             uuid: $company->uuid,
             name: $company->name,
-            domain: $company->canonical_domain,
+            domain: $company->canonicalDomain,
             country: $company->country,
-            companyType: $company->company_type?->value,
+            companyType: $company->companyType?->value,
             origin: $company->origin->value,
-            discoveryWave: $company->discovery_wave,
-            tier: $current?->tier->value,
-            leadScore: $current?->lead_score,
-            confidence: $current?->confidence,
-            needsResearch: (bool) $company->needs_research,
-            activityStatus: $company->activity_status->value,
-            hasDecisionMaker: (bool) $company->has_decision_maker,
-            updatedAt: $company->updated_at?->toIso8601String(),
+            discoveryWave: $company->discoveryWave,
+            tier: $lead['tier']?->value,
+            leadScore: $lead['leadScore'],
+            confidence: $lead['confidence'],
+            needsResearch: $company->needsResearch,
+            activityStatus: $company->activityStatus->value,
+            hasDecisionMaker: $company->hasDecisionMaker,
+            updatedAt: $company->updatedAt?->format(DATE_ATOM),
         );
     }
 }

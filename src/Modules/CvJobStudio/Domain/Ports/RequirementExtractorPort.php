@@ -12,5 +12,5 @@ interface RequirementExtractorPort
      *
      * @return array{requirements: list<array{canonical_name: string, raw_text: string, tag: string, nature: string}>, responsibilities: list<array{text: string, must_do: bool}>, provider: string, model: string, prompt_version: string}
      */
-    public function extract(string $postingText): array;
+    public function extract(string $postingText, int $userId): array;
 }

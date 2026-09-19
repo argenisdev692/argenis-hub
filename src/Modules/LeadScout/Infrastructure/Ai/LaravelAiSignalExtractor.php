@@ -7,6 +7,7 @@ namespace Modules\LeadScout\Infrastructure\Ai;
 use Illuminate\Support\Facades\Log;
 use Modules\LeadScout\Domain\Enums\BudgetCategory;
 use Modules\LeadScout\Domain\Ports\AiModelCatalogPort;
+use Modules\LeadScout\Domain\Ports\SignalExtractorPort;
 use Modules\LeadScout\Domain\ValueObjects\SignalKey;
 use Modules\LeadScout\Infrastructure\Budgets\BudgetLedger;
 use Shared\Infrastructure\AI\AIClientInterface;
@@ -19,7 +20,7 @@ use Throwable;
  * discarded and counted. Provider/model resolve from the extraction
  * catalog with fallback; real token usage prices the AI budget.
  */
-final readonly class LaravelAiSignalExtractor
+final readonly class LaravelAiSignalExtractor implements SignalExtractorPort
 {
     public function __construct(
         private AIClientInterface $ai,

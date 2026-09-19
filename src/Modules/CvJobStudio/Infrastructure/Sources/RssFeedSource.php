@@ -6,8 +6,8 @@ namespace Modules\CvJobStudio\Infrastructure\Sources;
 
 use Illuminate\Support\Facades\Http;
 use Modules\CvJobStudio\Domain\Ports\PostingSourcePort;
-use Modules\CvJobStudio\Domain\Services\OutboundUrlGuard;
 use Modules\CvJobStudio\Domain\Services\RobotsTxtPolicy;
+use Modules\CvJobStudio\Infrastructure\Fetching\OutboundUrlGuard;
 
 /**
  * Generic RSS/Atom harvest (T-038, T-113 pattern): WeWorkRemotely and
@@ -34,7 +34,7 @@ final readonly class RssFeedSource implements PostingSourcePort
         }
 
         try {
-            $response = Http::timeout(10)->retry(1, 500)->get($query);
+            $response = Http::withOptions($this->guard->httpOptions())->timeout(10)->retry(1, 500)->get($query);
         } catch (\Throwable) {
             return ['postings' => [], 'query' => $query, 'cost_micros' => 0];
         }

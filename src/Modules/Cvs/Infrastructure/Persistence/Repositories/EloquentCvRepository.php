@@ -37,6 +37,10 @@ final readonly class EloquentCvRepository implements CvRepositoryPort
         'is_primary',
         'file_type',
         'original_filename',
+        'source',
+        'language',
+        'parent_cv_uuid',
+        'studio_version_uuid',
         'created_at',
         'updated_at',
         'deleted_at',
@@ -62,6 +66,23 @@ final readonly class EloquentCvRepository implements CvRepositoryPort
             ->with('user:id,first_name,last_name')
             ->where('uuid', $uuid)
             ->first();
+    }
+
+    public function findByIdForUser(int $id, int $userId): ?CvEloquentModel
+    {
+        return CvEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('id', $id)
+            ->first(['id', 'uuid', 'niche']);
+    }
+
+    public function findPrimaryForUser(int $userId): ?CvEloquentModel
+    {
+        return CvEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('is_primary', true)
+            ->orderByDesc('created_at')
+            ->first(['id', 'uuid', 'niche']);
     }
 
     public function create(array $attributes): CvEloquentModel

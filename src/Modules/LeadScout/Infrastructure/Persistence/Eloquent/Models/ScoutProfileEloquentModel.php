@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * Versioned matching profile derived from the operator's CV (spec US-1).
@@ -45,7 +47,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 final class ScoutProfileEloquentModel extends Model
 {
     /** @use HasFactory<ScoutProfileFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, LogsActivity;
 
     /** @var list<string> */
     protected $hidden = ['id'];
@@ -74,6 +76,15 @@ final class ScoutProfileEloquentModel extends Model
             'weights' => 'array',
             'is_current' => 'boolean',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['version', 'source_cv_uuid', 'is_current', 'min_rate_cents'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('lead-scout.profile');
     }
 
     /**

@@ -16,11 +16,14 @@ final readonly class LaravelAiCvJudge implements CvJudgePort
 {
     public function __construct(private AiCallExecutor $calls) {}
 
-    public function judge(string $cvText, ?string $targetJobTitle): array
+    public function judge(string $cvText, ?string $targetJobTitle, int $userId): array
     {
-        $prompt = ($targetJobTitle !== null ? "Target role: {$targetJobTitle}\n\n" : '').$cvText;
+        // Both inputs are untrusted user text: fenced, never spliced into an
+        // instruction (LLM01).
+        $prompt = ($targetJobTitle !== null ? "<target_role>\n{$targetJobTitle}\n</target_role>\n\n" : '')
+            ."<cv>\n{$cvText}\n</cv>";
 
-        $result = $this->calls->call(AiPurpose::CvJudge, JudgeCvAgent::class, $prompt, 0);
+        $result = $this->calls->call(AiPurpose::CvJudge, JudgeCvAgent::class, $prompt, $userId);
 
         /** @var array<string, mixed> $data */
         $data = (array) $result['response'];

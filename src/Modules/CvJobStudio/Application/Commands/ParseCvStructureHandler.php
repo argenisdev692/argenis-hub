@@ -13,12 +13,14 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvBulle
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvEntryEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvSkillEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvStructureEloquentModel;
+use Throwable;
 
 /**
  * Parses a CV into addressable rows (T-068, FR-4): reads `Modules\Cvs`
  * read-only (never modifies it — GAP-A1), merges portfolio projects as
  * `kind = project` entries (T-008), and stores the parser rows. Re-runnable;
- * `raw_text` stays the source of truth.
+ * `raw_text` stays the source of truth. Bullets are embedded best-effort
+ * after commit — an embedding outage delays RAG, never the parse (NFR-17).
  */
 final readonly class ParseCvStructureHandler
 {
@@ -27,22 +29,24 @@ final readonly class ParseCvStructureHandler
         private ProjectSourcePort $projects,
         private CvStructureParserPort $parser,
         private TransactionPort $db,
+        private StoreEmbeddingHandler $embeddings,
     ) {}
 
     #[\NoDiscard]
     public function handle(?string $cvUuid, int $userId): StudioCvStructureEloquentModel
     {
-        return $this->db->atomic(function () use ($cvUuid, $userId): StudioCvStructureEloquentModel {
-            $cv = $cvUuid !== null
-                ? $this->cvs->findForUser($cvUuid, $userId)
-                : $this->cvs->primaryForUser($userId);
+        $cv = $cvUuid !== null
+            ? $this->cvs->findForUser($cvUuid, $userId)
+            : $this->cvs->primaryForUser($userId);
 
-            if ($cv === null || ($cv['raw_text'] ?? null) === null) {
-                throw new PostingNotFoundException('No CV with extracted text found.');
-            }
+        if ($cv === null || ($cv['raw_text'] ?? null) === null) {
+            throw new PostingNotFoundException('No CV with extracted text found.');
+        }
 
-            $parsed = $this->parser->parse((string) $cv['raw_text']);
+        // LLM call outside the transaction (see AuditCvHandler).
+        $parsed = $this->parser->parse((string) $cv['raw_text'], $userId);
 
+        $structure = $this->db->atomic(function () use ($cv, $parsed, $userId): StudioCvStructureEloquentModel {
             $structure = StudioCvStructureEloquentModel::query()->create([
                 'user_id' => $userId,
                 'cv_id' => $cv['cv_id'],
@@ -69,8 +73,10 @@ final readonly class ParseCvStructureHandler
                 $entryIds[] = $created->id;
             }
 
+            $bullets = [];
+
             foreach ($parsed['bullets'] as $ordinal => $bullet) {
-                StudioCvBulletEloquentModel::query()->create([
+                $bullets[] = StudioCvBulletEloquentModel::query()->create([
                     'user_id' => $userId,
                     'structure_id' => $structure->id,
                     'entry_id' => $entryIds[$bullet['entry_ordinal'] ?? 0] ?? $entryIds[0] ?? 0,
@@ -81,6 +87,8 @@ final readonly class ParseCvStructureHandler
                     'char_count' => mb_strlen((string) ($bullet['text'] ?? '')),
                 ]);
             }
+
+            $structure->setRelation('freshBullets', collect($bullets));
 
             foreach ($parsed['skills'] as $skill) {
                 StudioCvSkillEloquentModel::query()->create([
@@ -106,5 +114,21 @@ final readonly class ParseCvStructureHandler
 
             return $structure;
         });
+
+        foreach ($structure->getRelation('freshBullets') as $bullet) {
+            $text = trim((string) $bullet->text);
+
+            if ($text === '') {
+                continue;
+            }
+
+            try {
+                (void) $this->embeddings->handle('cv_bullet', $bullet->id, $text, $userId);
+            } catch (Throwable) {
+                break;
+            }
+        }
+
+        return $structure;
     }
 }

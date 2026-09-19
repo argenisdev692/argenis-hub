@@ -69,22 +69,31 @@ export const cvFormSchema = z.object({
             (files) => files.every(hasAcceptedExtension),
             'Upload a PDF or a Markdown (.md) file.',
         ),
+    content: z
+        .string()
+        .max(500000, 'Pasted content must be 500,000 characters or fewer.')
+        .optional()
+        .transform((value) => (value?.trim() ? value : undefined)),
 });
 
 export type CvFormValues = z.infer<typeof cvFormSchema>;
 
 /**
- * Create mode additionally requires the file.
+ * Create mode additionally requires a file or pasted content.
  *
  * `CreateCvHandler` throws `ValidationException::withMessages(['file' => …])`
- * when it is missing, so leaving this to the server would work — it would just
- * cost a full round trip to say something the browser already knows. Update
- * mode keeps it optional: an omitted file is how `UpdateCvHandler` is told to
- * keep the stored R2 object and its extracted text.
+ * when both are missing, so leaving this to the server would work — it would
+ * just cost a full round trip to say something the browser already knows.
+ * Update mode keeps both optional: omitted file and content is how
+ * `UpdateCvHandler` is told to keep the stored R2 object and its extracted
+ * text.
  */
 export const cvCreateFormSchema = cvFormSchema.refine(
-    (values) => values.file.length === 1,
-    { path: ['file'], message: 'A CV file (PDF or Markdown) is required.' },
+    (values) => values.file.length === 1 || values.content !== undefined,
+    {
+        path: ['file'],
+        message: 'A CV file (PDF or Markdown) or pasted content is required.',
+    },
 );
 
 /**
@@ -110,7 +119,13 @@ export function cvModeAwareSchema(isUpdate: () => boolean): StandardSchema {
 }
 
 export function emptyCvFormValues(): CvFormValues {
-    return { title: '', niche: 'fullstack', is_primary: false, file: [] };
+    return {
+        title: '',
+        niche: 'fullstack',
+        is_primary: false,
+        file: [],
+        content: undefined,
+    };
 }
 
 /**
@@ -127,6 +142,7 @@ export function toCvFormValues(cv: Cv): CvFormValues {
         niche: cv.niche,
         is_primary: cv.is_primary,
         file: [],
+        content: undefined,
     };
 }
 
@@ -154,6 +170,8 @@ export function toCvWritePayload(
 
     if (file) {
         payload.file = file;
+    } else if (values.content !== undefined) {
+        payload.content = values.content;
     }
 
     return payload;

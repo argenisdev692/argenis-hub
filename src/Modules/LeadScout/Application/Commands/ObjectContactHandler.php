@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
-use Modules\LeadScout\Domain\Enums\PrivacyRequestOutcome;
+use Carbon\CarbonImmutable;
 use Modules\LeadScout\Domain\Enums\PrivacyRequestType;
 use Modules\LeadScout\Domain\Exceptions\ContactNotFoundException;
+use Modules\LeadScout\Domain\Ports\ContactRepositoryPort;
+use Modules\LeadScout\Domain\Ports\PrivacyRequestRepositoryPort;
+use Modules\LeadScout\Domain\Ports\TransactionPort;
 use Modules\LeadScout\Domain\Services\DecisionMakerExtractor;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactObjectionEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutPrivacyRequestEloquentModel;
 
 /**
  * Person objection (spec US-11 CA-10, FR-25/29, T049): immediate
@@ -20,34 +19,22 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutPrivacyReq
  */
 final readonly class ObjectContactHandler
 {
+    public function __construct(
+        private ContactRepositoryPort $contacts,
+        private PrivacyRequestRepositoryPort $privacyRequests,
+        private TransactionPort $transaction,
+    ) {}
+
     public function handle(string $contactUuid): void
     {
-        $contact = ScoutContactEloquentModel::query()->with('company')->where('uuid', $contactUuid)->first()
-            ?? throw new ContactNotFoundException($contactUuid);
+        $contact = $this->contacts->byUuid($contactUuid) ?? throw new ContactNotFoundException($contactUuid);
+        $hash = DecisionMakerExtractor::personHash((string) $contact->fullName, (string) $contact->companyDomain);
+        $now = CarbonImmutable::now();
 
-        DB::transaction(function () use ($contact): void {
-            $hash = DecisionMakerExtractor::personHash(
-                (string) $contact->full_name,
-                (string) $contact->company->canonical_domain,
-            );
-
-            ScoutContactObjectionEloquentModel::query()->firstOrCreate(['person_hash' => $hash]);
-
-            $contact->update([
-                'full_name' => null,
-                'published_email' => null,
-                'public_profile_url' => null,
-                'evidence_excerpt' => null,
-                'anonymized_at' => now(),
-            ]);
-
-            ScoutPrivacyRequestEloquentModel::query()->create([
-                'subject_ref' => $hash,
-                'request_type' => PrivacyRequestType::Objection->value,
-                'received_at' => now(),
-                'resolved_at' => now(),
-                'outcome' => PrivacyRequestOutcome::Resolved->value,
-            ]);
+        $this->transaction->run(function () use ($contact, $hash, $now): void {
+            $this->contacts->recordObjection($hash);
+            $this->contacts->anonymize($contact->id, $now);
+            $this->privacyRequests->recordResolved($hash, PrivacyRequestType::Objection, $now);
         });
     }
 }

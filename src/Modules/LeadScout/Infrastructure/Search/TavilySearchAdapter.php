@@ -57,7 +57,7 @@ final readonly class TavilySearchAdapter implements SearchPort
     {
         self::assertAllowed($query->text);
 
-        $hash = hash('sha256', mb_strtolower(trim($query->text)).'|'.$query->depth.'|'.($query->country ?? ''));
+        $hash = self::hashOf($query);
         $freshBefore = now()->subDays((int) config('lead-scout.discovery.search_cache_days', 30));
 
         $cached = ScoutSearchQueryEloquentModel::query()
@@ -176,5 +176,19 @@ final readonly class TavilySearchAdapter implements SearchPort
         $key = $depth === 'basic' ? 'tavily_basic_eur' : 'tavily_advanced_eur';
 
         return (int) ((float) config("lead-scout.costs.{$key}", 0.01) * 1_000_000);
+    }
+
+    public function recordNewCompanies(SearchQuery $query, int $count): void
+    {
+        ScoutSearchQueryEloquentModel::query()
+            ->where('query_hash', self::hashOf($query))
+            ->orderByDesc('id')
+            ->first()
+            ?->increment('new_companies_count', $count);
+    }
+
+    private static function hashOf(SearchQuery $query): string
+    {
+        return hash('sha256', mb_strtolower(trim($query->text)).'|'.$query->depth.'|'.($query->country ?? ''));
     }
 }

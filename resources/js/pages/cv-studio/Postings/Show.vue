@@ -7,16 +7,14 @@ import { Button } from '@/components/ui/button';
 import FitScoreBadge from '@/modules/cv-studio/components/FitScoreBadge.vue';
 import OpportunityChips from '@/modules/cv-studio/components/OpportunityChips.vue';
 import PostingStatusBadge from '@/modules/cv-studio/components/PostingStatusBadge.vue';
+import TailorChatPanel from '@/modules/cv-studio/components/TailorChatPanel.vue';
 import { usePostingMutations } from '@/modules/cv-studio/composables/usePostingMutations';
 import {
     bandLabel,
     formatDate,
     remoteScopeLabel,
 } from '@/modules/cv-studio/helpers/studioPresentation';
-import type {
-    StudioPosting,
-    StudioScore,
-} from '@/modules/cv-studio/types';
+import type { StudioPosting, StudioScore } from '@/modules/cv-studio/types';
 import { index, resolve, unlink } from '@/routes/cv-studio/postings';
 import { dismiss } from '@/routes/cv-studio/postings/requirements';
 
@@ -146,8 +144,8 @@ const failedGates = computed(() => gates.filter((gate) => !gate.passed));
                     v-if="posting.cap_reason"
                     class="text-xs text-muted-foreground"
                 >
-                    Capped: {{ posting.cap_reason }} — see uncapped value in
-                    the score breakdown.
+                    Capped: {{ posting.cap_reason }} — see uncapped value in the
+                    score breakdown.
                 </span>
             </div>
         </header>
@@ -184,17 +182,23 @@ const failedGates = computed(() => gates.filter((gate) => !gate.passed));
             <dl class="grid grid-cols-3 gap-3 text-center">
                 <div class="rounded-lg bg-muted p-3">
                     <dt class="text-xs text-muted-foreground">Skills (H)</dt>
-                    <dd class="text-xl font-semibold tabular-nums">{{ hBar }}</dd>
+                    <dd class="text-xl font-semibold tabular-nums">
+                        {{ hBar }}
+                    </dd>
                 </div>
                 <div class="rounded-lg bg-muted p-3">
                     <dt class="text-xs text-muted-foreground">Semantic (S)</dt>
-                    <dd class="text-xl font-semibold tabular-nums">{{ sBar }}</dd>
+                    <dd class="text-xl font-semibold tabular-nums">
+                        {{ sBar }}
+                    </dd>
                 </div>
                 <div class="rounded-lg bg-muted p-3">
                     <dt class="text-xs text-muted-foreground">
                         Deterministic (D)
                     </dt>
-                    <dd class="text-xl font-semibold tabular-nums">{{ dBar }}</dd>
+                    <dd class="text-xl font-semibold tabular-nums">
+                        {{ dBar }}
+                    </dd>
                 </div>
             </dl>
 
@@ -242,10 +246,9 @@ const failedGates = computed(() => gates.filter((gate) => !gate.passed));
             </p>
         </section>
 
-        <section
-            class="flex flex-wrap gap-2"
-            aria-label="Posting actions"
-        >
+        <TailorChatPanel :posting-uuid="posting.uuid" />
+
+        <section class="flex flex-wrap gap-2" aria-label="Posting actions">
             <PermissionGuard permission="VIEW_STUDIO_POSTINGS">
                 <Button
                     v-if="posting.canonical_url"

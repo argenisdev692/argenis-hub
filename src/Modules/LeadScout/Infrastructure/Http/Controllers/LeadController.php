@@ -21,13 +21,11 @@ final readonly class LeadController
         $page = $list->handle($filters, $filters->perPage ?? 15);
 
         return response()->json([
-            'data' => $page->getCollection()->map(
-                static fn ($company): LeadListItemData => LeadListItemData::fromModel($company),
-            )->all(),
+            'data' => array_map(LeadListItemData::fromLead(...), $page->items),
             'meta' => [
-                'current_page' => $page->currentPage(),
-                'per_page' => $page->perPage(),
-                'total' => $page->total(),
+                'current_page' => $page->currentPage,
+                'per_page' => $page->perPage,
+                'total' => $page->total,
             ],
         ]);
     }

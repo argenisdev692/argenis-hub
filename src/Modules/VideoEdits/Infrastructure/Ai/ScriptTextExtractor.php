@@ -7,7 +7,7 @@ namespace Modules\VideoEdits\Infrastructure\Ai;
 use Modules\VideoEdits\Domain\Exceptions\ScriptUnreadableException;
 use Modules\VideoEdits\Domain\Ports\ScriptTextExtractorPort;
 use Modules\VideoEdits\Domain\ValueObjects\ScriptDocument;
-use Smalot\PdfParser\Parser as PdfParser;
+use PrinsFrank\PdfParser\PdfParser;
 use Throwable;
 
 /**

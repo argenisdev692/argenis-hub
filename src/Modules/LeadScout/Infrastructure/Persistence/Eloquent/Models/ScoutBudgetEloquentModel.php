@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Modules\LeadScout\Domain\Enums\BudgetCategory;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * Monthly spend ledger per category (spec US-8, FR-14). `spent_micros` moves
@@ -28,6 +30,8 @@ use Modules\LeadScout\Domain\Enums\BudgetCategory;
 ])]
 final class ScoutBudgetEloquentModel extends Model
 {
+    use LogsActivity;
+
     /** @var list<string> */
     protected $hidden = ['id'];
 
@@ -41,5 +45,14 @@ final class ScoutBudgetEloquentModel extends Model
             'limit_micros' => 'integer',
             'spent_micros' => 'integer',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['period', 'category', 'limit_micros'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('lead-scout.budget');
     }
 }

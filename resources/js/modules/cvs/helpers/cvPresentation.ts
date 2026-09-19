@@ -8,7 +8,7 @@ import {
 import type { LucideIcon } from '@lucide/vue';
 import type { FilterSelectOption } from '@/common/form';
 import type { BadgeVariants } from '@/components/ui/badge';
-import type { Cv, CvFileType, CvNiche } from '../types';
+import type { Cv, CvFileType, CvNiche, CvSource } from '../types';
 
 /**
  * Row-derived display values shared by the table, the dialog, the detail page
@@ -74,6 +74,41 @@ export const CV_NICHE_OPTIONS: FilterSelectOption[] = CV_NICHES.map(
 /** Narrows a select's `unknown` model value back to a niche. */
 export function isCvNiche(value: unknown): value is CvNiche {
     return CV_NICHES.some((niche) => niche === value);
+}
+
+const SOURCES: Record<CvSource, Presentation> = {
+    upload: {
+        label: 'Upload',
+        variant: 'secondary',
+        icon: FileTextIcon,
+    },
+    studio: {
+        label: 'Studio',
+        variant: 'default',
+        icon: LayersIcon,
+    },
+    chat: {
+        label: 'Chat',
+        variant: 'outline',
+        icon: TagIcon,
+    },
+};
+
+export function cvSourcePresentation(source: CvSource): Presentation {
+    return SOURCES[source];
+}
+
+/** Every source, in display order. */
+export const CV_SOURCES: readonly CvSource[] = ['upload', 'studio', 'chat'];
+
+/** The source select options shared by the list filter. */
+export const CV_SOURCE_OPTIONS: FilterSelectOption[] = CV_SOURCES.map(
+    (source) => ({ value: source, label: SOURCES[source].label }),
+);
+
+/** Narrows a select's `unknown` model value back to a source. */
+export function isCvSource(value: unknown): value is CvSource {
+    return CV_SOURCES.some((source) => source === value);
 }
 
 const FILE_TYPES: Record<CvFileType, { label: string; icon: LucideIcon }> = {

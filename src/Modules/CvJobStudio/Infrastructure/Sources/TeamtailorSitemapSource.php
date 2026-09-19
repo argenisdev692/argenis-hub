@@ -6,8 +6,8 @@ namespace Modules\CvJobStudio\Infrastructure\Sources;
 
 use Illuminate\Support\Facades\Http;
 use Modules\CvJobStudio\Domain\Ports\PostingSourcePort;
-use Modules\CvJobStudio\Domain\Services\OutboundUrlGuard;
 use Modules\CvJobStudio\Domain\Services\RobotsTxtPolicy;
+use Modules\CvJobStudio\Infrastructure\Fetching\OutboundUrlGuard;
 
 /**
  * Teamtailor company sitemap walker (T-005/T-037 resolution): the official
@@ -37,7 +37,7 @@ final readonly class TeamtailorSitemapSource implements PostingSourcePort
         }
 
         try {
-            $response = Http::timeout(10)->retry(1, 500)->get($sitemap);
+            $response = Http::withOptions($this->guard->httpOptions())->timeout(10)->retry(1, 500)->get($sitemap);
         } catch (\Throwable) {
             return ['postings' => [], 'query' => $query, 'cost_micros' => 0];
         }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Database\Factories\UserFactory;
@@ -44,16 +46,21 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvStruc
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersionEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioEmbeddingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioExportEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioGateResultEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioInsightReportEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioMetricAnswerEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingSightingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingSourceEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingTextEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProviderCallEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioQueryExperimentEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioQueryTemplateEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSkillMatchEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSkillRelationEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSourceCompanyEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSourceEloquentModel;
@@ -163,6 +170,11 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, StudioCvVersionEloquentModel> $studioCvVersions
  * @property-read Collection<int, StudioExportEloquentModel> $studioExports
  * @property-read Collection<int, StudioSkillRelationEloquentModel> $studioSkillRelations
+ * @property-read Collection<int, StudioPostingTextEloquentModel> $studioPostingTexts
+ * @property-read Collection<int, StudioRequirementEloquentModel> $studioRequirements
+ * @property-read Collection<int, StudioGateResultEloquentModel> $studioGateResults
+ * @property-read Collection<int, StudioScoreEloquentModel> $studioScores
+ * @property-read Collection<int, StudioSkillMatchEloquentModel> $studioSkillMatches
  * @property-read Collection<int, ProductEloquentModel> $products
  * @property-read Collection<int, InvoiceEloquentModel> $invoices
  * @property-read Collection<int, PaymentAccountEloquentModel> $paymentAccounts
@@ -271,6 +283,11 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $studio_source_locales_count
  * @property-read int|null $studio_sources_count
  * @property-read int|null $studio_vocabulary_count
+ * @property-read int|null $studio_gate_results_count
+ * @property-read int|null $studio_posting_texts_count
+ * @property-read int|null $studio_requirements_count
+ * @property-read int|null $studio_scores_count
+ * @property-read int|null $studio_skill_matches_count
  *
  * @mixin \Eloquent
  */
@@ -654,6 +671,36 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function studioSkillRelations(): HasMany
     {
         return $this->hasMany(StudioSkillRelationEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioPostingTextEloquentModel, $this> */
+    public function studioPostingTexts(): HasMany
+    {
+        return $this->hasMany(StudioPostingTextEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioRequirementEloquentModel, $this> */
+    public function studioRequirements(): HasMany
+    {
+        return $this->hasMany(StudioRequirementEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioGateResultEloquentModel, $this> */
+    public function studioGateResults(): HasMany
+    {
+        return $this->hasMany(StudioGateResultEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioScoreEloquentModel, $this> */
+    public function studioScores(): HasMany
+    {
+        return $this->hasMany(StudioScoreEloquentModel::class);
+    }
+
+    /** @return HasMany<StudioSkillMatchEloquentModel, $this> */
+    public function studioSkillMatches(): HasMany
+    {
+        return $this->hasMany(StudioSkillMatchEloquentModel::class);
     }
 
     /**

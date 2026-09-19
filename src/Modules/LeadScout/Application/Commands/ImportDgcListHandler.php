@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Modules\LeadScout\Domain\Enums\SuppressionSource;
+use Carbon\CarbonImmutable;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
+use Modules\LeadScout\Domain\Ports\TabularFileReaderPort;
 use Modules\LeadScout\Domain\ValueObjects\CanonicalDomain;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressionEloquentModel;
-use Spatie\SimpleExcel\SimpleExcelReader;
 
 /**
  * DGC opposition-list import (spec FR-17, T074, Lei 41/2004 art. 13-B):
  * CSV/XLSX (≤ 10 MB) matched by NIPC, domain or normalized name. Rows land
  * as `dgc_list` suppressions with the list period; `ChannelAdvisor` blocks
  * PT email while listed and while the last import is under 3 months old.
- *
- * @return array{imported: int, skipped: int, invalid: int}
  */
 final readonly class ImportDgcListHandler
 {
@@ -25,15 +23,26 @@ final readonly class ImportDgcListHandler
 
     private const array NAME_KEYS = ['nombre', 'nome', 'name', 'empresa', 'company', 'denominacion', 'denominação'];
 
+    private const int MAX_BYTES = 10 * 1024 * 1024;
+
+    private const string REASON = 'DGC opposition list (Lei 41/2004 art. 13-B).';
+
+    public function __construct(
+        private TabularFileReaderPort $reader,
+        private SuppressionRepositoryPort $suppressions,
+    ) {}
+
+    /**
+     * @return array{imported: int, skipped: int, invalid: int}
+     */
     public function handle(string $file, ?string $period = null): array
     {
-        $this->assertFile($file);
-
         $report = ['imported' => 0, 'skipped' => 0, 'invalid' => 0];
-        $period ??= now()->format('Y').'-Q'.((int) ceil((int) now()->format('n') / 3));
+        $now = CarbonImmutable::now();
+        $period ??= $now->format('Y').'-Q'.$now->quarter;
 
-        foreach (SimpleExcelReader::create($file)->headersToSnakeCase()->getRows() as $row) {
-            $this->importRow(is_array($row) ? $row : [], $period, $report);
+        foreach ($this->reader->rows($file, self::MAX_BYTES) as $row) {
+            $this->importRow($row, $period, $report);
         }
 
         return $report;
@@ -59,30 +68,8 @@ final readonly class ImportDgcListHandler
             return;
         }
 
-        $existing = $this->findExisting($taxId, $domain, $name);
-
-        if ($existing !== null) {
-            $existing->update([
-                'tax_id' => $taxId ?? $existing->tax_id,
-                'canonical_domain' => $domain ?? $existing->canonical_domain,
-                'name' => $name ?? $existing->name,
-                'source' => SuppressionSource::DgcList->value,
-                'list_period' => $period,
-            ]);
-            $report['skipped']++;
-
-            return;
-        }
-
-        ScoutSuppressionEloquentModel::query()->create([
-            'canonical_domain' => $domain,
-            'tax_id' => $taxId,
-            'name' => $name,
-            'source' => SuppressionSource::DgcList->value,
-            'reason' => 'DGC opposition list (Lei 41/2004 art. 13-B).',
-            'list_period' => $period,
-        ]);
-        $report['imported']++;
+        $created = $this->suppressions->recordDgcListing($taxId, $domain, $name, $period, self::REASON);
+        $report[$created ? 'imported' : 'skipped']++;
     }
 
     /**
@@ -129,33 +116,5 @@ final readonly class ImportDgcListHandler
         $normalized = (string) preg_replace('/\s+/', ' ', trim($value));
 
         return mb_strlen($normalized) >= 2 ? $normalized : null;
-    }
-
-    private function findExisting(?string $taxId, ?string $domain, ?string $name): ?ScoutSuppressionEloquentModel
-    {
-        return ScoutSuppressionEloquentModel::query()
-            ->where(static function ($query) use ($taxId, $domain, $name): void {
-                $query->when($domain !== null, static fn ($q) => $q->where('canonical_domain', $domain))
-                    ->when($taxId !== null, static fn ($q) => $q->orWhere('tax_id', $taxId))
-                    ->when($name !== null, static fn ($q) => $q->orWhere('name', $name));
-            })
-            ->first();
-    }
-
-    private function assertFile(string $file): void
-    {
-        if (! is_file($file) || ! is_readable($file)) {
-            throw new \InvalidArgumentException("File not found or unreadable: {$file}.");
-        }
-
-        if ((filesize($file) ?: 0) > 10 * 1024 * 1024) {
-            throw new \InvalidArgumentException('File exceeds the 10 MB limit.');
-        }
-
-        $extension = mb_strtolower((string) pathinfo($file, PATHINFO_EXTENSION));
-
-        if (! in_array($extension, ['csv', 'xlsx'], true)) {
-            throw new \InvalidArgumentException("Unsupported extension '{$extension}': use CSV or XLSX.");
-        }
     }
 }

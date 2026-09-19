@@ -7,6 +7,9 @@ namespace Modules\CvJobStudio\Infrastructure\Queue;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\Attributes\Backoff;
+use Illuminate\Queue\Attributes\Timeout;
+use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\CvJobStudio\Domain\Services\GateEvaluator;
@@ -15,9 +18,12 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPosting
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
 
 /** Pipeline stage 5: G1/G2/G3 over run postings; pass AND fail stored. */
+#[Tries(3)]
+#[Timeout(120)]
+#[Backoff([10, 60, 300])]
 final class GatePostingsJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, MarksRunFailed, Queueable, SerializesModels;
 
     public function __construct(public int $runId, public int $userId)
     {
@@ -37,13 +43,15 @@ final class GatePostingsJob implements ShouldQueue
         StudioPostingEloquentModel::query()
             ->ownedBy($this->userId)
             ->where('profile_id', $run->profile_id)
+            // Latest text per posting in ONE query per chunk, not one per row.
+            ->with(['texts' => static fn ($texts) => $texts->select(['id', 'posting_id', 'text'])->latest('id')->limit(1)])
             ->chunkById(200, function ($postings) use ($run, $gates, &$passed): void {
                 foreach ($postings as $posting) {
                     $verdicts = $gates->evaluate(
                         [
                             'remote_scope' => $posting->remote_scope ?? 'remote_unclear',
                             'title' => $posting->title,
-                            'text' => (string) $posting->texts()->orderByDesc('id')->first()?->text,
+                            'text' => (string) $posting->texts->first()?->text,
                             'url' => $posting->canonical_url,
                         ],
                         [

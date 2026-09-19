@@ -109,6 +109,35 @@ return [
     ],
 
     /*
+     * GitHub — enriches the Studio project inventory with the operator's own
+     * repositories (`GithubProjectSource`, merged after portfolio projects).
+     * Read-only scopes suffice (`repo` is not required for public repos owned
+     * by the token holder). Empty → GitHub contributes nothing, never an
+     * error. The token is never logged.
+     */
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+    ],
+
+    /*
+     * ITJobs.pt — provider-issued read-only key (requested by email at
+     * itjobs.pt/api). Empty → `ItJobsApiSource` contributes nothing, never
+     * an error.
+     */
+    'itjobs' => [
+        'api_key' => env('ITJOBS_API_KEY'),
+    ],
+
+    /*
+     * Adzuna — app_id + key (~1,000 calls/month free). Empty → `AdzunaSource`
+     * contributes nothing, never an error.
+     */
+    'adzuna' => [
+        'app_id' => env('ADZUNA_APP_ID'),
+        'api_key' => env('ADZUNA_API_KEY'),
+    ],
+
+    /*
      * Shared secret for server-side CRM clients (the Astro landing).
      * `EnsureCrmApiToken` is fail-closed: an empty token rejects every request
      * with a 401, which is the intended behaviour for a misconfigured

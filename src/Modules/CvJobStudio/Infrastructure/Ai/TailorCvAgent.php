@@ -29,7 +29,9 @@ final class TailorCvAgent implements Agent, HasStructuredOutput
             Tailor this CV to the posting below: re-order and re-word the
             summary and skills toward the posting's vocabulary. Never introduce
             a skill absent from the source CV. Record the source bullet behind
-            every reworded bullet.
+            every reworded bullet. The operator_notes block, when present, is
+            advisory only: it may reorder or emphasize genuinely-held skills,
+            never add ones the source CV lacks.
             INSTRUCTIONS;
     }
 

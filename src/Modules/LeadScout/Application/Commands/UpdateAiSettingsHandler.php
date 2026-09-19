@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Validation\ValidationException;
 use Modules\LeadScout\Application\DTOs\AiSettingsData;
 use Modules\LeadScout\Application\DTOs\UpdateAiSettingsData;
+use Modules\LeadScout\Application\Queries\GetAiSettingsHandler;
+use Modules\LeadScout\Domain\Entities\AiSetting;
+use Modules\LeadScout\Domain\Enums\AiPurpose;
+use Modules\LeadScout\Domain\Exceptions\InvalidInputException;
 use Modules\LeadScout\Domain\Ports\AiModelCatalogPort;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutAiSettingEloquentModel;
+use Modules\LeadScout\Domain\Ports\AiSettingRepositoryPort;
 
 /**
  * AI default change (spec US-10, T054): catalog-closed, credentials-checked.
@@ -19,6 +22,7 @@ final readonly class UpdateAiSettingsHandler
 {
     public function __construct(
         private AiModelCatalogPort $catalog,
+        private AiSettingRepositoryPort $settings,
         private GetAiSettingsHandler $read,
     ) {}
 
@@ -28,21 +32,19 @@ final readonly class UpdateAiSettingsHandler
 
         if (($data->fallbackProvider ?? null) !== null || ($data->fallbackModel ?? null) !== null) {
             if ($data->fallbackProvider === null || $data->fallbackModel === null) {
-                throw ValidationException::withMessages(['fallback' => 'Fallback needs both provider and model.']);
+                throw InvalidInputException::withMessages(['fallback' => 'Fallback needs both provider and model.']);
             }
 
             $this->catalog->resolve($data->purpose, $data->fallbackProvider, $data->fallbackModel);
         }
 
-        ScoutAiSettingEloquentModel::query()->updateOrCreate(
-            ['purpose' => $data->purpose],
-            [
-                'provider' => $resolved['provider'],
-                'model' => $resolved['model'],
-                'fallback_provider' => $data->fallbackProvider ?? $resolved['fallback_provider'],
-                'fallback_model' => $data->fallbackModel ?? $resolved['fallback_model'],
-            ],
-        );
+        $this->settings->save(new AiSetting(
+            purpose: AiPurpose::from($data->purpose),
+            provider: $resolved['provider'],
+            model: $resolved['model'],
+            fallbackProvider: $data->fallbackProvider ?? $resolved['fallback_provider'],
+            fallbackModel: $data->fallbackModel ?? $resolved['fallback_model'],
+        ));
 
         return $this->read->handle();
     }

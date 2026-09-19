@@ -6,6 +6,7 @@ namespace Modules\LeadScout\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Modules\LeadScout\Application\Commands\UpsertOpportunityHandler;
+use Modules\LeadScout\Application\DTOs\OpportunityData;
 use Modules\LeadScout\Application\DTOs\UpsertOpportunityData;
 
 /**
@@ -15,19 +16,15 @@ final readonly class OpportunityController
 {
     public function store(string $uuid, UpsertOpportunityData $data, UpsertOpportunityHandler $upsert): JsonResponse
     {
-        $result = $upsert->handleForOutreach($uuid, $data);
-
         return response()->json([
-            'data' => UpsertOpportunityHandler::toData($result['opportunity'], $result['outreach_uuid']),
+            'data' => OpportunityData::fromEntity($upsert->handleForOutreach($uuid, $data)),
         ], 201);
     }
 
     public function update(string $uuid, UpsertOpportunityData $data, UpsertOpportunityHandler $upsert): JsonResponse
     {
-        $result = $upsert->handleUpdate($uuid, $data);
-
         return response()->json([
-            'data' => UpsertOpportunityHandler::toData($result['opportunity'], $result['outreach_uuid']),
+            'data' => OpportunityData::fromEntity($upsert->handleUpdate($uuid, $data)),
         ]);
     }
 }

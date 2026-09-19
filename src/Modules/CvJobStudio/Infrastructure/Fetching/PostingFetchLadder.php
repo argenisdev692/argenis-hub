@@ -17,7 +17,7 @@ final readonly class PostingFetchLadder
     public function __construct(private array $fetchers) {}
 
     /**
-     * @return array{text: string, ladder_step: string, completeness: string}|null
+     * @return array{text: string, ladder_step: string, completeness: string, cost_micros: int}|null
      */
     #[\NoDiscard]
     public function fetch(string $url, bool $skipExtraction): ?array
@@ -34,6 +34,7 @@ final readonly class PostingFetchLadder
                     'text' => $result['text'],
                     'ladder_step' => $fetcher->stepName(),
                     'completeness' => $result['completeness'],
+                    'cost_micros' => $result['cost_micros'],
                 ];
             }
         }

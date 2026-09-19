@@ -8,6 +8,7 @@ import {
     TextField,
 } from '@/common/form';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { useCvForm } from '../composables/useCvForm';
 import {
     CV_NICHE_OPTIONS,
@@ -131,6 +132,36 @@ const storedFile = computed(() =>
                         :max-size-mb="MAX_CV_MB"
                         hint="PDF or Markdown (.md)"
                         @update:model-value="field.handleChange($event)"
+                    />
+                </AppField>
+            </form.Field>
+
+            <!--
+                Pasted-Markdown alternative to the file above, and the input the
+                agent chat writes to: `CreateCvHandler` persists it as a `.md`
+                R2 object with `source: 'chat'`. Either a file or content is
+                required on create; both empty keeps the stored file on edit.
+            -->
+            <form.Field name="content" #default="{ field }">
+                <AppField
+                    :field="field"
+                    label="Or paste Markdown"
+                    :description="
+                        cv
+                            ? 'Optional — pasting replaces the stored file.'
+                            : 'Alternative to uploading a file.'
+                    "
+                    #default="{ control }"
+                >
+                    <Textarea
+                        v-bind="control"
+                        :model-value="field.state.value ?? ''"
+                        placeholder="# Jane Doe&#10;&#10;Senior Laravel Developer…"
+                        rows="6"
+                        class="font-mono text-sm"
+                        @update:model-value="
+                            (value) => field.handleChange(String(value))
+                        "
                     />
                 </AppField>
             </form.Field>

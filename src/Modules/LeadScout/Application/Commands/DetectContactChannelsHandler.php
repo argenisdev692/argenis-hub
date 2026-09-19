@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
+use Carbon\CarbonImmutable;
+use Modules\LeadScout\Domain\Entities\FetchedPage;
+use Modules\LeadScout\Domain\Enums\ChannelAudience;
+use Modules\LeadScout\Domain\Enums\ChannelType;
+use Modules\LeadScout\Domain\Enums\ExtractionMethod;
+use Modules\LeadScout\Domain\Enums\SignalDimension;
+use Modules\LeadScout\Domain\Enums\SignalNature;
 use Modules\LeadScout\Domain\Exceptions\CompanyNotFoundException;
+use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactChannelRepositoryPort;
+use Modules\LeadScout\Domain\Ports\FetchedPageRepositoryPort;
+use Modules\LeadScout\Domain\Ports\JobPostingRepositoryPort;
+use Modules\LeadScout\Domain\Ports\SignalRepositoryPort;
 use Modules\LeadScout\Domain\Services\ContactChannelDetector;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactChannelEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSignalEloquentModel;
+use Modules\LeadScout\Domain\ValueObjects\NewSignal;
 
 /**
  * Detects and upserts contact channels from stored pages + the offer
@@ -18,101 +28,86 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSignalEloq
  */
 final readonly class DetectContactChannelsHandler
 {
-    public function __construct(private ContactChannelDetector $detector) {}
+    public function __construct(
+        private ContactChannelDetector $detector,
+        private CompanyRepositoryPort $companies,
+        private FetchedPageRepositoryPort $pages,
+        private JobPostingRepositoryPort $postings,
+        private ContactChannelRepositoryPort $channels,
+        private SignalRepositoryPort $signals,
+    ) {}
 
     /**
      * @return array{channels: int, signals: int}
      */
     public function handle(string $companyUuid): array
     {
-        $company = ScoutCompanyEloquentModel::query()->where('uuid', $companyUuid)->first()
-            ?? throw new CompanyNotFoundException($companyUuid);
+        $company = $this->companies->byUuid($companyUuid) ?? throw new CompanyNotFoundException($companyUuid);
 
-        $pages = $company->fetchedPages()
-            ->whereNotNull('content_markdown')
-            ->orderBy('id')
-            ->get(['url', 'content_markdown', 'forms_summary'])
-            ->map(static fn ($page): array => [
-                'url' => $page->url,
-                'markdown' => (string) $page->content_markdown,
-                'forms_summary' => $page->forms_summary,
-            ])
-            ->all();
+        $pages = array_map(static fn (FetchedPage $page): array => [
+            'url' => $page->url,
+            'markdown' => (string) $page->contentMarkdown,
+            'forms_summary' => $page->formsSummary,
+        ], $this->pages->withContent($company->id));
 
-        $offer = $company->postings()->where('status', 'active')->orderByDesc('published_at')->first(['source_url']);
+        $offer = array_first($this->postings->activeForCompany($company->id));
 
         $detected = $this->detector->detect(
             $pages,
-            $company->canonical_domain,
-            $offer === null ? null : ['url' => $offer->source_url, 'apply_email' => null],
+            $company->canonicalDomain,
+            $offer === null ? null : ['url' => $offer->sourceUrl, 'apply_email' => null],
         );
 
         $channels = 0;
 
         foreach ($detected['channels'] as $channel) {
-            $existing = ScoutContactChannelEloquentModel::query()
-                ->where('company_id', $company->id)
-                ->where('channel_type', $channel['type'])
-                ->where('url', $channel['url'])
-                ->first();
+            $type = ChannelType::from($channel['type']);
+            $isForm = $type === ChannelType::ContactForm || $type === ChannelType::CareersForm;
 
-            if ($existing === null) {
-                ScoutContactChannelEloquentModel::query()->create([
-                    'company_id' => $company->id,
-                    'channel_type' => $channel['type'],
-                    'url' => $channel['url'],
-                    'generic_email' => $channel['generic_email'],
-                    'form_fields' => $channel['type'] === 'contact_form' || $channel['type'] === 'careers_form'
-                        ? $this->formFields($pages, (string) $channel['url'])
-                        : null,
-                    'has_captcha' => $channel['has_captcha'],
-                    'audience' => $channel['audience'],
-                    'evidence_url' => $channel['evidence_url'],
-                    'evidence_excerpt' => $channel['excerpt'],
-                ]);
+            $created = $this->channels->upsertDetected(
+                companyId: $company->id,
+                type: $type,
+                url: $channel['url'],
+                genericEmail: $channel['generic_email'],
+                formFields: $isForm ? self::formFields($pages, (string) $channel['url']) : null,
+                hasCaptcha: (bool) $channel['has_captcha'],
+                audience: $channel['audience'] === null ? null : ChannelAudience::from($channel['audience']),
+                evidenceUrl: $channel['evidence_url'],
+                evidenceExcerpt: $channel['excerpt'],
+            );
+
+            if ($created) {
                 $channels++;
-            } else {
-                $existing->update([
-                    'generic_email' => $channel['generic_email'] ?? $existing->generic_email,
-                    'evidence_url' => $channel['evidence_url'],
-                    'evidence_excerpt' => $channel['excerpt'],
-                ]);
             }
         }
 
         $signals = 0;
 
         foreach ($detected['impliedSignals'] as $implied) {
-            $exists = ScoutSignalEloquentModel::query()
-                ->where('company_id', $company->id)
-                ->where('signal_key', $implied['signal_key'])
-                ->exists();
+            $stored = $this->signals->addIfAbsent($company->id, new NewSignal(
+                dimension: SignalDimension::Commercial,
+                signalKey: $implied['signal_key'],
+                nature: SignalNature::Fact,
+                confidence: 80,
+                extractionMethod: ExtractionMethod::Rule,
+                capturedAt: CarbonImmutable::now(),
+                evidenceUrl: $implied['url'],
+                evidenceExcerpt: $implied['excerpt'],
+            ));
 
-            if ($exists) {
-                continue;
+            if ($stored) {
+                $signals++;
             }
-
-            ScoutSignalEloquentModel::query()->create([
-                'company_id' => $company->id,
-                'dimension' => 'commercial',
-                'signal_key' => $implied['signal_key'],
-                'nature' => 'fact',
-                'confidence' => 80,
-                'evidence_url' => $implied['url'],
-                'evidence_excerpt' => $implied['excerpt'],
-                'captured_at' => now(),
-                'extraction_method' => 'rule',
-            ]);
-            $signals++;
         }
 
         return ['channels' => $channels, 'signals' => $signals];
     }
 
     /**
+     * @param  list<array{url: string, markdown: string, forms_summary: array<string, mixed>|null}>  $pages
      * @return list<string>|null
      */
-    private function formFields(array $pages, string $url): ?array
+    private static function formFields(array $pages, string $url): ?array
     {
         foreach ($pages as $page) {
             if ($page['url'] === $url && is_array($page['forms_summary'])) {

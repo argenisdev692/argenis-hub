@@ -23,7 +23,7 @@ final class LeadDetailData extends Data
      * @param  list<ContactData>  $decisors
      * @param  list<array{uuid: ?string, type: string, url: ?string, rank: int, allowed: bool, blocked_reason: ?string, warning: ?string, audience: ?string, evidence_url: ?string}>  $channels
      * @param  list<OutreachData>  $outreaches
-     * @param  array<string, mixed>  $company
+     * @param  array{uuid: string, name: string, domain: string, country: ?string, company_type: ?string, origin: string, origin_ref: ?string, discovery_wave: ?string, employee_range: string, team_size_observed: ?int, has_decision_maker: bool, needs_research: bool, activity_status: string, legal_name: ?string, city: ?string, founded_year: ?int, services: list<string>, sectors: list<string>}  $company
      */
     public function __construct(
         public readonly array $company,

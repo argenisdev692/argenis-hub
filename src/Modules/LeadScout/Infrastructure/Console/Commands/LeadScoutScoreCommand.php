@@ -32,7 +32,7 @@ final class LeadScoutScoreCommand extends Command
 
         foreach ($query->pluck('uuid') as $uuid) {
             $result = $score->handle($uuid);
-            $this->line("{$uuid}: {$result->lead_score} ({$result->tier->value}, conf {$result->confidence})");
+            $this->line("{$uuid}: {$result->leadScore} ({$result->tier->value}, conf {$result->confidence})");
             $count++;
         }
 

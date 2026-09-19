@@ -1,0 +1,3594 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "ArgenisHub",
+        "version": "1.0.0",
+        "description": "LeadScout endpoints (session auth, spec 003-lead-scout)."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/data/admin/lead-scout"
+        }
+    ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
+    "paths": {
+        "/ai-settings": {
+            "get": {
+                "operationId": "lead-scout.ai-settings.show",
+                "tags": [
+                    "AiSettings"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AiSettingsData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "lead-scout.ai-settings.update",
+                "tags": [
+                    "AiSettings"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateAiSettingsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AiSettingsData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/budgets": {
+            "get": {
+                "operationId": "lead-scout.budgets.show",
+                "tags": [
+                    "Budget"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/BudgetStatusData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "lead-scout.budgets.update",
+                "tags": [
+                    "Budget"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateBudgetsData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/BudgetStatusData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/channels/{uuid}": {
+            "patch": {
+                "operationId": "lead-scout.channels.update",
+                "tags": [
+                    "Channel"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateChannelData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid",
+                                                "type",
+                                                "status"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/leads/{uuid}/contacts": {
+            "post": {
+                "operationId": "lead-scout.contacts.store",
+                "tags": [
+                    "Contact"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpsertContactData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ContactData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/contacts/{uuid}": {
+            "patch": {
+                "operationId": "lead-scout.contacts.update",
+                "tags": [
+                    "Contact"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpsertContactData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ContactData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/contacts/{uuid}/objection": {
+            "post": {
+                "operationId": "lead-scout.contacts.objection",
+                "tags": [
+                    "Contact"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/decision-rules": {
+            "post": {
+                "operationId": "lead-scout.decision-rules.store",
+                "tags": [
+                    "DecisionRule"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DecisionRuleData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                },
+                                                "sample_size": {
+                                                    "type": "integer"
+                                                },
+                                                "window_days": {
+                                                    "type": "integer"
+                                                },
+                                                "thresholds": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "number"
+                                                    }
+                                                },
+                                                "locked_at": {
+                                                    "type": "null"
+                                                },
+                                                "result": {
+                                                    "type": "null"
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid",
+                                                "sample_size",
+                                                "window_days",
+                                                "thresholds",
+                                                "locked_at",
+                                                "result"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/decision-rules/{uuid}/lock": {
+            "post": {
+                "operationId": "lead-scout.decision-rules.lock",
+                "tags": [
+                    "DecisionRule"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                },
+                                                "sample_size": {
+                                                    "type": "integer"
+                                                },
+                                                "window_days": {
+                                                    "type": "integer"
+                                                },
+                                                "thresholds": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "number"
+                                                    }
+                                                },
+                                                "locked_at": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "result": {
+                                                    "type": "string"
+                                                },
+                                                "evaluation": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "outcome": {
+                                                            "type": "string"
+                                                        },
+                                                        "contacted": {
+                                                            "type": "string"
+                                                        },
+                                                        "positives": {
+                                                            "type": "string"
+                                                        },
+                                                        "rate": {
+                                                            "type": "string"
+                                                        },
+                                                        "expected_low": {
+                                                            "type": "string"
+                                                        },
+                                                        "expected_high": {
+                                                            "type": "string"
+                                                        },
+                                                        "conclusive": {
+                                                            "type": "string"
+                                                        },
+                                                        "message": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "outcome",
+                                                        "contacted",
+                                                        "positives",
+                                                        "rate",
+                                                        "expected_low",
+                                                        "expected_high",
+                                                        "conclusive",
+                                                        "message"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid",
+                                                "sample_size",
+                                                "window_days",
+                                                "thresholds",
+                                                "locked_at",
+                                                "result",
+                                                "evaluation"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/leads/{uuid}/drafts": {
+            "post": {
+                "operationId": "lead-scout.leads.drafts",
+                "tags": [
+                    "Draft"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateDraftData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutreachData"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "subject": {
+                                                    "type": "string"
+                                                },
+                                                "unconfirmed_claims": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                "warnings": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            },
+                                                            "minItems": 0,
+                                                            "maxItems": 0,
+                                                            "additionalItems": false
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                                {
+                                                                    "type": "string",
+                                                                    "const": "The decisor no longer appears on the evidence page and was anonymized."
+                                                                }
+                                                            ],
+                                                            "minItems": 1,
+                                                            "maxItems": 1,
+                                                            "additionalItems": false
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                                {
+                                                                    "type": "string",
+                                                                    "const": "Could not re-verify the decisor page: confirm the person manually before sending."
+                                                                }
+                                                            ],
+                                                            "minItems": 1,
+                                                            "maxItems": 1,
+                                                            "additionalItems": false
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                                {
+                                                                    "type": "string",
+                                                                    "const": "Decisor data is older than 90 days and has no evidence page to re-verify: confirm manually."
+                                                                }
+                                                            ],
+                                                            "minItems": 1,
+                                                            "maxItems": 1,
+                                                            "additionalItems": false
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "subject",
+                                                "unconfirmed_claims",
+                                                "warnings"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/leads": {
+            "get": {
+                "operationId": "lead-scout.leads.index",
+                "tags": [
+                    "Lead"
+                ],
+                "parameters": [
+                    {
+                        "name": "tier[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "A",
+                                "B",
+                                "C",
+                                "discarded"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "A",
+                                    "B",
+                                    "C",
+                                    "discarded"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "country[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 2,
+                                "maxLength": 2
+                            }
+                        }
+                    },
+                    {
+                        "name": "companyType[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "software_agency",
+                                "consultancy",
+                                "product_company",
+                                "recruiter",
+                                "large_outsourcer",
+                                "other"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "software_agency",
+                                    "consultancy",
+                                    "product_company",
+                                    "recruiter",
+                                    "large_outsourcer",
+                                    "other"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "signalType[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "technical",
+                                "commercial",
+                                "remote",
+                                "communication",
+                                "recurrent",
+                                "vitality",
+                                "geo_contract"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "technical",
+                                    "commercial",
+                                    "remote",
+                                    "communication",
+                                    "recurrent",
+                                    "vitality",
+                                    "geo_contract"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "stage[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "draft",
+                                "ready",
+                                "sent",
+                                "replied",
+                                "positive",
+                                "call",
+                                "trial",
+                                "won",
+                                "recurrent",
+                                "lost",
+                                "do_not_contact"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "draft",
+                                    "ready",
+                                    "sent",
+                                    "replied",
+                                    "positive",
+                                    "call",
+                                    "trial",
+                                    "won",
+                                    "recurrent",
+                                    "lost",
+                                    "do_not_contact"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "origin[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "job_posting",
+                                "discovery",
+                                "manual",
+                                "import"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "job_posting",
+                                    "discovery",
+                                    "manual",
+                                    "import"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "needsResearch",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "dateFrom",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "dateTo",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "per_page",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "lead-scout.leads.store",
+                "tags": [
+                    "ManualLead"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateManualLeadData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CompanyData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/leads/{uuid}": {
+            "get": {
+                "operationId": "lead-scout.leads.show",
+                "tags": [
+                    "Lead"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`LeadDetailData`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LeadDetailData"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/leads/export": {
+            "get": {
+                "operationId": "lead-scout.leads.export",
+                "tags": [
+                    "LeadExport"
+                ],
+                "parameters": [
+                    {
+                        "name": "tier[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "A",
+                                "B",
+                                "C",
+                                "discarded"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "A",
+                                    "B",
+                                    "C",
+                                    "discarded"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "country[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 2,
+                                "maxLength": 2
+                            }
+                        }
+                    },
+                    {
+                        "name": "companyType[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "software_agency",
+                                "consultancy",
+                                "product_company",
+                                "recruiter",
+                                "large_outsourcer",
+                                "other"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "software_agency",
+                                    "consultancy",
+                                    "product_company",
+                                    "recruiter",
+                                    "large_outsourcer",
+                                    "other"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "signalType[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "technical",
+                                "commercial",
+                                "remote",
+                                "communication",
+                                "recurrent",
+                                "vitality",
+                                "geo_contract"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "technical",
+                                    "commercial",
+                                    "remote",
+                                    "communication",
+                                    "recurrent",
+                                    "vitality",
+                                    "geo_contract"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "stage[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "draft",
+                                "ready",
+                                "sent",
+                                "replied",
+                                "positive",
+                                "call",
+                                "trial",
+                                "won",
+                                "recurrent",
+                                "lost",
+                                "do_not_contact"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "draft",
+                                    "ready",
+                                    "sent",
+                                    "replied",
+                                    "positive",
+                                    "call",
+                                    "trial",
+                                    "won",
+                                    "recurrent",
+                                    "lost",
+                                    "do_not_contact"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "origin[]",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "enum": [
+                                "job_posting",
+                                "discovery",
+                                "manual",
+                                "import"
+                            ],
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "job_posting",
+                                    "discovery",
+                                    "manual",
+                                    "import"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "name": "needsResearch",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "dateFrom",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "dateTo",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "dataset",
+                        "in": "query",
+                        "description": "Export dataset: `leads` (bandeja) or `funnel` (outreaches + stages + deals).",
+                        "schema": {
+                            "type": "string",
+                            "default": "leads"
+                        },
+                        "example": "leads"
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "Export file format: `csv`, `xlsx` or `pdf`.",
+                        "schema": {
+                            "type": "string",
+                            "default": "csv"
+                        },
+                        "example": "xlsx"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/status": {
+            "get": {
+                "operationId": "lead-scout.status",
+                "tags": [
+                    "LeadScoutStatus"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "module": {
+                                            "type": "string",
+                                            "const": "lead-scout"
+                                        },
+                                        "rules_version": {
+                                            "type": "string"
+                                        },
+                                        "ok": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "module",
+                                        "rules_version",
+                                        "ok"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/metrics": {
+            "get": {
+                "operationId": "lead-scout.metrics.index",
+                "tags": [
+                    "Metrics"
+                ],
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "groupBy",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "channel",
+                                "variant",
+                                "country",
+                                "signal",
+                                "origin",
+                                "wave",
+                                null
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "stages": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "stage": {
+                                                                "type": "string"
+                                                            },
+                                                            "count": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "stage",
+                                                            "count"
+                                                        ]
+                                                    }
+                                                },
+                                                "totals": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "sent": {
+                                                            "type": "integer"
+                                                        },
+                                                        "responded": {
+                                                            "type": "integer"
+                                                        },
+                                                        "positive": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "sent",
+                                                        "responded",
+                                                        "positive"
+                                                    ]
+                                                },
+                                                "by_channel": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "value": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "sent": {
+                                                                "type": "integer"
+                                                            },
+                                                            "responded": {
+                                                                "type": "integer"
+                                                            },
+                                                            "positive": {
+                                                                "type": "integer"
+                                                            },
+                                                            "response_rate": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "value",
+                                                            "sent",
+                                                            "responded",
+                                                            "positive",
+                                                            "response_rate"
+                                                        ]
+                                                    }
+                                                },
+                                                "by_variant": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "value": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "sent": {
+                                                                "type": "integer"
+                                                            },
+                                                            "responded": {
+                                                                "type": "integer"
+                                                            },
+                                                            "positive": {
+                                                                "type": "integer"
+                                                            },
+                                                            "response_rate": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "value",
+                                                            "sent",
+                                                            "responded",
+                                                            "positive",
+                                                            "response_rate"
+                                                        ]
+                                                    }
+                                                },
+                                                "by_origin": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "value": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "sent": {
+                                                                "type": "integer"
+                                                            },
+                                                            "responded": {
+                                                                "type": "integer"
+                                                            },
+                                                            "positive": {
+                                                                "type": "integer"
+                                                            },
+                                                            "response_rate": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "value",
+                                                            "sent",
+                                                            "responded",
+                                                            "positive",
+                                                            "response_rate"
+                                                        ]
+                                                    }
+                                                },
+                                                "by_country": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "value": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "sent": {
+                                                                "type": "integer"
+                                                            },
+                                                            "responded": {
+                                                                "type": "integer"
+                                                            },
+                                                            "positive": {
+                                                                "type": "integer"
+                                                            },
+                                                            "response_rate": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "value",
+                                                            "sent",
+                                                            "responded",
+                                                            "positive",
+                                                            "response_rate"
+                                                        ]
+                                                    }
+                                                },
+                                                "by_wave": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "wave": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "companies": {
+                                                                "type": "integer"
+                                                            },
+                                                            "discarded_by_reason": {
+                                                                "type": "object",
+                                                                "additionalProperties": {
+                                                                    "type": "integer"
+                                                                }
+                                                            },
+                                                            "ab_leads": {
+                                                                "type": "integer"
+                                                            },
+                                                            "response_rate": {
+                                                                "type": "number"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "wave",
+                                                            "companies",
+                                                            "discarded_by_reason",
+                                                            "ab_leads",
+                                                            "response_rate"
+                                                        ]
+                                                    }
+                                                },
+                                                "weekly_volume": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "week": {
+                                                                "type": "string"
+                                                            },
+                                                            "source": {
+                                                                "type": "string"
+                                                            },
+                                                            "postings": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "week",
+                                                            "source",
+                                                            "postings"
+                                                        ]
+                                                    }
+                                                },
+                                                "billing": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "hours_billed": {
+                                                            "type": "integer"
+                                                        },
+                                                        "revenue_cents": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "hours_billed",
+                                                        "revenue_cents"
+                                                    ]
+                                                },
+                                                "cost_per_qualified_lead": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "spent_micros": {
+                                                            "type": "integer"
+                                                        },
+                                                        "qualified_leads": {
+                                                            "type": "integer"
+                                                        },
+                                                        "micros_per_lead": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "spent_micros",
+                                                        "qualified_leads",
+                                                        "micros_per_lead"
+                                                    ]
+                                                },
+                                                "search_effectiveness": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "family": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "queries": {
+                                                                "type": "integer"
+                                                            },
+                                                            "results": {
+                                                                "type": "integer"
+                                                            },
+                                                            "new_companies": {
+                                                                "type": "integer"
+                                                            },
+                                                            "ab_leads": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "family",
+                                                            "queries",
+                                                            "results",
+                                                            "new_companies",
+                                                            "ab_leads"
+                                                        ]
+                                                    }
+                                                },
+                                                "extraction": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "companies": {
+                                                            "type": "integer"
+                                                        },
+                                                        "with_pages": {
+                                                            "type": "integer"
+                                                        },
+                                                        "blocked_share": {
+                                                            "type": "number"
+                                                        },
+                                                        "spa_rescued_share": {
+                                                            "type": "number"
+                                                        },
+                                                        "micros_per_enriched": {
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "companies",
+                                                        "with_pages",
+                                                        "blocked_share",
+                                                        "spa_rescued_share",
+                                                        "micros_per_enriched"
+                                                    ]
+                                                },
+                                                "decisor_coverage": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "ab_leads": {
+                                                            "type": "integer"
+                                                        },
+                                                        "ab_with_decisor": {
+                                                            "type": "integer"
+                                                        },
+                                                        "ab_with_allowed_channel": {
+                                                            "type": "number"
+                                                        },
+                                                        "reply_by_role": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "role": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "replied": {
+                                                                        "type": "integer"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "role",
+                                                                    "replied"
+                                                                ]
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "ab_leads",
+                                                        "ab_with_decisor",
+                                                        "ab_with_allowed_channel",
+                                                        "reply_by_role"
+                                                    ]
+                                                },
+                                                "sample": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "outcome": {
+                                                            "type": "string"
+                                                        },
+                                                        "contacted": {
+                                                            "type": "integer"
+                                                        },
+                                                        "positives": {
+                                                            "type": "integer"
+                                                        },
+                                                        "rate": {
+                                                            "type": "number"
+                                                        },
+                                                        "expected_low": {
+                                                            "type": "string"
+                                                        },
+                                                        "expected_high": {
+                                                            "type": "string"
+                                                        },
+                                                        "conclusive": {
+                                                            "type": "string"
+                                                        },
+                                                        "message": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "outcome",
+                                                        "contacted",
+                                                        "positives",
+                                                        "rate",
+                                                        "expected_low",
+                                                        "expected_high",
+                                                        "conclusive",
+                                                        "message"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "stages",
+                                                "totals",
+                                                "by_channel",
+                                                "by_variant",
+                                                "by_origin",
+                                                "by_country",
+                                                "by_wave",
+                                                "weekly_volume",
+                                                "billing",
+                                                "cost_per_qualified_lead",
+                                                "search_effectiveness",
+                                                "extraction",
+                                                "decisor_coverage",
+                                                "sample"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/outreaches/{uuid}/opportunities": {
+            "post": {
+                "operationId": "lead-scout.opportunities.store",
+                "tags": [
+                    "Opportunity"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpsertOpportunityData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/OpportunityData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/opportunities/{uuid}": {
+            "patch": {
+                "operationId": "lead-scout.opportunities.update",
+                "tags": [
+                    "Opportunity"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpsertOpportunityData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/OpportunityData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/outreaches/{uuid}": {
+            "patch": {
+                "operationId": "lead-scout.outreaches.update",
+                "tags": [
+                    "Outreach"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateOutreachData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutreachData"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "daily_sent": {
+                                                    "type": "integer"
+                                                },
+                                                "daily_limit_warning": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "daily_sent",
+                                                "daily_limit_warning"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/profile": {
+            "get": {
+                "operationId": "lead-scout.profile.show",
+                "tags": [
+                    "Profile"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProfileData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "lead-scout.profile.update",
+                "tags": [
+                    "Profile"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateProfileData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProfileData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/profile/cvs": {
+            "get": {
+                "operationId": "lead-scout.profile.cvs",
+                "tags": [
+                    "Profile"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "anyOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/DataCollection"
+                                                },
+                                                {
+                                                    "$ref": "#/components/schemas/PaginatedDataCollection"
+                                                },
+                                                {
+                                                    "$ref": "#/components/schemas/CursorPaginatedDataCollection"
+                                                },
+                                                {
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "$ref": "#/components/schemas/LazyCollection"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/profile/import-cv": {
+            "post": {
+                "operationId": "lead-scout.profile.import-cv",
+                "tags": [
+                    "Profile"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProfileData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/outreaches/{uuid}/reply": {
+            "post": {
+                "operationId": "lead-scout.outreaches.reply",
+                "tags": [
+                    "Reply"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RecordReplyData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/OutreachData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/leads/{uuid}/rescore": {
+            "post": {
+                "operationId": "lead-scout.leads.rescore",
+                "tags": [
+                    "Score"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ScoreResultData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/sources": {
+            "get": {
+                "operationId": "lead-scout.sources.index",
+                "tags": [
+                    "Source"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/sources/{uuid}": {
+            "patch": {
+                "operationId": "lead-scout.sources.update",
+                "tags": [
+                    "Source"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSourceData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SourceData"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/sources/{uuid}/run": {
+            "post": {
+                "operationId": "lead-scout.sources.run",
+                "summary": "Queues an ingest run; the queue's running marker answers 409 while\none is in flight (T028)",
+                "tags": [
+                    "Source"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                },
+                                                "queued": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid",
+                                                "queued"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "This source is already running."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "SOURCE_RUNNING"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/suppressions": {
+            "post": {
+                "operationId": "lead-scout.suppressions.store",
+                "tags": [
+                    "Suppression"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SuppressData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string"
+                                                },
+                                                "domain": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "source": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "uuid",
+                                                "domain",
+                                                "source"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "AiSettingsData": {
+                "type": "object",
+                "properties": {
+                    "purposes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "purposes"
+                ],
+                "title": "AiSettingsData"
+            },
+            "BudgetStatusData": {
+                "type": "object",
+                "properties": {
+                    "period": {
+                        "type": "string"
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "period",
+                    "categories"
+                ],
+                "title": "BudgetStatusData"
+            },
+            "CompanyData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "domain": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "origin": {
+                        "type": "string"
+                    },
+                    "company_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "name",
+                    "domain",
+                    "origin"
+                ],
+                "title": "CompanyData"
+            },
+            "ContactData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "full_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "role_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "role_category": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    },
+                    "published_email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "email_kind": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "public_profile_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "evidence_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "evidence_excerpt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_verified_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "is_primary",
+                    "source"
+                ],
+                "title": "ContactData"
+            },
+            "CreateManualLeadData": {
+                "type": "object",
+                "description": "Manual lead intake (spec FR-20): company name + URL + operator note.\nCountry is unknown at this point \u2014 enrichment backfills it.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri",
+                        "maxLength": 2048
+                    },
+                    "note": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "name",
+                    "url"
+                ],
+                "title": "CreateManualLeadData"
+            },
+            "CursorPaginatedDataCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "CursorPaginatedDataCollection"
+            },
+            "DataCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "DataCollection"
+            },
+            "DecisionRuleData": {
+                "type": "object",
+                "description": "Decision-rule write (plan \u00a75 `DecisionRuleData`): sample, window and\nrate thresholds. Locked before measuring (FR-19); locked rows are\nimmutable \u2014 only a new version for a new period.",
+                "properties": {
+                    "sampleSize": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 10,
+                        "maximum": 10000
+                    },
+                    "windowDays": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 7,
+                        "maximum": 365
+                    },
+                    "thresholds": {
+                        "type": "object",
+                        "properties": {
+                            "scale_at": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "stop_below": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            }
+                        }
+                    }
+                },
+                "title": "DecisionRuleData"
+            },
+            "GenerateDraftData": {
+                "type": "object",
+                "description": "Draft request (plan \u00a75 `GenerateDraftData`): optional posting, variant,\nlanguage and selector-chosen provider/model (validated vs catalog).",
+                "properties": {
+                    "jobPostingId": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "variant": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "vacancy",
+                            "stack",
+                            "legacy",
+                            "sector",
+                            null
+                        ]
+                    },
+                    "language": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "es",
+                            "pt",
+                            "en",
+                            null
+                        ]
+                    },
+                    "provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 32
+                    },
+                    "model": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 64
+                    }
+                },
+                "title": "GenerateDraftData"
+            },
+            "LazyCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "LazyCollection"
+            },
+            "LeadDetailData": {
+                "type": "object",
+                "properties": {
+                    "company": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "postings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "score": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "decisors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Modules.LeadScout.Application.DTOs.ContactData"
+                        }
+                    },
+                    "channels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "outreaches": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Modules.LeadScout.Application.DTOs.OutreachData"
+                        }
+                    },
+                    "cold_email_allowed": {
+                        "type": "boolean"
+                    },
+                    "employment_application": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "company",
+                    "postings",
+                    "reasons",
+                    "decisors",
+                    "channels",
+                    "outreaches",
+                    "cold_email_allowed",
+                    "employment_application"
+                ],
+                "title": "LeadDetailData"
+            },
+            "OpportunityData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "outreach_uuid": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "hours_per_month": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "hourly_rate_cents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "amount_cents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "started_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ended_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "outreach_uuid",
+                    "type",
+                    "currency",
+                    "status"
+                ],
+                "title": "OpportunityData"
+            },
+            "OutreachData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "company_uuid": {
+                        "type": "string"
+                    },
+                    "stage": {
+                        "type": "string"
+                    },
+                    "send_medium": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "outreach_kind": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "sender_kind": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "variant": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "draft_body": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ai_provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ai_model": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "channel_warning": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "legal_rule_status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "sent_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reply_outcome": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "stage_changed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "contact_channel_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "opportunities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "company_uuid",
+                    "stage",
+                    "opportunities"
+                ],
+                "title": "OutreachData"
+            },
+            "PaginatedDataCollection": {
+                "type": "object",
+                "additionalProperties": {},
+                "title": "PaginatedDataCollection"
+            },
+            "ProfileData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "source_cv_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "confirmed_skills": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "potential_skills": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "proof_points": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "min_rate_cents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "target_countries": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "weights": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "stale": {
+                        "type": "boolean"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "version",
+                    "confirmed_skills",
+                    "potential_skills",
+                    "proof_points",
+                    "languages",
+                    "stale"
+                ],
+                "title": "ProfileData"
+            },
+            "RecordReplyData": {
+                "type": "object",
+                "description": "Reply record (spec FR-42, plan \u00a75 `RecordReplyData`).",
+                "properties": {
+                    "outcome": {
+                        "type": "string",
+                        "enum": [
+                            "interested",
+                            "not_interested",
+                            "unsubscribe"
+                        ]
+                    },
+                    "repliedAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "outcome"
+                ],
+                "title": "RecordReplyData"
+            },
+            "ScoreResultData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "company_uuid": {
+                        "type": "string"
+                    },
+                    "subscores": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "lead_score": {
+                        "type": "integer"
+                    },
+                    "confidence": {
+                        "type": "integer"
+                    },
+                    "tier": {
+                        "type": "string"
+                    },
+                    "discard_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "rules_version": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "company_uuid",
+                    "subscores",
+                    "lead_score",
+                    "confidence",
+                    "tier",
+                    "reasons",
+                    "rules_version"
+                ],
+                "title": "ScoreResultData"
+            },
+            "SourceData": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "access_method": {
+                        "type": "string"
+                    },
+                    "frequency_minutes": {
+                        "type": "integer"
+                    },
+                    "priority": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "last_run_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_cursor": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "terms_reviewed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "uuid",
+                    "name",
+                    "type",
+                    "access_method",
+                    "frequency_minutes",
+                    "priority",
+                    "status"
+                ],
+                "title": "SourceData"
+            },
+            "SuppressData": {
+                "type": "object",
+                "description": "Suppression intake (spec FR-17): canonical domain + reason.",
+                "properties": {
+                    "domain": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "domain",
+                    "reason"
+                ],
+                "title": "SuppressData"
+            },
+            "UpdateAiSettingsData": {
+                "type": "object",
+                "description": "AI default change (plan \u00a75 `UpdateAiSettingsData`). Catalog membership\nand credential availability are enforced in the handler (422).",
+                "properties": {
+                    "purpose": {
+                        "type": "string",
+                        "enum": [
+                            "extraction",
+                            "drafting"
+                        ]
+                    },
+                    "provider": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "model": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "fallbackProvider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 32
+                    },
+                    "fallbackModel": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 64
+                    }
+                },
+                "required": [
+                    "purpose",
+                    "provider",
+                    "model"
+                ],
+                "title": "UpdateAiSettingsData"
+            },
+            "UpdateBudgetsData": {
+                "type": "object",
+                "description": "Editable monthly limits (spec US-8, plan \u00a75 `BudgetData[]`).",
+                "properties": {
+                    "budgets": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "category": {
+                                    "type": "string",
+                                    "enum": [
+                                        "search",
+                                        "extraction",
+                                        "ai"
+                                    ]
+                                },
+                                "limit_eur": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 10000
+                                }
+                            },
+                            "required": [
+                                "category",
+                                "limit_eur"
+                            ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 10
+                    }
+                },
+                "required": [
+                    "budgets"
+                ],
+                "title": "UpdateBudgetsData"
+            },
+            "UpdateChannelData": {
+                "type": "object",
+                "description": "Channel re-verification (spec US-12, plan \u00a75 `UpdateChannelData`):\na channel that no longer exists is marked `broken` and stops being\nrecommended. No other transition exists.",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "broken"
+                        ]
+                    }
+                },
+                "required": [
+                    "status"
+                ],
+                "title": "UpdateChannelData"
+            },
+            "UpdateOutreachData": {
+                "type": "object",
+                "description": "Outreach mutation (plan \u00a75 `UpdateOutreachData`). `operator_id` is\ndeliberately absent: the server always stamps the authenticated user,\nnever client input (FR-41).",
+                "properties": {
+                    "draftBody": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 10000
+                    },
+                    "stage": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "draft",
+                            "ready",
+                            "sent",
+                            "replied",
+                            "positive",
+                            "call",
+                            "trial",
+                            "won",
+                            "recurrent",
+                            "lost",
+                            "do_not_contact",
+                            null
+                        ]
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 2000
+                    },
+                    "contactChannelId": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "sendMedium": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "email",
+                            "contact_form",
+                            "job_posting",
+                            "linkedin_manual",
+                            "employment_application",
+                            null
+                        ]
+                    },
+                    "senderKind": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "personal_mailbox",
+                            "business_domain",
+                            null
+                        ]
+                    },
+                    "acknowledgePendingLegal": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    }
+                },
+                "title": "UpdateOutreachData"
+            },
+            "UpdateProfileData": {
+                "type": "object",
+                "description": "Operator-tunable profile fields (spec US-1 CA-6): weights, languages,\nminimum rate and target countries. Every save mints a new profile\nversion; later scores record which version they used.",
+                "properties": {
+                    "weights": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                        }
+                    },
+                    "languages": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "maxLength": 32
+                        }
+                    },
+                    "minRateCents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0
+                    },
+                    "targetCountries": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 2
+                        },
+                        "maxItems": 30
+                    }
+                },
+                "title": "UpdateProfileData"
+            },
+            "UpdateSourceData": {
+                "type": "object",
+                "description": "Source tuning (spec US-2): status, frequency and the terms-review stamp.\nActivating without reviewed terms is rejected in the handler (422) and by\nthe DB CHECK \u2014 never trust the client (spec FR-13).",
+                "properties": {
+                    "status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "active",
+                            "paused",
+                            null
+                        ]
+                    },
+                    "frequencyMinutes": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 15,
+                        "maximum": 10080
+                    },
+                    "termsReviewedAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "title": "UpdateSourceData"
+            },
+            "UpsertContactData": {
+                "type": "object",
+                "description": "Manual decisor upsert (spec US-11, plan \u00a75 `UpsertContactData`).\nExcluded/ambiguous titles are rejected in the handler (422); the email\nmust live on the company domain; opposed people answer 409.",
+                "properties": {
+                    "fullName": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "roleTitle": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "roleCategory": {
+                        "type": "string",
+                        "enum": [
+                            "founder",
+                            "executive",
+                            "technical_lead"
+                        ]
+                    },
+                    "publishedEmail": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "email",
+                        "maxLength": 255
+                    },
+                    "publicProfileUrl": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri",
+                        "maxLength": 2048
+                    },
+                    "isPrimary": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "fullName",
+                    "roleTitle",
+                    "roleCategory"
+                ],
+                "title": "UpsertContactData"
+            },
+            "UpsertOpportunityData": {
+                "type": "object",
+                "description": "Opportunity write (spec US-6, plan \u00a75 `OpportunityData`). Several\nopportunities can hang off one contact (trial first, then retainer).",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "trial",
+                            "project",
+                            "retainer",
+                            "staff_augmentation"
+                        ]
+                    },
+                    "hoursPerMonth": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 1000
+                    },
+                    "hourlyRateCents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0
+                    },
+                    "amountCents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0
+                    },
+                    "currency": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "minLength": 3,
+                        "maxLength": 3
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "open",
+                            "won",
+                            "lost"
+                        ]
+                    },
+                    "startedAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "endedAt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "title": "UpsertOpportunityData"
+            }
+        },
+        "responses": {
+            "AuthenticationException": {
+                "description": "Unauthenticated",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -26,7 +26,7 @@ use Modules\LeadScout\Application\Commands\ScoreCompanyHandler;
 #[Backoff([10, 60, 300])]
 final class ScoreCompanyJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, ReportsPipelineFailure, SerializesModels;
 
     public function __construct(
         public readonly string $companyUuid,

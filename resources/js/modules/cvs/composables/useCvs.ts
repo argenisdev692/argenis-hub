@@ -14,6 +14,8 @@ export function defaultCvFilters(): CvFilters {
         search: '',
         status: 'active',
         niche: '',
+        source: '',
+        language: null,
         date_from: null,
         date_to: null,
         page: 1,

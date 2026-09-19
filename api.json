@@ -1237,6 +1237,35 @@
                         }
                     },
                     {
+                        "name": "source",
+                        "in": "query",
+                        "description": "Which pipeline produced the row. Omit for any source.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "upload",
+                                "studio",
+                                "chat",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "language",
+                        "in": "query",
+                        "description": "Version language (en, es, pt-PT). Omit for any language.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 8
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
                         "description": "Rows per page, clamped to 1\u2013100.",
@@ -3238,7 +3267,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/StudioApplicationEloquentModel"
+                                                "$ref": "#/components/schemas/StudioApplicationData"
                                             }
                                         },
                                         "first_page_url": {
@@ -3370,23 +3399,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "category": {
-                                                        "type": "string"
-                                                    },
-                                                    "limit_micros": {
-                                                        "type": "integer"
-                                                    },
-                                                    "spent_micros": {
-                                                        "type": "integer"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "category",
-                                                    "limit_micros",
-                                                    "spent_micros"
-                                                ]
+                                                "$ref": "#/components/schemas/StudioBudgetData"
                                             }
                                         }
                                     },
@@ -3420,52 +3433,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "bucket": {
-                                                        "anyOf": [
-                                                            {
-                                                                "type": "string"
-                                                            },
-                                                            {
-                                                                "type": "string",
-                                                                "enum": [
-                                                                    "unknown"
-                                                                ]
-                                                            }
-                                                        ]
-                                                    },
-                                                    "applications": {
-                                                        "type": "string"
-                                                    },
-                                                    "positives": {
-                                                        "type": "string"
-                                                    },
-                                                    "rate": {
-                                                        "type": [
-                                                            "number",
-                                                            "null"
-                                                        ]
-                                                    },
-                                                    "lower": {
-                                                        "type": "number"
-                                                    },
-                                                    "upper": {
-                                                        "type": "number"
-                                                    },
-                                                    "gate_passed": {
-                                                        "type": "string"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "bucket",
-                                                    "applications",
-                                                    "positives",
-                                                    "rate",
-                                                    "lower",
-                                                    "upper",
-                                                    "gate_passed"
-                                                ]
+                                                "$ref": "#/components/schemas/StudioOwnRateData"
                                             }
                                         }
                                     },
@@ -3499,7 +3467,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/StudioSourceEloquentModel"
+                                                "$ref": "#/components/schemas/StudioSourceData"
                                             }
                                         }
                                     },
@@ -3547,7 +3515,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/StudioCvVersionEloquentModel"
+                                                "$ref": "#/components/schemas/StudioCvVersionData"
                                             }
                                         },
                                         "first_page_url": {
@@ -3672,16 +3640,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "cv_uuid": {
-                                        "type": [
-                                            "string",
-                                            "null"
-                                        ],
-                                        "format": "uuid"
-                                    }
-                                }
+                                "$ref": "#/components/schemas/SelectCvData"
                             }
                         }
                     }
@@ -3713,9 +3672,6 @@
                             }
                         }
                     },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
                     }
@@ -3732,23 +3688,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "cv_uuid": {
-                                        "type": [
-                                            "string",
-                                            "null"
-                                        ],
-                                        "format": "uuid"
-                                    },
-                                    "target_job_title": {
-                                        "type": [
-                                            "string",
-                                            "null"
-                                        ],
-                                        "maxLength": 255
-                                    }
-                                }
+                                "$ref": "#/components/schemas/AuditCvData"
                             }
                         }
                     }
@@ -3772,9 +3712,6 @@
                             }
                         }
                     },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
                     }
@@ -3784,6 +3721,7 @@
         "/cv-studio/versions/{uuid}/export": {
             "get": {
                 "operationId": "cv-studio.versions.export",
+                "summary": "Generates the file into private R2 storage and hands back a 5-minute\nsigned URL to it (OWASP \u00a715: R2 only through signed URLs). The page\nfollows `download_url`; `download_name` is the ATS-friendly suggested\nfilename (`Firstname-Lastname-Resume.pdf`, never `resume_final_v4`)",
                 "tags": [
                     "StudioCv"
                 ],
@@ -3800,14 +3738,10 @@
                         "name": "format",
                         "in": "query",
                         "schema": {
-                            "type": [
-                                "string",
-                                "null"
-                            ],
+                            "type": "string",
                             "enum": [
                                 "docx",
-                                "pdf",
-                                null
+                                "pdf"
                             ]
                         }
                     }
@@ -3828,11 +3762,19 @@
                                                 },
                                                 "verified": {
                                                     "type": "boolean"
+                                                },
+                                                "download_url": {
+                                                    "type": "string"
+                                                },
+                                                "download_name": {
+                                                    "type": "string"
                                                 }
                                             },
                                             "required": [
                                                 "uuid",
-                                                "verified"
+                                                "verified",
+                                                "download_url",
+                                                "download_name"
                                             ]
                                         }
                                     },
@@ -3842,9 +3784,6 @@
                                 }
                             }
                         }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -4752,7 +4691,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/StudioSkillRelationEloquentModel"
+                                                "$ref": "#/components/schemas/StudioSkillRelationData"
                                             }
                                         },
                                         "first_page_url": {
@@ -5010,16 +4949,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "profile_uuid": {
-                                        "type": "string",
-                                        "format": "uuid"
-                                    }
-                                },
-                                "required": [
-                                    "profile_uuid"
-                                ]
+                                "$ref": "#/components/schemas/StartRunData"
                             }
                         }
                     }
@@ -5055,9 +4985,6 @@
                             }
                         }
                     },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
                     }
@@ -5089,7 +5016,7 @@
                                     "type": "object",
                                     "properties": {
                                         "run": {
-                                            "$ref": "#/components/schemas/StudioRunEloquentModel"
+                                            "$ref": "#/components/schemas/StudioRunData"
                                         }
                                     },
                                     "required": [
@@ -5300,6 +5227,27 @@
                     "abilities"
                 ],
                 "title": "ApiTokenData"
+            },
+            "AuditCvData": {
+                "type": "object",
+                "description": "CV audit input: which CV (primary when omitted) and an optional target role.",
+                "properties": {
+                    "cv_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "target_job_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    }
+                },
+                "title": "AuditCvData"
             },
             "AuthenticatedUserData": {
                 "type": "object",
@@ -6051,6 +5999,27 @@
                     "original_filename": {
                         "type": "string"
                     },
+                    "source": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "parent_cv_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "studio_version_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "owner_name": {
                         "type": [
                             "string",
@@ -6088,7 +6057,8 @@
                     "niche",
                     "is_primary",
                     "file_type",
-                    "original_filename"
+                    "original_filename",
+                    "source"
                 ],
                 "title": "CvData"
             },
@@ -7514,6 +7484,20 @@
                 },
                 "title": "ScorePostingInputData"
             },
+            "SelectCvData": {
+                "type": "object",
+                "description": "Which CV to parse \u2014 the primary CV when `cv_uuid` is omitted.",
+                "properties": {
+                    "cv_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    }
+                },
+                "title": "SelectCvData"
+            },
             "SocialCopyData": {
                 "type": "object",
                 "properties": {
@@ -7974,6 +7958,20 @@
                 ],
                 "title": "SocialMediaTopicIdeaData"
             },
+            "StartRunData": {
+                "type": "object",
+                "description": "Discovery run input: the profile whose gates and sources drive the run.",
+                "properties": {
+                    "profile_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "profile_uuid"
+                ],
+                "title": "StartRunData"
+            },
             "StorePublicContactSupportRequest": {
                 "type": "object",
                 "description": "The public landing-page contact form. Unauthenticated: the route is throttled\nand honeypot-protected ({@see ProtectAgainstSpam}), and this\nrequest is the authoritative validation gate \u2014 the client-side Zod schema is\nUX only (OWASP \u00a73 / \u00a715.5). Triage columns (`readed`, `is_spam`, `spam_*`)\nare NOT accepted here; the submission pipeline owns them.",
@@ -8019,94 +8017,60 @@
                 ],
                 "title": "StorePublicContactSupportRequest"
             },
-            "StudioApplicationEloquentModel": {
+            "StudioApplicationData": {
                 "type": "object",
                 "properties": {
                     "uuid": {
                         "type": "string"
                     },
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "posting_id": {
-                        "type": "integer"
-                    },
-                    "cv_version_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "export_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
                     "status": {
+                        "type": "string"
+                    },
+                    "outcome": {
                         "type": "string"
                     },
                     "applied_at": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "outcome": {
-                        "type": "string"
+                        ]
                     },
                     "outcome_at": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "outcome_note": {
-                        "type": [
-                            "string",
-                            "null"
                         ]
                     },
-                    "deleted_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "created_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
+                    "posting": {
+                        "$ref": "#/components/schemas/StudioApplicationPostingData"
                     }
                 },
                 "required": [
                     "uuid",
-                    "user_id",
-                    "posting_id",
-                    "cv_version_id",
-                    "export_id",
                     "status",
-                    "applied_at",
-                    "outcome",
-                    "outcome_at",
-                    "outcome_note",
-                    "deleted_at",
-                    "created_at",
-                    "updated_at"
+                    "outcome"
                 ],
-                "title": "StudioApplicationEloquentModel"
+                "title": "StudioApplicationData"
+            },
+            "StudioBudgetData": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string"
+                    },
+                    "limit_micros": {
+                        "type": "integer"
+                    },
+                    "spent_micros": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "category",
+                    "limit_micros",
+                    "spent_micros"
+                ],
+                "title": "StudioBudgetData"
             },
             "StudioCvAuditEloquentModel": {
                 "type": "object",
@@ -8247,35 +8211,11 @@
                 ],
                 "title": "StudioCvAuditEloquentModel"
             },
-            "StudioCvVersionEloquentModel": {
+            "StudioCvVersionData": {
                 "type": "object",
                 "properties": {
                     "uuid": {
                         "type": "string"
-                    },
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "cv_id": {
-                        "type": "integer"
-                    },
-                    "structure_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "profile_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "posting_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
                     },
                     "purpose": {
                         "type": "string"
@@ -8283,76 +8223,19 @@
                     "language": {
                         "type": "string"
                     },
-                    "content": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
-                    },
-                    "page_count_estimate": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "parent_version_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "bullet_provenance": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
-                    },
-                    "rules_version": {
-                        "type": "integer"
-                    },
-                    "deleted_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
                     "created_at": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
+                        ]
                     }
                 },
                 "required": [
                     "uuid",
-                    "user_id",
-                    "cv_id",
-                    "structure_id",
-                    "profile_id",
-                    "posting_id",
                     "purpose",
-                    "language",
-                    "content",
-                    "page_count_estimate",
-                    "parent_version_id",
-                    "bullet_provenance",
-                    "rules_version",
-                    "deleted_at",
-                    "created_at",
-                    "updated_at"
+                    "language"
                 ],
-                "title": "StudioCvVersionEloquentModel"
+                "title": "StudioCvVersionData"
             },
             "StudioInsightReportEloquentModel": {
                 "type": "object",
@@ -8444,6 +8327,44 @@
                     "updated_at"
                 ],
                 "title": "StudioInsightReportEloquentModel"
+            },
+            "StudioOwnRateData": {
+                "type": "object",
+                "properties": {
+                    "bucket": {
+                        "type": "string"
+                    },
+                    "applications": {
+                        "type": "integer"
+                    },
+                    "positives": {
+                        "type": "integer"
+                    },
+                    "rate": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "lower": {
+                        "type": "number"
+                    },
+                    "upper": {
+                        "type": "number"
+                    },
+                    "gate_passed": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "bucket",
+                    "applications",
+                    "positives",
+                    "lower",
+                    "upper",
+                    "gate_passed"
+                ],
+                "title": "StudioOwnRateData"
             },
             "StudioPostingData": {
                 "type": "object",
@@ -8622,29 +8543,11 @@
                 ],
                 "title": "StudioProfileData"
             },
-            "StudioRunEloquentModel": {
+            "StudioRunData": {
                 "type": "object",
                 "properties": {
                     "uuid": {
                         "type": "string"
-                    },
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "profile_id": {
-                        "type": "integer"
-                    },
-                    "cv_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "structure_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
                     },
                     "status": {
                         "type": "string"
@@ -8653,22 +8556,13 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
+                        ]
                     },
                     "finished_at": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "queries": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
+                        ]
                     },
                     "candidates_count": {
                         "type": "integer"
@@ -8685,75 +8579,21 @@
                     "new_matches_count": {
                         "type": "integer"
                     },
-                    "excluded_count": {
-                        "type": "integer"
-                    },
                     "spend_micros": {
                         "type": "integer"
-                    },
-                    "refresh_flags": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
-                    },
-                    "notes": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "rules_version": {
-                        "type": "integer"
-                    },
-                    "deleted_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "created_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
                     }
                 },
                 "required": [
                     "uuid",
-                    "user_id",
-                    "profile_id",
-                    "cv_id",
-                    "structure_id",
                     "status",
-                    "started_at",
-                    "finished_at",
-                    "queries",
                     "candidates_count",
                     "gate_passed_count",
                     "extracted_count",
                     "scored_count",
                     "new_matches_count",
-                    "excluded_count",
-                    "spend_micros",
-                    "refresh_flags",
-                    "notes",
-                    "rules_version",
-                    "deleted_at",
-                    "created_at",
-                    "updated_at"
+                    "spend_micros"
                 ],
-                "title": "StudioRunEloquentModel"
+                "title": "StudioRunData"
             },
             "StudioScoreData": {
                 "type": "object",
@@ -8813,14 +8653,11 @@
                 ],
                 "title": "StudioScoreData"
             },
-            "StudioSkillRelationEloquentModel": {
+            "StudioSkillRelationData": {
                 "type": "object",
                 "properties": {
                     "uuid": {
                         "type": "string"
-                    },
-                    "user_id": {
-                        "type": "integer"
                     },
                     "from_skill": {
                         "type": "string"
@@ -8837,64 +8674,33 @@
                     "status": {
                         "type": "string"
                     },
-                    "deleted_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
                     "created_at": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
+                        ]
                     }
                 },
                 "required": [
                     "uuid",
-                    "user_id",
                     "from_skill",
                     "to_skill",
                     "kind",
                     "origin",
-                    "status",
-                    "deleted_at",
-                    "created_at",
-                    "updated_at"
+                    "status"
                 ],
-                "title": "StudioSkillRelationEloquentModel"
+                "title": "StudioSkillRelationData"
             },
-            "StudioSourceEloquentModel": {
+            "StudioSourceData": {
                 "type": "object",
                 "properties": {
                     "uuid": {
                         "type": "string"
                     },
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "kind": {
-                        "type": "string"
-                    },
                     "name": {
                         "type": "string"
                     },
-                    "endpoint": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "auth_kind": {
+                    "kind": {
                         "type": "string"
                     },
                     "tier": {
@@ -8903,24 +8709,6 @@
                     "layer": {
                         "type": "string"
                     },
-                    "attribution_required": {
-                        "type": "boolean"
-                    },
-                    "attribution_text": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "redistribution_allowed": {
-                        "type": "boolean"
-                    },
-                    "publish_delay_hours": {
-                        "type": "integer"
-                    },
-                    "rate_limit_per_minute": {
-                        "type": "integer"
-                    },
                     "status": {
                         "type": "string"
                     },
@@ -8928,41 +8716,9 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "gate_tags": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
-                    },
-                    "resolution_priority": {
-                        "type": "integer"
-                    },
-                    "supplies_full_text": {
-                        "type": "boolean"
-                    },
-                    "company_scoped": {
-                        "type": "boolean"
-                    },
-                    "ats_kind": {
-                        "type": [
-                            "string",
-                            "null"
                         ]
                     },
-                    "endpoint_template": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "supports_since_filter": {
-                        "type": "boolean"
-                    },
-                    "requires_api_key": {
+                    "attribution_required": {
                         "type": "boolean"
                     },
                     "access_mode": {
@@ -8970,67 +8726,20 @@
                     },
                     "resolution_tier": {
                         "type": "integer"
-                    },
-                    "usage_restriction": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "deleted_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "created_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
                     }
                 },
                 "required": [
                     "uuid",
-                    "user_id",
-                    "kind",
                     "name",
-                    "endpoint",
-                    "auth_kind",
+                    "kind",
                     "tier",
                     "layer",
-                    "attribution_required",
-                    "attribution_text",
-                    "redistribution_allowed",
-                    "publish_delay_hours",
-                    "rate_limit_per_minute",
                     "status",
-                    "health_checked_at",
-                    "gate_tags",
-                    "resolution_priority",
-                    "supplies_full_text",
-                    "company_scoped",
-                    "ats_kind",
-                    "endpoint_template",
-                    "supports_since_filter",
-                    "requires_api_key",
+                    "attribution_required",
                     "access_mode",
-                    "resolution_tier",
-                    "usage_restriction",
-                    "deleted_at",
-                    "created_at",
-                    "updated_at"
+                    "resolution_tier"
                 ],
-                "title": "StudioSourceEloquentModel"
+                "title": "StudioSourceData"
             },
             "SuggestCampaignTopicsData": {
                 "type": "object",

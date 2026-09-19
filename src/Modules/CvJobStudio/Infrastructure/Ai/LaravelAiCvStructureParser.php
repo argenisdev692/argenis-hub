@@ -12,9 +12,9 @@ final readonly class LaravelAiCvStructureParser implements CvStructureParserPort
 {
     public function __construct(private AiCallExecutor $calls) {}
 
-    public function parse(string $rawText): array
+    public function parse(string $rawText, int $userId): array
     {
-        $result = $this->calls->call(AiPurpose::CvStructureParse, CvStructureParserAgent::class, $rawText, 0);
+        $result = $this->calls->call(AiPurpose::CvStructureParse, CvStructureParserAgent::class, $rawText, $userId);
 
         /** @var array<string, mixed> $data */
         $data = (array) $result['response'];

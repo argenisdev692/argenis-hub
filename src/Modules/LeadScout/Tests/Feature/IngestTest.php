@@ -12,15 +12,11 @@ use Modules\LeadScout\Application\Commands\IngestSourceHandler;
 use Modules\LeadScout\Domain\Enums\PostingStatus;
 use Modules\LeadScout\Domain\Enums\SourceStatus;
 use Modules\LeadScout\Domain\Enums\SourceType;
-use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
-use Modules\LeadScout\Domain\Ports\JobPostingRepositoryPort;
-use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Infrastructure\JobSources\ArbeitnowApiSource;
 use Modules\LeadScout\Infrastructure\JobSources\RssFeedSource;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutJobPostingEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressionEloquentModel;
-use Shared\Infrastructure\Resilience\CircuitBreaker\CircuitBreakerInterface;
 
 uses(RefreshDatabase::class);
 
@@ -48,13 +44,7 @@ function rssSource(string $name = 'LaraJobs'): ScoutSourceEloquentModel
 
 function ingestHandler(): IngestSourceHandler
 {
-    return new IngestSourceHandler(
-        app(CompanyRepositoryPort::class),
-        app(JobPostingRepositoryPort::class),
-        app(SuppressionGate::class),
-        app(CircuitBreakerInterface::class),
-        [new RssFeedSource, new ArbeitnowApiSource],
-    );
+    return app()->make(IngestSourceHandler::class, ['adapters' => [new RssFeedSource, new ArbeitnowApiSource]]);
 }
 
 function rssXml(string $name): string
@@ -80,8 +70,8 @@ it('dedupes the same offer across two sources with both pivots', function (): vo
     $a = rssSource('LaraJobs');
     $b = rssSource('Remotive');
 
-    ingestHandler()->handle($a);
-    $counts = ingestHandler()->handle($b);
+    ingestHandler()->handle($a->uuid);
+    $counts = ingestHandler()->handle($b->uuid);
 
     expect(ScoutJobPostingEloquentModel::query()->count())->toBe(2)
         ->and($counts['linked'])->toBe(2)
@@ -97,10 +87,10 @@ it('keeps ingesting other sources when one feed fails', function (): void {
     $ok = rssSource('LaraJobs');
     $down = rssSource('Remotive');
 
-    expect(ingestHandler()->handle($ok)['created'])->toBe(2);
+    expect(ingestHandler()->handle($ok->uuid)['created'])->toBe(2);
 
     try {
-        ingestHandler()->handle($down);
+        ingestHandler()->handle($down->uuid);
         $this->fail('Expected the failing source to throw.');
     } catch (Throwable) {
         expect($down->refresh()->status->value)->toBe(SourceStatus::Failing->value);
@@ -121,7 +111,7 @@ it('discards irrelevant offers and marks expired ones without a company', functi
         ),
     ]);
 
-    $counts = ingestHandler()->handle(rssSource());
+    $counts = ingestHandler()->handle(rssSource()->uuid);
 
     expect($counts['irrelevant'])->toBe(1)
         ->and(ScoutJobPostingEloquentModel::query()->count())->toBe(0);
@@ -138,7 +128,7 @@ it('skips suppressed companies without enrichment', function (): void {
         'reason' => 'Asked not to be contacted',
     ]);
 
-    $counts = ingestHandler()->handle(rssSource('Remotive'));
+    $counts = ingestHandler()->handle(rssSource('Remotive')->uuid);
 
     expect($counts['suppressed'])->toBe(1)
         ->and(ScoutJobPostingEloquentModel::query()->count())->toBe(0);
@@ -171,7 +161,7 @@ it('parses arbeitnow jobs with pagination', function (): void {
         'terms_reviewed_at' => now(),
     ]);
 
-    $counts = ingestHandler()->handle($source);
+    $counts = ingestHandler()->handle($source->uuid);
 
     expect($counts['created'])->toBe(2)
         ->and(ScoutJobPostingEloquentModel::query()->where('title', 'PHP Freelancer')->exists())->toBeTrue();

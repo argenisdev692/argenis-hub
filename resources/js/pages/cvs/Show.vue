@@ -11,6 +11,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import CvNicheBadge from '@/modules/cvs/components/CvNicheBadge.vue';
+import CvSourceBadge from '@/modules/cvs/components/CvSourceBadge.vue';
 import CvStatusBadge from '@/modules/cvs/components/CvStatusBadge.vue';
 import {
     cvFileTypePresentation,
@@ -140,6 +141,18 @@ const timeline = computed(() =>
                         <dd class="mt-1">
                             <CvNicheBadge :niche="cv.niche" />
                         </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-xs text-muted-foreground">Source</dt>
+                        <dd class="mt-1">
+                            <CvSourceBadge :source="cv.source" />
+                        </dd>
+                    </div>
+
+                    <div v-if="cv.language">
+                        <dt class="text-xs text-muted-foreground">Language</dt>
+                        <dd class="text-sm">{{ cv.language }}</dd>
                     </div>
 
                     <div>

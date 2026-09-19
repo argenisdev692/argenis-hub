@@ -51,51 +51,23 @@ export type StudioPostingFilters = {
     per_page: number;
 };
 
-export type StudioRun = {
-    uuid: string;
-    status: string;
-    candidates_count: number;
-    gate_passed_count: number;
-    extracted_count: number;
-    scored_count: number;
-    new_matches_count: number;
-    spend_micros: number;
-};
 
-export type StudioReference = {
-    uuid: string;
-    title: string;
-    employer_name: string | null;
-    canonical_url: string;
-    source: string | null;
-    created_at: string | null;
-};
+export type StudioRun = Modules.CvJobStudio.Application.DTOs.StudioRunData;
+export type StudioReference =
+    Modules.CvJobStudio.Application.DTOs.StudioReferenceData;
+export type StudioApplication =
+    Modules.CvJobStudio.Application.DTOs.StudioApplicationData;
+export type StudioBudget = Modules.CvJobStudio.Application.DTOs.StudioBudgetData;
+export type StudioOwnRate =
+    Modules.CvJobStudio.Application.DTOs.StudioOwnRateData;
+export type StudioCvVersion =
+    Modules.CvJobStudio.Application.DTOs.StudioCvVersionData;
+export type StudioRelation =
+    Modules.CvJobStudio.Application.DTOs.StudioSkillRelationData;
+export type StudioSource = Modules.CvJobStudio.Application.DTOs.StudioSourceData;
 
-export type StudioApplication = {
-    uuid: string;
-    status: string;
-    outcome: string;
-    applied_at: string | null;
-    posting: {
-        uuid: string;
-        title: string;
-        employer_name: string | null;
-        status: string;
-    } | null;
-};
+export type StudioApplicationPage = PaginatedPage<StudioApplication>;
+export type StudioCvVersionPage = PaginatedPage<StudioCvVersion>;
 
-export type StudioBudget = {
-    category: string;
-    limit_micros: number;
-    spent_micros: number;
-};
-
-export type StudioOwnRate = {
-    bucket: string;
-    applications: number;
-    positives: number;
-    rate: number | null;
-    lower: number;
-    upper: number;
-    gate_passed: boolean;
-};
+/** Terminal run statuses — polling stops on either. */
+export type StudioRunTerminalStatus = 'finished' | 'failed';

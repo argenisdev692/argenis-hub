@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Modules\LeadScout\Application\DTOs\CreateManualLeadData;
+use Modules\LeadScout\Domain\Entities\Company;
 use Modules\LeadScout\Domain\Enums\CompanyOrigin;
+use Modules\LeadScout\Domain\Exceptions\InvalidInputException;
 use Modules\LeadScout\Domain\Exceptions\SuppressedException;
 use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
 use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Domain\ValueObjects\CanonicalDomain;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
 
 /**
  * Manual lead intake (spec FR-20, T029): company + URL + note for the
@@ -24,41 +24,36 @@ final readonly class CreateManualLeadHandler
     public function __construct(
         private CompanyRepositoryPort $companies,
         private SuppressionGate $gate,
+        private SuppressionRepositoryPort $suppressions,
     ) {}
 
-    public function handle(CreateManualLeadData $data, int $userId): ScoutCompanyEloquentModel
+    public function handle(CreateManualLeadData $data, int $userId): Company
     {
         try {
             $domain = CanonicalDomain::fromUrl(trim($data->url))->value;
         } catch (\InvalidArgumentException $e) {
-            throw ValidationException::withMessages(['url' => $e->getMessage()]);
+            throw InvalidInputException::withMessages(['url' => $e->getMessage()]);
         }
 
         $this->assertNotSuppressed($domain, $data->name);
 
-        $existing = $this->companies->findByDomain($domain);
+        $existing = $this->companies->byDomain($domain);
 
         if ($existing !== null) {
             return $existing;
         }
 
-        return DB::transaction(fn (): ScoutCompanyEloquentModel => $this->companies->create([
-            'canonical_domain' => $domain,
-            'name' => mb_substr(trim($data->name), 0, 255),
-            'origin' => CompanyOrigin::Manual->value,
-            'origin_ref' => $data->note === null ? null : mb_substr(trim($data->note), 0, 255),
-        ]));
+        return $this->companies->register(
+            canonicalDomain: $domain,
+            name: mb_substr(trim($data->name), 0, 255),
+            origin: CompanyOrigin::Manual,
+            originRef: $data->note === null ? null : mb_substr(trim($data->note), 0, 255),
+        );
     }
 
     private function assertNotSuppressed(string $domain, string $name): void
     {
-        $candidates = $this->companies->suppressionsMatching($domain, null, $name)
-            ->map(static fn ($row): array => [
-                'canonical_domain' => $row->canonical_domain,
-                'tax_id' => $row->tax_id,
-                'name' => $row->name,
-            ])
-            ->all();
+        $candidates = $this->suppressions->matching($domain, null, $name);
 
         if ($this->gate->isSuppressed($domain, null, $name, $candidates)) {
             throw new SuppressedException;

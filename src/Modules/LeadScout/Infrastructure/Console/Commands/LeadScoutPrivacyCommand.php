@@ -97,8 +97,14 @@ final class LeadScoutPrivacyCommand extends Command
             return self::FAILURE;
         }
 
-        $report = $privacy->export($query, $path);
-        $this->info("Exported {$report['records']} record(s) to {$report['file']}.");
+        $records = $privacy->export($query);
+
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
+        }
+
+        file_put_contents($path, json_encode($records, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->info('Exported '.count($records)." record(s) to {$path}.");
 
         return self::SUCCESS;
     }

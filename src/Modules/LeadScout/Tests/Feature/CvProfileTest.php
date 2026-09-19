@@ -137,3 +137,20 @@ it('lists the operator cvs without raw text and edits the profile by version', f
 it('returns 404 when no profile exists yet', function (): void {
     $this->actingAs(profileAdmin())->getJson('/data/admin/lead-scout/profile')->assertNotFound();
 });
+
+it('imports a pdf cv once it carries extracted text', function (): void {
+    $admin = profileAdmin();
+    $pdf = CvFactory::new()->pdf()->create([
+        'user_id' => $admin->id,
+        'is_primary' => true,
+        'raw_text' => cvFixture(),
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson('/data/admin/lead-scout/profile/import-cv', ['cv_uuid' => $pdf->uuid])
+        ->assertCreated();
+
+    $cvs = $this->actingAs($admin)->getJson('/data/admin/lead-scout/profile/cvs')->assertOk()->json('data');
+
+    expect($cvs[0]['importable'])->toBeTrue();
+});

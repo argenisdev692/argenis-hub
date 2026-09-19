@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Domain\Ports;
 
-use Modules\LeadScout\Application\DTOs\RawPostingData;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloquentModel;
+use Modules\LeadScout\Domain\Entities\Source;
+use Modules\LeadScout\Domain\ValueObjects\RawPosting;
 
 /**
  * One job-source adapter (RSS feed, employment API). Adapters declare
@@ -14,10 +14,10 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloq
  */
 interface JobSourcePort
 {
-    public function supports(ScoutSourceEloquentModel $source): bool;
+    public function supports(Source $source): bool;
 
     /**
-     * @return iterable<int, RawPostingData>
+     * @return iterable<int, RawPosting>
      */
-    public function fetchSince(ScoutSourceEloquentModel $source, ?string $cursor): iterable;
+    public function fetchSince(Source $source, ?string $cursor): iterable;
 }

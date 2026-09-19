@@ -5,20 +5,25 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Application\Commands;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Log;
+use Modules\LeadScout\Domain\Entities\Company;
+use Modules\LeadScout\Domain\Entities\FetchedPage;
+use Modules\LeadScout\Domain\Enums\ExtractionMethod;
 use Modules\LeadScout\Domain\Enums\FetchStatus;
+use Modules\LeadScout\Domain\Enums\PageType;
+use Modules\LeadScout\Domain\Enums\SignalDimension;
+use Modules\LeadScout\Domain\Enums\SignalNature;
 use Modules\LeadScout\Domain\Exceptions\CompanyNotFoundException;
+use Modules\LeadScout\Domain\Ports\CompanyPageFetcherPort;
 use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\FetchedPageRepositoryPort;
+use Modules\LeadScout\Domain\Ports\PipelineLoggerPort;
+use Modules\LeadScout\Domain\Ports\PipelineQueuePort;
+use Modules\LeadScout\Domain\Ports\SignalRepositoryPort;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
 use Modules\LeadScout\Domain\Services\PublicCompanyDataExtractor;
 use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Domain\ValueObjects\CanonicalDomain;
-use Modules\LeadScout\Infrastructure\Fetching\FetchLadder;
-use Modules\LeadScout\Infrastructure\Fetching\FormSummaryExtractor;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutFetchedPageEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSignalEloquentModel;
-use Modules\LeadScout\Infrastructure\Queue\ExtractSignalsJob;
-use Modules\LeadScout\Infrastructure\Queue\ScoreCompanyJob;
+use Modules\LeadScout\Domain\ValueObjects\NewSignal;
 
 /**
  * Progressive enrichment (spec US-7 CA-3/CA-8, T045): sitemap/home →
@@ -29,11 +34,11 @@ use Modules\LeadScout\Infrastructure\Queue\ScoreCompanyJob;
  *
  * A natural person (FR-39) stores no identification: a `solo_freelancer`
  * fact is recorded and scoring discards it with the reason.
- *
- * @return array{status: string, pages: int}
  */
 final readonly class EnrichCompanyHandler
 {
+    private const int MAX_TARGETS = 4;
+
     /**
      * @var array<string, list<string>>
      */
@@ -49,77 +54,85 @@ final readonly class EnrichCompanyHandler
         'legal' => ['aviso-legal', 'termos', 'privacidad', 'privacidade', 'legal'],
     ];
 
+    /** Public-data fields the allowlist lets us store (spec FR-38). */
+    private const array PUBLIC_FIELDS = [
+        'legal_name', 'legal_form', 'tax_id', 'registry_info', 'city', 'founded_year',
+        'services', 'sectors', 'site_languages', 'client_companies', 'public_urls',
+    ];
+
     public function __construct(
-        private FetchLadder $ladder,
+        private CompanyPageFetcherPort $fetcher,
         private PublicCompanyDataExtractor $publicData,
         private DetectContactChannelsHandler $channels,
         private CompanyRepositoryPort $companies,
+        private FetchedPageRepositoryPort $pages,
+        private SignalRepositoryPort $signals,
         private SuppressionGate $gate,
+        private SuppressionRepositoryPort $suppressions,
+        private PipelineQueuePort $queue,
+        private PipelineLoggerPort $log,
     ) {}
 
+    /**
+     * @return array{status: string, pages: int}
+     */
     public function handle(string $companyUuid): array
     {
-        $company = ScoutCompanyEloquentModel::query()->where('uuid', $companyUuid)->first()
-            ?? throw new CompanyNotFoundException($companyUuid);
+        $company = $this->companies->byUuid($companyUuid) ?? throw new CompanyNotFoundException($companyUuid);
 
         // Suppression wins over enrichment too (spec FR-43, T084).
-        $candidates = $this->companies->suppressionsMatching($company->canonical_domain, $company->tax_id, $company->name)
-            ->map(static fn ($row): array => [
-                'canonical_domain' => $row->canonical_domain,
-                'tax_id' => $row->tax_id,
-                'name' => $row->name,
-            ])
-            ->all();
+        $candidates = $this->suppressions->matching($company->canonicalDomain, $company->taxId, $company->name);
 
-        if ($this->gate->isSuppressed($company->canonical_domain, $company->tax_id, $company->name, $candidates)) {
+        if ($this->gate->isSuppressed($company->canonicalDomain, $company->taxId, $company->name, $candidates)) {
             return ['status' => 'suppressed', 'pages' => 0];
         }
 
-        $extraRound = $company->needs_research;
+        $extraRound = $company->needsResearch;
+        $homeUrl = 'https://'.$company->canonicalDomain.'/';
 
         $sitemap = $this->fetchSitemap($company);
-        $home = $this->ladder->fetch($company, 'https://'.$company->canonical_domain.'/');
+        $home = $this->fetcher->fetch($company->id, $homeUrl);
 
         if ($home->succeeded()) {
-            $this->storePage($company, 'https://'.$company->canonical_domain.'/', 'home', $home->markdown, $home->html);
+            $this->storePage($company, $homeUrl, PageType::Home, $home->markdown, $home->html);
         }
 
-        $targets = $this->selectTargets($company, ($home->html ?? '')."\n".($home->markdown ?? ''), $sitemap['urls'], $extraRound);
+        $targets = $this->selectTargets($company, ($home->html ?? '')."\n".($home->markdown ?? ''), $sitemap, $extraRound);
 
         foreach ($targets as $target) {
-            $result = $this->ladder->fetch($company, $target['url']);
+            $result = $this->fetcher->fetch($company->id, $target['url']);
 
             if ($result->succeeded()) {
-                $this->storePage($company, $target['url'], $target['type'], $result->markdown, $result->html);
+                $this->storePage($company, $target['url'], PageType::from($target['type']), $result->markdown, $result->html);
             }
 
-            if ($this->hasEnoughEvidence($company)) {
+            if ($this->pages->countEvidencePages($company->id) >= self::MAX_TARGETS) {
                 break;
             }
         }
 
-        $pages = (int) $company->fetchedPages()->whereNotNull('content_markdown')->whereNotNull('page_type')->count();
+        $pages = $this->pages->countEvidencePages($company->id);
 
         if ($pages === 0) {
             return ['status' => 'no_pages', 'pages' => 0];
         }
 
         if ($this->handleNaturalPerson($company)) {
-            ScoreCompanyJob::dispatch($company->uuid, null, true);
+            $this->queue->scoreCompany($company->uuid, null, true);
 
             return ['status' => 'solo_freelancer', 'pages' => $pages];
         }
 
-        $this->persistSitemapVitality($company, $sitemap['urls']);
+        $this->persistSitemapVitality($company, $sitemap);
         $this->channels->handle($company->uuid);
 
-        Log::info('lead-scout.enrich_finished', [
+        $this->log->pipeline('enrich_finished', [
             'company' => $company->uuid,
             'pages' => $pages,
             'extra_round' => $extraRound,
         ]);
 
-        ExtractSignalsJob::dispatch($company->uuid, $extraRound);
+        $this->queue->extractSignals($company->uuid, $extraRound);
 
         return ['status' => 'enriched', 'pages' => $pages];
     }
@@ -130,7 +143,7 @@ final readonly class EnrichCompanyHandler
      *
      * @param  array<string, ?string>  $sitemapUrls
      */
-    private function persistSitemapVitality(ScoutCompanyEloquentModel $company, array $sitemapUrls): void
+    private function persistSitemapVitality(Company $company, array $sitemapUrls): void
     {
         $latest = null;
 
@@ -161,43 +174,41 @@ final readonly class EnrichCompanyHandler
         $months = $latest->diffInMonths(CarbonImmutable::now());
 
         if ($months <= 6) {
-            $this->firstSignal($company, 'sitemap_fresh', "Sitemap {$latest->toDateString()}");
+            $this->vitalitySignal($company, 'sitemap_fresh', "Sitemap {$latest->toDateString()}");
         } elseif ($months > 24) {
-            $this->firstSignal($company, 'old_sitemap', "Sitemap {$latest->toDateString()}");
+            $this->vitalitySignal($company, 'old_sitemap', "Sitemap {$latest->toDateString()}");
         }
     }
 
-    private function firstSignal(ScoutCompanyEloquentModel $company, string $key, string $value): void
+    private function vitalitySignal(Company $company, string $key, string $value): void
     {
-        ScoutSignalEloquentModel::query()->firstOrCreate(
-            ['company_id' => $company->id, 'signal_key' => $key],
-            [
-                'dimension' => 'vitality',
-                'value_text' => $value,
-                'nature' => 'fact',
-                'confidence' => 75,
-                'captured_at' => now(),
-                'extraction_method' => 'rule',
-            ],
-        );
+        $this->signals->addIfAbsent($company->id, new NewSignal(
+            dimension: SignalDimension::Vitality,
+            signalKey: $key,
+            nature: SignalNature::Fact,
+            confidence: 75,
+            extractionMethod: ExtractionMethod::Rule,
+            capturedAt: CarbonImmutable::now(),
+            valueText: $value,
+        ));
     }
 
     /**
-     * @return array{urls: array<string, ?string>}
+     * @return array<string, ?string> sitemap location → lastmod
      */
-    private function fetchSitemap(ScoutCompanyEloquentModel $company): array
+    private function fetchSitemap(Company $company): array
     {
-        $sitemapUrl = 'https://'.$company->canonical_domain.'/sitemap.xml';
-        $result = $this->ladder->fetch($company, $sitemapUrl);
+        $sitemapUrl = 'https://'.$company->canonicalDomain.'/sitemap.xml';
+        $result = $this->fetcher->fetch($company->id, $sitemapUrl);
 
         // Sitemaps are XML: the markdown step strips every tag, so the raw
         // html field carries the <loc> payload here.
         if ($result->status !== FetchStatus::Ok || (($result->html ?? $result->markdown) === null)) {
-            return ['urls' => []];
+            return [];
         }
 
         // Stored untyped: evidence for sitemap-lastmod vitality, excluded
-        // from the keyword-page evidence count below.
+        // from the keyword-page evidence count.
         $this->storePage($company, $sitemapUrl, null, $result->markdown, null);
 
         $urls = [];
@@ -215,30 +226,25 @@ final readonly class EnrichCompanyHandler
             }
         }
 
-        return ['urls' => $urls];
+        return $urls;
     }
 
     /**
      * @param  array<string, ?string>  $sitemapUrls
      * @return list<array{url: string, type: string}>
      */
-    private function selectTargets(
-        ScoutCompanyEloquentModel $company,
-        string $homeContent,
-        array $sitemapUrls,
-        bool $extraRound,
-    ): array {
+    private function selectTargets(Company $company, string $homeContent, array $sitemapUrls, bool $extraRound): array
+    {
         $links = [];
-        $text = $homeContent;
 
         // Raw html first (href attributes), markdown links second.
-        if (preg_match_all('/href\s*=\s*["\'](https?:\/\/[^"\'\s>]+)/i', $text, $hrefs) > 0) {
+        if (preg_match_all('/href\s*=\s*["\'](https?:\/\/[^"\'\s>]+)/i', $homeContent, $hrefs) > 0) {
             foreach ($hrefs[1] as $link) {
                 $links[] = $link;
             }
         }
 
-        if (preg_match_all('/\((https?:\/\/[^\s)]+)\)/', $text, $found) > 0) {
+        if (preg_match_all('/\((https?:\/\/[^\s)]+)\)/', $homeContent, $found) > 0) {
             foreach ($found[1] as $link) {
                 $links[] = $link;
             }
@@ -248,17 +254,17 @@ final readonly class EnrichCompanyHandler
             $links[] = $loc;
         }
 
-        $visited = $company->fetchedPages()->pluck('url')->all();
+        $visited = $this->pages->urlsFor($company->id);
         $targets = [];
         $priority = $extraRound ? ['cases', 'blog', 'services', 'about'] : ['services', 'about', 'team', 'jobs', 'contact', 'cases'];
 
         foreach ($priority as $type) {
-            if (count($targets) >= 4) {
+            if (count($targets) >= self::MAX_TARGETS) {
                 break;
             }
 
             foreach (array_unique($links) as $link) {
-                if (count($targets) >= 4) {
+                if (count($targets) >= self::MAX_TARGETS) {
                     break;
                 }
 
@@ -280,109 +286,57 @@ final readonly class EnrichCompanyHandler
         return $targets;
     }
 
-    private function isSameSite(ScoutCompanyEloquentModel $company, string $link): bool
+    private function isSameSite(Company $company, string $link): bool
     {
         try {
-            return CanonicalDomain::fromUrl($link)->value === $company->canonical_domain;
+            return CanonicalDomain::fromUrl($link)->value === $company->canonicalDomain;
         } catch (\InvalidArgumentException) {
             return false;
         }
     }
 
-    private function hasEnoughEvidence(ScoutCompanyEloquentModel $company): bool
+    private function storePage(Company $company, string $url, ?PageType $type, ?string $markdown, ?string $html): void
     {
-        return $company->fetchedPages()->whereNotNull('content_markdown')->whereNotNull('page_type')->count() >= 4;
-    }
-
-    private function storePage(
-        ScoutCompanyEloquentModel $company,
-        string $url,
-        ?string $type,
-        ?string $markdown,
-        ?string $html,
-    ): void {
-        $markdown = $markdown !== null && trim($markdown) !== '' ? $markdown : null;
-        $summary = FormSummaryExtractor::summarize($html, $url);
-
-        ScoutFetchedPageEloquentModel::query()->updateOrCreate(
-            ['company_id' => $company->id, 'url' => mb_substr($url, 0, 2048)],
-            [
-                'page_type' => $type,
-                'content_markdown' => $markdown,
-                'content_hash' => $markdown === null ? null : hash('sha256', $markdown),
-                'forms_summary' => $summary,
-                'fetched_at' => now(),
-            ],
-        );
+        $this->pages->store($company->id, $url, $type, $markdown, $html, CarbonImmutable::now());
     }
 
     /**
      * Natural person (spec FR-39): persist the verdict as a signal and let
      * scoring discard it — identification fields are never stored.
      */
-    private function handleNaturalPerson(ScoutCompanyEloquentModel $company): bool
+    private function handleNaturalPerson(Company $company): bool
     {
-        $pages = $company->fetchedPages()
-            ->whereNotNull('content_markdown')
-            ->orderBy('id')
-            ->get(['url', 'page_type', 'content_markdown'])
-            ->map(static fn ($page): array => [
-                'url' => $page->url,
-                'page_type' => $page->page_type?->value,
-                'markdown' => (string) $page->content_markdown,
-            ])
-            ->all();
+        $pages = array_map(static fn (FetchedPage $page): array => [
+            'url' => $page->url,
+            'page_type' => $page->pageType?->value,
+            'markdown' => (string) $page->contentMarkdown,
+        ], $this->pages->withContent($company->id));
 
         $extracted = $this->publicData->extract($pages);
 
         if (! $extracted['is_natural_person']) {
-            $this->storePublicData($company, $extracted);
+            $this->companies->recordPublicData(
+                $company,
+                array_intersect_key($extracted['data'], array_flip(self::PUBLIC_FIELDS)),
+                $extracted['evidence'],
+            );
 
             return false;
         }
 
-        ScoutSignalEloquentModel::query()->firstOrCreate(
-            ['company_id' => $company->id, 'signal_key' => 'solo_freelancer'],
-            [
-                'dimension' => 'vitality',
-                'nature' => 'fact',
-                'confidence' => 85,
-                'evidence_url' => array_key_first($extracted['evidence']) !== null
-                    ? $extracted['evidence'][array_key_first($extracted['evidence'])]['url']
-                    : null,
-                'evidence_excerpt' => 'Natural person (sole trader).',
-                'captured_at' => now(),
-                'extraction_method' => 'rule',
-            ],
-        );
+        $firstEvidence = array_first($extracted['evidence']);
+
+        $this->signals->addIfAbsent($company->id, new NewSignal(
+            dimension: SignalDimension::Vitality,
+            signalKey: 'solo_freelancer',
+            nature: SignalNature::Fact,
+            confidence: 85,
+            extractionMethod: ExtractionMethod::Rule,
+            capturedAt: CarbonImmutable::now(),
+            evidenceUrl: $firstEvidence['url'] ?? null,
+            evidenceExcerpt: 'Natural person (sole trader).',
+        ));
 
         return true;
-    }
-
-    /**
-     * @param  array{data: array<string, mixed>, evidence: array<string, array{url: string, excerpt: string, captured_at: string}>, is_natural_person: bool}  $extracted
-     */
-    private function storePublicData(ScoutCompanyEloquentModel $company, array $extracted): void
-    {
-        $allowed = [
-            'legal_name', 'legal_form', 'tax_id', 'registry_info', 'city', 'founded_year',
-            'services', 'sectors', 'site_languages', 'client_companies', 'public_urls',
-        ];
-
-        $attributes = [];
-
-        foreach ($allowed as $field) {
-            if (array_key_exists($field, $extracted['data'])) {
-                $attributes[$field] = $extracted['data'][$field];
-            }
-        }
-
-        $attributes['public_data_evidence'] = $extracted['evidence'];
-
-        if ($attributes !== ['public_data_evidence' => $extracted['evidence']]) {
-            $company->update($attributes);
-        } else {
-            $company->update(['public_data_evidence' => $extracted['evidence']]);
-        }
     }
 }

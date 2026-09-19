@@ -17,11 +17,11 @@ final readonly class LaravelAiRequirementExtractor implements RequirementExtract
 {
     public function __construct(private AiCallExecutor $calls) {}
 
-    public function extract(string $postingText): array
+    public function extract(string $postingText, int $userId): array
     {
-        // userId 0: extraction is content-addressed, not user-scoped; the
-        // handler owns the user scope and the skip-if-hashed check.
-        $result = $this->calls->call(AiPurpose::RequirementExtraction, ExtractRequirementsAgent::class, $postingText, 0);
+        // Extraction is content-addressed (the handler owns the skip-if-hashed
+        // check), but the spend is charged to the requesting user (LLM10).
+        $result = $this->calls->call(AiPurpose::RequirementExtraction, ExtractRequirementsAgent::class, $postingText, $userId);
 
         /** @var array{requirements: list<array<string, mixed>>, responsibilities: list<array<string, mixed>>} $data */
         $data = (array) $result['response'];

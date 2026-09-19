@@ -22,6 +22,38 @@ use Modules\LeadScout\Domain\Enums\LegalRuleStatus;
 final readonly class ChannelAdvisor
 {
     /**
+     * Legal state a send through this channel carries (spec FR-44):
+     * applying to an offer needs none; forms and company network pages in
+     * ES/PT stay pending verification; email follows the country rule.
+     *
+     * @param  list<array{country: string, medium: string, mailbox: string, decision: string, legal_status: string}>  $rules
+     */
+    public function legalRuleStatus(ChannelType $type, ?string $country, array $rules): ?LegalRuleStatus
+    {
+        return match ($type) {
+            ChannelType::JobPostingApply => null,
+            ChannelType::ContactForm, ChannelType::CareersForm, ChannelType::CompanyNetworkPage => in_array($country, ['ES', 'PT'], true)
+                ? LegalRuleStatus::PendingVerification
+                : null,
+            default => $this->emailRuleStatus($country, $rules),
+        };
+    }
+
+    /**
+     * @param  list<array{country: string, medium: string, mailbox: string, decision: string, legal_status: string}>  $rules
+     */
+    private function emailRuleStatus(?string $country, array $rules): ?LegalRuleStatus
+    {
+        foreach ($rules as $rule) {
+            if (mb_strtoupper($rule['country']) === mb_strtoupper((string) $country) && $rule['medium'] === 'email') {
+                return LegalRuleStatus::tryFrom($rule['legal_status']);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @param  array<int, array{uuid: string, type: string, url: ?string, generic_email: ?string, status: string, audience: ?string}>  $channels
      * @param  array{country: ?string, has_offer: bool, is_employment_offer: bool, discovery_without_offer: bool, has_decisor: bool, nominative_email: ?string, dgc_listed: bool, dgc_list_stale: bool}  $context
      * @param  list<array{country: string, medium: string, mailbox: string, decision: string, legal_status: string}>  $rules

@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Carbon\CarbonImmutable;
 use Modules\LeadScout\Application\DTOs\UpsertContactData;
-use Modules\LeadScout\Domain\Enums\ContactSource;
-use Modules\LeadScout\Domain\Enums\EmailKind;
+use Modules\LeadScout\Domain\Entities\Contact;
 use Modules\LeadScout\Domain\Enums\RoleCategory;
 use Modules\LeadScout\Domain\Exceptions\CompanyNotFoundException;
 use Modules\LeadScout\Domain\Exceptions\ContactNotFoundException;
+use Modules\LeadScout\Domain\Exceptions\InvalidInputException;
 use Modules\LeadScout\Domain\Exceptions\PersonOpposedException;
+use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactRepositoryPort;
 use Modules\LeadScout\Domain\Services\DecisionMakerExtractor;
+use Modules\LeadScout\Domain\ValueObjects\ContactDetails;
 use Modules\LeadScout\Domain\ValueObjects\RoleTaxonomy;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactObjectionEloquentModel;
 
 /**
  * Manual decisor upsert (spec US-11, T049): the operator adds by hand what
@@ -26,64 +25,45 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactObj
  */
 final readonly class UpsertContactHandler
 {
-    public function handleByCompany(string $companyUuid, UpsertContactData $data): ScoutContactEloquentModel
+    public function __construct(
+        private CompanyRepositoryPort $companies,
+        private ContactRepositoryPort $contacts,
+    ) {}
+
+    public function handleByCompany(string $companyUuid, UpsertContactData $data): Contact
     {
-        $company = ScoutCompanyEloquentModel::query()->where('uuid', $companyUuid)->first()
-            ?? throw new CompanyNotFoundException($companyUuid);
+        $company = $this->companies->byUuid($companyUuid) ?? throw new CompanyNotFoundException($companyUuid);
 
-        $this->assertImportable($company, $data);
+        $this->assertImportable($company->canonicalDomain, $data);
 
-        return DB::transaction(fn (): ScoutContactEloquentModel => ScoutContactEloquentModel::query()->create([
-            'company_id' => $company->id,
-            'full_name' => mb_substr(trim($data->fullName), 0, 255),
-            'role_title' => mb_substr(trim($data->roleTitle), 0, 120),
-            'role_category' => RoleCategory::from($data->roleCategory)->value,
-            'is_primary' => $data->isPrimary ?? false,
-            'published_email' => $data->publishedEmail,
-            'email_kind' => $data->publishedEmail === null ? null : EmailKind::Nominative->value,
-            'public_profile_url' => $data->publicProfileUrl,
-            'source' => ContactSource::Manual->value,
-            'last_verified_at' => now(),
-        ]));
+        return $this->contacts->createManual($company->id, self::details($data), CarbonImmutable::now());
     }
 
-    public function handleUpdate(string $contactUuid, UpsertContactData $data): ScoutContactEloquentModel
+    public function handleUpdate(string $contactUuid, UpsertContactData $data): Contact
     {
-        $contact = ScoutContactEloquentModel::query()->with('company')->where('uuid', $contactUuid)->first()
-            ?? throw new ContactNotFoundException($contactUuid);
+        $contact = $this->contacts->byUuid($contactUuid) ?? throw new ContactNotFoundException($contactUuid);
 
-        $company = $contact->company;
-        $this->assertImportable($company, $data);
+        $this->assertImportable((string) $contact->companyDomain, $data);
 
-        return DB::transaction(function () use ($contact, $company, $data): ScoutContactEloquentModel {
-            if (($data->isPrimary ?? false) === true) {
-                ScoutContactEloquentModel::query()
-                    ->where('company_id', $company->id)
-                    ->where('id', '!=', $contact->id)
-                    ->update(['is_primary' => false]);
-            }
-
-            $contact->update([
-                'full_name' => mb_substr(trim($data->fullName), 0, 255),
-                'role_title' => mb_substr(trim($data->roleTitle), 0, 120),
-                'role_category' => RoleCategory::from($data->roleCategory)->value,
-                'is_primary' => $data->isPrimary ?? $contact->is_primary,
-                'published_email' => $data->publishedEmail,
-                'email_kind' => $data->publishedEmail === null ? null : EmailKind::Nominative->value,
-                'public_profile_url' => $data->publicProfileUrl,
-                'last_verified_at' => now(),
-            ]);
-
-            return $contact->refresh();
-        });
+        return $this->contacts->updateDetails($contact, self::details($data), CarbonImmutable::now());
     }
 
-    private function assertImportable(
-        ScoutCompanyEloquentModel $company,
-        UpsertContactData $data,
-    ): void {
+    private static function details(UpsertContactData $data): ContactDetails
+    {
+        return new ContactDetails(
+            fullName: mb_substr(trim($data->fullName), 0, 255),
+            roleTitle: mb_substr(trim($data->roleTitle), 0, 120),
+            roleCategory: RoleCategory::from($data->roleCategory),
+            isPrimary: $data->isPrimary,
+            publishedEmail: $data->publishedEmail,
+            publicProfileUrl: $data->publicProfileUrl,
+        );
+    }
+
+    private function assertImportable(string $companyDomain, UpsertContactData $data): void
+    {
         if (RoleTaxonomy::classify($data->roleTitle) === null) {
-            throw ValidationException::withMessages([
+            throw InvalidInputException::withMessages([
                 'role_title' => 'This title is excluded or ambiguous: only decisor titles are stored.',
             ]);
         }
@@ -91,17 +71,14 @@ final readonly class UpsertContactHandler
         if ($data->publishedEmail !== null) {
             $parts = explode('@', mb_strtolower(trim($data->publishedEmail)));
 
-            if (count($parts) !== 2 || $parts[1] !== mb_strtolower($company->canonical_domain)) {
-                throw ValidationException::withMessages([
+            if (count($parts) !== 2 || $parts[1] !== mb_strtolower($companyDomain)) {
+                throw InvalidInputException::withMessages([
                     'published_email' => 'Only emails published on the company domain are stored; never guessed ones.',
                 ]);
             }
         }
 
-        $hash = DecisionMakerExtractor::personHash($data->fullName, $company->canonical_domain);
-        $opposed = ScoutContactObjectionEloquentModel::query()->where('person_hash', $hash)->exists();
-
-        if ($opposed) {
+        if ($this->contacts->isPersonOpposed(DecisionMakerExtractor::personHash($data->fullName, $companyDomain))) {
             throw new PersonOpposedException;
         }
     }

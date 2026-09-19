@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Domain\ValueObjects;
 
+use Modules\LeadScout\Domain\Enums\SignalDimension;
+
 /**
  * Closed signal vocabulary (spec FR-10): the LLM may only emit these keys
  * (verified literally in T056), and the rule extractor only emits these.
@@ -39,5 +41,27 @@ final readonly class SignalKey
     public static function allowed(string $key): bool
     {
         return in_array($key, self::ALLOWED, true);
+    }
+
+    /**
+     * Score dimension a key feeds (plan §3.3). Unknown keys count as commercial.
+     */
+    public static function dimensionOf(string $key): SignalDimension
+    {
+        foreach ([
+            'technical' => ['laravel', 'php_plain', 'vue_inertia', 'livewire', 'stack_db', 'api_ai', 'unconfirmed_tech'],
+            'commercial' => ['freelance_contract', 'accepts_external', 'agency_type', 'consultancy_type', 'product_type', 'recruiter', 'large_outsourcer', 'multi_vacancies', 'fixed_job', 'low_prices'],
+            'recurrent' => ['staff_augmentation', 'maintenance_sla', 'long_term', 'many_cases', 'long_clients', 'active_vacancy', 'one_off'],
+            'vitality' => ['recent_content', 'sitemap_fresh', 'vacancy_vitality', 'copyright_recent', 'team_5_50', 'team_51_200', 'team_over_200', 'team_2_4', 'team_unknown', 'stale_content', 'old_sitemap', 'old_copyright', 'dead_web', 'solo_freelancer'],
+            'communication' => ['lang_es_pt', 'async_english', 'english_unknown', 'english_fluent_required'],
+            'geo_contract' => ['country_pt_es', 'country_eu', 'country_uk_ie', 'country_us_ca', 'country_other', 'accepts_eu_contractors', 'overlap_ok', 'overlap_low', 'local_contract_required'],
+            'remote' => ['remote', 'hybrid', 'onsite', 'remote_unknown'],
+        ] as $dimension => $keys) {
+            if (in_array($key, $keys, true)) {
+                return SignalDimension::from($dimension);
+            }
+        }
+
+        return SignalDimension::Commercial;
     }
 }

@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { useQuery } from '@pinia/colada';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import { Button } from '@/components/ui/button';
-import { httpJson } from '@/lib/http';
-import { toUrl } from '@/lib/utils';
+import {
+    useInvalidateProfiles,
+    useProfiles,
+} from '@/modules/cv-studio/composables/useProfiles';
 import {
     usePendingRelations,
     useRelationMutations,
 } from '@/modules/cv-studio/composables/useRelations';
-import type { StudioProfile } from '@/modules/cv-studio/types';
 import { index as postingsIndex } from '@/routes/cv-studio/postings';
-import { index, policy, store } from '@/routes/cv-studio/profiles';
+import { policy, store } from '@/routes/cv-studio/profiles';
 
 defineOptions({
     layout: {
@@ -24,18 +24,8 @@ defineOptions({
     },
 });
 
-type ProfilePage = {
-    data: (StudioProfile & { rules?: Record<string, unknown> })[];
-};
-
-const { data: profilesData } = useQuery<ProfilePage>({
-    key: () => ['studio-profiles'],
-    query: () => httpJson<ProfilePage>(toUrl(index())),
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
-});
-
-const profiles = computed(() => profilesData.value?.data ?? []);
+const { profiles } = useProfiles();
+const invalidateProfiles = useInvalidateProfiles();
 const selectedUuid = ref<string | null>(null);
 
 const selected = computed(
@@ -86,7 +76,10 @@ function savePolicy(): void {
     }
 
     policyForm.put(policy.url(selected.value.uuid), {
-        onSuccess: () => toast.success('Opportunity policy updated.'),
+        onSuccess: () => {
+            toast.success('Opportunity policy updated.');
+            void invalidateProfiles();
+        },
         onError: () => toast.error('Policy values must sit in [0.1, 1].'),
     });
 }
@@ -116,6 +109,7 @@ function createProfile(): void {
             onSuccess: () => {
                 toast.success('Profile saved.');
                 createForm.reset();
+                void invalidateProfiles();
             },
         });
 }

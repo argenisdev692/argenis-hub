@@ -105,3 +105,27 @@ it('denies bandeja routes without permission', function (): void {
     $this->actingAs($user)->getJson('/data/admin/lead-scout/leads')->assertForbidden();
     $this->actingAs($user)->get('/lead-scout')->assertForbidden();
 });
+
+it('accepts single-bound date filters and rejects an inverted range', function (): void {
+    $admin = bandejaAdmin();
+    ScoutCompanyFactory::new()->create(['created_at' => '2026-03-10 12:00:00']);
+    ScoutCompanyFactory::new()->create(['created_at' => '2026-06-10 12:00:00']);
+
+    $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads?date_from=2026-05-01')
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1);
+
+    $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads?date_to=2026-03-10')
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1);
+
+    $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads?date_from=2026-06-01&date_to=2026-03-01')
+        ->assertUnprocessable();
+
+    $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads?signal_type[]=bogus')
+        ->assertUnprocessable();
+});

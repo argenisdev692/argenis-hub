@@ -99,7 +99,8 @@
       "Bash(xargs -I{} cat {})",
       "Bash(sed -i 's|<env name=\"SESSION_DRIVER\" value=\"file\"/>|<env name=\"SESSION_DRIVER\" value=\"array\"/>|' phpunit.xml)",
       "Bash(npm run *)",
-      "Bash(rmdir \"src/Modules/ActivityLog/Infrastructure/Http/Presenters\")"
+      "Bash(rmdir \"src/Modules/ActivityLog/Infrastructure/Http/Presenters\")",
+      "Bash(rm *)"
     ]
   },
   "enableAllProjectMcpServers": true

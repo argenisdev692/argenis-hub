@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\DTOs;
 
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactEloquentModel;
+use Modules\LeadScout\Domain\Entities\Contact;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -31,21 +31,21 @@ final class ContactData extends Data
         public readonly ?string $lastVerifiedAt,
     ) {}
 
-    public static function fromModel(ScoutContactEloquentModel $contact): self
+    public static function fromEntity(Contact $contact): self
     {
         return new self(
             uuid: $contact->uuid,
-            fullName: $contact->full_name,
-            roleTitle: $contact->role_title,
-            roleCategory: $contact->role_category?->value,
-            isPrimary: (bool) $contact->is_primary,
-            publishedEmail: $contact->published_email,
-            emailKind: $contact->email_kind?->value,
-            publicProfileUrl: $contact->public_profile_url,
+            fullName: $contact->fullName,
+            roleTitle: $contact->roleTitle,
+            roleCategory: $contact->roleCategory?->value,
+            isPrimary: $contact->isPrimary,
+            publishedEmail: $contact->publishedEmail,
+            emailKind: $contact->emailKind?->value,
+            publicProfileUrl: $contact->publicProfileUrl,
             source: $contact->source->value,
-            evidenceUrl: $contact->evidence_url,
-            evidenceExcerpt: $contact->evidence_excerpt,
-            lastVerifiedAt: $contact->last_verified_at?->toIso8601String(),
+            evidenceUrl: $contact->evidenceUrl,
+            evidenceExcerpt: $contact->evidenceExcerpt,
+            lastVerifiedAt: $contact->lastVerifiedAt?->format(DATE_ATOM),
         );
     }
 }

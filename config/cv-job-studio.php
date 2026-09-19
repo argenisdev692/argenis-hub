@@ -113,4 +113,23 @@ return [
     ],
 
     'access_modes' => ['api_feed', 'search_scoped', 'sitemap', 'link_only', 'resolve_only'],
+
+    /*
+    | Monthly spend ceilings per user and category (FR-33, SC-8, LLM10). The
+    | ledger provisions the period row from these on first use, so a new
+    | user is budgeted, never silently refused. `llm_call_estimate_eur` is a
+    | CONSERVATIVE flat per-call charge until T-154 fills measured pricing —
+    | it keeps the LLM budget binding instead of never moving.
+    */
+    'budgets' => [
+        'llm' => ['limit_eur' => (float) env('CV_STUDIO_LLM_BUDGET_EUR', 5)],
+        'search' => ['limit_eur' => (float) env('CV_STUDIO_SEARCH_BUDGET_EUR', 5)],
+        'extraction' => ['limit_eur' => (float) env('CV_STUDIO_EXTRACTION_BUDGET_EUR', 5)],
+    ],
+
+    'llm_call_estimate_eur' => (float) env('CV_STUDIO_LLM_CALL_ESTIMATE_EUR', 0.02),
+
+    // Conservative per-scrape estimate (same figure as LeadScout's
+    // `costs.firecrawl_scrape_eur`); direct HTTP is free.
+    'firecrawl_scrape_eur' => (float) env('CV_STUDIO_FIRECRAWL_SCRAPE_EUR', 0.01),
 ];

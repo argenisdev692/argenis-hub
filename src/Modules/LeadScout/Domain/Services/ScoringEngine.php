@@ -22,7 +22,7 @@ final readonly class ScoringEngine
      * @param  array<int, array{signal_key: string, dimension: string, nature: string, confidence: int, evidence_url: ?string, captured_at: string, value_text: ?string}>  $signals
      * @param  list<string>  $confirmedSkills
      * @param  list<string>  $requiredTechs
-     * @param  array{weights: array<string, int>, inference_weight: float}  $rules
+     * @param  array{weights: array<string, int>, inference_weight: float, overlap_hours?: array<string, int|float>}  $rules  `overlap_hours`: working-hours overlap with Portugal by country
      * @return array{subscores: array<string, int>, leadScore: int, confidence: int, reasons: list<array{signal_key: string, points: int, explanation: string}>, flags: array{solo_freelancer: bool, dead_or_absorbed: bool, inactive_agency: bool, outsourcer_large: bool, remote_zero: bool}}
      */
     #[\NoDiscard]
@@ -60,7 +60,8 @@ final readonly class ScoringEngine
         $subscores['recurrent'] = $this->recurrent($facts, $inferences, $weight, $reasons);
         $subscores['vitality'] = $this->vitality($facts, $inferences, $weight, $now, $reasons);
         $subscores['communication'] = $this->communication($facts, $inferences, $weight, $reasons);
-        $subscores['geo_contract'] = $this->geoContract($facts, $inferences, $weight, $country, $reasons);
+        $overlap = $country === null || ! isset($rules['overlap_hours'][$country]) ? null : (float) $rules['overlap_hours'][$country];
+        $subscores['geo_contract'] = $this->geoContract($facts, $inferences, $weight, $overlap, $reasons);
         $subscores['remote'] = $this->remote($facts, $inferences, $weight, $reasons);
 
         $weights = $rules['weights'];
@@ -316,7 +317,7 @@ final readonly class ScoringEngine
      * @param  callable(array): float  $weight
      * @param  list<array{signal_key: string, points: int, explanation: string}>  $reasons
      */
-    private function geoContract(array $facts, array $inferences, callable $weight, ?string $country, array &$reasons): int
+    private function geoContract(array $facts, array $inferences, callable $weight, ?float $overlap, array &$reasons): int
     {
         $total = 0;
         $total += $this->scoreKey('country_pt_es', 50, 'Empresa PT/ES', $facts, $inferences, $weight, $reasons);
@@ -325,8 +326,6 @@ final readonly class ScoringEngine
         $total += $this->scoreKey('country_us_ca', 15, 'US/CA', $facts, $inferences, $weight, $reasons);
         $total += $this->scoreKey('country_other', 10, 'Resto del mundo', $facts, $inferences, $weight, $reasons);
         $total += $this->scoreKey('accepts_eu_contractors', 30, 'Acepta contractors UE', $facts, $inferences, $weight, $reasons);
-
-        $overlap = $this->overlapHours($country);
 
         if ($overlap !== null && $overlap >= 4) {
             $total += 10;
@@ -339,17 +338,6 @@ final readonly class ScoringEngine
         $total += $this->scoreKey('local_contract_required', -40, 'Exige contrato local', $facts, $inferences, $weight, $reasons);
 
         return max(0, min(100, $total));
-    }
-
-    private function overlapHours(?string $country): ?float
-    {
-        if ($country === null) {
-            return null;
-        }
-
-        $map = (array) config('lead-scout.geo.overlap_hours', []);
-
-        return isset($map[$country]) ? (float) $map[$country] : null;
     }
 
     /**

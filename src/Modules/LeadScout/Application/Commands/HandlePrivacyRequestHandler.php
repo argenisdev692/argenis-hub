@@ -4,72 +4,69 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
-use Modules\LeadScout\Domain\Enums\PrivacyRequestOutcome;
+use Carbon\CarbonImmutable;
+use Modules\LeadScout\Domain\Entities\Contact;
 use Modules\LeadScout\Domain\Enums\PrivacyRequestType;
+use Modules\LeadScout\Domain\Ports\ContactRepositoryPort;
+use Modules\LeadScout\Domain\Ports\PrivacyRequestRepositoryPort;
+use Modules\LeadScout\Domain\Ports\TransactionPort;
 use Modules\LeadScout\Domain\Services\DecisionMakerExtractor;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactObjectionEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutPrivacyRequestEloquentModel;
 
 /**
  * Data-subject rights (spec FR-29, T073): search/export/erase/object by a
  * name or email fragment (min 3 chars, enforced by the command). Every
  * request is recorded in `scout_privacy_requests` with a subject hash —
- * never PII. Exported JSON (the subject's own data) goes to a file outside
- * the git-tracked tree.
+ * never PII. The export returns the subject's own data; the command writes
+ * it to a file outside the git-tracked tree.
  */
 final readonly class HandlePrivacyRequestHandler
 {
+    private const int MAX_MATCHES = 100;
+
+    public function __construct(
+        private ContactRepositoryPort $contacts,
+        private PrivacyRequestRepositoryPort $privacyRequests,
+        private TransactionPort $transaction,
+    ) {}
+
     /**
      * @return list<array{uuid: string, company: string, role: ?string, anonymized: bool}>
      */
     #[\NoDiscard]
     public function search(string $query): array
     {
-        $rows = $this->matches($query);
+        $rows = $this->contacts->matchingPerson($query, self::MAX_MATCHES);
         $this->ledger($query, PrivacyRequestType::Access);
 
-        return $rows->map(static fn (ScoutContactEloquentModel $contact): array => [
+        return array_map(static fn (Contact $contact): array => [
             'uuid' => $contact->uuid,
-            'company' => (string) $contact->company->canonical_domain,
-            'role' => $contact->role_title,
-            'anonymized' => $contact->anonymized_at !== null,
-        ])->all();
+            'company' => (string) $contact->companyDomain,
+            'role' => $contact->roleTitle,
+            'anonymized' => $contact->isAnonymized(),
+        ], $rows);
     }
 
     /**
-     * @return array{file: string, records: int}
+     * @return list<array{uuid: string, company: string, full_name: ?string, role_title: ?string, role_category: ?string, published_email: ?string, public_profile_url: ?string, evidence_url: ?string, anonymized_at: ?string}>
      */
     #[\NoDiscard]
-    public function export(string $query, string $outputPath): array
+    public function export(string $query): array
     {
-        $rows = $this->matches($query);
-
-        $payload = $rows->map(static fn (ScoutContactEloquentModel $contact): array => [
+        $payload = array_map(static fn (Contact $contact): array => [
             'uuid' => $contact->uuid,
-            'company' => (string) $contact->company->canonical_domain,
-            'full_name' => $contact->full_name,
-            'role_title' => $contact->role_title,
-            'role_category' => $contact->role_category?->value,
-            'published_email' => $contact->published_email,
-            'public_profile_url' => $contact->public_profile_url,
-            'evidence_url' => $contact->evidence_url,
-            'anonymized_at' => $contact->anonymized_at,
-        ])->all();
-
-        $dir = dirname($outputPath);
-
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        file_put_contents($outputPath, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            'company' => (string) $contact->companyDomain,
+            'full_name' => $contact->fullName,
+            'role_title' => $contact->roleTitle,
+            'role_category' => $contact->roleCategory?->value,
+            'published_email' => $contact->publishedEmail,
+            'public_profile_url' => $contact->publicProfileUrl,
+            'evidence_url' => $contact->evidenceUrl,
+            'anonymized_at' => $contact->anonymizedAt?->format(DATE_ATOM),
+        ], $this->contacts->matchingPerson($query, self::MAX_MATCHES));
 
         $this->ledger($query, PrivacyRequestType::Access);
 
-        return ['file' => $outputPath, 'records' => count($payload)];
+        return $payload;
     }
 
     /**
@@ -78,16 +75,20 @@ final readonly class HandlePrivacyRequestHandler
     #[\NoDiscard]
     public function erase(string $query): array
     {
-        $rows = $this->matches($query);
-        $count = 0;
+        $rows = $this->contacts->matchingPerson($query, self::MAX_MATCHES);
+        $now = CarbonImmutable::now();
 
-        DB::transaction(function () use ($rows, &$count): void {
+        $count = $this->transaction->run(function () use ($rows, $now): int {
+            $count = 0;
+
             foreach ($rows as $contact) {
-                if ($contact->anonymized_at === null) {
-                    $this->anonymize($contact);
+                if (! $contact->isAnonymized()) {
+                    $this->contacts->anonymize($contact->id, $now);
                     $count++;
                 }
             }
+
+            return $count;
         });
 
         $this->ledger($query, PrivacyRequestType::Erasure);
@@ -101,72 +102,41 @@ final readonly class HandlePrivacyRequestHandler
     #[\NoDiscard]
     public function object(string $query): array
     {
-        $rows = $this->matches($query);
-        $anonymized = 0;
-        $objections = 0;
+        $rows = $this->contacts->matchingPerson($query, self::MAX_MATCHES);
+        $now = CarbonImmutable::now();
 
-        DB::transaction(function () use ($rows, &$anonymized, &$objections): void {
+        $report = $this->transaction->run(function () use ($rows, $now): array {
+            $report = ['anonymized' => 0, 'objections' => 0];
+
             foreach ($rows as $contact) {
-                $name = (string) $contact->full_name;
-                $domain = (string) $contact->company->canonical_domain;
+                $name = (string) $contact->fullName;
 
-                if ($name !== '') {
-                    $hash = DecisionMakerExtractor::personHash($name, $domain);
-                    $created = ScoutContactObjectionEloquentModel::query()->firstOrCreate(['person_hash' => $hash]);
-                    if ($created->wasRecentlyCreated) {
-                        $objections++;
-                    }
+                if ($name !== '' && $this->contacts->recordObjection(
+                    DecisionMakerExtractor::personHash($name, (string) $contact->companyDomain),
+                )) {
+                    $report['objections']++;
                 }
 
-                if ($contact->anonymized_at === null) {
-                    $this->anonymize($contact);
-                    $anonymized++;
+                if (! $contact->isAnonymized()) {
+                    $this->contacts->anonymize($contact->id, $now);
+                    $report['anonymized']++;
                 }
             }
+
+            return $report;
         });
 
         $this->ledger($query, PrivacyRequestType::Objection);
 
-        return ['anonymized' => $anonymized, 'objections' => $objections];
-    }
-
-    /**
-     * @return Collection<int, ScoutContactEloquentModel>
-     */
-    private function matches(string $query): Collection
-    {
-        $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], trim($query)).'%';
-
-        return ScoutContactEloquentModel::query()
-            ->with('company:id,canonical_domain')
-            ->where(static function ($where) use ($like): void {
-                $where->where('full_name', 'like', $like)
-                    ->orWhere('published_email', 'like', $like);
-            })
-            ->orderBy('id')
-            ->limit(100)
-            ->get();
-    }
-
-    private function anonymize(ScoutContactEloquentModel $contact): void
-    {
-        $contact->update([
-            'full_name' => null,
-            'published_email' => null,
-            'public_profile_url' => null,
-            'evidence_excerpt' => null,
-            'anonymized_at' => now(),
-        ]);
+        return $report;
     }
 
     private function ledger(string $query, PrivacyRequestType $type): void
     {
-        ScoutPrivacyRequestEloquentModel::query()->create([
-            'subject_ref' => hash('sha256', mb_strtolower(trim($query))),
-            'request_type' => $type->value,
-            'received_at' => now(),
-            'resolved_at' => now(),
-            'outcome' => PrivacyRequestOutcome::Resolved->value,
-        ]);
+        $this->privacyRequests->recordResolved(
+            hash('sha256', mb_strtolower(trim($query))),
+            $type,
+            CarbonImmutable::now(),
+        );
     }
 }

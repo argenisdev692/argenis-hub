@@ -6,14 +6,14 @@ namespace Modules\LeadScout\Application\Commands;
 
 use Modules\LeadScout\Application\DTOs\BudgetStatusData;
 use Modules\LeadScout\Domain\Enums\BudgetCategory;
-use Modules\LeadScout\Infrastructure\Budgets\BudgetLedger;
+use Modules\LeadScout\Domain\Ports\BudgetLedgerPort;
 
 /**
  * Budget month read (spec US-8, T040).
  */
 final readonly class GetBudgetStatusHandler
 {
-    public function __construct(private BudgetLedger $ledger) {}
+    public function __construct(private BudgetLedgerPort $ledger) {}
 
     public function handle(): BudgetStatusData
     {

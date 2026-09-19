@@ -139,10 +139,10 @@ it('walks the ladder without ever escalating a block', function (): void {
 
     $company = fetchCompany();
 
-    expect(ladder()->fetch($company, 'https://agencia.example/')->succeeded())->toBeTrue()
-        ->and(ladder()->fetch($company, 'https://bloqueada.example/')->status)->toBe(FetchStatus::Blocked)
-        ->and(ladder()->fetch($company, 'https://cerrada.example/')->status)->toBe(FetchStatus::SkippedRobots)
-        ->and(ladder()->fetch($company, 'https://www.linkedin.com/company/x')->status)->toBe(FetchStatus::Failed);
+    expect(ladder()->fetch($company->id, 'https://agencia.example/')->succeeded())->toBeTrue()
+        ->and(ladder()->fetch($company->id, 'https://bloqueada.example/')->status)->toBe(FetchStatus::Blocked)
+        ->and(ladder()->fetch($company->id, 'https://cerrada.example/')->status)->toBe(FetchStatus::SkippedRobots)
+        ->and(ladder()->fetch($company->id, 'https://www.linkedin.com/company/x')->status)->toBe(FetchStatus::Failed);
 
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'firecrawl'));
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'linkedin.com/company'));
@@ -164,7 +164,7 @@ it('rescues empty spas through firecrawl exactly once', function (): void {
         ], 200),
     ]);
 
-    $result = ladder()->fetch(fetchCompany(), 'https://spa.example/');
+    $result = ladder()->fetch(fetchCompany()->id, 'https://spa.example/');
 
     expect($result->succeeded())->toBeTrue()
         ->and($result->markdown)->toContain('rescatada');

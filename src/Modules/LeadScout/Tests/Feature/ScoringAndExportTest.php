@@ -12,6 +12,7 @@ use Modules\LeadScout\Application\Commands\ScoreCompanyHandler;
 use Modules\LeadScout\Domain\Enums\ActivityStatus;
 use Modules\LeadScout\Domain\Enums\Tier;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
+use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutScoreReasonEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutScoreResultEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSignalEloquentModel;
 
@@ -81,13 +82,13 @@ it('scores deterministically with a single current result and linked reasons', f
     $first = app(ScoreCompanyHandler::class)->handle($company->uuid, $admin->id);
     $second = app(ScoreCompanyHandler::class)->handle($company->uuid, $admin->id);
 
-    expect($first->lead_score)->toBe(87)
-        ->and($second->lead_score)->toBe($first->lead_score)
+    expect($first->leadScore)->toBe(87)
+        ->and($second->leadScore)->toBe($first->leadScore)
         ->and($first->tier)->toBe(Tier::A)
         ->and($company->refresh()->needs_research)->toBeFalse()
         ->and(ScoutScoreResultEloquentModel::query()->where('company_id', $company->id)->where('is_current', true)->count())->toBe(1)
-        ->and($first->reasons()->count())->toBe(20)
-        ->and($first->reasons()->whereNotNull('signal_id')->count())->toBeGreaterThanOrEqual(19);
+        ->and($first->reasons)->toHaveCount(20)
+        ->and(ScoutScoreReasonEloquentModel::query()->where('score_result_id', $first->id)->whereNotNull('signal_id')->count())->toBeGreaterThanOrEqual(19);
 });
 
 it('rescores over http with reasons and answers 404 unknown', function (): void {

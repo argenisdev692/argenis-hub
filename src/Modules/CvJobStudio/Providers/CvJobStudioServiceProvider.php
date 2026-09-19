@@ -7,14 +7,12 @@ namespace Modules\CvJobStudio\Providers;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Exceptions\Handler;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Modules\CvJobStudio\Application\Policies\StudioPostingPolicy;
-use Modules\CvJobStudio\Application\Policies\StudioProfilePolicy;
 use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
 use Modules\CvJobStudio\Domain\Exceptions\ProfileGateIncompleteException;
 use Modules\CvJobStudio\Domain\Exceptions\StructureNotConfirmedException;
+use Modules\CvJobStudio\Domain\Exceptions\VersionNotFoundException;
 use Modules\CvJobStudio\Domain\Ports\CvJudgePort;
 use Modules\CvJobStudio\Domain\Ports\CvRewriterPort;
 use Modules\CvJobStudio\Domain\Ports\CvSourcePort;
@@ -40,19 +38,18 @@ use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioRefreshVocabularyC
 use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioRescoreCommand;
 use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioRunCommand;
 use Modules\CvJobStudio\Infrastructure\Cvs\EloquentCvSource;
-use Modules\CvJobStudio\Infrastructure\Cvs\EloquentPortfolioProjectSource;
 use Modules\CvJobStudio\Infrastructure\Embeddings\InMemorySimilaritySearch;
 use Modules\CvJobStudio\Infrastructure\Embeddings\LaravelAiEmbeddingAdapter;
 use Modules\CvJobStudio\Infrastructure\Embeddings\PgVectorSimilaritySearch;
 use Modules\CvJobStudio\Infrastructure\Fetching\DirectHttpPostingFetcher;
 use Modules\CvJobStudio\Infrastructure\Fetching\FirecrawlPostingFetcher;
+use Modules\CvJobStudio\Infrastructure\Fetching\OutboundUrlGuard;
 use Modules\CvJobStudio\Infrastructure\Fetching\PostingFetchLadder;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioPostingRepository;
 use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioProfileRepository;
 use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioScoreRepository;
 use Modules\CvJobStudio\Infrastructure\Persistence\Transactions\StudioTransactionRunner;
+use Modules\CvJobStudio\Infrastructure\Projects\CompositeProjectSource;
 use Modules\CvJobStudio\Infrastructure\Sources\AdzunaSource;
 use Modules\CvJobStudio\Infrastructure\Sources\ArbeitnowSource;
 use Modules\CvJobStudio\Infrastructure\Sources\AshbyBoardSource;
@@ -83,7 +80,7 @@ final class CvJobStudioServiceProvider extends ServiceProvider
         $this->app->bind(StudioProfileRepositoryPort::class, EloquentStudioProfileRepository::class);
         $this->app->bind(TransactionPort::class, StudioTransactionRunner::class);
         $this->app->bind(CvSourcePort::class, EloquentCvSource::class);
-        $this->app->bind(ProjectSourcePort::class, EloquentPortfolioProjectSource::class);
+        $this->app->bind(ProjectSourcePort::class, CompositeProjectSource::class);
         $this->app->bind(RequirementExtractorPort::class, LaravelAiRequirementExtractor::class);
         $this->app->bind(CvJudgePort::class, LaravelAiCvJudge::class);
         $this->app->bind(CvRewriterPort::class, LaravelAiCvRewriter::class);
@@ -95,6 +92,12 @@ final class CvJobStudioServiceProvider extends ServiceProvider
         $this->app->bind(SimilaritySearchPort::class, static fn (): SimilaritySearchPort => DB::getDriverName() === 'pgsql'
             ? app(PgVectorSimilaritySearch::class)
             : app(InMemorySimilaritySearch::class));
+
+        // Autowiring would build the guard with an EMPTY never-fetch list and
+        // let every link_only host (linkedin.com, indeed.com…) be fetched.
+        $this->app->bind(OutboundUrlGuard::class, static fn (): OutboundUrlGuard => new OutboundUrlGuard(
+            (array) config('cv-job-studio.never_fetch_hosts', []),
+        ));
 
         $this->app->bind(PostingFetchLadder::class, static fn (): PostingFetchLadder => new PostingFetchLadder([
             app(DirectHttpPostingFetcher::class),
@@ -122,11 +125,8 @@ final class CvJobStudioServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Route::middleware('web')->group(__DIR__.'/../Infrastructure/Routes/web.php');
-        Route::middleware('api')->prefix('api')->group(__DIR__.'/../Infrastructure/Routes/api.php');
-
-        Gate::policy(StudioPostingEloquentModel::class, StudioPostingPolicy::class);
-        Gate::policy(StudioProfileEloquentModel::class, StudioProfilePolicy::class);
+        $this->registerWebRoutes();
+        $this->registerApiRoutes();
 
         $this->commands([
             StudioRunCommand::class,
@@ -140,6 +140,16 @@ final class CvJobStudioServiceProvider extends ServiceProvider
         $this->registerExceptionMapping();
     }
 
+    private function registerWebRoutes(): void
+    {
+        Route::middleware('web')->group(__DIR__.'/../Infrastructure/Routes/web.php');
+    }
+
+    private function registerApiRoutes(): void
+    {
+        Route::middleware('api')->prefix('api')->group(__DIR__.'/../Infrastructure/Routes/api.php');
+    }
+
     private function registerExceptionMapping(): void
     {
         $handler = $this->app->make(ExceptionHandler::class);
@@ -151,6 +161,11 @@ final class CvJobStudioServiceProvider extends ServiceProvider
         $handler->map(
             PostingNotFoundException::class,
             static fn (PostingNotFoundException $exception): NotFoundHttpException => new NotFoundHttpException($exception->getMessage(), $exception),
+        );
+
+        $handler->map(
+            VersionNotFoundException::class,
+            static fn (VersionNotFoundException $exception): NotFoundHttpException => new NotFoundHttpException($exception->getMessage(), $exception),
         );
 
         $handler->map(

@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
+use Modules\LeadScout\Domain\Entities\Company;
+use Modules\LeadScout\Domain\Entities\JobPosting;
 use Modules\LeadScout\Domain\Enums\CompanyOrigin;
 use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\JobPostingRepositoryPort;
 use Modules\LeadScout\Domain\Ports\SearchPort;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
 use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Domain\ValueObjects\CanonicalDomain;
 use Modules\LeadScout\Domain\ValueObjects\SearchQuery;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutJobPostingEloquentModel;
 
 /**
  * Links a posting to its company (spec US-3, T043): payload domain first
@@ -24,23 +26,25 @@ final readonly class ResolveCompanyHandler
 {
     public function __construct(
         private CompanyRepositoryPort $companies,
+        private JobPostingRepositoryPort $postings,
         private SearchPort $search,
         private SuppressionGate $gate,
+        private SuppressionRepositoryPort $suppressions,
     ) {}
 
-    public function handle(string $postingUuid): ?ScoutCompanyEloquentModel
+    public function handle(string $postingUuid): ?Company
     {
-        $posting = ScoutJobPostingEloquentModel::query()->with('company')->where('uuid', $postingUuid)->first();
+        $posting = $this->postings->byUuid($postingUuid);
 
-        if ($posting === null || $posting->company !== null) {
-            return $posting?->company;
+        if ($posting === null) {
+            return null;
         }
 
-        $domain = $this->payloadDomain($posting);
-
-        if ($domain === null) {
-            $domain = $this->searchDomain($posting);
+        if ($posting->companyId !== null) {
+            return $this->companies->byId($posting->companyId);
         }
+
+        $domain = $this->payloadDomain($posting) ?? $this->searchDomain($posting);
 
         if ($domain === null) {
             return null;
@@ -49,28 +53,28 @@ final readonly class ResolveCompanyHandler
         $company = $this->findOrCreate($domain, $posting);
 
         if ($company !== null) {
-            $posting->update(['company_id' => $company->id]);
+            $this->postings->assignCompany($posting->id, $company->id);
         }
 
         return $company;
     }
 
-    private function payloadDomain(ScoutJobPostingEloquentModel $posting): ?string
+    private function payloadDomain(JobPosting $posting): ?string
     {
-        if ($posting->company_url === null || trim($posting->company_url) === '') {
+        if ($posting->companyUrl === null || trim($posting->companyUrl) === '') {
             return null;
         }
 
         try {
-            return CanonicalDomain::fromUrl(trim($posting->company_url))->value;
+            return CanonicalDomain::fromUrl(trim($posting->companyUrl))->value;
         } catch (\InvalidArgumentException) {
             return null;
         }
     }
 
-    private function searchDomain(ScoutJobPostingEloquentModel $posting): ?string
+    private function searchDomain(JobPosting $posting): ?string
     {
-        $probe = trim(($posting->company_name ?? '').' '.($posting->country ?? '').' official site');
+        $probe = trim(($posting->companyName ?? '').' '.($posting->country ?? '').' official site');
 
         try {
             $results = $this->search->search(new SearchQuery(
@@ -94,44 +98,27 @@ final readonly class ResolveCompanyHandler
         return null;
     }
 
-    private function findOrCreate(
-        string $domain,
-        ScoutJobPostingEloquentModel $posting,
-    ): ?ScoutCompanyEloquentModel {
-        $existing = $this->companies->findByDomain($domain);
+    private function findOrCreate(string $domain, JobPosting $posting): ?Company
+    {
+        $existing = $this->companies->byDomain($domain) ?? $this->companies->byAlias($domain);
 
         if ($existing !== null) {
             return $existing;
         }
 
-        $aliased = ScoutCompanyEloquentModel::query()
-            ->whereJsonContains('aliases', $domain)
-            ->first();
-
-        if ($aliased !== null) {
-            return $aliased;
-        }
-
-        $companyName = trim((string) $posting->company_name) !== '' ? trim((string) $posting->company_name) : 'Unknown';
-
-        $candidates = $this->companies->suppressionsMatching($domain, null, $companyName)
-            ->map(static fn ($row): array => [
-                'canonical_domain' => $row->canonical_domain,
-                'tax_id' => $row->tax_id,
-                'name' => $row->name,
-            ])
-            ->all();
+        $companyName = trim((string) $posting->companyName) !== '' ? trim((string) $posting->companyName) : 'Unknown';
+        $candidates = $this->suppressions->matching($domain, null, $companyName);
 
         if ($this->gate->isSuppressed($domain, null, $companyName, $candidates)) {
             return null;
         }
 
-        return $this->companies->create([
-            'canonical_domain' => $domain,
-            'name' => mb_substr($companyName, 0, 255),
-            'country' => $posting->country,
-            'origin' => CompanyOrigin::JobPosting->value,
-            'origin_ref' => mb_substr($posting->source_url, 0, 255),
-        ]);
+        return $this->companies->register(
+            canonicalDomain: $domain,
+            name: mb_substr($companyName, 0, 255),
+            origin: CompanyOrigin::JobPosting,
+            originRef: mb_substr($posting->sourceUrl, 0, 255),
+            country: $posting->country,
+        );
     }
 }

@@ -4,104 +4,109 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\Commands;
 
-use Illuminate\Validation\ValidationException;
+use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Config\Repository as Config;
 use Modules\LeadScout\Application\DTOs\UpdateOutreachData;
+use Modules\LeadScout\Domain\Entities\ContactChannel;
+use Modules\LeadScout\Domain\Entities\Outreach;
+use Modules\LeadScout\Domain\Enums\ChannelStatus;
 use Modules\LeadScout\Domain\Enums\LegalRuleStatus;
+use Modules\LeadScout\Domain\Enums\OutreachChannel;
 use Modules\LeadScout\Domain\Enums\OutreachStage;
+use Modules\LeadScout\Domain\Exceptions\InvalidInputException;
 use Modules\LeadScout\Domain\Exceptions\SuppressedException;
 use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactChannelRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactRepositoryPort;
 use Modules\LeadScout\Domain\Ports\OutreachRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ProfileRepositoryPort;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
+use Modules\LeadScout\Domain\Ports\TransactionPort;
 use Modules\LeadScout\Domain\Services\ChannelAdvisor;
 use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Domain\ValueObjects\SkillTaxonomy;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactChannelEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutProfileEloquentModel;
 
 /**
  * Outreach stage machine (spec US-5/US-6, FR-41, T063): explicit valid
  * transitions, claim-clean `ready`, fully-evidenced manual `sent`.
  * `operator_id` always comes from the session — client input is ignored.
  *
- * @return array{outreach: ScoutOutreachEloquentModel, daily_sent: int, daily_limit_warning: bool}
+ * Everything is validated before the first write, and the writes land in
+ * one transaction: a rejected send leaves no trace.
  */
 final readonly class UpdateOutreachStageHandler
 {
-    /**
-     * @var array<string, list<string>>
-     */
-    private const array TRANSITIONS = [
-        'draft' => ['draft', 'ready'],
-        'ready' => ['draft', 'ready', 'sent'],
-        'sent' => ['sent', 'call', 'lost'],
-        'replied' => ['positive', 'lost'],
-        'positive' => ['call', 'lost'],
-        'call' => ['trial', 'lost'],
-        'trial' => ['won', 'lost'],
-        'won' => ['recurrent', 'lost'],
-        'recurrent' => ['recurrent'],
-        'lost' => [],
-        'do_not_contact' => [],
-    ];
+    private const int DAILY_SEND_WARNING = 15;
 
     public function __construct(
         private OutreachRepositoryPort $outreaches,
         private CompanyRepositoryPort $companies,
+        private ContactChannelRepositoryPort $channels,
+        private ContactRepositoryPort $contacts,
+        private ProfileRepositoryPort $profiles,
         private SuppressionGate $gate,
         private ChannelAdvisor $advisor,
+        private SuppressionRepositoryPort $suppressions,
+        private TransactionPort $transaction,
+        private Config $config,
     ) {}
 
+    /**
+     * @return array{outreach: Outreach, daily_sent: int, daily_limit_warning: bool}
+     */
     public function handle(string $outreachUuid, UpdateOutreachData $data, int $operatorId): array
     {
-        $outreach = $this->outreaches->findByUuid($outreachUuid);
-
-        if ($outreach === null) {
-            throw ValidationException::withMessages(['outreach' => 'Outreach not found.']);
-        }
-
-        $outreach->loadMissing(['company', 'contact', 'contactChannel']);
+        $outreach = $this->outreaches->byUuid($outreachUuid)
+            ?? throw InvalidInputException::withMessages(['outreach' => 'Outreach not found.']);
 
         $to = $data->stage === null ? $outreach->stage : OutreachStage::from($data->stage);
 
-        if (! in_array($to->value, self::TRANSITIONS[$outreach->stage->value] ?? [], true)) {
-            throw ValidationException::withMessages([
+        if (! $outreach->stage->canMoveTo($to)) {
+            throw InvalidInputException::withMessages([
                 'stage' => "Transition {$outreach->stage->value} → {$to->value} is not allowed.",
             ]);
         }
 
-        // Validate against the effective body BEFORE persisting: a rejected
-        // `ready` must not leave the invalid text saved.
-        $effectiveBody = $data->draftBody ?? (string) $outreach->draft_body;
-
         if ($to === OutreachStage::Ready) {
-            $this->assertReadyBody($effectiveBody, $operatorId);
+            $this->assertReadyBody($data->draftBody ?? (string) $outreach->draftBody, $operatorId);
         }
 
-        if ($to === OutreachStage::Sent) {
-            $this->assertSent($outreach, $data, $operatorId);
-        }
+        $send = $to === OutreachStage::Sent ? $this->validatedSend($outreach, $data) : null;
+        $now = CarbonImmutable::now();
 
-        if ($data->draftBody !== null) {
-            $outreach->update(['draft_body' => mb_substr($data->draftBody, 0, 10000)]);
-        }
+        $moved = $this->transaction->run(function () use ($outreach, $data, $send, $to, $operatorId, $now): Outreach {
+            $outreach = $this->outreaches->annotate(
+                $outreach,
+                $data->draftBody === null ? null : mb_substr($data->draftBody, 0, 10000),
+                $data->notes === null ? null : mb_substr(trim($data->notes), 0, 2000),
+            );
 
-        if ($data->notes !== null) {
-            $outreach->update(['notes' => mb_substr(trim($data->notes), 0, 2000)]);
-        }
+            if ($send !== null) {
+                $outreach = $this->outreaches->recordSend(
+                    $outreach,
+                    $send['channel']->id,
+                    $send['medium'],
+                    $data->senderKind ?? (string) $this->config->get('lead-scout.sender_kind_default', 'personal_mailbox'),
+                    $send['legal'],
+                    $send['legal'] === LegalRuleStatus::PendingVerification ? $now : null,
+                    $now,
+                );
+                $this->channels->setStatus($send['channel'], ChannelStatus::Used);
 
-        $moved = $this->outreaches->moveToStage($outreach->refresh(), $to, $operatorId);
-        $moved->loadMissing('company');
+                if ($outreach->contactId !== null) {
+                    $this->contacts->markNotified($outreach->contactId, $now);
+                }
+            }
 
-        $dailySent = ScoutOutreachEloquentModel::query()
-            ->where('operator_id', $operatorId)
-            ->where('stage', OutreachStage::Sent->value)
-            ->whereDate('sent_at', today())
-            ->count();
+            return $this->outreaches->moveToStage($outreach, $to, $operatorId);
+        });
+
+        $dailySent = $this->outreaches->countSentOn($operatorId, $now);
 
         return [
             'outreach' => $moved,
             'daily_sent' => $dailySent,
-            'daily_limit_warning' => $dailySent > 15,
+            'daily_limit_warning' => $dailySent > self::DAILY_SEND_WARNING,
         ];
     }
 
@@ -112,7 +117,7 @@ final readonly class UpdateOutreachStageHandler
     private function assertReadyBody(string $body, int $operatorId): void
     {
         if (trim($body) === '') {
-            throw ValidationException::withMessages(['draft_body' => 'A draft body is required before marking ready.']);
+            throw InvalidInputException::withMessages(['draft_body' => 'A draft body is required before marking ready.']);
         }
 
         // The art. 14 notice + opt-out line are template-inserted and never
@@ -122,28 +127,19 @@ final readonly class UpdateOutreachStageHandler
             || str_contains($body, 'Aviso de privacidade');
 
         if (! $hasNotice || ! str_contains($body, 'BAJA')) {
-            throw ValidationException::withMessages([
+            throw InvalidInputException::withMessages([
                 'draft_body' => 'The privacy notice and opt-out line are mandatory and cannot be removed.',
             ]);
         }
 
-        $confirmed = ScoutProfileEloquentModel::query()
-            ->where('user_id', $operatorId)
-            ->where('is_current', true)
-            ->value('confirmed_skills') ?? [];
-
-        $unconfirmed = [];
-        $watchList = (array) config('lead-scout.skills.watch_list', []);
-
-        foreach (SkillTaxonomy::claimTerms($watchList) as $term) {
-            if (SkillTaxonomy::mentions($body, $term)
-                && ! in_array($term, array_map(strtolower(...), (array) $confirmed), true)) {
-                $unconfirmed[] = $term;
-            }
-        }
+        $unconfirmed = SkillTaxonomy::unconfirmedClaims(
+            $body,
+            $this->profiles->current($operatorId)?->confirmedSkills ?? [],
+            (array) $this->config->get('lead-scout.skills.watch_list', []),
+        );
 
         if ($unconfirmed !== []) {
-            throw ValidationException::withMessages([
+            throw InvalidInputException::withMessages([
                 'draft_body' => 'Unconfirmed capabilities: '.implode(', ', $unconfirmed).'. Confirm them in the profile first.',
             ]);
         }
@@ -152,90 +148,46 @@ final readonly class UpdateOutreachStageHandler
     /**
      * Manual `sent` registration (spec FR-41): channel + medium + mailbox
      * kind + legal state, all evidenced. The module never sends (FR-16).
+     *
+     * @return array{channel: ContactChannel, medium: OutreachChannel, legal: ?LegalRuleStatus}
      */
-    private function assertSent(
-        ScoutOutreachEloquentModel $outreach,
-        UpdateOutreachData $data,
-        int $operatorId,
-    ): void {
-        $company = $outreach->company;
+    private function validatedSend(Outreach $outreach, UpdateOutreachData $data): array
+    {
+        $company = $this->companies->byId($outreach->companyId)
+            ?? throw InvalidInputException::withMessages(['outreach' => 'Outreach not found.']);
 
-        $candidates = $this->companies->suppressionsMatching($company->canonical_domain, $company->tax_id, $company->name)
-            ->map(static fn ($row): array => [
-                'canonical_domain' => $row->canonical_domain,
-                'tax_id' => $row->tax_id,
-                'name' => $row->name,
-            ])
-            ->all();
+        $candidates = $this->suppressions->matching($company->canonicalDomain, $company->taxId, $company->name);
 
-        if ($this->gate->isSuppressed($company->canonical_domain, $company->tax_id, $company->name, $candidates)) {
+        if ($this->gate->isSuppressed($company->canonicalDomain, $company->taxId, $company->name, $candidates)) {
             throw new SuppressedException;
         }
 
         if ($data->contactChannelId === null) {
-            throw ValidationException::withMessages(['contact_channel_id' => 'Sending requires the used channel.']);
+            throw InvalidInputException::withMessages(['contact_channel_id' => 'Sending requires the used channel.']);
         }
 
-        $channel = ScoutContactChannelEloquentModel::query()
-            ->where('uuid', $data->contactChannelId)
-            ->where('company_id', $company->id)
-            ->first();
+        $channel = $this->channels->byUuid($data->contactChannelId);
 
-        if ($channel === null || $channel->status->value !== 'active') {
-            throw ValidationException::withMessages(['contact_channel_id' => 'Channel must belong to the company and be active.']);
+        if ($channel === null || $channel->companyId !== $company->id || $channel->status !== ChannelStatus::Active) {
+            throw InvalidInputException::withMessages(['contact_channel_id' => 'Channel must belong to the company and be active.']);
         }
 
         if ($data->sendMedium === null) {
-            throw ValidationException::withMessages(['send_medium' => 'Sending requires the send medium.']);
+            throw InvalidInputException::withMessages(['send_medium' => 'Sending requires the send medium.']);
         }
 
-        $outreach->update([
-            'contact_channel_id' => $channel->id,
-            'send_medium' => $data->sendMedium,
-            'sender_kind' => $data->senderKind ?? (string) config('lead-scout.sender_kind_default', 'personal_mailbox'),
-            'sent_at' => now(),
-            'stage_changed_at' => now(),
-        ]);
+        $legal = $this->advisor->legalRuleStatus(
+            $channel->channelType,
+            $company->country,
+            (array) $this->config->get('lead-scout.contact_rules', []),
+        );
 
-        $channel->update(['status' => 'used']);
-
-        $legal = $this->legalStatus($company, $channel);
-
-        if ($legal === LegalRuleStatus::PendingVerification->value && ($data->acknowledgePendingLegal ?? false) !== true) {
-            throw ValidationException::withMessages([
+        if ($legal === LegalRuleStatus::PendingVerification && ($data->acknowledgePendingLegal ?? false) !== true) {
+            throw InvalidInputException::withMessages([
                 'acknowledge_pending_legal' => 'This channel rule is pending legal verification: confirm explicitly to record the send.',
             ]);
         }
 
-        $outreach->update([
-            'legal_rule_status' => $legal,
-            'legal_ack_at' => $legal === LegalRuleStatus::PendingVerification->value ? now() : null,
-        ]);
-
-        if ($outreach->contact !== null) {
-            $outreach->contact->update(['notified_at' => now()]);
-        }
-    }
-
-    private function legalStatus(object $company, ScoutContactChannelEloquentModel $channel): ?string
-    {
-        $type = $channel->channel_type->value;
-
-        if ($type === 'job_posting_apply') {
-            return null;
-        }
-
-        if (in_array($type, ['contact_form', 'careers_form', 'company_network_page'], true)) {
-            return in_array($company->country, ['ES', 'PT'], true) ? LegalRuleStatus::PendingVerification->value : null;
-        }
-
-        foreach ((array) config('lead-scout.contact_rules', []) as $rule) {
-            if (mb_strtoupper((string) ($rule['country'] ?? '')) === mb_strtoupper((string) $company->country)
-                && ($rule['medium'] ?? null) === 'email') {
-                return $rule['legal_status'];
-            }
-        }
-
-        return null;
+        return ['channel' => $channel, 'medium' => OutreachChannel::from($data->sendMedium), 'legal' => $legal];
     }
 }

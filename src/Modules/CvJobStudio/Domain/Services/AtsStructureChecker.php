@@ -6,9 +6,10 @@ namespace Modules\CvJobStudio\Domain\Services;
 
 /**
  * ATS structural ruleset enforced at generation time (T-070, FR-6, SC-6):
- * single-column, table-free, image-free, standard headings, standard font at
- * 9–11pt, MM/YYYY dates, at most 2 pages. Pure checks over a content
- * snapshot so DOCX and PDF both assert through it.
+ * single-column, table-free, image-free, standard headings, contact details
+ * in the body (parsers skip headers/footers), standard font at 9–11pt,
+ * MM/YYYY dates, at most 2 pages. Pure checks over a content snapshot so
+ * DOCX and PDF both assert through it.
  */
 final readonly class AtsStructureChecker
 {
@@ -20,7 +21,7 @@ final readonly class AtsStructureChecker
     ];
 
     /**
-     * @param  array{sections: list<array{heading: string}>, font: string, font_size_pt: float, page_count: int, has_tables: bool, has_images: bool, has_columns: bool, dates: list<string>}  $snapshot
+     * @param  array{sections: list<array{heading: string}>, font: string, font_size_pt: float, page_count: int, has_tables: bool, has_images: bool, has_columns: bool, contact_in_body: bool, dates: list<string>}  $snapshot
      * @return array{passed: bool, checks: array<string, array{passed: bool, detail: string}>}
      */
     #[\NoDiscard]
@@ -30,6 +31,7 @@ final readonly class AtsStructureChecker
             'single_column' => $this->result(! $snapshot['has_columns'], 'No multi-column layout.'),
             'table_free' => $this->result(! $snapshot['has_tables'], 'No tables.'),
             'image_free' => $this->result(! $snapshot['has_images'], 'No images.'),
+            'contact_in_body' => $this->result($snapshot['contact_in_body'], 'Contact details in the document body.'),
             'standard_headings' => $this->checkHeadings($snapshot['sections']),
             'standard_font' => $this->result(
                 in_array(mb_strtolower($snapshot['font']), ['arial', 'calibri', 'helvetica', 'georgia', 'garamond', 'dejavu sans'], true),

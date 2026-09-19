@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\LeadScout\Domain\Enums\SourceStatus;
 use Modules\LeadScout\Domain\Enums\SourceType;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * Ingest source registry (spec FR-2). A source is never activated without
@@ -43,7 +45,7 @@ use Modules\LeadScout\Domain\Enums\SourceType;
 final class ScoutSourceEloquentModel extends Model
 {
     /** @use HasFactory<ScoutSourceFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, LogsActivity;
 
     /** @var list<string> */
     protected $hidden = ['id'];
@@ -95,5 +97,14 @@ final class ScoutSourceEloquentModel extends Model
     protected static function newFactory(): ScoutSourceFactory
     {
         return ScoutSourceFactory::new();
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['status', 'frequency_minutes', 'priority', 'terms_reviewed_at'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges()
+            ->useLogName('lead-scout.source');
     }
 }

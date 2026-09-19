@@ -11,5 +11,5 @@ interface CvRewriterPort
      * @param  array<string, mixed>  $protectedBlock
      * @return array{sections: list<array{heading: string, bullets: list<array{text: string, source_bullet: string|null}>}>, cut_notes: list<string>, provider: string, model: string}
      */
-    public function rewrite(array $structure, array $protectedBlock, string $language): array;
+    public function rewrite(array $structure, array $protectedBlock, string $language, int $userId): array;
 }

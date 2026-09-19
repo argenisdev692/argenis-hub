@@ -101,4 +101,23 @@ final readonly class SkillTaxonomy
             ...array_map(static fn (string $term): string => strtolower(trim($term)), $watchList),
         ]));
     }
+
+    /**
+     * Capabilities a text claims that the profile has not confirmed
+     * (spec US-5 CA-5): a draft making them cannot go `ready`.
+     *
+     * @param  list<string>  $confirmed
+     * @param  list<string>  $watchList
+     * @return list<string>
+     */
+    #[\NoDiscard]
+    public static function unconfirmedClaims(string $text, array $confirmed, array $watchList): array
+    {
+        $confirmed = array_map(strtolower(...), $confirmed);
+
+        return array_values(array_filter(
+            self::claimTerms($watchList),
+            static fn (string $term): bool => self::mentions($text, $term) && ! in_array($term, $confirmed, true),
+        ));
+    }
 }

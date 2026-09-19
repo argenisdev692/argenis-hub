@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Infrastructure\JobSources;
 
 use Illuminate\Support\Facades\Http;
-use Modules\LeadScout\Application\DTOs\RawPostingData;
+use Modules\LeadScout\Domain\Entities\Source;
 use Modules\LeadScout\Domain\Enums\SourceType;
 use Modules\LeadScout\Domain\Ports\JobSourcePort;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloquentModel;
+use Modules\LeadScout\Domain\ValueObjects\RawPosting;
 
 /**
  * RSS postings (LaraJobs, Remotive, We Work Remotely — spec US-2, research
@@ -18,12 +18,12 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloq
  */
 final readonly class RssFeedSource implements JobSourcePort
 {
-    public function supports(ScoutSourceEloquentModel $source): bool
+    public function supports(Source $source): bool
     {
         return $source->type === SourceType::Rss;
     }
 
-    public function fetchSince(ScoutSourceEloquentModel $source, ?string $cursor): iterable
+    public function fetchSince(Source $source, ?string $cursor): iterable
     {
         $feeds = (array) config('lead-scout.job_sources.rss_feeds', []);
         $url = $feeds[$source->name] ?? null;
@@ -42,7 +42,7 @@ final readonly class RssFeedSource implements JobSourcePort
     }
 
     /**
-     * @return iterable<int, RawPostingData>
+     * @return iterable<int, RawPosting>
      */
     public static function parseItems(string $xml): iterable
     {
@@ -73,7 +73,7 @@ final readonly class RssFeedSource implements JobSourcePort
         }
     }
 
-    private static function fromRssItem(\SimpleXMLElement $item): RawPostingData
+    private static function fromRssItem(\SimpleXMLElement $item): RawPosting
     {
         $namespaces = $item->getNamespaces(true);
         $creator = '';
@@ -85,7 +85,7 @@ final readonly class RssFeedSource implements JobSourcePort
 
         $title = trim((string) $item->title);
 
-        return new RawPostingData(
+        return new RawPosting(
             title: $title,
             companyName: $creator !== '' ? $creator : self::companyFromTitle($title),
             location: null,
@@ -99,7 +99,7 @@ final readonly class RssFeedSource implements JobSourcePort
         );
     }
 
-    private static function fromAtomEntry(\SimpleXMLElement $entry): RawPostingData
+    private static function fromAtomEntry(\SimpleXMLElement $entry): RawPosting
     {
         $title = trim((string) $entry->title);
         $link = '';
@@ -112,7 +112,7 @@ final readonly class RssFeedSource implements JobSourcePort
             }
         }
 
-        return new RawPostingData(
+        return new RawPosting(
             title: $title,
             companyName: trim((string) ($entry->author->name ?? '')) !== '' ? trim((string) $entry->author->name) : self::companyFromTitle($title),
             location: null,

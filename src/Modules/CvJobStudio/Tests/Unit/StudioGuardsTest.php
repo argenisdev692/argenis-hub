@@ -13,7 +13,6 @@ use Modules\CvJobStudio\Domain\Services\JdTextTrimmer;
 use Modules\CvJobStudio\Domain\Services\NeverFetchHostPolicy;
 use Modules\CvJobStudio\Domain\Services\OpportunityCalculator;
 use Modules\CvJobStudio\Domain\Services\OpportunityPolicy;
-use Modules\CvJobStudio\Domain\Services\OutboundUrlGuard;
 use Modules\CvJobStudio\Domain\Services\PostingFingerprint;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
 use Modules\CvJobStudio\Domain\Services\RobotsTxtPolicy;
@@ -22,6 +21,7 @@ use Modules\CvJobStudio\Domain\Services\TitleLevelClassifier;
 use Modules\CvJobStudio\Domain\Services\TrigramSimilarity;
 use Modules\CvJobStudio\Domain\Services\VocabularyRefreshTrigger;
 use Modules\CvJobStudio\Infrastructure\Ai\FailoverPolicy;
+use Modules\CvJobStudio\Infrastructure\Fetching\OutboundUrlGuard;
 
 it('blocks link_only and resolve_only modes from fetching', function (): void {
     $policy = new NeverFetchHostPolicy;
@@ -204,6 +204,7 @@ it('asserts ATS structure on snapshots', function (): void {
         'sections' => [['heading' => 'Experience'], ['heading' => 'Skills']],
         'font' => 'Calibri', 'font_size_pt' => 10.0, 'page_count' => 2,
         'has_tables' => false, 'has_images' => false, 'has_columns' => false,
+        'contact_in_body' => true,
         'dates' => ['01/2022', '06/2024'],
     ]);
 
@@ -211,6 +212,7 @@ it('asserts ATS structure on snapshots', function (): void {
         'sections' => [['heading' => 'My Journey']],
         'font' => 'Comic Sans', 'font_size_pt' => 14.0, 'page_count' => 4,
         'has_tables' => true, 'has_images' => true, 'has_columns' => true,
+        'contact_in_body' => false,
         'dates' => ['Jan 2022'],
     ]);
 

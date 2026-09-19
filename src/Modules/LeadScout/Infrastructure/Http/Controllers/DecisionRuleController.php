@@ -19,8 +19,8 @@ final readonly class DecisionRuleController
 
         return response()->json(['data' => [
             'uuid' => $rule->uuid,
-            'sample_size' => $rule->sample_size,
-            'window_days' => $rule->window_days,
+            'sample_size' => $rule->sampleSize,
+            'window_days' => $rule->windowDays,
             'thresholds' => $rule->thresholds,
             'locked_at' => null,
             'result' => null,
@@ -31,14 +31,12 @@ final readonly class DecisionRuleController
     {
         ['rule' => $rule, 'evaluation' => $evaluation] = $rules->lock($uuid);
 
-        $rule->update(['result' => $evaluation['outcome']->value]);
-
         return response()->json(['data' => [
             'uuid' => $rule->uuid,
-            'sample_size' => $rule->sample_size,
-            'window_days' => $rule->window_days,
+            'sample_size' => $rule->sampleSize,
+            'window_days' => $rule->windowDays,
             'thresholds' => $rule->thresholds,
-            'locked_at' => $rule->locked_at?->toIso8601String(),
+            'locked_at' => $rule->lockedAt?->format(DATE_ATOM),
             'result' => $evaluation['outcome']->value,
             'evaluation' => [
                 'outcome' => $evaluation['outcome']->value,

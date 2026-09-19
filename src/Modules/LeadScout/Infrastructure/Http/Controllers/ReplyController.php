@@ -18,8 +18,7 @@ final readonly class ReplyController
     public function store(Request $request, string $uuid, RecordReplyData $data, RecordReplyHandler $record): JsonResponse
     {
         $outreach = $record->handle($uuid, $data, (int) $request->user()->id);
-        $outreach->loadMissing(['company', 'contactChannel']);
 
-        return response()->json(['data' => OutreachData::fromModel($outreach, $outreach->company->uuid)]);
+        return response()->json(['data' => OutreachData::fromEntity($outreach)]);
     }
 }

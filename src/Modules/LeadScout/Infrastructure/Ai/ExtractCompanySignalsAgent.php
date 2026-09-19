@@ -6,9 +6,7 @@ namespace Modules\LeadScout\Infrastructure\Ai;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
-use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
-use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
 use Modules\LeadScout\Domain\ValueObjects\SignalKey;
@@ -21,10 +19,9 @@ use Stringable;
  * tools: the company text arrives in a delimited block AS DATA (LLM01),
  * and every excerpt is verified literally before persisting (T056).
  */
-final class ExtractCompanySignalsAgent implements Agent, Conversational, HasStructuredOutput
+final class ExtractCompanySignalsAgent implements Agent, HasStructuredOutput
 {
     use Promptable;
-    use RemembersConversations;
 
     public function instructions(): Stringable|string
     {

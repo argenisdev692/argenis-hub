@@ -20,7 +20,7 @@ final readonly class DraftController
         $result = $generate->handle($uuid, $data, (int) $request->user()->id);
 
         return response()->json([
-            'data' => OutreachData::fromModel($result['outreach'], $uuid),
+            'data' => OutreachData::fromEntity($result['outreach']),
             'meta' => [
                 'subject' => $result['subject'],
                 'unconfirmed_claims' => $result['unconfirmed_claims'],

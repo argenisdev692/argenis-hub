@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Infrastructure\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
-use Modules\LeadScout\Application\Commands\GetAiSettingsHandler;
 use Modules\LeadScout\Application\Commands\UpdateAiSettingsHandler;
 use Modules\LeadScout\Application\DTOs\UpdateAiSettingsData;
+use Modules\LeadScout\Application\Queries\GetAiSettingsHandler;
 
 /**
  * AI settings endpoints (spec US-10, plan §5).

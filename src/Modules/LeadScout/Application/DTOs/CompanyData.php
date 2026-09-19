@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\LeadScout\Application\DTOs;
 
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
+use Modules\LeadScout\Domain\Entities\Company;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -27,16 +27,16 @@ final class CompanyData extends Data
         public readonly ?string $createdAt,
     ) {}
 
-    public static function fromModel(ScoutCompanyEloquentModel $company): self
+    public static function fromEntity(Company $company): self
     {
         return new self(
             uuid: $company->uuid,
             name: $company->name,
-            domain: $company->canonical_domain,
+            domain: $company->canonicalDomain,
             country: $company->country,
             origin: $company->origin->value,
-            companyType: $company->company_type?->value,
-            createdAt: $company->created_at?->toIso8601String(),
+            companyType: $company->companyType?->value,
+            createdAt: $company->createdAt?->format(DATE_ATOM),
         );
     }
 }

@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Application\Commands;
 
 use Carbon\CarbonImmutable;
+use Modules\LeadScout\Domain\Entities\Company;
+use Modules\LeadScout\Domain\Entities\FetchedPage;
 use Modules\LeadScout\Domain\Enums\Tier;
 use Modules\LeadScout\Domain\Exceptions\CompanyNotFoundException;
+use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactRepositoryPort;
+use Modules\LeadScout\Domain\Ports\FetchedPageRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ScoreResultRepositoryPort;
 use Modules\LeadScout\Domain\Services\DecisionMakerExtractor;
 use Modules\LeadScout\Domain\ValueObjects\RoleTaxonomy;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactObjectionEloquentModel;
 
 /**
  * Decisor candidates from stored pages (spec US-11, T048): in-memory for
@@ -22,15 +25,22 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactObj
  */
 final readonly class ExtractDecisionMakersHandler
 {
-    public function __construct(private DecisionMakerExtractor $extractor) {}
+    private const int CONTACT_DEADLINE_DAYS = 30;
+
+    public function __construct(
+        private DecisionMakerExtractor $extractor,
+        private CompanyRepositoryPort $companies,
+        private ContactRepositoryPort $contacts,
+        private FetchedPageRepositoryPort $pages,
+        private ScoreResultRepositoryPort $scores,
+    ) {}
 
     /**
      * @return list<array{name: string, title: string, category: string, email: ?string, email_kind: ?string, profile_url: ?string, evidence_url: string, excerpt: string, captured_at: string}>
      */
     public function candidates(string $companyUuid): array
     {
-        $company = ScoutCompanyEloquentModel::query()->where('uuid', $companyUuid)->first()
-            ?? throw new CompanyNotFoundException($companyUuid);
+        $company = $this->companies->byUuid($companyUuid) ?? throw new CompanyNotFoundException($companyUuid);
 
         return $this->extractFor($company)['candidates'];
     }
@@ -40,56 +50,36 @@ final readonly class ExtractDecisionMakersHandler
      */
     public function persistIfTierAB(string $companyUuid): array
     {
-        $company = ScoutCompanyEloquentModel::query()->where('uuid', $companyUuid)->first()
-            ?? throw new CompanyNotFoundException($companyUuid);
+        $company = $this->companies->byUuid($companyUuid) ?? throw new CompanyNotFoundException($companyUuid);
+        $tier = $this->scores->currentTier($company->id);
 
-        $tier = $company->scoreResults()->where('is_current', true)->value('tier');
-
-        if ($tier !== Tier::A->value && $tier !== Tier::B->value) {
-            return ['persisted' => 0, 'anonymized' => $this->anonymize($company)];
+        if ($tier !== Tier::A && $tier !== Tier::B) {
+            return ['persisted' => 0, 'anonymized' => $this->contacts->anonymizeCompany($company->id, CarbonImmutable::now())];
         }
 
         ['candidates' => $candidates, 'teamSize' => $teamSize] = $this->extractFor($company);
 
-        $company->update([
-            'has_decision_maker' => $candidates !== [],
-            'team_size_observed' => $teamSize ?? $company->team_size_observed,
-        ]);
+        $this->companies->recordDecisionMakers($company, $candidates !== [], $teamSize);
 
         if ($candidates === []) {
             return ['persisted' => 0, 'anonymized' => 0];
         }
 
-        $primary = $this->pickPrimary($candidates, $teamSize);
+        $primary = self::pickPrimary($candidates, $teamSize);
+        $deadline = CarbonImmutable::now()->addDays(self::CONTACT_DEADLINE_DAYS);
         $persisted = 0;
 
         foreach ($candidates as $candidate) {
-            $exists = ScoutContactEloquentModel::query()
-                ->where('company_id', $company->id)
-                ->where('full_name', $candidate['name'])
-                ->whereNull('anonymized_at')
-                ->exists();
-
-            if ($exists) {
+            if ($this->contacts->hasLiveContactNamed($company->id, $candidate['name'])) {
                 continue;
             }
 
-            ScoutContactEloquentModel::query()->create([
-                'company_id' => $company->id,
-                'full_name' => $candidate['name'],
-                'role_title' => $candidate['title'],
-                'role_category' => $candidate['category'],
-                'is_primary' => $primary !== null && $candidate['name'] === $primary['name'],
-                'published_email' => $candidate['email'],
-                'email_kind' => $candidate['email_kind'],
-                'public_profile_url' => $candidate['profile_url'],
-                'source' => 'website',
-                'evidence_url' => $candidate['evidence_url'],
-                'evidence_excerpt' => $candidate['excerpt'],
-                'evidence_captured_at' => $candidate['captured_at'],
-                'contact_deadline_at' => CarbonImmutable::now()->addDays(30),
-                'last_verified_at' => $candidate['captured_at'],
-            ]);
+            $this->contacts->createExtracted(
+                $company->id,
+                $candidate,
+                $primary !== null && $candidate['name'] === $primary['name'],
+                $deadline,
+            );
             $persisted++;
         }
 
@@ -99,39 +89,21 @@ final readonly class ExtractDecisionMakersHandler
     /**
      * @return array{candidates: list<array{name: string, title: string, category: string, email: ?string, email_kind: ?string, profile_url: ?string, evidence_url: string, excerpt: string, captured_at: string}>, teamSize: ?int}
      */
-    private function extractFor(ScoutCompanyEloquentModel $company): array
+    private function extractFor(Company $company): array
     {
-        $pages = $company->fetchedPages()
-            ->whereNotNull('content_markdown')
-            ->orderBy('id')
-            ->get(['url', 'content_markdown'])
-            ->map(static fn ($page): array => ['url' => $page->url, 'markdown' => (string) $page->content_markdown])
-            ->all();
+        $pages = array_map(
+            static fn (FetchedPage $page): array => ['url' => $page->url, 'markdown' => (string) $page->contentMarkdown],
+            $this->pages->withContent($company->id),
+        );
 
-        $opposed = ScoutContactObjectionEloquentModel::query()->pluck('person_hash')->all();
-
-        return $this->extractor->extract($pages, $company->canonical_domain, [], $opposed);
-    }
-
-    private function anonymize(ScoutCompanyEloquentModel $company): int
-    {
-        return ScoutContactEloquentModel::query()
-            ->where('company_id', $company->id)
-            ->whereNull('anonymized_at')
-            ->update([
-                'full_name' => null,
-                'published_email' => null,
-                'public_profile_url' => null,
-                'evidence_excerpt' => null,
-                'anonymized_at' => now(),
-            ]);
+        return $this->extractor->extract($pages, $company->canonicalDomain, [], $this->contacts->objectionHashes());
     }
 
     /**
      * @param  list<array{name: string, title: string, category: string, email: ?string, email_kind: ?string, profile_url: ?string, evidence_url: string, excerpt: string, captured_at: string}>  $candidates
      * @return array{name: string, title: string, category: string, email: ?string, email_kind: ?string, profile_url: ?string, evidence_url: string, excerpt: string, captured_at: string}|null
      */
-    private function pickPrimary(array $candidates, ?int $teamSize): ?array
+    private static function pickPrimary(array $candidates, ?int $teamSize): ?array
     {
         foreach (RoleTaxonomy::preferredOrder($teamSize) as $category) {
             foreach ($candidates as $candidate) {

@@ -26,3 +26,10 @@ it('never reports an unmentioned technology as confirmed', function (): void {
     expect($split['confirmed'])->not->toContain('aws')
         ->and($split['potential'])->toContain('aws');
 });
+
+it('lists claimed capabilities the profile has not confirmed', function (): void {
+    $claims = SkillTaxonomy::unconfirmedClaims('Trabajo con Laravel y AWS cada día.', ['Laravel'], ['aws']);
+
+    expect($claims)->toBe(['aws'])
+        ->and(SkillTaxonomy::unconfirmedClaims('Trabajo con Laravel.', ['laravel'], ['aws']))->toBe([]);
+});

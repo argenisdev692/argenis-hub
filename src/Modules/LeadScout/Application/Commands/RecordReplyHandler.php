@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Application\Commands;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use DateTimeImmutable;
 use Modules\LeadScout\Application\DTOs\RecordReplyData;
+use Modules\LeadScout\Domain\Entities\Outreach;
 use Modules\LeadScout\Domain\Enums\EmailKind;
 use Modules\LeadScout\Domain\Enums\OutreachStage;
 use Modules\LeadScout\Domain\Enums\ReplyOutcome;
 use Modules\LeadScout\Domain\Enums\SuppressionSource;
+use Modules\LeadScout\Domain\Exceptions\InvalidInputException;
+use Modules\LeadScout\Domain\Ports\CompanyRepositoryPort;
+use Modules\LeadScout\Domain\Ports\ContactRepositoryPort;
 use Modules\LeadScout\Domain\Ports\OutreachRepositoryPort;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutOutreachEloquentModel;
-use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressionEloquentModel;
+use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
+use Modules\LeadScout\Domain\Ports\TransactionPort;
 
 /**
  * Reply record with absolute-unsubscribe semantics (spec FR-42/FR-43,
@@ -27,21 +29,28 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressio
  */
 final readonly class RecordReplyHandler
 {
-    public function __construct(private OutreachRepositoryPort $outreaches) {}
+    private const string UNSUBSCRIBE_REASON = 'Unsubscribe — absolute precedence (FR-43).';
 
-    public function handle(string $outreachUuid, RecordReplyData $data, int $operatorId): ScoutOutreachEloquentModel
+    public function __construct(
+        private OutreachRepositoryPort $outreaches,
+        private CompanyRepositoryPort $companies,
+        private ContactRepositoryPort $contacts,
+        private SuppressionRepositoryPort $suppressions,
+        private ObjectContactHandler $objectContact,
+        private TransactionPort $transaction,
+    ) {}
+
+    public function handle(string $outreachUuid, RecordReplyData $data, int $operatorId): Outreach
     {
-        $outreach = $this->outreaches->findByUuid($outreachUuid);
-
-        if ($outreach === null) {
-            throw ValidationException::withMessages(['outreach' => 'Outreach not found.']);
-        }
+        $outreach = $this->outreaches->byUuid($outreachUuid)
+            ?? throw InvalidInputException::withMessages(['outreach' => 'Outreach not found.']);
 
         if ($outreach->stage !== OutreachStage::Sent) {
-            throw ValidationException::withMessages(['stage' => 'Only a sent outreach can receive a reply.']);
+            throw InvalidInputException::withMessages(['stage' => 'Only a sent outreach can receive a reply.']);
         }
 
         $outcome = ReplyOutcome::from($data->outcome);
+        $repliedAt = self::repliedAt($data->repliedAt);
 
         $to = match ($outcome) {
             ReplyOutcome::Interested => OutreachStage::Positive,
@@ -49,21 +58,12 @@ final readonly class RecordReplyHandler
             ReplyOutcome::Unsubscribe => OutreachStage::DoNotContact,
         };
 
-        return DB::transaction(function () use ($outreach, $data, $operatorId, $outcome, $to): ScoutOutreachEloquentModel {
-            $outreach->loadMissing(['company', 'contact']);
-            if ($data->repliedAt !== null) {
-                try {
-                    $outreach->update(['replied_at' => CarbonImmutable::parse($data->repliedAt)->toDateTimeString()]);
-                } catch (\Exception) {
-                    throw ValidationException::withMessages(['replied_at' => 'Invalid date.']);
-                }
-            }
-
+        return $this->transaction->run(function () use ($outreach, $data, $operatorId, $outcome, $to, $repliedAt): Outreach {
             if ($data->notes !== null) {
-                $outreach->update(['notes' => mb_substr(trim($data->notes), 0, 2000)]);
+                $outreach = $this->outreaches->annotate($outreach, null, mb_substr(trim($data->notes), 0, 2000));
             }
 
-            $moved = $this->outreaches->moveToStage($outreach->refresh(), $to, $operatorId, $outcome);
+            $moved = $this->outreaches->moveToStage($outreach, $to, $operatorId, $outcome, $repliedAt);
 
             if ($outcome === ReplyOutcome::Unsubscribe) {
                 $this->suppress($moved);
@@ -73,24 +73,31 @@ final readonly class RecordReplyHandler
         });
     }
 
-    private function suppress(ScoutOutreachEloquentModel $outreach): void
+    private static function repliedAt(?string $input): ?DateTimeImmutable
     {
-        $company = $outreach->company;
+        if ($input === null) {
+            return null;
+        }
 
-        ScoutSuppressionEloquentModel::query()->firstOrCreate(
-            ['canonical_domain' => $company->canonical_domain],
-            [
-                'source' => SuppressionSource::Objection->value,
-                'reason' => 'Unsubscribe — absolute precedence (FR-43).',
-            ],
-        );
+        try {
+            return CarbonImmutable::parse($input)->toDateTimeImmutable();
+        } catch (\Exception) {
+            throw InvalidInputException::withMessages(['replied_at' => 'Invalid date.']);
+        }
+    }
 
-        $contact = $outreach->contact;
+    private function suppress(Outreach $outreach): void
+    {
+        $company = $this->companies->byId($outreach->companyId);
 
-        if ($contact instanceof ScoutContactEloquentModel
-            && $contact->email_kind === EmailKind::Nominative
-            && $contact->published_email !== null) {
-            (new ObjectContactHandler)->handle($contact->uuid);
+        if ($company !== null) {
+            $this->suppressions->suppressDomain($company->canonicalDomain, SuppressionSource::Objection, self::UNSUBSCRIBE_REASON);
+        }
+
+        $contact = $outreach->contactId === null ? null : $this->contacts->byId($outreach->contactId);
+
+        if ($contact !== null && $contact->emailKind === EmailKind::Nominative && $contact->publishedEmail !== null) {
+            $this->objectContact->handle($contact->uuid);
         }
     }
 }

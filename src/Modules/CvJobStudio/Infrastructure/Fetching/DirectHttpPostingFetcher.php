@@ -6,8 +6,6 @@ namespace Modules\CvJobStudio\Infrastructure\Fetching;
 
 use Illuminate\Support\Facades\Http;
 use Modules\CvJobStudio\Domain\Ports\PostingTextFetcherPort;
-use Modules\CvJobStudio\Domain\Services\NeverFetchHostPolicy;
-use Modules\CvJobStudio\Domain\Services\OutboundUrlGuard;
 use Modules\CvJobStudio\Domain\Services\RobotsTxtPolicy;
 
 /** Plain HTTP fetch with guard + robots pre-checks (FR-14, FR-34). */
@@ -16,7 +14,6 @@ final readonly class DirectHttpPostingFetcher implements PostingTextFetcherPort
     public function __construct(
         private OutboundUrlGuard $guard,
         private RobotsTxtPolicy $robots,
-        private NeverFetchHostPolicy $access,
     ) {}
 
     public function stepName(): string
@@ -31,7 +28,7 @@ final readonly class DirectHttpPostingFetcher implements PostingTextFetcherPort
         }
 
         try {
-            $response = Http::timeout(5)->retry(1, 500)->get($url);
+            $response = Http::withOptions($this->guard->httpOptions())->timeout(5)->retry(1, 500)->get($url);
         } catch (\Throwable) {
             return null;
         }

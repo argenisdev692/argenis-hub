@@ -66,3 +66,45 @@ function leadScoutPhpFiles(): array
 
     return $files;
 }
+
+// Hexagonal boundary (ARCHITECTURE-PHP): Domain depends on nothing outside
+// itself; Application depends on Domain plus framework contracts only.
+
+arch('domain depends on nothing outside the domain')
+    ->expect('Modules\LeadScout\Domain')
+    ->not->toUse([
+        'Illuminate',
+        'Spatie',
+        'Shared',
+        'Modules\LeadScout\Application',
+        'Modules\LeadScout\Infrastructure',
+        'config',
+        'app',
+        'now',
+        'today',
+        'collect',
+        'cache',
+        'logger',
+    ]);
+
+arch('application reaches infrastructure only through ports')
+    ->expect('Modules\LeadScout\Application')
+    ->not->toUse([
+        'Modules\LeadScout\Infrastructure',
+        'Shared\Infrastructure',
+        'Illuminate\Support\Facades',
+        'Illuminate\Database',
+        'Illuminate\Http',
+        'Illuminate\Validation',
+        'Illuminate\Container',
+        'Illuminate\Queue',
+        'Spatie\SimpleExcel',
+        'config',
+        'app',
+        'now',
+        'today',
+        'cache',
+        'logger',
+        'filled',
+        'blank',
+    ]);

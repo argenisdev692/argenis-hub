@@ -87,9 +87,16 @@ it('serves the version export over HTTP with verification flag', function (): vo
     $admin = exportAdmin();
     $version = exportVersion($admin);
 
+    Storage::disk('r2')->buildTemporaryUrlsUsing(
+        fn (string $path, DateTimeInterface $expiresAt): string => "https://r2.test/{$path}?expires={$expiresAt->getTimestamp()}",
+    );
+
     $response = $this->actingAs($admin)->getJson("/cv-studio/versions/{$version->uuid}/export?format=pdf")->assertCreated();
 
-    expect($response->json('data.verified'))->toBeTrue();
+    // The page follows a short-lived signed URL to the stored file — the
+    // response itself is JSON, never the document (OWASP §15).
+    expect($response->json('data.verified'))->toBeTrue()
+        ->and($response->json('data.download_url'))->toStartWith("https://r2.test/studio-exports/{$version->uuid}.pdf");
 });
 
 it('refuses rewrite on an unconfirmed structure (RK-6)', function (): void {
