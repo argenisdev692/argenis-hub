@@ -103,7 +103,7 @@ final class HarvestStructuredSourcesJob implements ShouldQueue
                 }
 
                 try {
-                    $posting = $ingest->handle(IngestPostingData::from([
+                    $postingId = $ingest->handle(IngestPostingData::from([
                         'profile_uuid' => $run->profile->uuid,
                         'title' => $candidate['title'],
                         'canonical_url' => $candidate['url'],
@@ -116,7 +116,7 @@ final class HarvestStructuredSourcesJob implements ShouldQueue
 
                     StudioPostingSightingEloquentModel::query()->create([
                         'user_id' => $this->userId,
-                        'posting_id' => $posting->id,
+                        'posting_id' => $postingId,
                         'source_id' => $sourceIds[$name] ?? null,
                         'observed_at' => now(),
                     ]);

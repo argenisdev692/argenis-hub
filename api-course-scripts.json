@@ -1388,6 +1388,56 @@
                 }
             }
         },
+        "/{uuid}/videos/{videoUuid}/outline/preview": {
+            "get": {
+                "operationId": "course-scripts.videos.outline.preview",
+                "summary": "Live SSE preview of a video's outline (instructor draft screen)",
+                "tags": [
+                    "ScriptVersion"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "videoUuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "provider",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "openai"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/{uuid}/videos/{videoUuid}/practice": {
             "post": {
                 "operationId": "course-scripts.videos.practice",
@@ -2005,6 +2055,15 @@
                     },
                     "verification_checklist": {
                         "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "practice_exercise": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
                         "items": {
                             "type": "string"
                         }

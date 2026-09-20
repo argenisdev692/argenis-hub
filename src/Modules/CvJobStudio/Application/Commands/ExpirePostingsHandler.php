@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\Commands;
 
-use Modules\CvJobStudio\Domain\Ports\TransactionPort;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
+use Carbon\CarbonImmutable;
+use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 
 /**
  * Liveness and expiry (T-016, CHG-3, FR-42): a posting absent from harvests
@@ -15,22 +15,12 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPosting
  */
 final readonly class ExpirePostingsHandler
 {
-    public function __construct(private TransactionPort $db) {}
+    public function __construct(private StudioPostingRepositoryPort $postings) {}
 
     public function handle(int $userId): int
     {
-        return $this->db->atomic(static function () use ($userId): int {
-            $days = (int) config('cv-job-studio.expiry_days', 14);
+        $days = (int) config('cv-job-studio.expiry_days', 14);
 
-            return StudioPostingEloquentModel::query()
-                ->ownedBy($userId)
-                ->where('is_expired', false)
-                ->where('last_seen_at', '<=', now()->subDays($days))
-                ->update([
-                    'is_expired' => true,
-                    'expired_at' => now(),
-                    'alive_check_method' => 'harvest_absence',
-                ]);
-        });
+        return $this->postings->expireUnseenSince($userId, CarbonImmutable::now()->subDays($days));
     }
 }

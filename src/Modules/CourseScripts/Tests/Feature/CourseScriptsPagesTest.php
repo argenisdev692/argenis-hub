@@ -56,6 +56,21 @@ describe('inertia pages', function (): void {
                 ->has('course.blocks')
                 ->has('course.documents'));
     });
+
+    // The page's attach-document form validates against the same limits the
+    // create form does, so `show` has to carry them too.
+    it('renders the show page with the upload limits', function (): void {
+        $course = CourseEloquentModel::factory()->create(['user_id' => $this->author->id]);
+
+        $this->actingAs($this->author)
+            ->get(route('course-scripts.show', $course->uuid))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->has('limits', fn (Assert $limits): Assert => $limits
+                    ->whereType('max_kb', 'integer')
+                    ->whereType('max_content_files', 'integer')
+                    ->whereType('allowed_extensions', 'array')));
+    });
 });
 
 describe('json list consumed by the data table', function (): void {

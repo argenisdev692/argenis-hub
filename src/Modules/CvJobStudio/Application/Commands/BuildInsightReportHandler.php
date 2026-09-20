@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\Commands;
 
-use Modules\CvJobStudio\Domain\Ports\TransactionPort;
+use Modules\CvJobStudio\Application\DTOs\StudioInsightReportData;
+use Modules\CvJobStudio\Domain\Exceptions\RecordNotFoundException;
+use Modules\CvJobStudio\Domain\Ports\StudioApplicationRepositoryPort;
+use Modules\CvJobStudio\Domain\Ports\StudioRunRepositoryPort;
+use Modules\CvJobStudio\Domain\Services\ChannelOutcomeTally;
 use Modules\CvJobStudio\Domain\Services\OutcomeCorrelator;
 use Modules\CvJobStudio\Domain\Services\ReachCalculator;
 use Modules\CvJobStudio\Domain\Services\RequirementFrequencyCounter;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioApplicationEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioInsightReportEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
 
 /**
  * Per-run insight report (T-085, FR-26…FR-28): requirement frequency over
@@ -24,69 +23,49 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEl
  */
 final readonly class BuildInsightReportHandler
 {
+    private const int MIN_SAMPLE = 30;
+
+    private const int MIN_OUTCOMES = 8;
+
+    private const float REACH_THRESHOLD = 70.0;
+
     public function __construct(
         private RequirementFrequencyCounter $frequency,
         private ReachCalculator $reach,
         private OutcomeCorrelator $correlator,
-        private TransactionPort $db,
+        private ChannelOutcomeTally $outcomes,
+        private StudioRunRepositoryPort $runs,
+        private StudioApplicationRepositoryPort $applications,
     ) {}
 
     #[\NoDiscard]
-    public function handle(string $runUuid, int $userId): StudioInsightReportEloquentModel
+    public function handle(string $runUuid, int $userId): StudioInsightReportData
     {
-        return $this->db->atomic(function () use ($runUuid, $userId): StudioInsightReportEloquentModel {
-            $run = StudioRunEloquentModel::query()
-                ->ownedBy($userId)
-                ->where('uuid', $runUuid)
-                ->firstOrFail();
+        $inputs = $this->runs->insightInputs($runUuid, $userId)
+            ?? throw RecordNotFoundException::of('run', $runUuid);
 
-            $requirements = StudioRequirementEloquentModel::query()
-                ->where('user_id', $userId)
-                ->whereHas('posting', static fn ($q) => $q->where('profile_id', $run->profile_id))
-                ->with('posting.scores')
-                ->get()
-                ->map(static fn ($requirement): array => [
-                    'canonical_name' => $requirement->canonical_name,
-                    'covered' => false,
-                ])
-                ->all();
+        $requirements = array_map(
+            static fn (string $name): array => ['canonical_name' => $name, 'covered' => false],
+            $inputs['requirement_names'],
+        );
 
-            $frequency = $this->frequency->count($requirements, 30);
+        $observations = array_map(
+            fn (array $row): array => ['requirement' => $row['requirement'], 'answered' => $this->outcomes->isPositive($row['outcome'])],
+            $this->applications->requirementOutcomes($userId),
+        );
 
-            $scores = StudioScoreEloquentModel::query()
-                ->where('user_id', $userId)
-                ->whereHas('posting', static fn ($q) => $q->where('profile_id', $run->profile_id))
-                ->get(['cap_reason', 'raw_score', 'total_score'])
-                ->map(static fn ($score): array => [
-                    'cap_reason' => $score->cap_reason,
-                    'raw_score' => (float) $score->raw_score,
-                    'total_score' => (float) $score->total_score,
-                ])
-                ->all();
+        $analyzed = count($requirements);
 
-            $observations = StudioApplicationEloquentModel::query()
-                ->ownedBy($userId)
-                ->with('posting.requirements')
-                ->get()
-                ->flatMap(static fn ($application) => $application->posting->requirements->map(
-                    static fn ($requirement): array => [
-                        'requirement' => $requirement->canonical_name,
-                        'answered' => in_array($application->outcome, ['screening', 'interview', 'offer'], true),
-                    ],
-                ))
-                ->all();
-
-            return StudioInsightReportEloquentModel::query()->create([
-                'user_id' => $userId,
-                'run_id' => $run->id,
-                'jds_analyzed' => count($requirements),
-                'sample_note' => count($requirements) < 30 ? 'Sample below 30 — percentages indicative only.' : null,
-                'requirements' => $frequency,
-                'reach_table' => $this->reach->table($scores, 70.0),
-                'recommendations' => [],
-                'outcome_correlation' => $this->correlator->compare($observations, 8),
-                'rules_version' => $run->rules_version,
-            ]);
-        });
+        return $this->runs->storeInsightReport([
+            'user_id' => $userId,
+            'run_id' => $inputs['run_id'],
+            'jds_analyzed' => $analyzed,
+            'sample_note' => $analyzed < self::MIN_SAMPLE ? 'Sample below 30 — percentages indicative only.' : null,
+            'requirements' => $this->frequency->count($requirements, self::MIN_SAMPLE),
+            'reach_table' => $this->reach->table($inputs['scores'], self::REACH_THRESHOLD),
+            'recommendations' => [],
+            'outcome_correlation' => $this->correlator->compare($observations, self::MIN_OUTCOMES),
+            'rules_version' => $inputs['rules_version'],
+        ]);
     }
 }

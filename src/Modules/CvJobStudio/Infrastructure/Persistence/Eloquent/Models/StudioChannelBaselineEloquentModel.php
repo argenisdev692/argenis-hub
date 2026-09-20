@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -28,9 +31,43 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property string $grade
+ * @property string|null $source
+ * @property int $positives
+ * @property int $trials
+ * @property CarbonImmutable|null $applied_from
+ * @property CarbonImmutable|null $gate_passed_at
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read Collection<int, Activity> $activitiesAsSubject
+ * @property-read int|null $activities_as_subject_count
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereAppliedFrom($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereBucket($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereBucketKind($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereGatePassedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereGrade($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel wherePolicyValue($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel wherePositives($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereSource($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereTrials($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioChannelBaselineEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_channel_baselines')]
 #[Fillable(['uuid', 'user_id', 'bucket_kind', 'bucket', 'policy_value', 'grade', 'source', 'positives', 'trials', 'applied_from', 'gate_passed_at'])]

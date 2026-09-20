@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -24,9 +25,43 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int|null $cv_version_id
+ * @property string|null $language
+ * @property string $disk
+ * @property int $bytes
+ * @property bool $text_extraction_verified
+ * @property int $extracted_char_count
+ * @property array<array-key, mixed>|null $structural_checks
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read StudioCvVersionEloquentModel|null $cvVersion
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereBytes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereCvVersionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereDisk($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereExtractedCharCount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereFormat($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereLanguage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel wherePath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereStructuralChecks($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereTextExtractionVerified($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioExportEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_exports')]
 #[Fillable([

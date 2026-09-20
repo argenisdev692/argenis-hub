@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -22,9 +23,42 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int $structure_id
+ * @property string|null $raw_name
+ * @property string $nature
+ * @property string $evidence
+ * @property int|null $evidence_bullet_id
+ * @property numeric|null $years
+ * @property int $first_ordinal
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read StudioCvStructureEloquentModel|null $structure
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereCanonicalName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereEvidence($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereEvidenceBulletId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereFirstOrdinal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereNature($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereRawName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereStructureId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel whereYears($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvSkillEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_cv_skills')]
 #[Fillable(['uuid', 'user_id', 'structure_id', 'canonical_name', 'raw_name', 'nature', 'evidence', 'evidence_bullet_id', 'years', 'first_ordinal'])]

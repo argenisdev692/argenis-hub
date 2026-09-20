@@ -14,9 +14,7 @@ use Modules\CourseScripts\Domain\Enums\DeliverableFormat;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 
 /**
- * @internal
- *
- * A rendered file (FR-45…FR-48). `artifact_file_name` is '' for documents
+ * @internal A rendered file (FR-45…FR-48). `artifact_file_name` is '' for documents
  * that are not practice files.
  *
  * @property int $id
@@ -31,6 +29,21 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read CourseScriptVersionEloquentModel $scriptVersion
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereArtifactFileName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereChecksum($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereCourseScriptVersionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereDocumentType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereFormat($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel wherePath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereSizeBytes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseDeliverableEloquentModel whereUuid($value)
  *
  * @mixin \Eloquent
  */

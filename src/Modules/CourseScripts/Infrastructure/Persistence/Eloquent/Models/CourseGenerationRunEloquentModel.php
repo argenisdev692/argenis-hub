@@ -16,13 +16,12 @@ use Modules\CourseScripts\Domain\Enums\GenerationRunKind;
 use Modules\CourseScripts\Domain\Enums\GenerationRunStatus;
 use Modules\CourseScripts\Domain\Enums\GenerationScope;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 /**
- * @internal
- *
- * One generation run (US-9, US-13). `with_review` is the author's per-run
+ * @internal One generation run (US-9, US-13). `with_review` is the author's per-run
  * choice of the independent second review (DEC-10).
  *
  * @property int $id
@@ -61,6 +60,45 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read CourseVideoEloquentModel|null $currentVideo
  * @property-read Collection<int, CourseVideoOutcomeEloquentModel> $outcomes
  * @property-read Collection<int, CourseScriptVersionEloquentModel> $scriptVersions
+ * @property-read Collection<int, Activity> $activitiesAsSubject
+ * @property-read int|null $activities_as_subject_count
+ * @property-read int|null $outcomes_count
+ * @property-read int|null $script_versions_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel dBlock()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereAiCallCeiling($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereAiReviewCallsConsumed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereAiWriteCallsConsumed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereBatchId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereCourseId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereCurrentVideoId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereEstimatedAiReviewCalls($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereEstimatedAiWriteCalls($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereEstimatedResearchCalls($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereFinishedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereKind($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereResearchCallCeiling($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereResearchCallsConsumed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereReviewerNotIndependent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereReviewerProvider($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereScope($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereScopedBlockId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereStartedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereStopReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereVideosCompleted($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereVideosFailed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereVideosTotal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereWithReview($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseGenerationRunEloquentModel whereWriterProvider($value)
  *
  * @mixin \Eloquent
  */

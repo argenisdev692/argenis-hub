@@ -55,7 +55,7 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cv-studio')->name('
         ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.rescore');
 
     Route::post('/postings/{uuid}/tailor', [StudioPostingController::class, 'tailor'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.tailor');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->whereUuid('uuid')->name('postings.tailor');
 
     Route::delete('/postings/{uuid}', [StudioPostingController::class, 'destroy'])
         ->middleware('permission:DELETE_STUDIO_POSTINGS')->whereUuid('uuid')->name('postings.destroy');
@@ -94,7 +94,7 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cv-studio')->name('
         ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('relations.reject');
 
     Route::post('/runs', [StudioRunController::class, 'store'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->name('runs.store');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->name('runs.store');
 
     Route::get('/runs/{uuid}', [StudioRunController::class, 'show'])
         ->middleware('permission:VIEW_STUDIO_POSTINGS')->whereUuid('uuid')->name('runs.show');
@@ -121,19 +121,19 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cv-studio')->name('
         ->middleware('permission:VIEW_ANY_STUDIO_POSTINGS')->name('sources.index');
 
     Route::post('/cvs/structure', [StudioCvController::class, 'parse'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->name('cvs.parse');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->name('cvs.parse');
 
     Route::put('/structures/{uuid}', [StudioCvController::class, 'confirm'])
         ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('structures.confirm');
 
     Route::post('/cvs/audit', [StudioCvController::class, 'audit'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->name('cvs.audit');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->name('cvs.audit');
 
     Route::post('/audits/{uuid}/answers', [StudioCvController::class, 'answers'])
         ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('audits.answers');
 
     Route::post('/structures/{uuid}/rewrite', [StudioCvController::class, 'rewrite'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('structures.rewrite');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->whereUuid('uuid')->name('structures.rewrite');
 
     Route::get('/versions/{uuid}/export', [StudioCvController::class, 'export'])
         ->middleware('permission:EXPORT_STUDIO_POSTINGS')->whereUuid('uuid')->name('versions.export');

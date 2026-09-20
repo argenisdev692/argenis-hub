@@ -50,7 +50,11 @@ export async function httpJson<TResponse>(
 
     const headers: Record<string, string> = { Accept: 'application/json' };
 
-    if (body !== undefined) {
+    // A `FormData` body (file uploads) goes out as-is: the browser writes the
+    // multipart `Content-Type` itself, boundary included.
+    const isMultipart = body instanceof FormData;
+
+    if (body !== undefined && !isMultipart) {
         headers['Content-Type'] = 'application/json';
     }
 
@@ -66,7 +70,11 @@ export async function httpJson<TResponse>(
         method,
         headers,
         credentials: 'same-origin',
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body: isMultipart
+            ? body
+            : body !== undefined
+              ? JSON.stringify(body)
+              : undefined,
     });
 
     if (!res.ok) {

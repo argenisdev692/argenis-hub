@@ -18,6 +18,9 @@ final class RecordingDispatcher implements GenerationDispatcherPort
     /** @var list<string> */
     public array $cancelled = [];
 
+    /** @var list<array{course_id: int, provider: string}> */
+    public array $prepared = [];
+
     public static function install(): self
     {
         $dispatcher = new self;
@@ -31,6 +34,11 @@ final class RecordingDispatcher implements GenerationDispatcherPort
         $this->dispatched[] = ['run_id' => $runId, 'video_ids' => $videoIdsInOrder, 'prepare' => $prepareFirst, 'feedback' => $feedbackNote];
 
         return 'batch-'.$runId;
+    }
+
+    public function prepare(int $courseId, string $writerProvider): void
+    {
+        $this->prepared[] = ['course_id' => $courseId, 'provider' => $writerProvider];
     }
 
     public function progress(string $batchId): ?int

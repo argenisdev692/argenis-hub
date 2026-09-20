@@ -23,6 +23,7 @@ use Modules\CourseScripts\Domain\Enums\BibleOrigin;
 use Modules\CourseScripts\Domain\Enums\CourseStatus;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 use Shared\Domain\Ports\StoragePort;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -54,6 +55,39 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read Collection<int, CourseSourceDocumentEloquentModel> $sourceDocuments
  * @property-read Collection<int, CourseResearchFindingEloquentModel> $researchFindings
  * @property-read Collection<int, CourseGenerationRunEloquentModel> $runs
+ * @property-read Collection<int, Activity> $activitiesAsSubject
+ * @property-read int|null $activities_as_subject_count
+ * @property-read int|null $blocks_count
+ * @property-read int|null $research_findings_count
+ * @property-read int|null $runs_count
+ * @property-read int|null $source_documents_count
+ * @property-read int|null $videos_count
+ *
+ * @method static Builder<static>|CourseEloquentModel applyFilters(\Modules\CourseScripts\Application\DTOs\CourseFilterData $filters)
+ * @method static \Database\Factories\CourseFactory factory($count = null, $state = [])
+ * @method static Builder<static>|CourseEloquentModel newModelQuery()
+ * @method static Builder<static>|CourseEloquentModel newQuery()
+ * @method static Builder<static>|CourseEloquentModel onlyTrashed()
+ * @method static Builder<static>|CourseEloquentModel ownedBy(int $userId)
+ * @method static Builder<static>|CourseEloquentModel query()
+ * @method static Builder<static>|CourseEloquentModel whereBible($value)
+ * @method static Builder<static>|CourseEloquentModel whereBibleOrigin($value)
+ * @method static Builder<static>|CourseEloquentModel whereBibleRevision($value)
+ * @method static Builder<static>|CourseEloquentModel whereCourseNotes($value)
+ * @method static Builder<static>|CourseEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|CourseEloquentModel whereDeclaredDurationMinutes($value)
+ * @method static Builder<static>|CourseEloquentModel whereDefaultVideoMinutes($value)
+ * @method static Builder<static>|CourseEloquentModel whereDeletedAt($value)
+ * @method static Builder<static>|CourseEloquentModel whereId($value)
+ * @method static Builder<static>|CourseEloquentModel whereLanguage($value)
+ * @method static Builder<static>|CourseEloquentModel wherePreparedAt($value)
+ * @method static Builder<static>|CourseEloquentModel whereStatus($value)
+ * @method static Builder<static>|CourseEloquentModel whereTitle($value)
+ * @method static Builder<static>|CourseEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|CourseEloquentModel whereUserId($value)
+ * @method static Builder<static>|CourseEloquentModel whereUuid($value)
+ * @method static Builder<static>|CourseEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|CourseEloquentModel withoutTrashed()
  *
  * @mixin \Eloquent
  */

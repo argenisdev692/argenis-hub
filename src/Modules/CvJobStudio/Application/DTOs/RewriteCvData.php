@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Application\DTOs;
 
 use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
 /** ATS rewrite input: output language of the new version. */
 #[MapInputName(SnakeCaseMapper::class)]
+#[MapOutputName(SnakeCaseMapper::class)]
 final class RewriteCvData extends Data
 {
     public function __construct(public readonly string $language = 'en') {}

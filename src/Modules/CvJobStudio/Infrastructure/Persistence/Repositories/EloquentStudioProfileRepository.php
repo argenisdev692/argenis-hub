@@ -7,17 +7,26 @@ namespace Modules\CvJobStudio\Infrastructure\Persistence\Repositories;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Modules\CvJobStudio\Application\DTOs\StudioProfileData;
-use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
 use Modules\CvJobStudio\Domain\Exceptions\ProfileGateIncompleteException;
 use Modules\CvJobStudio\Domain\Ports\StudioProfileRepositoryPort;
+use Modules\CvJobStudio\Domain\ValueObjects\StudioProfileSnapshot;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioVocabularyEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Mappers\StudioReadModelMapper;
 
 final readonly class EloquentStudioProfileRepository implements StudioProfileRepositoryPort
 {
-    /** @var list<string> */
+    /**
+     * Every column `StudioProfileData` exposes — a narrower select would
+     * silently null the gate inputs on the Settings page.
+     *
+     * @var list<string>
+     */
     private const array LIST_COLUMNS = [
         'id', 'uuid', 'user_id', 'name', 'slug', 'flow', 'is_active',
+        'base_city', 'base_country', 'accepted_remote_scopes', 'stack_must',
+        'stack_reject', 'geography_deny', 'years_baseline',
         'rules_version', 'created_at', 'updated_at', 'deleted_at',
     ];
 
@@ -29,20 +38,23 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($perPage)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(StudioReadModelMapper::profile(...));
     }
 
-    public function findByUuidForUser(string $uuid, int $userId): ?StudioProfileEloquentModel
+    public function snapshotForUser(string $uuid, int $userId): ?StudioProfileSnapshot
     {
-        return StudioProfileEloquentModel::query()
+        $profile = StudioProfileEloquentModel::query()
             ->ownedBy($userId)
             ->where('uuid', $uuid)
-            ->first();
+            ->first(['id', 'uuid', 'accepted_remote_scopes', 'stack_must', 'stack_reject', 'rules']);
+
+        return $profile !== null ? StudioReadModelMapper::profileSnapshot($profile) : null;
     }
 
-    public function upsert(StudioProfileData $data, int $userId, array $defaultRules): StudioProfileEloquentModel
+    public function upsert(StudioProfileData $data, int $userId, array $defaultRules): string
     {
-        return DB::transaction(static function () use ($data, $userId, $defaultRules): StudioProfileEloquentModel {
+        return DB::transaction(static function () use ($data, $userId, $defaultRules): string {
             $existing = StudioProfileEloquentModel::query()
                 ->ownedBy($userId)
                 ->where('slug', $data->slug)
@@ -63,7 +75,7 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
             if ($existing !== null) {
                 $existing->update($attributes);
 
-                return $existing->refresh();
+                return $existing->uuid;
             }
 
             return StudioProfileEloquentModel::query()->create([
@@ -74,13 +86,13 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
                 'rules' => $defaultRules,
                 'rules_version' => (int) ($defaultRules['rules_version'] ?? 2),
                 ...$attributes,
-            ]);
+            ])->uuid;
         });
     }
 
-    public function updateOpportunityRules(string $uuid, int $userId, array $opportunity): StudioProfileEloquentModel
+    public function updateOpportunityRules(string $uuid, int $userId, array $opportunity): bool
     {
-        return DB::transaction(static function () use ($uuid, $userId, $opportunity): StudioProfileEloquentModel {
+        return DB::transaction(static function () use ($uuid, $userId, $opportunity): bool {
             $profile = StudioProfileEloquentModel::query()
                 ->ownedBy($userId)
                 ->where('uuid', $uuid)
@@ -88,20 +100,19 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
                 ->first();
 
             if ($profile === null) {
-                throw new PostingNotFoundException("Profile {$uuid} not found.");
+                return false;
             }
 
             $rules = $profile->rules ?? [];
             $rules['opportunity'] = $opportunity;
-            $profile->update(['rules' => $rules]);
 
-            return $profile->refresh();
+            return $profile->update(['rules' => $rules]);
         });
     }
 
-    public function beginRun(string $uuid, int $userId): StudioRunEloquentModel
+    public function beginRun(string $uuid, int $userId): ?array
     {
-        return DB::transaction(static function () use ($uuid, $userId): StudioRunEloquentModel {
+        return DB::transaction(static function () use ($uuid, $userId): ?array {
             $profile = StudioProfileEloquentModel::query()
                 ->ownedBy($userId)
                 ->where('uuid', $uuid)
@@ -109,7 +120,7 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
                 ->first();
 
             if ($profile === null) {
-                throw new PostingNotFoundException("Profile {$uuid} not found.");
+                return null;
             }
 
             $missing = [];
@@ -126,12 +137,33 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
                 throw new ProfileGateIncompleteException($missing);
             }
 
-            return StudioRunEloquentModel::query()->create([
+            $run = StudioRunEloquentModel::query()->create([
                 'user_id' => $userId,
                 'profile_id' => $profile->id,
                 'status' => 'queued',
                 'rules_version' => $profile->rules_version,
             ]);
+
+            return ['id' => $run->id, 'run' => StudioReadModelMapper::run($run->refresh())];
+        });
+    }
+
+    public function seedVocabulary(int $profileId, int $userId, array $strong, array $neverSeed): int
+    {
+        return DB::transaction(static function () use ($profileId, $userId, $strong, $neverSeed): int {
+            $terms = [
+                ...array_map(static fn (string $term): array => [$term, 'strong'], $strong),
+                ...array_map(static fn (string $term): array => [$term, 'never_seed'], $neverSeed),
+            ];
+
+            foreach ($terms as [$term, $kind]) {
+                StudioVocabularyEloquentModel::query()->updateOrCreate(
+                    ['profile_id' => $profileId, 'term' => $term, 'language' => 'en'],
+                    ['user_id' => $userId, 'kind' => $kind, 'refreshed_at' => now()],
+                );
+            }
+
+            return count($terms);
         });
     }
 }

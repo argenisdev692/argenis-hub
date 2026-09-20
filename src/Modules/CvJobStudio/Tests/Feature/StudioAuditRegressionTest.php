@@ -60,7 +60,7 @@ function auditProfile(User $owner): StudioProfileEloquentModel
 
 function auditIngest(User $owner, StudioProfileEloquentModel $profile, string $url = 'https://boards.greenhouse.io/acme/jobs/4242'): StudioPostingEloquentModel
 {
-    return app(IngestPostingHandler::class)->handle(IngestPostingData::from([
+    return StudioPostingEloquentModel::withTrashed()->findOrFail(app(IngestPostingHandler::class)->handle(IngestPostingData::from([
         'profile_uuid' => $profile->uuid,
         'title' => 'Senior Laravel Developer',
         'canonical_url' => $url,
@@ -68,7 +68,7 @@ function auditIngest(User $owner, StudioProfileEloquentModel $profile, string $u
         'location_text' => 'Remote, EU',
         'source' => 'greenhouse',
         'discovery_channel' => 'employer_ats',
-    ]), $owner->id);
+    ]), $owner->id));
 }
 
 // ── SSRF (OWASP A01:2025 / §15) ─────────────────────────────────────────

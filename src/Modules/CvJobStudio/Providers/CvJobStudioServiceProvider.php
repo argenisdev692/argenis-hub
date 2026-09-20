@@ -4,31 +4,49 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
 use Modules\CvJobStudio\Domain\Exceptions\ProfileGateIncompleteException;
+use Modules\CvJobStudio\Domain\Exceptions\RecordNotFoundException;
 use Modules\CvJobStudio\Domain\Exceptions\StructureNotConfirmedException;
 use Modules\CvJobStudio\Domain\Exceptions\VersionNotFoundException;
 use Modules\CvJobStudio\Domain\Ports\CvJudgePort;
 use Modules\CvJobStudio\Domain\Ports\CvRewriterPort;
 use Modules\CvJobStudio\Domain\Ports\CvSourcePort;
 use Modules\CvJobStudio\Domain\Ports\CvStructureParserPort;
+use Modules\CvJobStudio\Domain\Ports\CvTailorPort;
+use Modules\CvJobStudio\Domain\Ports\CvTranslatorPort;
+use Modules\CvJobStudio\Domain\Ports\CvVersionDocumentPort;
+use Modules\CvJobStudio\Domain\Ports\DiscoveryPipelinePort;
 use Modules\CvJobStudio\Domain\Ports\EmbeddingPort;
+use Modules\CvJobStudio\Domain\Ports\MatchNarratorPort;
 use Modules\CvJobStudio\Domain\Ports\ProjectSourcePort;
 use Modules\CvJobStudio\Domain\Ports\RequirementExtractorPort;
 use Modules\CvJobStudio\Domain\Ports\SimilaritySearchPort;
 use Modules\CvJobStudio\Domain\Ports\SpendGuardPort;
+use Modules\CvJobStudio\Domain\Ports\StudioApplicationRepositoryPort;
+use Modules\CvJobStudio\Domain\Ports\StudioCatalogReadPort;
+use Modules\CvJobStudio\Domain\Ports\StudioCvRepositoryPort;
+use Modules\CvJobStudio\Domain\Ports\StudioEmbeddingRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\StudioProfileRepositoryPort;
+use Modules\CvJobStudio\Domain\Ports\StudioRunRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\StudioScoreRepositoryPort;
+use Modules\CvJobStudio\Domain\Ports\StudioSkillRelationRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\TransactionPort;
 use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiCvJudge;
 use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiCvRewriter;
 use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiCvStructureParser;
+use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiCvTailor;
+use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiCvTranslator;
+use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiMatchNarrator;
 use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiRequirementExtractor;
 use Modules\CvJobStudio\Infrastructure\Budgets\StudioBudgetLedger;
 use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioAgeOutcomesCommand;
@@ -37,6 +55,7 @@ use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioReembedCommand;
 use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioRefreshVocabularyCommand;
 use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioRescoreCommand;
 use Modules\CvJobStudio\Infrastructure\Console\Commands\StudioRunCommand;
+use Modules\CvJobStudio\Infrastructure\Cvs\CvVersionDocumentRenderer;
 use Modules\CvJobStudio\Infrastructure\Cvs\EloquentCvSource;
 use Modules\CvJobStudio\Infrastructure\Embeddings\InMemorySimilaritySearch;
 use Modules\CvJobStudio\Infrastructure\Embeddings\LaravelAiEmbeddingAdapter;
@@ -45,11 +64,18 @@ use Modules\CvJobStudio\Infrastructure\Fetching\DirectHttpPostingFetcher;
 use Modules\CvJobStudio\Infrastructure\Fetching\FirecrawlPostingFetcher;
 use Modules\CvJobStudio\Infrastructure\Fetching\OutboundUrlGuard;
 use Modules\CvJobStudio\Infrastructure\Fetching\PostingFetchLadder;
+use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioApplicationRepository;
+use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioCatalogReader;
+use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioCvRepository;
+use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioEmbeddingRepository;
 use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioPostingRepository;
 use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioProfileRepository;
+use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioRunRepository;
 use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioScoreRepository;
+use Modules\CvJobStudio\Infrastructure\Persistence\Repositories\EloquentStudioSkillRelationRepository;
 use Modules\CvJobStudio\Infrastructure\Persistence\Transactions\StudioTransactionRunner;
 use Modules\CvJobStudio\Infrastructure\Projects\CompositeProjectSource;
+use Modules\CvJobStudio\Infrastructure\Queue\QueuedDiscoveryPipeline;
 use Modules\CvJobStudio\Infrastructure\Sources\AdzunaSource;
 use Modules\CvJobStudio\Infrastructure\Sources\ArbeitnowSource;
 use Modules\CvJobStudio\Infrastructure\Sources\AshbyBoardSource;
@@ -78,12 +104,23 @@ final class CvJobStudioServiceProvider extends ServiceProvider
         $this->app->bind(StudioPostingRepositoryPort::class, EloquentStudioPostingRepository::class);
         $this->app->bind(StudioScoreRepositoryPort::class, EloquentStudioScoreRepository::class);
         $this->app->bind(StudioProfileRepositoryPort::class, EloquentStudioProfileRepository::class);
+        $this->app->bind(StudioCvRepositoryPort::class, EloquentStudioCvRepository::class);
+        $this->app->bind(StudioRunRepositoryPort::class, EloquentStudioRunRepository::class);
+        $this->app->bind(StudioApplicationRepositoryPort::class, EloquentStudioApplicationRepository::class);
+        $this->app->bind(StudioSkillRelationRepositoryPort::class, EloquentStudioSkillRelationRepository::class);
+        $this->app->bind(StudioEmbeddingRepositoryPort::class, EloquentStudioEmbeddingRepository::class);
+        $this->app->bind(StudioCatalogReadPort::class, EloquentStudioCatalogReader::class);
+        $this->app->bind(CvVersionDocumentPort::class, CvVersionDocumentRenderer::class);
         $this->app->bind(TransactionPort::class, StudioTransactionRunner::class);
         $this->app->bind(CvSourcePort::class, EloquentCvSource::class);
         $this->app->bind(ProjectSourcePort::class, CompositeProjectSource::class);
         $this->app->bind(RequirementExtractorPort::class, LaravelAiRequirementExtractor::class);
         $this->app->bind(CvJudgePort::class, LaravelAiCvJudge::class);
         $this->app->bind(CvRewriterPort::class, LaravelAiCvRewriter::class);
+        $this->app->bind(CvTailorPort::class, LaravelAiCvTailor::class);
+        $this->app->bind(CvTranslatorPort::class, LaravelAiCvTranslator::class);
+        $this->app->bind(MatchNarratorPort::class, LaravelAiMatchNarrator::class);
+        $this->app->bind(DiscoveryPipelinePort::class, QueuedDiscoveryPipeline::class);
         $this->app->bind(CvStructureParserPort::class, LaravelAiCvStructureParser::class);
         $this->app->bind(EmbeddingPort::class, LaravelAiEmbeddingAdapter::class);
         $this->app->bind(SpendGuardPort::class, StudioBudgetLedger::class);
@@ -125,6 +162,7 @@ final class CvJobStudioServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerRateLimiters();
         $this->registerWebRoutes();
         $this->registerApiRoutes();
 
@@ -138,6 +176,20 @@ final class CvJobStudioServiceProvider extends ServiceProvider
         ]);
 
         $this->registerExceptionMapping();
+    }
+
+    /**
+     * OWASP LLM10 (unbounded consumption): every route that triggers a model
+     * call is capped per user, on top of the monthly spend budget the
+     * `SpendGuardPort` enforces per call.
+     */
+    private function registerRateLimiters(): void
+    {
+        RateLimiter::for(
+            'cv-studio-llm',
+            static fn (Request $request): Limit => Limit::perMinute((int) config('cv-job-studio.llm_requests_per_minute', 10))
+                ->by('cv-studio-llm:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+        );
     }
 
     private function registerWebRoutes(): void
@@ -166,6 +218,11 @@ final class CvJobStudioServiceProvider extends ServiceProvider
         $handler->map(
             VersionNotFoundException::class,
             static fn (VersionNotFoundException $exception): NotFoundHttpException => new NotFoundHttpException($exception->getMessage(), $exception),
+        );
+
+        $handler->map(
+            RecordNotFoundException::class,
+            static fn (RecordNotFoundException $exception): NotFoundHttpException => new NotFoundHttpException($exception->getMessage(), $exception),
         );
 
         $handler->map(

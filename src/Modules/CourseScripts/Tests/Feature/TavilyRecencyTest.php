@@ -22,7 +22,9 @@ beforeEach(function (): void {
 it('sends exactly the original payload when no recency is given', function (): void {
     $results = app(TavilyClientInterface::class)->search(['claude projects']);
 
-    Http::assertSent(fn (Request $request): bool => array_keys($request->data()) === ['query', 'search_depth', 'max_results']);
+    // `auto_parameters: false` is sent on every call since the Lead Scout module
+    // pinned it in the shared adapter; what must stay absent is `time_range`.
+    Http::assertSent(fn (Request $request): bool => array_keys($request->data()) === ['query', 'search_depth', 'max_results', 'auto_parameters']);
 
     expect($results)->toHaveCount(1)->and($results[0]['url'])->toBe('https://example.test/a');
 });

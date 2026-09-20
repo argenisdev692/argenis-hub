@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\Commands;
 
-use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
+use Modules\CvJobStudio\Application\DTOs\StudioCvVersionData;
+use Modules\CvJobStudio\Domain\Exceptions\RecordNotFoundException;
 use Modules\CvJobStudio\Domain\Exceptions\StructureNotConfirmedException;
 use Modules\CvJobStudio\Domain\Ports\CvRewriterPort;
-use Modules\CvJobStudio\Domain\Ports\TransactionPort;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvStructureEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersionEloquentModel;
+use Modules\CvJobStudio\Domain\Ports\StudioCvRepositoryPort;
 
 /**
  * ATS-safe rewrite as a new version (T-073, FR-5): the source CV is never
@@ -19,42 +18,30 @@ final readonly class RewriteCvHandler
 {
     public function __construct(
         private CvRewriterPort $rewriter,
-        private TransactionPort $db,
+        private StudioCvRepositoryPort $cvs,
     ) {}
 
     #[\NoDiscard]
-    public function handle(string $structureUuid, string $language, int $userId): StudioCvVersionEloquentModel
+    public function handle(string $structureUuid, string $language, int $userId): StudioCvVersionData
     {
-        $structure = StudioCvStructureEloquentModel::query()
-            ->ownedBy($userId)
-            ->with(['entries.bullets', 'skills'])
-            ->where('uuid', $structureUuid)
-            ->first();
+        $structure = $this->cvs->structureForUser($structureUuid, $userId)
+            ?? throw RecordNotFoundException::of('structure', $structureUuid);
 
-        if ($structure === null) {
-            throw new PostingNotFoundException("Structure {$structureUuid} not found.");
-        }
-
-        if ($structure->confirmed_at === null) {
+        if (! $structure->isConfirmed) {
             throw new StructureNotConfirmedException("Structure {$structureUuid} is not confirmed.");
         }
 
-        $rewritten = $this->rewriter->rewrite(
-            $structure->toArray(),
-            (array) $structure->profile_facts,
-            $language,
-            $userId,
-        );
+        $rewritten = $this->rewriter->rewrite($structure->document, $structure->profileFacts, $language, $userId);
 
-        return $this->db->atomic(static fn (): StudioCvVersionEloquentModel => StudioCvVersionEloquentModel::query()->create([
+        return $this->cvs->createVersion([
             'user_id' => $userId,
-            'cv_id' => $structure->cv_id,
+            'cv_id' => $structure->cvId,
             'structure_id' => $structure->id,
             'purpose' => 'ats_rewrite',
             'language' => $language,
             'content' => $rewritten['sections'],
             'bullet_provenance' => $rewritten['cut_notes'],
             'rules_version' => 2,
-        ]));
+        ]);
     }
 }

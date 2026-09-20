@@ -14,9 +14,7 @@ use Illuminate\Support\Carbon;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 
 /**
- * @internal
- *
- * A source found while researching the subject (video id null) or one video.
+ * @internal A source found while researching the subject (video id null) or one video.
  *
  * @property int $id
  * @property string $uuid
@@ -36,6 +34,26 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property-read CourseEloquentModel $course
  * @property-read CourseVideoEloquentModel|null $video
  * @property-read Collection<int, CourseScriptVersionEloquentModel> $scriptVersions
+ * @property-read int|null $script_versions_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereContent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereCourseId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereCourseVideoId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereFullPageFetched($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereGatheredAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereProvider($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel wherePublishedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereQuery($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereScore($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseResearchFindingEloquentModel whereUuid($value)
  *
  * @mixin \Eloquent
  */

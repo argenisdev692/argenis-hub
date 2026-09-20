@@ -23,7 +23,8 @@ export function maxSizeMb(limits: CourseUploadLimits): number {
     return limits.max_kb / 1024;
 }
 
-function fileSchema(limits: CourseUploadLimits) {
+/** One upload's size + extension rules — shared with the attach-document form. */
+export function fileSchema(limits: CourseUploadLimits) {
     const extensions = limits.allowed_extensions.map((ext) => `.${ext}`);
 
     return z

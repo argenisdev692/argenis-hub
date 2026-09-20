@@ -6,7 +6,6 @@ namespace Modules\CvJobStudio\Application\Commands;
 
 use Modules\CvJobStudio\Application\DTOs\StudioProfileData;
 use Modules\CvJobStudio\Domain\Ports\StudioProfileRepositoryPort;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
 
 /**
  * Creates a profile or updates the one with the same slug for this user.
@@ -17,8 +16,9 @@ final readonly class UpsertProfileHandler
 {
     public function __construct(private StudioProfileRepositoryPort $profiles) {}
 
+    /** @return string the profile uuid */
     #[\NoDiscard]
-    public function handle(StudioProfileData $data, int $userId): StudioProfileEloquentModel
+    public function handle(StudioProfileData $data, int $userId): string
     {
         return $this->profiles->upsert($data, $userId, (array) config('cv-job-studio'));
     }

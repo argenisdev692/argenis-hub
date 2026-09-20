@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Modules\CvJobStudio\Application\Commands\ExportCvVersionHandler;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvStructureEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersionEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioExportEloquentModel;
 use Shared\Domain\Ports\WordExportPort;
 
 uses(RefreshDatabase::class);
@@ -70,13 +71,13 @@ it('exports docx and pdf with structural assertions (SC-6)', function (): void {
     $version = exportVersion($admin);
     $handler = app(ExportCvVersionHandler::class);
 
-    $docx = $handler->handle($version->uuid, 'docx', $admin->id);
+    $docx = StudioExportEloquentModel::query()->where('uuid', $handler->handle($version->uuid, 'docx', $admin->id)['uuid'])->sole();
 
     expect($docx->format)->toBe('docx')
         ->and($docx->disk)->toBe('r2')
         ->and($docx->text_extraction_verified)->toBeTrue();
 
-    $pdf = $handler->handle($version->uuid, 'pdf', $admin->id);
+    $pdf = StudioExportEloquentModel::query()->where('uuid', $handler->handle($version->uuid, 'pdf', $admin->id)['uuid'])->sole();
 
     expect($pdf->format)->toBe('pdf')
         ->and($pdf->text_extraction_verified)->toBeTrue()

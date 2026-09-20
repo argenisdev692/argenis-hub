@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Application\DTOs;
 
 use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 
@@ -15,6 +16,7 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * the source CV (OWASP LLM01, FR-22).
  */
 #[MapInputName(SnakeCaseMapper::class)]
+#[MapOutputName(SnakeCaseMapper::class)]
 final class TailorCvData extends Data
 {
     public function __construct(

@@ -33,9 +33,9 @@ final readonly class StudioCvController
 {
     public function parse(Request $request, SelectCvData $data, ParseCvStructureHandler $parse): JsonResponse
     {
-        $structure = $parse->handle($data->cvUuid, $this->ownerId($request));
+        $structureUuid = $parse->handle($data->cvUuid, $this->ownerId($request));
 
-        return response()->json(['data' => ['uuid' => $structure->uuid]], 201);
+        return response()->json(['data' => ['uuid' => $structureUuid]], 201);
     }
 
     public function confirm(Request $request, string $uuid, ConfirmCvStructureHandler $confirm): RedirectResponse
@@ -80,9 +80,9 @@ final readonly class StudioCvController
         $export = $handler->handle($uuid, $data->format, $this->ownerId($request));
 
         return response()->json(['data' => [
-            'uuid' => $export->uuid,
-            'verified' => $export->text_extraction_verified,
-            'download_url' => $storage->temporaryUrl($export->path, now()->addMinutes(5)),
+            'uuid' => $export['uuid'],
+            'verified' => $export['verified'],
+            'download_url' => $storage->temporaryUrl($export['path'], now()->addMinutes(5)),
             'download_name' => self::downloadName($request, $data->format),
         ]], 201);
     }
@@ -97,9 +97,9 @@ final readonly class StudioCvController
         /** @var array{title?: string} $validated */
         $validated = $request->validate(['title' => ['sometimes', 'nullable', 'string', 'max:255']]);
 
-        $cv = $promote->handle($uuid, $this->ownerId($request), $validated['title'] ?? null);
+        $cvUuid = $promote->handle($uuid, $this->ownerId($request), $validated['title'] ?? null);
 
-        return response()->json(['data' => ['uuid' => $cv->uuid]], 201);
+        return response()->json(['data' => ['uuid' => $cvUuid]], 201);
     }
 
     public function versions(Request $request, ListCvVersionsHandler $list): InertiaResponse|JsonResponse

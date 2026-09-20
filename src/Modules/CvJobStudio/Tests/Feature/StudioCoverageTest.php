@@ -19,6 +19,7 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioApplica
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioEmbeddingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioVocabularyEloquentModel;
 
@@ -108,7 +109,7 @@ it('extracts requirements once per text hash (T-057)', function (): void {
     expect($first)->toHaveCount(1)
         ->and($second)->toHaveCount(1)
         ->and($fake->calls)->toBe(1)
-        ->and($first[0]->extracted_by_provider)->toBe('fake');
+        ->and(StudioRequirementEloquentModel::query()->whereKey($first[0]['id'])->value('extracted_by_provider'))->toBe('fake');
 });
 
 it('writes embeddings once per content hash (T-053)', function (): void {
@@ -126,12 +127,12 @@ it('writes embeddings once per content hash (T-053)', function (): void {
         }
     };
 
-    $handler = new StoreEmbeddingHandler($fake);
+    $handler = app(StoreEmbeddingHandler::class, ['embeddings' => $fake]);
 
-    $first = $handler->handle('cv_bullet', 7, 'Built APIs.', $admin->id);
-    $second = $handler->handle('cv_bullet', 7, 'Built APIs.', $admin->id);
+    $handler->handle('cv_bullet', 7, 'Built APIs.', $admin->id);
+    $handler->handle('cv_bullet', 7, 'Built APIs.', $admin->id);
 
-    expect($second->id)->toBe($first->id)->and($fake->calls)->toBe(1);
+    expect($fake->calls)->toBe(1);
     expect(StudioEmbeddingEloquentModel::query()->count())->toBe(1);
 });
 

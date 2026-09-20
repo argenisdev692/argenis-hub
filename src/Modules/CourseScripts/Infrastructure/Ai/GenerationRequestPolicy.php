@@ -42,13 +42,15 @@ final readonly class GenerationRequestPolicy
     #[\NoDiscard]
     public function fallbacksFor(string $primary): array
     {
-        $order = (string) $this->config->get('course-scripts.generation.failover_order', 'openai,anthropic,gemini');
-
-        $fallbacks = array_values(array_filter(
-            array_map(trim(...), explode(',', $order)),
-            static fn (string $provider): bool => $provider !== '' && strtolower($provider) !== strtolower($primary),
-        ));
-
-        return array_slice(array_values(array_unique($fallbacks)), 0, 2);
+        return (string) $this->config->get('course-scripts.generation.failover_order', 'openai,anthropic,gemini')
+            |> (static fn (string $order): array => explode(',', $order))
+            |> (static fn (array $providers): array => array_map(trim(...), $providers))
+            |> (static fn (array $providers): array => array_filter(
+                $providers,
+                static fn (string $provider): bool => $provider !== '' && strtolower($provider) !== strtolower($primary),
+            ))
+            |> array_unique(...)
+            |> array_values(...)
+            |> (static fn (array $providers): array => array_slice($providers, 0, 2));
     }
 }

@@ -9,9 +9,7 @@ use Modules\CvJobStudio\Domain\Enums\RequirementTag;
 use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
 use Modules\CvJobStudio\Domain\Ports\RequirementExtractorPort;
 use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
-use Modules\CvJobStudio\Domain\Ports\TransactionPort;
 use Modules\CvJobStudio\Domain\Services\JdTextTrimmer;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
 use Throwable;
 
 /**
@@ -25,76 +23,64 @@ use Throwable;
  */
 final readonly class ExtractRequirementsHandler
 {
+    private const string PROMPT_VERSION = 'v2';
+
     public function __construct(
         private RequirementExtractorPort $extractor,
         private JdTextTrimmer $trimmer,
         private StudioPostingRepositoryPort $postings,
-        private TransactionPort $db,
         private StoreEmbeddingHandler $embeddings,
     ) {}
 
-    /** @return list<StudioRequirementEloquentModel> */
+    /** @return list<array{id: int, canonical_name: string, raw_text: string}> */
     #[\NoDiscard]
     public function handle(string $postingUuid, int $userId, int $maxInputChars = 20000): array
     {
-        $posting = $this->postings->scoringContext($postingUuid, $userId);
+        $posting = $this->postings->scoringContext($postingUuid, $userId)
+            ?? throw new PostingNotFoundException("Posting {$postingUuid} not found.");
 
-        if ($posting === null) {
-            throw new PostingNotFoundException("Posting {$postingUuid} not found.");
+        $hash = hash('sha256', $posting->latestText);
+        $existing = $this->postings->requirementsForText($posting->id, $userId, $hash);
+
+        if ($existing !== []) {
+            return $existing;
         }
 
-        $text = (string) $posting->texts->sortByDesc('id')->first()?->text;
-        $hash = hash('sha256', $text);
+        $extracted = $this->extractor->extract($this->trimmer->trim($posting->latestText, $maxInputChars), $userId);
 
-        $existing = StudioRequirementEloquentModel::query()
-            ->where('user_id', $userId)
-            ->where('posting_id', $posting->id)
-            ->where('source_text_hash', $hash)
-            ->get();
+        $valid = [];
 
-        if ($existing->isNotEmpty()) {
-            return $existing->all();
-        }
+        foreach ($extracted['requirements'] as $requirement) {
+            $tag = RequirementTag::tryFrom((string) ($requirement['tag'] ?? ''));
+            $nature = RequirementNature::tryFrom((string) ($requirement['nature'] ?? ''));
 
-        $extracted = $this->extractor->extract($this->trimmer->trim($text, $maxInputChars), $userId);
-
-        $rows = $this->db->atomic(function () use ($posting, $userId, $hash, $extracted): array {
-            $rows = [];
-
-            foreach ($extracted['requirements'] as $requirement) {
-                $tag = RequirementTag::tryFrom((string) ($requirement['tag'] ?? ''));
-                $nature = RequirementNature::tryFrom((string) ($requirement['nature'] ?? ''));
-
-                if ($tag === null || $nature === null) {
-                    continue;
-                }
-
-                $rows[] = StudioRequirementEloquentModel::query()->create([
-                    'user_id' => $userId,
-                    'posting_id' => $posting->id,
-                    'canonical_name' => (string) $requirement['canonical_name'],
-                    'raw_text' => (string) ($requirement['raw_text'] ?? ''),
-                    'tag' => $tag->value,
-                    'nature' => $nature->value,
-                    'source_text_hash' => $hash,
-                    'extracted_by_provider' => $extracted['provider'],
-                    'extracted_by_model' => $extracted['model'],
-                    'prompt_version' => 'v2',
-                ]);
+            if ($tag === null || $nature === null) {
+                continue;
             }
 
-            return $rows;
-        });
+            $valid[] = [
+                'canonical_name' => (string) $requirement['canonical_name'],
+                'raw_text' => (string) ($requirement['raw_text'] ?? ''),
+                'tag' => $tag,
+                'nature' => $nature,
+            ];
+        }
+
+        $rows = $this->postings->storeRequirements($posting->id, $userId, $hash, $valid, [
+            'provider' => $extracted['provider'],
+            'model' => $extracted['model'],
+            'prompt_version' => self::PROMPT_VERSION,
+        ]);
 
         foreach ($rows as $row) {
-            $text = trim((string) ($row->raw_text !== '' ? $row->raw_text : $row->canonical_name));
+            $text = trim($row['raw_text'] !== '' ? $row['raw_text'] : $row['canonical_name']);
 
             if ($text === '') {
                 continue;
             }
 
             try {
-                (void) $this->embeddings->handle('posting_requirement', $row->id, $text, $userId);
+                $this->embeddings->handle('posting_requirement', $row['id'], $text, $userId);
             } catch (Throwable) {
                 break;
             }

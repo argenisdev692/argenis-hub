@@ -56,7 +56,9 @@ final readonly class StudioPostingExportController
         $rows = StudioPostingEloquentModel::query()
             ->ownedBy((int) $request->user()->id)
             ->applyFilters($filters)
-            ->with('scores')
+            ->with(['scores' => static fn ($scores) => $scores
+                ->select(['id', 'posting_id', 'total_score', 'band', 'cap_reason'])
+                ->limit(1)])
             ->select(self::EXPORT_COLUMNS)
             ->lazy();
 

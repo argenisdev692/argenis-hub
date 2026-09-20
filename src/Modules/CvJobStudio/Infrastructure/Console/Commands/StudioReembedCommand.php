@@ -118,7 +118,7 @@ final class StudioReembedCommand extends Command
                     }
 
                     try {
-                        (void) $embeddings->handle($ownerType, (int) $row->id, $content, (int) $row->user_id);
+                        $embeddings->handle($ownerType, (int) $row->id, $content, (int) $row->user_id);
                     } catch (Throwable) {
                         return false;
                     }

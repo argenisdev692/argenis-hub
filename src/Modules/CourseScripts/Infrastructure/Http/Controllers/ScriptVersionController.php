@@ -14,14 +14,10 @@ use Modules\CourseScripts\Application\DTOs\GenerationRunData;
 use Modules\CourseScripts\Application\DTOs\RegenerateScriptData;
 use Modules\CourseScripts\Application\DTOs\ScriptVersionData;
 use Modules\CourseScripts\Application\DTOs\ScriptVersionSummaryData;
-use Modules\CourseScripts\Application\Generation\VideoWritingContextFactory;
 use Modules\CourseScripts\Domain\Exceptions\CourseNotFoundException;
 use Modules\CourseScripts\Domain\Ports\CourseRepositoryPort;
 use Modules\CourseScripts\Domain\Ports\ScriptVersionRepositoryPort;
-use Modules\CourseScripts\Infrastructure\Ai\GenerateScriptOutlineAgent;
-use Modules\CourseScripts\Infrastructure\Ai\GenerationRequestPolicy;
-use Modules\CourseScripts\Infrastructure\Ai\WritingContextRenderer;
-use Shared\Infrastructure\AI\PromptCache\PromptCachingAIClient;
+use Modules\CourseScripts\Infrastructure\Ai\OutlinePreviewStreamer;
 
 /**
  * A video's script: preview, versions, regenerate with feedback, force a
@@ -71,42 +67,12 @@ final readonly class ScriptVersionController
 
     /**
      * Live SSE preview of a video's outline (instructor draft screen).
-     *
-     * Builds the same cacheable context as the queued run, then streams the
-     * outline agent directly — no version is stored. Long research is reused
-     * from stored findings when present, so repeat previews start instantly.
      */
-    public function previewOutline(
-        Request $request,
-        string $uuid,
-        string $videoUuid,
-        CourseRepositoryPort $courses,
-        VideoWritingContextFactory $contexts,
-        WritingContextRenderer $renderer,
-        PromptCachingAIClient $streaming,
-        GenerationRequestPolicy $policy,
-    ): StreamableAgentResponse {
-        $provider = strtolower((string) $request->query('provider', 'openai'));
+    public function previewOutline(Request $request, string $uuid, string $videoUuid, OutlinePreviewStreamer $preview): StreamableAgentResponse
+    {
+        $provider = $request->query('provider', 'openai');
 
-        abort_unless(
-            in_array($provider, (array) config('course-scripts.providers.selectable_writers', ['openai', 'anthropic', 'gemini']), true),
-            422,
-            'Unknown writer provider.',
-        );
-
-        $course = $courses->findOwnedWithStructure($uuid, $this->user($request)->id) ?? throw new CourseNotFoundException;
-        $video = $course->videos->firstWhere('uuid', $videoUuid) ?? throw new CourseNotFoundException;
-
-        ['context' => $context] = $contexts->build($course, $video);
-
-        return $streaming->streamStructured(
-            GenerateScriptOutlineAgent::class,
-            $renderer->prompt($context, 'REQUEST: Write the OUTLINE of this video.'),
-            $provider,
-            $policy->modelFor('outline'),
-            $policy->timeoutFor('outline'),
-            'outline-preview',
-        );
+        return $preview->stream($uuid, $videoUuid, is_string($provider) ? $provider : '', $this->user($request)->id);
     }
 
     private function user(Request $request): User

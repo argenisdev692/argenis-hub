@@ -23,9 +23,8 @@ final readonly class CourseExportTransformer
     public static function transformForExcel(CourseEloquentModel $course): array
     {
         return $course
-            |> self::extractBaseData(...)
-            |> self::formatDates(...)
-            |> self::sanitizeOutput(...);
+            |> self::transformForPdf(...)
+            |> self::neutraliseFormulas(...);
     }
 
     /**
@@ -34,7 +33,10 @@ final readonly class CourseExportTransformer
     #[\NoDiscard]
     public static function transformForPdf(CourseEloquentModel $course): array
     {
-        return self::transformForExcel($course);
+        return $course
+            |> self::extractBaseData(...)
+            |> self::formatDates(...)
+            |> self::sanitizeOutput(...);
     }
 
     /**
@@ -84,6 +86,23 @@ final readonly class CourseExportTransformer
     {
         return array_map(
             static fn (string $value): string => $value === '' ? '—' : $value,
+            $data,
+        );
+    }
+
+    /**
+     * CSV/XLSX formula injection (OWASP A05, CWE-1236): a course title is
+     * author-typed or read from an uploaded index, so a leading `=`, `+`, `-`,
+     * `@`, tab or carriage return is prefixed with `'` to make spreadsheet
+     * apps read the cell as text. PDF output is not a spreadsheet and skips it.
+     *
+     * @param  array{Reference: string, Title: string, Language: string, 'Generation Status': string, Videos: string, Generated: string, Status: string, Created: string, Updated: string}  $data
+     * @return array{Reference: string, Title: string, Language: string, 'Generation Status': string, Videos: string, Generated: string, Status: string, Created: string, Updated: string}
+     */
+    private static function neutraliseFormulas(array $data): array
+    {
+        return array_map(
+            static fn (string $value): string => preg_match('/^[=+\-@\t\r]/', $value) === 1 ? "'".$value : $value,
             $data,
         );
     }

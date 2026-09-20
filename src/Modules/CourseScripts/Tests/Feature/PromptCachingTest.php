@@ -16,6 +16,9 @@ use Shared\Infrastructure\AI\PromptCache\PromptCacheScope;
  * context. Those must reach every provider as a stable, cacheable prefix.
  */
 beforeEach(function (): void {
+    // Pinned so a local AI_PROMPT_CACHE_LONG_TTL override cannot change the assertion.
+    config()->set('ai.prompt_cache.long_ttl', '1h');
+
     $this->client = RecordingAiClient::install([
         GenerateScriptOutlineAgent::class => CanonicalScriptFixture::outlinePayload(),
         GenerateScriptClosingAgent::class => CanonicalScriptFixture::closingPayload(),

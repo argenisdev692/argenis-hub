@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Modules\CvJobStudio\Application\DTOs\StudioPostingFilterData;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -37,9 +38,92 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read StudioProfileEloquentModel $profile
  * @property-read Collection<int, StudioScoreEloquentModel> $scores
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property string $canonical_url
+ * @property string $url_hash
+ * @property string|null $fingerprint
+ * @property string|null $source
+ * @property string|null $employer_name
+ * @property string|null $location_text
+ * @property CarbonImmutable|null $posted_at
+ * @property string|null $posted_at_source
+ * @property string|null $salary_text
+ * @property string|null $currency
+ * @property string|null $attribution
+ * @property string|null $discovery_channel
+ * @property string|null $apply_destination
+ * @property string|null $ats_kind
+ * @property int|null $preferred_source_id
+ * @property bool $is_expired
+ * @property CarbonImmutable|null $expired_at
+ * @property CarbonImmutable|null $last_alive_check_at
+ * @property string|null $alive_check_method
+ * @property CarbonImmutable|null $first_seen_at
+ * @property CarbonImmutable|null $last_seen_at
+ * @property numeric|null $d_disc
+ * @property array<array-key, mixed>|null $d_disc_components
+ * @property-read Collection<int, Activity> $activitiesAsSubject
+ * @property-read int|null $activities_as_subject_count
+ * @property-read Collection<int, StudioApplicationEloquentModel> $applications
+ * @property-read int|null $applications_count
+ * @property-read Collection<int, StudioGateResultEloquentModel> $gateResults
+ * @property-read int|null $gate_results_count
+ * @property-read Collection<int, StudioPostingSourceEloquentModel> $postingSources
+ * @property-read int|null $posting_sources_count
+ * @property-read Collection<int, StudioRequirementEloquentModel> $requirements
+ * @property-read int|null $requirements_count
+ * @property-read int|null $scores_count
+ * @property-read Collection<int, StudioPostingSightingEloquentModel> $sightings
+ * @property-read int|null $sightings_count
+ * @property-read Collection<int, StudioPostingTextEloquentModel> $texts
+ * @property-read int|null $texts_count
+ *
+ * @method static Builder<static>|StudioPostingEloquentModel applyFilters(\Modules\CvJobStudio\Application\DTOs\StudioPostingFilterData $filters)
+ * @method static Builder<static>|StudioPostingEloquentModel applySort(\Modules\CvJobStudio\Application\DTOs\StudioPostingFilterData $filters)
+ * @method static \Database\Factories\StudioPostingFactory factory($count = null, $state = [])
+ * @method static Builder<static>|StudioPostingEloquentModel newModelQuery()
+ * @method static Builder<static>|StudioPostingEloquentModel newQuery()
+ * @method static Builder<static>|StudioPostingEloquentModel onlyTrashed()
+ * @method static Builder<static>|StudioPostingEloquentModel ownedBy(int $userId)
+ * @method static Builder<static>|StudioPostingEloquentModel query()
+ * @method static Builder<static>|StudioPostingEloquentModel whereAliveCheckMethod($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereApplyDestination($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereAtsKind($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereAttribution($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereCanonicalUrl($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereCurrency($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereDDisc($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereDDiscComponents($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereDeletedAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereDiscoveryChannel($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereEmployerName($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereExpiredAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereFingerprint($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereFirstSeenAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereId($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereIsExpired($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereLastAliveCheckAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereLastSeenAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereLocationText($value)
+ * @method static Builder<static>|StudioPostingEloquentModel wherePostedAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel wherePostedAtSource($value)
+ * @method static Builder<static>|StudioPostingEloquentModel wherePreferredSourceId($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereProfileId($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereRemoteScope($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereSalaryText($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereSource($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereStatus($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereTitle($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereUrlHash($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereUserId($value)
+ * @method static Builder<static>|StudioPostingEloquentModel whereUuid($value)
+ * @method static Builder<static>|StudioPostingEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|StudioPostingEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_postings')]
 #[Fillable([

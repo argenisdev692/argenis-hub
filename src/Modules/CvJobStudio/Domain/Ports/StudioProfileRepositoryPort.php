@@ -6,23 +6,48 @@ namespace Modules\CvJobStudio\Domain\Ports;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Modules\CvJobStudio\Application\DTOs\StudioProfileData;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
+use Modules\CvJobStudio\Application\DTOs\StudioRunData;
+use Modules\CvJobStudio\Domain\Exceptions\ProfileGateIncompleteException;
+use Modules\CvJobStudio\Domain\ValueObjects\StudioProfileSnapshot;
 
 /**
- * Profile aggregate: upsert, rules versioning, gate-input validation and run
- * bootstrapping. Profiles own their `rules` snapshot — a run may never
- * silently inherit another profile's gates (FR-31).
+ * Profile aggregate: upsert, rules versioning, gate-input validation, the
+ * profile's seed vocabulary and run bootstrapping. Profiles own their
+ * `rules` snapshot — a run may never silently inherit another profile's
+ * gates (FR-31).
  */
 interface StudioProfileRepositoryPort
 {
+    /** @return LengthAwarePaginator<int, StudioProfileData> */
     public function paginate(int $userId, int $perPage): LengthAwarePaginator;
 
-    public function findByUuidForUser(string $uuid, int $userId): ?StudioProfileEloquentModel;
+    public function snapshotForUser(string $uuid, int $userId): ?StudioProfileSnapshot;
 
-    public function upsert(StudioProfileData $data, int $userId, array $defaultRules): StudioProfileEloquentModel;
+    /**
+     * @param  array<string, mixed>  $defaultRules  seeded only on create — an update never overwrites rules
+     * @return string the profile uuid
+     */
+    public function upsert(StudioProfileData $data, int $userId, array $defaultRules): string;
 
-    public function updateOpportunityRules(string $uuid, int $userId, array $opportunity): StudioProfileEloquentModel;
+    /**
+     * @param  array<string, mixed>  $opportunity
+     * @return bool false when the profile is not the owner's
+     */
+    public function updateOpportunityRules(string $uuid, int $userId, array $opportunity): bool;
 
-    public function beginRun(string $uuid, int $userId): StudioRunEloquentModel;
+    /**
+     * @return array{id: int, run: StudioRunData}|null null when the profile is not the owner's
+     *
+     * @throws ProfileGateIncompleteException
+     */
+    public function beginRun(string $uuid, int $userId): ?array;
+
+    /**
+     * Idempotent: `$strong` terms seed as strong vocabulary, `$neverSeed` as never_seed.
+     *
+     * @param  list<string>  $strong
+     * @param  list<string>  $neverSeed
+     * @return int terms written
+     */
+    public function seedVocabulary(int $profileId, int $userId, array $strong, array $neverSeed): int;
 }

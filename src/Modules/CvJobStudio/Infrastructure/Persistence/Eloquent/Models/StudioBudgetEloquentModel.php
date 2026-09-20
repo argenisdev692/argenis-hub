@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -23,9 +24,30 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereCategory($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereLimitMicros($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel wherePeriod($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereSpentMicros($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioBudgetEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_budgets')]
 #[Fillable(['uuid', 'user_id', 'period', 'category', 'limit_micros', 'spent_micros'])]

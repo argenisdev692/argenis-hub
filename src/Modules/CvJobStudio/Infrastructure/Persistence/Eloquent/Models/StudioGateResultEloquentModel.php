@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -23,9 +24,33 @@ use Illuminate\Support\Str;
  * @property Carbon|null $updated_at
  * @property-read StudioPostingEloquentModel $posting
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property string|null $reason_code
+ * @property string|null $detail
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereDetail($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereGateCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel wherePassed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel wherePostingId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereReasonCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioGateResultEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_gate_results')]
 #[Fillable([

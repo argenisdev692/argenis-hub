@@ -1,0 +1,4 @@
+/cv-studio/cvs/audit post - {"type":"object","properties":{"data":{"$ref":"#\/components\/schemas\/StudioCvAuditData"}},"required":["data"]}
+/cv-studio/runs/{uuid}/report get - {"type":"object","properties":{"uuid":{"type":"string"},"report":{"$ref":"#\/components\/schemas\/StudioInsightReportData"}},"required":["uuid","report"]}
+/cv-studio/postings/{uuid} get - {"$ref":"#\/components\/schemas\/StudioPostingDetailData"}
+schemas: StudioCvAuditData,StudioInsightReportData,StudioPostingDetailData

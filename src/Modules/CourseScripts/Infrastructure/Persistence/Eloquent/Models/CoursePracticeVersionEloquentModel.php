@@ -13,9 +13,7 @@ use Modules\CourseScripts\Domain\Enums\PracticeDecisionOrigin;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 
 /**
- * @internal
- *
- * The practice pack of a script version, modelled on the author's sample
+ * @internal The practice pack of a script version, modelled on the author's sample
  * `Propuestas_Logistica_Heliantia` (DEC-9).
  *
  * @property int $id
@@ -36,6 +34,27 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read CourseScriptVersionEloquentModel $scriptVersion
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereArtifacts($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereCourseScriptVersionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereDecidedBy($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereDecisionReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereDesignedContrasts($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereDocumentName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereFilesSummary($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereHeaderTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereInstructorNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereReviewObjections($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereReviewScores($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereSetupInstruction($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereUsage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CoursePracticeVersionEloquentModel whereUuid($value)
  *
  * @mixin \Eloquent
  */

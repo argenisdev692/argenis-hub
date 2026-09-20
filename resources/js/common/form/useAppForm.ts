@@ -3,6 +3,7 @@ import { router } from '@inertiajs/vue3';
 import type { AnyFieldApi } from '@tanstack/vue-form';
 import { revalidateLogic, useForm } from '@tanstack/vue-form';
 import { toast } from 'vue-sonner';
+import { HttpError } from '@/lib/http';
 
 /**
  * A Standard Schema v1 validator. Zod 4, Valibot and ArkType all implement this
@@ -123,6 +124,33 @@ export function applyServerErrors(
             })) as never,
         );
     }
+}
+
+/**
+ * `applyServerErrors` for a failed `httpJson` call: when the error is a 422
+ * with a Laravel `errors` bag, each field gets its first message and this
+ * returns true. Anything else (network, 403, 500) returns false so the caller
+ * can leave the toast its mutation already raised.
+ */
+export function applyHttpErrors(
+    form: FieldMetaWriter,
+    error: unknown,
+): boolean {
+    if (!(error instanceof HttpError) || !error.errors) {
+        return false;
+    }
+
+    applyServerErrors(
+        form,
+        Object.fromEntries(
+            Object.entries(error.errors).map(([name, messages]) => [
+                name,
+                messages[0] ?? '',
+            ]),
+        ),
+    );
+
+    return true;
 }
 
 /**

@@ -15,8 +15,10 @@ use Modules\CvJobStudio\Infrastructure\Http\Controllers\StudioResolutionControll
 use Modules\CvJobStudio\Infrastructure\Http\Controllers\StudioRunController;
 
 /*
-| CvJobStudio module — API (Sanctum, mobile/external). Mirrors the web data
-| surface; Inertia pages never call these (FRONTEND §4).
+| CvJobStudio module — API (Sanctum, mobile/external). Mirrors the web
+| endpoints that answer JSON; redirect-only form actions (structure confirm,
+| metric answers, requirement dismiss) stay web-only. Inertia pages never
+| call these (FRONTEND §4).
 */
 Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('cv-studio')->name('api.cv-studio.')->group(function (): void {
     Route::get('/profiles', [StudioProfileController::class, 'index'])
@@ -30,6 +32,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('cv-studio')->name(
 
     Route::post('/postings', [StudioPostingController::class, 'store'])
         ->middleware('permission:CREATE_STUDIO_POSTINGS')->name('postings.store');
+
+    Route::post('/postings/bulk-delete', [StudioPostingController::class, 'bulkDelete'])
+        ->middleware('permission:BULK_DELETE_STUDIO_POSTINGS')->name('postings.bulk-delete');
+
+    Route::post('/postings/bulk-restore', [StudioPostingController::class, 'bulkRestore'])
+        ->middleware('permission:BULK_RESTORE_STUDIO_POSTINGS')->name('postings.bulk-restore');
 
     Route::get('/postings/export', StudioPostingExportController::class)
         ->middleware(['permission:EXPORT_STUDIO_POSTINGS', 'throttle:10,1'])->name('postings.export');
@@ -77,7 +85,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('cv-studio')->name(
         ->middleware('permission:UPDATE_STUDIO_POSTINGS')->whereUuid('uuid')->name('relations.reject');
 
     Route::post('/runs', [StudioRunController::class, 'store'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->name('runs.store');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->name('runs.store');
 
     Route::get('/runs/{uuid}', [StudioRunController::class, 'show'])
         ->middleware('permission:VIEW_STUDIO_POSTINGS')->whereUuid('uuid')->name('runs.show');
@@ -104,10 +112,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('cv-studio')->name(
         ->middleware('permission:VIEW_ANY_STUDIO_POSTINGS')->name('sources.index');
 
     Route::post('/cvs/structure', [StudioCvController::class, 'parse'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->name('cvs.parse');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->name('cvs.parse');
 
     Route::post('/cvs/audit', [StudioCvController::class, 'audit'])
-        ->middleware('permission:CREATE_STUDIO_POSTINGS')->name('cvs.audit');
+        ->middleware(['permission:CREATE_STUDIO_POSTINGS', 'throttle:cv-studio-llm'])->name('cvs.audit');
 
     Route::get('/versions/{uuid}/export', [StudioCvController::class, 'export'])
         ->middleware('permission:EXPORT_STUDIO_POSTINGS')->whereUuid('uuid')->name('versions.export');

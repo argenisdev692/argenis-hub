@@ -12,9 +12,7 @@ use Illuminate\Support\Carbon;
 use Modules\CourseScripts\Domain\Enums\VideoOutcomeStatus;
 
 /**
- * @internal
- *
- * Per-video truth of a run (FR-18). Framework batch rows are transport only.
+ * @internal Per-video truth of a run (FR-18). Framework batch rows are transport only.
  *
  * @property int $id
  * @property int $course_generation_run_id
@@ -33,6 +31,25 @@ use Modules\CourseScripts\Domain\Enums\VideoOutcomeStatus;
  * @property Carbon|null $updated_at
  * @property-read CourseGenerationRunEloquentModel $run
  * @property-read CourseVideoEloquentModel $video
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereAiReviewCalls($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereAiWriteCalls($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereAttempts($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereCourseGenerationRunId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereCourseVideoId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereFailureReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereFinishedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel wherePosition($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereResearchCalls($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereReviewIterations($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereStartedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseVideoOutcomeEloquentModel whereUpdatedAt($value)
  *
  * @mixin \Eloquent
  */

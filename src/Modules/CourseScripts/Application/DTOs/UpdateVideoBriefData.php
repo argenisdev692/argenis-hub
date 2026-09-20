@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CourseScripts\Application\DTOs;
 
 use Spatie\LaravelData\Attributes\MapInputName;
+use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Attributes\Validation\Max;
 use Spatie\LaravelData\Attributes\Validation\Min;
 use Spatie\LaravelData\Attributes\Validation\Required;
@@ -16,6 +17,7 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * sent; the stored brief becomes exactly this.
  */
 #[MapInputName(SnakeCaseMapper::class)]
+#[MapOutputName(SnakeCaseMapper::class)]
 final class UpdateVideoBriefData extends Data
 {
     /**

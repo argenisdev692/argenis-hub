@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\Commands;
 
+use Modules\CvJobStudio\Application\DTOs\StudioRunData;
+use Modules\CvJobStudio\Domain\Exceptions\RecordNotFoundException;
+use Modules\CvJobStudio\Domain\Ports\DiscoveryPipelinePort;
 use Modules\CvJobStudio\Domain\Ports\StudioProfileRepositoryPort;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Queue\HarvestStructuredSourcesJob;
 
 /**
  * Starts a discovery run (T-043, FR-31 GAP-A2): the repository refuses a
@@ -16,15 +17,19 @@ use Modules\CvJobStudio\Infrastructure\Queue\HarvestStructuredSourcesJob;
  */
 final readonly class StartRunHandler
 {
-    public function __construct(private StudioProfileRepositoryPort $profiles) {}
+    public function __construct(
+        private StudioProfileRepositoryPort $profiles,
+        private DiscoveryPipelinePort $pipeline,
+    ) {}
 
     #[\NoDiscard]
-    public function handle(string $profileUuid, int $userId): StudioRunEloquentModel
+    public function handle(string $profileUuid, int $userId): StudioRunData
     {
-        $run = $this->profiles->beginRun($profileUuid, $userId);
+        $started = $this->profiles->beginRun($profileUuid, $userId)
+            ?? throw RecordNotFoundException::of('profile', $profileUuid);
 
-        HarvestStructuredSourcesJob::dispatch($run->id, $userId);
+        $this->pipeline->start($started['id'], $userId);
 
-        return $run;
+        return $started['run'];
     }
 }

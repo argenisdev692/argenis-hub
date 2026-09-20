@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -29,9 +31,49 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int $cv_id
+ * @property int|null $structure_id
+ * @property int|null $profile_id
+ * @property int|null $posting_id
+ * @property array<array-key, mixed>|null $content
+ * @property int|null $page_count_estimate
+ * @property int|null $parent_version_id
+ * @property array<array-key, mixed>|null $bullet_provenance
+ * @property int $rules_version
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read Collection<int, StudioExportEloquentModel> $exports
+ * @property-read int|null $exports_count
+ * @property-read User|null $user
+ *
+ * @method static Builder<static>|StudioCvVersionEloquentModel newModelQuery()
+ * @method static Builder<static>|StudioCvVersionEloquentModel newQuery()
+ * @method static Builder<static>|StudioCvVersionEloquentModel onlyTrashed()
+ * @method static Builder<static>|StudioCvVersionEloquentModel ownedBy(int $userId)
+ * @method static Builder<static>|StudioCvVersionEloquentModel query()
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereBulletProvenance($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereContent($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereCvId($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereDeletedAt($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereId($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereLanguage($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel wherePageCountEstimate($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereParentVersionId($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel wherePostingId($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereProfileId($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel wherePurpose($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereRulesVersion($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereStructureId($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereUserId($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel whereUuid($value)
+ * @method static Builder<static>|StudioCvVersionEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|StudioCvVersionEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_cv_versions')]
 #[Fillable([
@@ -70,7 +112,7 @@ final class StudioCvVersionEloquentModel extends Model
      * @param  Builder<StudioCvVersionEloquentModel>  $query
      * @return Builder<StudioCvVersionEloquentModel>
      */
-    public function scopeOwnedBy($query, int $userId)
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
     }

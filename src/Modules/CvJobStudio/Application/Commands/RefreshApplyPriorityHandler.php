@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\Commands;
 
+use Carbon\CarbonImmutable;
+use Modules\CvJobStudio\Domain\Ports\StudioScoreRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\TransactionPort;
 use Modules\CvJobStudio\Domain\Services\OpportunityCalculator;
 use Modules\CvJobStudio\Domain\Services\OpportunityPolicy;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
 
 /**
  * Materialises `apply_priority = fit × opportunity` (T-131, FR-47): refreshed
@@ -19,49 +20,46 @@ final readonly class RefreshApplyPriorityHandler
 {
     public function __construct(
         private OpportunityCalculator $opportunity,
+        private StudioScoreRepositoryPort $scores,
         private TransactionPort $db,
     ) {}
 
     public function handle(int $userId, bool $neutral = false): int
     {
         return $this->db->atomic(function () use ($userId, $neutral): int {
-            $scores = StudioScoreEloquentModel::query()
-                ->where('user_id', $userId)
-                ->where(static function ($query): void {
-                    $query->whereNull('priority_computed_at')
-                        ->orWhere('priority_computed_at', '<=', now()->subHours(6));
-                })
-                ->with('posting')
-                ->lockForUpdate()
-                ->get();
+            $now = CarbonImmutable::now();
+            $candidates = $this->scores->priorityCandidates($userId, $now->subHours(6));
+            $priorities = [];
 
-            foreach ($scores as $score) {
-                $posting = $score->posting;
+            foreach ($candidates as $candidate) {
                 $policy = OpportunityPolicy::fromConfig(
-                    $posting->profile->rules['opportunity'] ?? config('cv-job-studio.opportunity'),
+                    $candidate['opportunity_rules'] ?? config('cv-job-studio.opportunity'),
                     $neutral,
                 );
 
+                $postedAt = $candidate['posted_at'] !== null ? CarbonImmutable::instance($candidate['posted_at']) : null;
+
                 $result = $this->opportunity->calculate([
-                    'channel' => $posting->discovery_channel,
-                    'age_days' => $posting->posted_at !== null ? (float) $posting->posted_at->diffInDays(now()) : null,
-                    'posted_at' => $posting->posted_at?->format('Y-m-d'),
-                    'relist_count' => $posting->sightings()->count(),
-                    'text' => (string) $posting->texts()->orderByDesc('id')->first()?->text,
-                    'title' => $posting->title,
+                    'channel' => $candidate['channel'],
+                    'age_days' => $postedAt !== null ? (float) $postedAt->diffInDays($now) : null,
+                    'posted_at' => $postedAt?->format('Y-m-d'),
+                    'relist_count' => $candidate['relist_count'],
+                    'text' => $candidate['text'],
+                    'title' => $candidate['title'],
                     'profile_min_step' => null,
                     'profile_max_step' => null,
                 ], $policy);
 
-                $score->update([
-                    'o_components' => $result['components'],
-                    'opportunity_static' => $result['factor'],
-                    'apply_priority' => (float) $score->total_score * $result['factor'],
-                    'priority_computed_at' => now(),
-                ]);
+                $priorities[$candidate['score_id']] = [
+                    'components' => $result['components'],
+                    'factor' => $result['factor'],
+                    'priority' => $candidate['total_score'] * $result['factor'],
+                ];
             }
 
-            return $scores->count();
+            $this->scores->recordPriorities($priorities);
+
+            return count($candidates);
         });
     }
 }

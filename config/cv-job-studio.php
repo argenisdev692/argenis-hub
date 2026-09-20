@@ -129,6 +129,10 @@ return [
 
     'llm_call_estimate_eur' => (float) env('CV_STUDIO_LLM_CALL_ESTIMATE_EUR', 0.02),
 
+    // Per-user cap on routes that trigger a model call (OWASP LLM10) — the
+    // `cv-studio-llm` rate limiter, applied on top of the spend budget.
+    'llm_requests_per_minute' => (int) env('CV_STUDIO_LLM_REQUESTS_PER_MINUTE', 10),
+
     // Conservative per-scrape estimate (same figure as LeadScout's
     // `costs.firecrawl_scrape_eur`); direct HTTP is free.
     'firecrawl_scrape_eur' => (float) env('CV_STUDIO_FIRECRAWL_SCRAPE_EUR', 0.01),

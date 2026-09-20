@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\DTOs;
 
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -29,21 +28,4 @@ final class StudioScoreData extends Data
         public readonly string $heuristicLabel,
         public readonly ?string $computedAt,
     ) {}
-
-    public static function fromModel(StudioScoreEloquentModel $score): self
-    {
-        return new self(
-            uuid: $score->uuid,
-            h: (float) $score->h,
-            s: (float) $score->s,
-            d: (float) $score->d,
-            rawScore: (float) $score->raw_score,
-            totalScore: (float) $score->total_score,
-            band: $score->band,
-            capReason: $score->cap_reason,
-            rulesVersion: $score->rules_version,
-            heuristicLabel: 'Heuristic estimate — not a vendor ATS score.',
-            computedAt: $score->computed_at?->toIso8601String(),
-        );
-    }
 }

@@ -32,9 +32,9 @@ final readonly class ResolvePostingSourceHandler
     public function handle(string $postingUuid, int $userId): void
     {
         $this->db->atomic(function () use ($postingUuid, $userId): void {
-            $posting = $this->postings->findByUuidForUser($postingUuid, $userId);
+            $url = $this->postings->canonicalUrlForUser($postingUuid, $userId);
 
-            if ($posting === null) {
+            if ($url === null) {
                 throw new PostingNotFoundException("Posting {$postingUuid} not found.");
             }
 
@@ -42,10 +42,12 @@ final readonly class ResolvePostingSourceHandler
             // this handler records the tier-2/4 outcome supplied by the job.
             // Ambiguity and zero-request-to-link_only invariants are asserted
             // by the tier-1 probe tests, not by re-fetching here.
-            $posting->update([
-                'apply_destination' => $this->destinations->classify($posting->canonical_url),
-                'ats_kind' => $this->destinations->atsKind($posting->canonical_url),
-            ]);
+            $this->postings->recordApplyDestination(
+                $postingUuid,
+                $userId,
+                $this->destinations->classify($url),
+                $this->destinations->atsKind($url),
+            );
         });
     }
 

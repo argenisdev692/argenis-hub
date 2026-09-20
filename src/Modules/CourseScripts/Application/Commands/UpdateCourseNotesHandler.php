@@ -21,7 +21,9 @@ final readonly class UpdateCourseNotesHandler
     {
         $course = $this->courses->findOwned($courseUuid, $userId) ?? throw new CourseNotFoundException;
 
-        $notes = $data->courseNotes === null || trim($data->courseNotes) === '' ? null : trim($data->courseNotes);
+        $notes = $data->courseNotes
+            |> (static fn (?string $notes): string => trim((string) $notes))
+            |> (static fn (string $notes): ?string => $notes === '' ? null : $notes);
 
         $this->courses->updateCourseNotes($course, $notes);
     }

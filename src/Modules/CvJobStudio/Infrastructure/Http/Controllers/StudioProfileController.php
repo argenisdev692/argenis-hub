@@ -29,7 +29,7 @@ final readonly class StudioProfileController
             min(max($request->integer('per_page', 15), 1), 100),
         );
 
-        $props = ['profiles' => StudioProfileData::collect($profiles)];
+        $props = ['profiles' => $profiles];
 
         return match ($request->expectsJson()) {
             true => response()->json($props['profiles']),

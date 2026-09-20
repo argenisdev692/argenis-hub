@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue';
 import {
-    applyServerErrors,
+    applyHttpErrors,
     FormDialog,
     TextField,
     useAppForm,
 } from '@/common/form';
-import { HttpError } from '@/lib/http';
 import { usePasteJobText } from '../composables/useReferences';
 import {
     emptyPasteJobTextValues,
@@ -43,17 +42,7 @@ const form = useAppForm({
             });
             open.value = false;
         } catch (error) {
-            if (error instanceof HttpError && error.errors) {
-                applyServerErrors(
-                    form,
-                    Object.fromEntries(
-                        Object.entries(error.errors).map(([key, messages]) => [
-                            key,
-                            messages[0] ?? '',
-                        ]),
-                    ),
-                );
-            }
+            applyHttpErrors(form, error);
         }
     },
 });

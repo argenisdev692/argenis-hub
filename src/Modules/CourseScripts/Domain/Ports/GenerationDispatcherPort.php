@@ -18,6 +18,12 @@ interface GenerationDispatcherPort
     public function dispatch(int $runId, int $courseId, array $videoIdsInOrder, bool $prepareFirst, string $writerProvider, ?string $feedbackNote = null): string;
 
     /**
+     * Queues the author's standalone "prepare" action (bible + subject
+     * research) outside any run.
+     */
+    public function prepare(int $courseId, string $writerProvider): void;
+
+    /**
      * Live progress 0–100, or null when the batch is gone.
      */
     public function progress(string $batchId): ?int;

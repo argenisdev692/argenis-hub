@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Repositories;
 
+use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Modules\CvJobStudio\Application\DTOs\StudioPostingDetailData;
 use Modules\CvJobStudio\Application\DTOs\StudioPostingFilterData;
+use Modules\CvJobStudio\Application\DTOs\StudioReferenceData;
 use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 use Modules\CvJobStudio\Domain\Services\PostingFingerprint;
+use Modules\CvJobStudio\Domain\ValueObjects\PostingScoringContext;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioGateResultEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingSourceEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingTextEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSkillRelationEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Mappers\StudioReadModelMapper;
 
 /**
  * Deletes and restores go through the model instance, never a mass query:
@@ -37,6 +42,8 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
         'status',
         'discovery_channel',
         'apply_destination',
+        'attribution',
+        'canonical_url',
         'd_disc',
         'is_expired',
         'created_at',
@@ -50,39 +57,43 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
             ->ownedBy($userId)
             ->applyFilters($filters)
             // Only the newest score per posting (the relation orders newest
-            // first) — `StudioPostingData::fromModel()` reads `scores->first()`
-            // for the Fit column.
+            // first) — the mapper reads `scores->first()` for the Fit column.
             ->with(['scores' => static fn ($scores) => $scores
                 ->select(['id', 'posting_id', 'total_score', 'band', 'cap_reason'])
                 ->limit(1)])
             ->select(self::LIST_COLUMNS)
             ->paginate($perPage)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(StudioReadModelMapper::posting(...));
     }
 
-    public function findByUuidForUser(string $uuid, int $userId): ?StudioPostingEloquentModel
+    public function detailForUser(string $uuid, int $userId): ?StudioPostingDetailData
     {
-        return StudioPostingEloquentModel::withTrashed()
+        $posting = StudioPostingEloquentModel::withTrashed()
             ->ownedBy($userId)
-            ->with(['profile:uuid,name,slug', 'requirements', 'gateResults', 'texts', 'scores'])
+            // Exactly what the detail view reads (BACKEND-PHP §4.1): full JD
+            // text never loads here, and only the newest score is needed.
+            ->with([
+                'requirements:id,uuid,posting_id,canonical_name,tag,nature',
+                'gateResults:id,posting_id,gate_code,passed,reason_code',
+                'scores' => static fn ($scores) => $scores
+                    ->select(['id', 'uuid', 'posting_id', 'h', 's', 'd', 'raw_score', 'total_score', 'band', 'cap_reason', 'rules_version', 'computed_at'])
+                    ->limit(1),
+            ])
             ->where('uuid', $uuid)
-            ->first();
+            ->first(self::LIST_COLUMNS);
+
+        return $posting !== null ? StudioReadModelMapper::postingDetail($posting) : null;
     }
 
-    public function create(array $attributes): StudioPostingEloquentModel
+    public function idForUser(string $uuid, int $userId): ?int
     {
-        return DB::transaction(
-            static fn (): StudioPostingEloquentModel => StudioPostingEloquentModel::query()->create($attributes),
-        );
-    }
+        $id = StudioPostingEloquentModel::withTrashed()
+            ->ownedBy($userId)
+            ->where('uuid', $uuid)
+            ->value('id');
 
-    public function update(StudioPostingEloquentModel $posting, array $attributes): StudioPostingEloquentModel
-    {
-        return DB::transaction(static function () use ($posting, $attributes): StudioPostingEloquentModel {
-            $posting->update($attributes);
-
-            return $posting->refresh();
-        });
+        return $id !== null ? (int) $id : null;
     }
 
     public function softDelete(string $uuid, int $userId): bool
@@ -135,9 +146,9 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
             ->count());
     }
 
-    public function ingest(array $posting, ?string $text, array $requirements, array $verdicts): StudioPostingEloquentModel
+    public function ingest(array $posting, ?string $text, array $requirements, array $verdicts): int
     {
-        return DB::transaction(static function () use ($posting, $text, $requirements, $verdicts): StudioPostingEloquentModel {
+        return DB::transaction(static function () use ($posting, $text, $requirements, $verdicts): int {
             // withTrashed: a soft-deleted posting still owns its URL (unique
             // index). Re-discovery refreshes it but never resurrects it — the
             // user deleted it on purpose; restore is an explicit action.
@@ -192,17 +203,25 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
                 );
             }
 
-            return $model->refresh();
+            return $model->id;
         });
     }
 
-    public function scoringContext(string $uuid, int $userId): ?StudioPostingEloquentModel
+    public function scoringContext(string $uuid, int $userId): ?PostingScoringContext
     {
-        return StudioPostingEloquentModel::query()
+        $posting = StudioPostingEloquentModel::query()
             ->ownedBy($userId)
-            ->with(['profile', 'requirements', 'gateResults', 'texts'])
+            ->with([
+                'profile:id,rules,rules_version',
+                'requirements:id,uuid,posting_id,canonical_name,raw_text,tag,nature',
+                'gateResults:id,posting_id,gate_code,passed',
+                // Only the newest JD text is ever read.
+                'texts' => static fn ($texts) => $texts->select(['id', 'posting_id', 'text'])->latest('id')->limit(1),
+            ])
             ->where('uuid', $uuid)
-            ->first();
+            ->first(['id', 'uuid', 'user_id', 'profile_id']);
+
+        return $posting !== null ? StudioReadModelMapper::scoringContext($posting) : null;
     }
 
     public function confirmedRelations(int $userId): array
@@ -219,12 +238,15 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
             ->all();
     }
 
+    /** Instance update, not a mass query: `status` is in the activity-log allowlist. */
     public function setStatus(string $uuid, int $userId, string $status): bool
     {
-        return (bool) StudioPostingEloquentModel::query()
+        return DB::transaction(static fn (): bool => (bool) StudioPostingEloquentModel::query()
             ->ownedBy($userId)
             ->where('uuid', $uuid)
-            ->update(['status' => $status]);
+            ->lockForUpdate()
+            ->first(self::LIST_COLUMNS)
+            ?->update(['status' => $status]));
     }
 
     public function paginateReferences(int $userId, int $perPage): LengthAwarePaginator
@@ -236,7 +258,15 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($perPage)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(static fn (StudioPostingEloquentModel $posting): StudioReferenceData => new StudioReferenceData(
+                uuid: $posting->uuid,
+                title: $posting->title,
+                employerName: $posting->employer_name,
+                canonicalUrl: $posting->canonical_url,
+                source: $posting->source,
+                createdAt: $posting->created_at?->toIso8601String(),
+            ));
     }
 
     public function deduplicate(int $userId): int
@@ -304,5 +334,154 @@ final readonly class EloquentStudioPostingRepository implements StudioPostingRep
 
             return $merged;
         });
+    }
+
+    public function canonicalUrlForUser(string $uuid, int $userId): ?string
+    {
+        $url = StudioPostingEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('uuid', $uuid)
+            ->value('canonical_url');
+
+        return $url !== null ? (string) $url : null;
+    }
+
+    public function recordApplyDestination(string $uuid, int $userId, string $destination, ?string $atsKind): void
+    {
+        DB::transaction(static fn (): bool => (bool) StudioPostingEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('uuid', $uuid)
+            ->lockForUpdate()
+            ->first(self::LIST_COLUMNS)
+            ?->update(['apply_destination' => $destination, 'ats_kind' => $atsKind]));
+    }
+
+    public function unlinkResolution(string $uuid, int $userId): bool
+    {
+        return DB::transaction(static fn (): bool => (bool) StudioPostingEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('uuid', $uuid)
+            ->lockForUpdate()
+            ->first(self::LIST_COLUMNS)
+            ?->update(['preferred_source_id' => null, 'apply_destination' => null]));
+    }
+
+    /**
+     * One set-based UPDATE on purpose: expiry is a scheduled sweep over many
+     * rows, and `is_expired` flips are recorded on the row itself
+     * (`expired_at` + `alive_check_method`) rather than per-row activity.
+     */
+    public function expireUnseenSince(int $userId, DateTimeImmutable $cutoff): int
+    {
+        return DB::transaction(static fn (): int => StudioPostingEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('is_expired', false)
+            ->where('last_seen_at', '<=', $cutoff)
+            ->update([
+                'is_expired' => true,
+                'expired_at' => now(),
+                'alive_check_method' => 'harvest_absence',
+            ]));
+    }
+
+    public function attachPastedText(string $uuid, int $userId, string $text): bool
+    {
+        return DB::transaction(static function () use ($uuid, $userId, $text): bool {
+            $posting = StudioPostingEloquentModel::query()
+                ->ownedBy($userId)
+                ->where('uuid', $uuid)
+                ->where('status', 'reference')
+                ->lockForUpdate()
+                ->first(self::LIST_COLUMNS);
+
+            if ($posting === null) {
+                return false;
+            }
+
+            StudioPostingTextEloquentModel::query()->create([
+                'user_id' => $userId,
+                'posting_id' => $posting->id,
+                'ladder_step' => 'candidate_pasted',
+                'completeness' => 'full',
+                'text' => $text,
+                'char_count' => mb_strlen($text),
+                'fetched_at' => now(),
+            ]);
+
+            return $posting->update(['status' => 'new']);
+        });
+    }
+
+    public function requirementTargets(string $uuid, int $userId): ?array
+    {
+        $postingId = StudioPostingEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('uuid', $uuid)
+            ->value('id');
+
+        if ($postingId === null) {
+            return null;
+        }
+
+        return StudioRequirementEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('posting_id', $postingId)
+            ->toBase()
+            ->get(['canonical_name', 'raw_text'])
+            ->map(static fn (object $requirement): string => trim((string) ($requirement->raw_text !== null && $requirement->raw_text !== '' ? $requirement->raw_text : $requirement->canonical_name)))
+            ->filter(static fn (string $text): bool => $text !== '')
+            ->values()
+            ->all();
+    }
+
+    public function requirementsForText(int $postingId, int $userId, string $textHash): array
+    {
+        return StudioRequirementEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('posting_id', $postingId)
+            ->where('source_text_hash', $textHash)
+            ->toBase()
+            ->get(['id', 'canonical_name', 'raw_text'])
+            ->map(static fn (object $row): array => [
+                'id' => (int) $row->id,
+                'canonical_name' => (string) $row->canonical_name,
+                'raw_text' => (string) $row->raw_text,
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function storeRequirements(int $postingId, int $userId, string $textHash, array $requirements, array $provenance): array
+    {
+        return DB::transaction(static function () use ($postingId, $userId, $textHash, $requirements, $provenance): array {
+            $stored = [];
+
+            foreach ($requirements as $requirement) {
+                $row = StudioRequirementEloquentModel::query()->create([
+                    'user_id' => $userId,
+                    'posting_id' => $postingId,
+                    'canonical_name' => $requirement['canonical_name'],
+                    'raw_text' => $requirement['raw_text'],
+                    'tag' => $requirement['tag']->value,
+                    'nature' => $requirement['nature']->value,
+                    'source_text_hash' => $textHash,
+                    'extracted_by_provider' => $provenance['provider'],
+                    'extracted_by_model' => $provenance['model'],
+                    'prompt_version' => $provenance['prompt_version'],
+                ]);
+
+                $stored[] = ['id' => $row->id, 'canonical_name' => $requirement['canonical_name'], 'raw_text' => $requirement['raw_text']];
+            }
+
+            return $stored;
+        });
+    }
+
+    public function dismissRequirement(string $uuid, int $userId): bool
+    {
+        return (bool) StudioRequirementEloquentModel::query()
+            ->ownedBy($userId)
+            ->where('uuid', $uuid)
+            ->delete();
     }
 }

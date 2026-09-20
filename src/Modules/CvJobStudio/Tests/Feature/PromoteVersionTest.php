@@ -63,7 +63,7 @@ function promoteHandler(): PromoteVersionToCvsHandler
 
     $parse = app(ParseCvStructureHandler::class, [
         'parser' => $parser,
-        'embeddings' => new StoreEmbeddingHandler($embeddings),
+        'embeddings' => app(StoreEmbeddingHandler::class, ['embeddings' => $embeddings]),
     ]);
 
     return app(PromoteVersionToCvsHandler::class, ['parse' => $parse]);
@@ -93,7 +93,7 @@ it('promotes a version to a new primary cv without touching the source row', fun
     ]);
     $version = promoteVersion($admin, $source);
 
-    $cv = promoteHandler()->handle($version->uuid, $admin->id);
+    $cv = CvEloquentModel::query()->where('uuid', promoteHandler()->handle($version->uuid, $admin->id))->sole();
 
     expect($cv->is_primary)->toBeTrue()
         ->and($cv->source)->toBe(CvSource::Studio)

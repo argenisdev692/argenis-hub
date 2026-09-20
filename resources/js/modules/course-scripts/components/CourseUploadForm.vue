@@ -135,7 +135,7 @@ function contentFiles(entries: CourseContentEntry[]): File[] {
                         >
                             <li
                                 v-for="(entry, position) in field.state.value"
-                                :key="`${entry.file.name}-${entry.file.lastModified}`"
+                                :key="`${position}-${entry.file.name}-${entry.file.lastModified}`"
                                 class="flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between"
                             >
                                 <div class="flex min-w-0 items-center gap-2">

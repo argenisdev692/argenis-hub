@@ -6,6 +6,8 @@
  * column must fail the build, not surface as a runtime `undefined`.
  */
 
+import type { PaginatedPage } from '@/common/table';
+
 /** One row of the list, as `CourseListItemData` serializes it. */
 export type CourseListItem =
     Modules.CourseScripts.Application.DTOs.CourseListItemData;
@@ -30,22 +32,28 @@ export type VideoScriptStatus =
 export type SourceDocumentKind =
     Modules.CourseScripts.Domain.Enums.SourceDocumentKind;
 
+export type CourseBible =
+    Modules.CourseScripts.Application.DTOs.CourseBibleData;
+
+export type BibleOrganisation =
+    Modules.CourseScripts.Application.DTOs.BibleOrganisationData;
+
+export type BibleCharacter =
+    Modules.CourseScripts.Application.DTOs.BibleCharacterData;
+
+/** `PUT /course-scripts/{uuid}/videos/{videoUuid}` body. */
+export type VideoBriefPayload =
+    Modules.CourseScripts.Application.DTOs.UpdateVideoBriefData;
+
+/** `PUT /course-scripts/{uuid}/course-notes` body. */
+export type CourseNotesPayload =
+    Modules.CourseScripts.Application.DTOs.UpdateCourseNotesData;
+
 /**
- * One page of `GET /course-scripts` over JSON.
- *
- * Laravel's flat `LengthAwarePaginator::toArray()` — `index()` answers
- * `response()->json($paginator)`, so the meta keys sit at the top level rather
- * than under the generated Inertia `meta` stub (same as the CVs module).
+ * One page of `GET /course-scripts` over JSON — the table kit's flat
+ * `response()->json($paginator)` shape (meta keys beside `data`).
  */
-export type CoursePage = {
-    data: CourseListItem[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    from: number | null;
-    to: number | null;
-    total: number;
-};
+export type CoursePage = PaginatedPage<CourseListItem>;
 
 /**
  * Soft-delete axis, named after `CourseFilterData::TRASHED_VALUES`.

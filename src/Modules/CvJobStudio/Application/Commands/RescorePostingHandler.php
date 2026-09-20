@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Application\Commands;
 
 use Modules\CvJobStudio\Application\DTOs\ScorePostingInputData;
+use Modules\CvJobStudio\Application\DTOs\StudioScoreData;
 use Modules\CvJobStudio\Domain\Enums\ScoreBand;
 use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
 use Modules\CvJobStudio\Domain\Ports\StudioScoreRepositoryPort;
 use Modules\CvJobStudio\Domain\Services\BandClassifier;
 use Modules\CvJobStudio\Domain\Services\CapLadder;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
 
 /**
  * Recompute from stored rows with zero provider calls (T-066, FR-37, SC-2):
@@ -31,7 +31,7 @@ final readonly class RescorePostingHandler
     ) {}
 
     #[\NoDiscard]
-    public function handle(string $postingUuid, ScorePostingInputData $input, int $userId): StudioScoreEloquentModel
+    public function handle(string $postingUuid, ScorePostingInputData $input, int $userId): StudioScoreData
     {
         return $this->score->handle($postingUuid, $input, $userId);
     }
@@ -42,13 +42,10 @@ final readonly class RescorePostingHandler
     #[\NoDiscard]
     public function recomputeFromStored(string $postingUuid, int $userId, array $rules): array
     {
-        $score = $this->scores->latestForPosting($postingUuid, $userId);
+        $score = $this->scores->latestComponents($postingUuid, $userId)
+            ?? throw new PostingNotFoundException("Score for posting {$postingUuid} not found.");
 
-        if ($score === null) {
-            throw new PostingNotFoundException("Score for posting {$postingUuid} not found.");
-        }
-
-        $components = $score->h_components ?? [];
+        $components = $score['h_components'];
         $denominator = (float) ($components['denominator'] ?? 0.0);
         $numerator = 0.0;
 
@@ -58,14 +55,14 @@ final readonly class RescorePostingHandler
 
         $h = $denominator > 0.0 ? 100.0 * $numerator / $denominator : 50.0;
         $blend = $rules['blend'];
-        $raw = (float) $blend['h'] * $h + (float) $blend['s'] * (float) $score->s + (float) $blend['d'] * (float) $score->d;
+        $raw = (float) $blend['h'] * $h + (float) $blend['s'] * $score['s'] + (float) $blend['d'] * $score['d'];
 
         $capped = $this->caps->apply($raw, $components['cap_context'] ?? [], $rules['caps']);
 
         return [
             'total' => $capped['total'],
             'band' => $this->bands->classify($capped['total'], $rules['bands']),
-            'matches_stored' => (float) $score->total_score === $capped['total'],
+            'matches_stored' => $score['total_score'] === $capped['total'],
         ];
     }
 }

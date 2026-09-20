@@ -873,18 +873,18 @@ declare namespace Modules {
                     withReview: boolean | null;
                 };
                 export type UpdateCourseNotesData = {
-                    courseNotes: string | null;
+                    course_notes: string | null;
                 };
                 export type UpdateVideoBriefData = {
                     title: string;
                     topic: string | null;
-                    declaredDurationMinutes: number | null;
+                    declared_duration_minutes: number | null;
                     objective: string | null;
-                    learningAreas: (string | null)[] | null;
-                    audienceObjectives: (string | null)[] | null;
-                    mandatoryContent: (string | null)[] | null;
-                    errorsToAvoid: (string | null)[] | null;
-                    expectedResult: string | null;
+                    learning_areas: (string | null)[] | null;
+                    audience_objectives: (string | null)[] | null;
+                    mandatory_content: (string | null)[] | null;
+                    errors_to_avoid: (string | null)[] | null;
+                    expected_result: string | null;
                     notes: string | null;
                 };
                 export type VideoBriefData = {
@@ -980,8 +980,8 @@ declare namespace Modules {
         namespace Application {
             namespace DTOs {
                 export type AuditCvData = {
-                    readonly cvUuid: string | null;
-                    readonly targetJobTitle: string | null;
+                    readonly cv_uuid: string | null;
+                    readonly target_job_title: string | null;
                 };
                 export type ExportCvVersionData = {
                     readonly format: string;
@@ -1034,10 +1034,10 @@ declare namespace Modules {
                     };
                 };
                 export type SelectCvData = {
-                    readonly cvUuid: string | null;
+                    readonly cv_uuid: string | null;
                 };
                 export type StartRunData = {
-                    readonly profileUuid: string;
+                    readonly profile_uuid: string;
                 };
                 export type StudioApplicationData = {
                     readonly uuid: string;
@@ -1058,10 +1058,51 @@ declare namespace Modules {
                     readonly limit_micros: number;
                     readonly spent_micros: number;
                 };
+                export type StudioCvAuditData = {
+                    readonly uuid: string;
+                    readonly verdict: string | null;
+                    readonly verdict_reasons: string[] | null;
+                    readonly target_job_title: string | null;
+                    readonly strengths: string[] | null;
+                    readonly improvements: string[] | null;
+                    readonly keyword_gaps: string[] | null;
+                    readonly xyz_gaps: string[] | null;
+                    readonly created_at: string | null;
+                };
                 export type StudioCvVersionData = {
                     readonly uuid: string;
                     readonly purpose: string;
                     readonly language: string;
+                    readonly created_at: string | null;
+                };
+                export type StudioInsightReportData = {
+                    readonly uuid: string;
+                    readonly jds_analyzed: number;
+                    readonly sample_note: string | null;
+                    readonly requirements: {
+                        total: number;
+                        requirements: {
+                            name: string;
+                            count: number;
+                            covered: boolean;
+                            percentage: number | null;
+                        }[];
+                    };
+                    readonly reach_table: {
+                        cap: string;
+                        capped_count: number;
+                        unlocked_count: number;
+                    }[];
+                    readonly recommendations: string[];
+                    readonly outcome_correlation: {
+                        suppressed: boolean;
+                        rows: {
+                            requirement: string;
+                            answered_rate: number | null;
+                            silent_rate: number | null;
+                        }[];
+                    };
+                    readonly rules_version: number;
                     readonly created_at: string | null;
                 };
                 export type StudioOwnRateData = {
@@ -1089,6 +1130,21 @@ declare namespace Modules {
                     readonly canonical_url: string | null;
                     readonly created_at: string | null;
                     readonly deleted_at: string | null;
+                };
+                export type StudioPostingDetailData = {
+                    readonly posting: Modules.CvJobStudio.Application.DTOs.StudioPostingData;
+                    readonly requirements: {
+                        uuid: string;
+                        canonical_name: string;
+                        tag: string;
+                        nature: string;
+                    }[];
+                    readonly gates: {
+                        gate_code: string;
+                        passed: boolean;
+                        reason_code: string | null;
+                    }[];
+                    readonly score: Modules.CvJobStudio.Application.DTOs.StudioScoreData | null;
                 };
                 export type StudioPostingFilterData = {
                     remote_scope: string | null;

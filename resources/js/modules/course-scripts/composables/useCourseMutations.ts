@@ -145,9 +145,7 @@ export function useCourseMutations() {
         }
 
         for (const snapshot of context.snapshots) {
-            if (
-                queryCache.getQueryData(snapshot.key) === snapshot.optimistic
-            ) {
+            if (queryCache.getQueryData(snapshot.key) === snapshot.optimistic) {
                 queryCache.setQueryData(snapshot.key, snapshot.previous);
             }
         }
@@ -159,9 +157,7 @@ export function useCourseMutations() {
             typeof context === 'object' &&
             context !== null &&
             'snapshots' in context &&
-            Array.isArray(
-                (context as { snapshots: unknown }).snapshots,
-            )
+            Array.isArray((context as { snapshots: unknown }).snapshots)
         ) {
             return context as MutationContext;
         }

@@ -6,9 +6,9 @@ namespace Modules\CvJobStudio\Application\Queries;
 
 use Modules\CvJobStudio\Domain\Ports\EmbeddingPort;
 use Modules\CvJobStudio\Domain\Ports\SimilaritySearchPort;
+use Modules\CvJobStudio\Domain\Ports\StudioCvRepositoryPort;
+use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 use Modules\CvJobStudio\Domain\Services\EvidenceRetriever;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvBulletEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
 use Throwable;
 
 /**
@@ -21,6 +21,8 @@ use Throwable;
 final readonly class RetrieveEvidenceHandler
 {
     public function __construct(
+        private StudioPostingRepositoryPort $postings,
+        private StudioCvRepositoryPort $cvs,
         private EmbeddingPort $embeddings,
         private SimilaritySearchPort $search,
         private EvidenceRetriever $retriever,
@@ -34,30 +36,15 @@ final readonly class RetrieveEvidenceHandler
     {
         $empty = ['evidence' => [], 'proposals' => []];
 
-        $posting = StudioPostingEloquentModel::query()
-            ->where('user_id', $userId)
-            ->where('uuid', $postingUuid)
-            ->first();
+        $targets = $this->postings->requirementTargets($postingUuid, $userId);
 
-        if ($posting === null) {
+        if ($targets === null) {
             return $empty;
         }
 
-        $targets = $posting->requirements()
-            ->where('user_id', $userId)
-            ->get(['canonical_name', 'raw_text'])
-            ->map(static fn ($requirement): string => trim((string) ($requirement->raw_text !== '' ? $requirement->raw_text : $requirement->canonical_name)))
-            ->filter(static fn (string $text): bool => $text !== '')
-            ->values()
-            ->all();
+        $bullets = $this->cvs->bulletsForStructure($structureId, $userId);
 
-        $bullets = StudioCvBulletEloquentModel::query()
-            ->where('user_id', $userId)
-            ->where('structure_id', $structureId)
-            ->get(['id', 'text'])
-            ->keyBy('id');
-
-        if ($targets === [] || $bullets->isEmpty()) {
+        if ($targets === [] || $bullets === []) {
             return $empty;
         }
 
@@ -69,8 +56,8 @@ final readonly class RetrieveEvidenceHandler
 
         $matrix = [];
 
-        foreach ($bullets as $bulletId => $bullet) {
-            $matrix[$bulletId] = ['bullet_id' => (int) $bulletId, 'text' => (string) $bullet->text, 'similarities' => []];
+        foreach ($bullets as $bulletId => $text) {
+            $matrix[$bulletId] = ['bullet_id' => $bulletId, 'text' => $text, 'similarities' => []];
         }
 
         foreach ($targets as $index => $target) {

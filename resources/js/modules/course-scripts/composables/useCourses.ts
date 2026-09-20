@@ -5,15 +5,12 @@ import type { PaginationMeta } from '@/common/table';
 import { httpJson } from '@/lib/http';
 import { index } from '@/routes/course-scripts';
 import { buildCourseListQueryParams } from '../helpers/buildCourseQueryParams';
-import { COURSE_STATUSES_ORDERED } from '../helpers/coursePresentation';
-import type {
-    CourseFilters,
-    CoursePage,
-    CourseSortField,
-    CourseStatus,
-    CourseTrashedFilter,
-} from '../types';
-import { COURSE_SORT_FIELDS, COURSE_TRASHED_VALUES } from '../types';
+import {
+    isCourseSortField,
+    isCourseStatus,
+    isCourseTrashedFilter,
+} from '../helpers/courseFilterGuards';
+import type { CourseFilters, CoursePage } from '../types';
 
 /** The key every course mutation invalidates. */
 export const COURSES_KEY = ['course-scripts'];
@@ -36,27 +33,6 @@ export function defaultCourseFilters(): CourseFilters {
         page: 1,
         per_page: 15,
     };
-}
-
-function isCourseStatus(value: unknown): value is CourseStatus {
-    return (
-        typeof value === 'string' &&
-        (COURSE_STATUSES_ORDERED as readonly string[]).includes(value)
-    );
-}
-
-function isSortField(value: unknown): value is CourseSortField {
-    return (
-        typeof value === 'string' &&
-        (COURSE_SORT_FIELDS as readonly string[]).includes(value)
-    );
-}
-
-function isTrashedFilter(value: unknown): value is CourseTrashedFilter {
-    return (
-        typeof value === 'string' &&
-        (COURSE_TRASHED_VALUES as readonly string[]).includes(value)
-    );
 }
 
 function toPage(value: unknown, fallback: number): number {
@@ -92,7 +68,7 @@ function restoreFilters(): CourseFilters {
         status: isCourseStatus(remembered.status)
             ? remembered.status
             : defaults.status,
-        trashed: isTrashedFilter(remembered.trashed)
+        trashed: isCourseTrashedFilter(remembered.trashed)
             ? remembered.trashed
             : defaults.trashed,
         date_from:
@@ -103,7 +79,7 @@ function restoreFilters(): CourseFilters {
             typeof remembered.date_to === 'string'
                 ? remembered.date_to
                 : defaults.date_to,
-        sort_field: isSortField(remembered.sort_field)
+        sort_field: isCourseSortField(remembered.sort_field)
             ? remembered.sort_field
             : defaults.sort_field,
         sort_order:

@@ -45,13 +45,7 @@ final readonly class CourseController
 
     public function create(): InertiaResponse
     {
-        return Inertia::render('course-scripts/Create', [
-            'limits' => [
-                'max_kb' => (int) config('course-scripts.uploads.max_kb'),
-                'max_content_files' => (int) config('course-scripts.uploads.max_content_files'),
-                'allowed_extensions' => (array) config('course-scripts.uploads.allowed_extensions'),
-            ],
-        ]);
+        return Inertia::render('course-scripts/Create', ['limits' => $this->uploadLimits()]);
     }
 
     public function store(StoreCourseRequest $request, StoreCourseHandler $store, GetCourseHandler $get): RedirectResponse|JsonResponse
@@ -73,8 +67,24 @@ final readonly class CourseController
 
         return match ($request->expectsJson()) {
             true => response()->json(['data' => $course]),
-            false => Inertia::render('course-scripts/Show', ['course' => $course]),
+            false => Inertia::render('course-scripts/Show', ['course' => $course, 'limits' => $this->uploadLimits()]),
         };
+    }
+
+    /**
+     * The upload limits both the create form and the course page's
+     * attach-document form validate against — read from the same config
+     * `StoreCourseRequest::fileRules()` enforces, so the client never drifts.
+     *
+     * @return array{max_kb: int, max_content_files: int, allowed_extensions: list<string>}
+     */
+    private function uploadLimits(): array
+    {
+        return [
+            'max_kb' => (int) config('course-scripts.uploads.max_kb'),
+            'max_content_files' => (int) config('course-scripts.uploads.max_content_files'),
+            'allowed_extensions' => array_values((array) config('course-scripts.uploads.allowed_extensions')),
+        ];
     }
 
     public function destroy(Request $request, string $uuid, DeleteCourseHandler $delete): RedirectResponse|JsonResponse

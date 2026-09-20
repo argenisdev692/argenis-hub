@@ -13,9 +13,7 @@ use Modules\CourseScripts\Domain\Enums\SourceDocumentKind;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 
 /**
- * @internal
- *
- * An uploaded file attached to a course: the index, a content file with the
+ * @internal An uploaded file attached to a course: the index, a content file with the
  * author's notes, or a style reference (FR-1b, FR-8, FR-10).
  *
  * @property int $id
@@ -33,6 +31,23 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property Carbon|null $updated_at
  * @property-read CourseEloquentModel $course
  * @property-read CourseVideoEloquentModel|null $video
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereChecksum($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereCourseId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereCourseVideoId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereExtractedText($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereKind($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereMime($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereOriginalName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel wherePath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereSizeBytes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseSourceDocumentEloquentModel whereUuid($value)
  *
  * @mixin \Eloquent
  */

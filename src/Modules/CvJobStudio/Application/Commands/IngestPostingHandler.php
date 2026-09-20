@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Application\Commands;
 
 use Modules\CvJobStudio\Application\DTOs\IngestPostingData;
-use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
+use Modules\CvJobStudio\Domain\Exceptions\RecordNotFoundException;
 use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\StudioProfileRepositoryPort;
 use Modules\CvJobStudio\Domain\Services\GateEvaluator;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
 use Modules\CvJobStudio\Domain\Services\RemoteScopeClassifier;
 use Modules\CvJobStudio\Domain\ValueObjects\CanonicalPostingUrl;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
 
 /**
  * Manual intake: canonicalise → classify scope → gate (G1/G2/G3, pass AND
@@ -30,14 +29,12 @@ final readonly class IngestPostingHandler
         private StudioPostingRepositoryPort $postings,
     ) {}
 
+    /** @return int the posting id (new or re-sighted) */
     #[\NoDiscard]
-    public function handle(IngestPostingData $data, int $userId): StudioPostingEloquentModel
+    public function handle(IngestPostingData $data, int $userId): int
     {
-        $profile = $this->profiles->findByUuidForUser($data->profileUuid, $userId);
-
-        if ($profile === null) {
-            throw new PostingNotFoundException("Profile {$data->profileUuid} not found.");
-        }
+        $profile = $this->profiles->snapshotForUser($data->profileUuid, $userId)
+            ?? throw RecordNotFoundException::of('profile', $data->profileUuid);
 
         $canonical = new CanonicalPostingUrl($data->canonicalUrl);
         $scope = $this->scopes->classify($data->title, $data->locationText);
@@ -51,9 +48,9 @@ final readonly class IngestPostingHandler
                 'url' => $canonical->value,
             ],
             [
-                'accepted_remote_scopes' => $profile->accepted_remote_scopes ?? [],
-                'stack_must' => $profile->stack_must ?? [],
-                'stack_reject' => $profile->stack_reject ?? [],
+                'accepted_remote_scopes' => $profile->acceptedRemoteScopes,
+                'stack_must' => $profile->stackMust,
+                'stack_reject' => $profile->stackReject,
             ],
         );
 

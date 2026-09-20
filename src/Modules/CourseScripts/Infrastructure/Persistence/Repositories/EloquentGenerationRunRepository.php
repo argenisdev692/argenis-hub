@@ -25,14 +25,22 @@ final readonly class EloquentGenerationRunRepository implements GenerationRunRep
                     'videos_total' => count($videoIdsInOrder),
                 ]);
 
-                foreach (array_values($videoIdsInOrder) as $position => $videoId) {
-                    CourseVideoOutcomeEloquentModel::query()->create([
+                // One INSERT for the whole run (BACKEND-PHP §4.1 #10): outcomes carry
+                // no uuid, events or activity log, so nothing is lost by skipping hydration.
+                $now = now();
+
+                CourseVideoOutcomeEloquentModel::query()->insert(array_map(
+                    static fn (int $position, int $videoId): array => [
                         'course_generation_run_id' => $run->id,
                         'course_video_id' => $videoId,
                         'position' => $position,
-                        'status' => VideoOutcomeStatus::Pending,
-                    ]);
-                }
+                        'status' => VideoOutcomeStatus::Pending->value,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ],
+                    array_keys(array_values($videoIdsInOrder)),
+                    array_values($videoIdsInOrder),
+                ));
 
                 return $run;
             });

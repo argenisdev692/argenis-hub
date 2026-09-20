@@ -37,13 +37,32 @@ final readonly class QueuedGenerationDispatcher implements GenerationDispatcherP
                 app(FinalizeGenerationRunHandler::class)->handle($runId);
             });
 
-        $connection = $this->config->get('course-scripts.runs.connection');
+        $connection = $this->connection();
 
-        if (is_string($connection) && $connection !== '') {
+        if ($connection !== null) {
             $batch->onConnection($connection);
         }
 
-        return $batch->onQueue((string) $this->config->get('course-scripts.runs.queue', 'default'))->dispatch()->id;
+        return $batch->onQueue($this->queue())->dispatch()->id;
+    }
+
+    public function prepare(int $courseId, string $writerProvider): void
+    {
+        PrepareCourseJob::dispatch($courseId, $writerProvider)
+            ->onConnection($this->connection())
+            ->onQueue($this->queue());
+    }
+
+    private function connection(): ?string
+    {
+        $connection = $this->config->get('course-scripts.runs.connection');
+
+        return is_string($connection) && $connection !== '' ? $connection : null;
+    }
+
+    private function queue(): string
+    {
+        return (string) $this->config->get('course-scripts.runs.queue', 'default');
     }
 
     public function progress(string $batchId): ?int

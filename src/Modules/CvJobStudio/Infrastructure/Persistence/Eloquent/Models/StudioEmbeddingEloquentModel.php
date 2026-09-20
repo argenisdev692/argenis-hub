@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -28,9 +29,34 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property string $content_hash
+ * @property array<array-key, mixed> $embedding
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereContentHash($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereDims($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereEmbedding($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereModel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereOwnerId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereOwnerType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioEmbeddingEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_embeddings')]
 #[Fillable(['uuid', 'user_id', 'owner_type', 'owner_id', 'model', 'dims', 'content_hash', 'embedding'])]

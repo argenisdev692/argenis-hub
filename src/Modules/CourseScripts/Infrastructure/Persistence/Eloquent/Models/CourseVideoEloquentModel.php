@@ -17,9 +17,7 @@ use Modules\CourseScripts\Domain\Enums\VideoScriptStatus;
 use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\GeneratesPublicUuid;
 
 /**
- * @internal
- *
- * The durable video brief — the input every generation reads (FR-6).
+ * @internal The durable video brief — the input every generation reads (FR-6).
  *
  * @property int $id
  * @property string $uuid
@@ -48,6 +46,37 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property-read Collection<int, CourseSourceDocumentEloquentModel> $assignedDocuments
  * @property-read Collection<int, CourseVideoOutcomeEloquentModel> $outcomes
  * @property-read Collection<int, CourseGenerationRunEloquentModel> $currentRuns
+ * @property-read int|null $assigned_documents_count
+ * @property-read int|null $current_runs_count
+ * @property-read int|null $outcomes_count
+ * @property-read Collection<int, CourseResearchFindingEloquentModel> $researchFindings
+ * @property-read int|null $research_findings_count
+ * @property-read int|null $script_versions_count
+ *
+ * @method static Builder<static>|CourseVideoEloquentModel filterByStatusAndBlock(?\Modules\CourseScripts\Domain\Enums\VideoScriptStatus $status, ?int $blockId)
+ * @method static Builder<static>|CourseVideoEloquentModel newModelQuery()
+ * @method static Builder<static>|CourseVideoEloquentModel newQuery()
+ * @method static Builder<static>|CourseVideoEloquentModel query()
+ * @method static Builder<static>|CourseVideoEloquentModel whereAudienceObjectives($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereBriefRevision($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereCourseBlockId($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereCourseId($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereDeclaredDurationMinutes($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereErrorsToAvoid($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereExpectedResult($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereId($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereLearningAreas($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereMandatoryContent($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereNeedsReview($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereNotes($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereNumber($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereObjective($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereScriptStatus($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereTitle($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereTopic($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|CourseVideoEloquentModel whereUuid($value)
  *
  * @mixin \Eloquent
  */

@@ -41,6 +41,11 @@ final class RunRequestRejectedException extends RuntimeException
         return new self('estimate_exceeds_ceiling', 'This run would exceed the configured call ceiling. Choose a smaller scope.', ['estimate' => $estimate]);
     }
 
+    public static function unknownProvider(): self
+    {
+        return new self('unknown_provider', 'Unknown writer provider.');
+    }
+
     public static function notRetryable(): self
     {
         return new self('nothing_to_retry', 'This run has no failed videos to retry, or it is still running.');

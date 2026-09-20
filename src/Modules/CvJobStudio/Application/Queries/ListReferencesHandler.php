@@ -20,14 +20,6 @@ final readonly class ListReferencesHandler
     #[\NoDiscard]
     public function handle(int $userId, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->postings->paginateReferences($userId, $perPage)
-            ->through(static fn (object $posting): StudioReferenceData => new StudioReferenceData(
-                uuid: $posting->uuid,
-                title: $posting->title,
-                employerName: $posting->employer_name,
-                canonicalUrl: $posting->canonical_url,
-                source: $posting->source,
-                createdAt: $posting->created_at?->toIso8601String(),
-            ));
+        return $this->postings->paginateReferences($userId, min(max($perPage, 1), 100));
     }
 }

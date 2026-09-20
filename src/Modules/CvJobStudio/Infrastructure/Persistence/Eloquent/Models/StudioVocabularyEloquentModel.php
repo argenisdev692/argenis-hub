@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -19,9 +20,41 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int $profile_id
+ * @property string $term
+ * @property string $kind
+ * @property string|null $language
+ * @property numeric $weight
+ * @property CarbonImmutable|null $last_seen_at
+ * @property CarbonImmutable|null $refreshed_at
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read StudioProfileEloquentModel|null $profile
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereKind($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereLanguage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereLastSeenAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereProfileId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereRefreshedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereTerm($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel whereWeight($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioVocabularyEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_vocabulary')]
 #[Fillable(['uuid', 'user_id', 'profile_id', 'term', 'kind', 'language', 'weight', 'last_seen_at', 'refreshed_at'])]

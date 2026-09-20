@@ -160,6 +160,15 @@ describe('export', function (): void {
         expect($body)->toContain($completed->uuid)->and($body)->not->toContain($ready->uuid);
     });
 
+    it('neutralises spreadsheet formulas in author-controlled cells', function (): void {
+        CourseEloquentModel::factory()->create(['user_id' => $this->author->id, 'title' => '=HYPERLINK("http://evil.test","x")']);
+
+        $body = courseExportBody($this->actingAs($this->author)->get(route('course-scripts.export'))->baseResponse);
+
+        expect($body)->toContain("'=HYPERLINK")
+            ->and($body)->not->toMatch('/(^|,)"?=HYPERLINK/m');
+    });
+
     it('renders XLSX and PDF downloads', function (): void {
         CourseEloquentModel::factory()->create(['user_id' => $this->author->id]);
 

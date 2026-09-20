@@ -27,7 +27,7 @@ final readonly class StudioRunController
     {
         $run = $get->handle($uuid, $this->ownerId($request));
 
-        $props = ['run' => $run];
+        $props = ['uuid' => $uuid, 'run' => $run];
 
         return match ($request->expectsJson()) {
             true => response()->json($props),
@@ -39,7 +39,7 @@ final readonly class StudioRunController
     {
         $report = $get->handle($uuid, $this->ownerId($request));
 
-        $props = ['report' => $report];
+        $props = ['uuid' => $uuid, 'report' => $report];
 
         return match ($request->expectsJson()) {
             true => response()->json($props),

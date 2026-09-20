@@ -9,8 +9,6 @@ use Illuminate\Support\Str;
 use Modules\CvJobStudio\Application\Commands\StoreEmbeddingHandler;
 use Modules\CvJobStudio\Application\Queries\RetrieveEvidenceHandler;
 use Modules\CvJobStudio\Domain\Ports\EmbeddingPort;
-use Modules\CvJobStudio\Domain\Ports\SimilaritySearchPort;
-use Modules\CvJobStudio\Domain\Services\EvidenceRetriever;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvBulletEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvEntryEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvStructureEloquentModel;
@@ -52,7 +50,7 @@ function evidenceEmbeddingFake(): EmbeddingPort
 it('retrieves top bullets per requirement from stored vectors (T-123)', function (): void {
     $admin = evidenceAdmin();
     $fake = evidenceEmbeddingFake();
-    $store = new StoreEmbeddingHandler($fake);
+    $store = app(StoreEmbeddingHandler::class, ['embeddings' => $fake]);
 
     $cv = CvEloquentModel::factory()->create(['user_id' => $admin->id, 'raw_text' => 'Laravel developer']);
 
@@ -120,7 +118,7 @@ it('retrieves top bullets per requirement from stored vectors (T-123)', function
         'prompt_version' => 'v2',
     ]);
 
-    $result = (new RetrieveEvidenceHandler($fake, app(SimilaritySearchPort::class), new EvidenceRetriever))
+    $result = app(RetrieveEvidenceHandler::class, ['embeddings' => $fake])
         ->handle($posting->uuid, $structure->id, $admin->id);
 
     expect($result['evidence'])->toHaveKey('Laravel')
@@ -165,7 +163,7 @@ it('returns empty evidence when nothing is embedded yet', function (): void {
         'status' => 'new',
     ]);
 
-    $result = (new RetrieveEvidenceHandler(evidenceEmbeddingFake(), app(SimilaritySearchPort::class), new EvidenceRetriever))
+    $result = app(RetrieveEvidenceHandler::class, ['embeddings' => evidenceEmbeddingFake()])
         ->handle($posting->uuid, $structure->id, $admin->id);
 
     expect($result)->toBe(['evidence' => [], 'proposals' => []]);

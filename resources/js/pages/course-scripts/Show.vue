@@ -2,7 +2,10 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeftIcon,
+    BookOpenIcon,
     DownloadIcon,
+    NotebookPenIcon,
+    PencilIcon,
     Trash2Icon,
     TriangleAlertIcon,
 } from '@lucide/vue';
@@ -10,7 +13,7 @@ import { useQueryCache } from '@pinia/colada';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
-import { ConfirmModal } from '@/common/table';
+import { ConfirmModal, DataTableRowAction } from '@/common/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,18 +23,23 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import CourseBibleSheet from '@/modules/course-scripts/components/CourseBibleSheet.vue';
+import CourseDocumentsCard from '@/modules/course-scripts/components/CourseDocumentsCard.vue';
+import CourseNotesSheet from '@/modules/course-scripts/components/CourseNotesSheet.vue';
 import CourseStatusBadge from '@/modules/course-scripts/components/CourseStatusBadge.vue';
+import VideoBriefSheet from '@/modules/course-scripts/components/VideoBriefSheet.vue';
+import VideoScriptStatusBadge from '@/modules/course-scripts/components/VideoScriptStatusBadge.vue';
 import { COURSES_KEY } from '@/modules/course-scripts/composables/useCourses';
 import {
-    DOCUMENT_ICON,
-    documentKindLabel,
-    formatBytes,
     formatDate,
     generatedProgress,
     pluralize,
-    scriptStatusPresentation,
 } from '@/modules/course-scripts/helpers/coursePresentation';
-import type { CourseDetail, CourseVideo } from '@/modules/course-scripts/types';
+import type {
+    CourseDetail,
+    CourseUploadLimits,
+    CourseVideo,
+} from '@/modules/course-scripts/types';
 import { bundle, destroy, index } from '@/routes/course-scripts';
 
 defineOptions({
@@ -40,9 +48,21 @@ defineOptions({
     },
 });
 
-const { course } = defineProps<{
+const { course, limits } = defineProps<{
     course: CourseDetail;
+    limits: CourseUploadLimits;
 }>();
+
+// ---- in-place editing (US-3): each sheet re-seeds from the prop on open ----
+const notesOpen = ref(false);
+const bibleOpen = ref(false);
+const briefOpen = ref(false);
+const editingVideo = ref<CourseVideo | null>(null);
+
+function editBrief(video: CourseVideo): void {
+    editingVideo.value = video;
+    briefOpen.value = true;
+}
 
 const queryCache = useQueryCache();
 
@@ -143,7 +163,18 @@ function confirmDelete(): Promise<void> {
 
             <CourseStatusBadge :status="course.status" />
 
-            <div class="flex w-full gap-2 sm:w-auto">
+            <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+                <PermissionGuard permission="UPDATE_COURSE_SCRIPTS">
+                    <Button variant="outline" @click="notesOpen = true">
+                        <NotebookPenIcon class="size-4" aria-hidden="true" />
+                        Notes
+                    </Button>
+                    <Button variant="outline" @click="bibleOpen = true">
+                        <BookOpenIcon class="size-4" aria-hidden="true" />
+                        Bible
+                    </Button>
+                </PermissionGuard>
+
                 <PermissionGuard permission="DOWNLOAD_COURSE_SCRIPTS">
                     <Button
                         v-if="generatedCount > 0"
@@ -257,67 +288,37 @@ function confirmDelete(): Promise<void> {
                             <Badge v-if="video.needs_review" variant="outline">
                                 Needs review
                             </Badge>
-                            <Badge
-                                :variant="
-                                    scriptStatusPresentation(
-                                        video.script_status,
-                                    ).variant
-                                "
-                            >
-                                <component
-                                    :is="
-                                        scriptStatusPresentation(
-                                            video.script_status,
-                                        ).icon
-                                    "
-                                    class="size-3"
-                                    aria-hidden="true"
+                            <VideoScriptStatusBadge
+                                :status="video.script_status"
+                            />
+                            <PermissionGuard permission="UPDATE_COURSE_SCRIPTS">
+                                <DataTableRowAction
+                                    :icon="PencilIcon"
+                                    :label="`Edit brief of video ${video.number}, ${video.title}`"
+                                    tooltip="Edit brief"
+                                    @click="editBrief(video)"
                                 />
-                                {{
-                                    scriptStatusPresentation(
-                                        video.script_status,
-                                    ).label
-                                }}
-                            </Badge>
+                            </PermissionGuard>
                         </li>
                     </ul>
                 </section>
             </CardContent>
         </Card>
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Source documents</CardTitle>
-            </CardHeader>
-
-            <CardContent>
-                <ul
-                    class="divide-y divide-border rounded-lg border border-border"
-                >
-                    <li
-                        v-for="document in course.documents"
-                        :key="document.uuid"
-                        class="flex items-center gap-3 px-3 py-2"
-                    >
-                        <component
-                            :is="DOCUMENT_ICON"
-                            class="size-4 shrink-0 text-muted-foreground"
-                            aria-hidden="true"
-                        />
-                        <span class="min-w-0 flex-1 truncate text-sm">
-                            {{ document.original_name }}
-                        </span>
-                        <span class="text-xs text-muted-foreground">
-                            {{ formatBytes(document.size_bytes) }}
-                        </span>
-                        <Badge variant="secondary">
-                            {{ documentKindLabel(document.kind) }}
-                        </Badge>
-                    </li>
-                </ul>
-            </CardContent>
-        </Card>
+        <CourseDocumentsCard :course="course" :limits="limits" />
     </div>
+
+    <CourseNotesSheet v-model:open="notesOpen" :course="course" />
+    <CourseBibleSheet
+        v-model:open="bibleOpen"
+        :course-uuid="course.uuid"
+        :bible="course.bible"
+    />
+    <VideoBriefSheet
+        v-model:open="briefOpen"
+        :course-uuid="course.uuid"
+        :video="editingVideo"
+    />
 
     <ConfirmModal
         v-model:open="confirmDeleteOpen"

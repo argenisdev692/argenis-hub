@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,9 +27,75 @@ use Illuminate\Support\Str;
  * @property Carbon|null $updated_at
  * @property-read User $user
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property string $kind
+ * @property string|null $endpoint
+ * @property string $auth_kind
+ * @property int $tier
+ * @property string $layer
+ * @property bool $attribution_required
+ * @property string|null $attribution_text
+ * @property bool $redistribution_allowed
+ * @property int $publish_delay_hours
+ * @property int $rate_limit_per_minute
+ * @property string $status
+ * @property CarbonImmutable|null $health_checked_at
+ * @property array<array-key, mixed>|null $gate_tags
+ * @property int $resolution_priority
+ * @property bool $supplies_full_text
+ * @property bool $company_scoped
+ * @property string|null $ats_kind
+ * @property string|null $endpoint_template
+ * @property bool $supports_since_filter
+ * @property bool $requires_api_key
+ * @property int $resolution_tier
+ * @property string|null $usage_restriction
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read Collection<int, StudioSourceCompanyEloquentModel> $companies
+ * @property-read int|null $companies_count
+ * @property-read Collection<int, StudioSourceLocaleEloquentModel> $locales
+ * @property-read int|null $locales_count
+ *
+ * @method static Builder<static>|StudioSourceEloquentModel newModelQuery()
+ * @method static Builder<static>|StudioSourceEloquentModel newQuery()
+ * @method static Builder<static>|StudioSourceEloquentModel onlyTrashed()
+ * @method static Builder<static>|StudioSourceEloquentModel ownedBy(int $userId)
+ * @method static Builder<static>|StudioSourceEloquentModel query()
+ * @method static Builder<static>|StudioSourceEloquentModel whereAccessMode($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereAtsKind($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereAttributionRequired($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereAttributionText($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereAuthKind($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereCompanyScoped($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereDeletedAt($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereEndpoint($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereEndpointTemplate($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereGateTags($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereHealthCheckedAt($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereId($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereKind($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereLayer($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereName($value)
+ * @method static Builder<static>|StudioSourceEloquentModel wherePublishDelayHours($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereRateLimitPerMinute($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereRedistributionAllowed($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereRequiresApiKey($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereResolutionPriority($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereResolutionTier($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereStatus($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereSuppliesFullText($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereSupportsSinceFilter($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereTier($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereUsageRestriction($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereUserId($value)
+ * @method static Builder<static>|StudioSourceEloquentModel whereUuid($value)
+ * @method static Builder<static>|StudioSourceEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|StudioSourceEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_sources')]
 #[Fillable([
@@ -75,7 +143,7 @@ final class StudioSourceEloquentModel extends Model
      * @param  Builder<StudioSourceEloquentModel>  $query
      * @return Builder<StudioSourceEloquentModel>
      */
-    public function scopeOwnedBy($query, int $userId)
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
     }

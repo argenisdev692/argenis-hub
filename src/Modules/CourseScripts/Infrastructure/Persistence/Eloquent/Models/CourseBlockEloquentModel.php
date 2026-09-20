@@ -28,6 +28,21 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Concerns\Generates
  * @property-read CourseEloquentModel $course
  * @property-read Collection<int, CourseVideoEloquentModel> $videos
  * @property-read Collection<int, CourseGenerationRunEloquentModel> $scopedRuns
+ * @property-read int|null $videos_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel dRuns()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereCourseId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereDeclaredDurationMinutes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel wherePosition($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CourseBlockEloquentModel whereUuid($value)
  *
  * @mixin \Eloquent
  */

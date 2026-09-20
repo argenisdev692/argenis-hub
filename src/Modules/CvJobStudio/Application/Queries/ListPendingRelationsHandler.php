@@ -6,30 +6,17 @@ namespace Modules\CvJobStudio\Application\Queries;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Modules\CvJobStudio\Application\DTOs\StudioSkillRelationData;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSkillRelationEloquentModel;
+use Modules\CvJobStudio\Domain\Ports\StudioSkillRelationRepositoryPort;
 
 /** Proposed skill relations awaiting the owner's confirm/reject (relations inbox). */
 final readonly class ListPendingRelationsHandler
 {
+    public function __construct(private StudioSkillRelationRepositoryPort $relations) {}
+
     /** @return LengthAwarePaginator<int, StudioSkillRelationData> */
     #[\NoDiscard]
     public function handle(int $userId, int $perPage = 15): LengthAwarePaginator
     {
-        return StudioSkillRelationEloquentModel::query()
-            ->where('user_id', $userId)
-            ->where('status', 'pending')
-            ->select(['id', 'uuid', 'from_skill', 'to_skill', 'kind', 'origin', 'status', 'created_at'])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->paginate($perPage)
-            ->through(static fn (StudioSkillRelationEloquentModel $relation): StudioSkillRelationData => new StudioSkillRelationData(
-                uuid: $relation->uuid,
-                fromSkill: $relation->from_skill,
-                toSkill: $relation->to_skill,
-                kind: $relation->kind,
-                origin: $relation->origin,
-                status: $relation->status,
-                createdAt: $relation->created_at?->toIso8601String(),
-            ));
+        return $this->relations->paginatePending($userId, min(max($perPage, 1), 100));
     }
 }

@@ -6,11 +6,10 @@ namespace Modules\CvJobStudio\Application\Commands;
 
 use Illuminate\Support\Str;
 use Modules\CvJobStudio\Domain\Exceptions\VersionNotFoundException;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersionEloquentModel;
+use Modules\CvJobStudio\Domain\Ports\StudioCvRepositoryPort;
 use Modules\Cvs\Domain\Enums\CvNiche;
 use Modules\Cvs\Domain\Enums\CvSource;
 use Modules\Cvs\Domain\Ports\CvRepositoryPort;
-use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 use Shared\Domain\Ports\StoragePort;
 use Throwable;
 
@@ -30,23 +29,20 @@ final readonly class PromoteVersionToCvsHandler
 {
     public function __construct(
         private CvRepositoryPort $cvs,
+        private StudioCvRepositoryPort $studioCvs,
         private StoragePort $storage,
         private ParseCvStructureHandler $parse,
     ) {}
 
+    /** @return string the new canonical CV's uuid */
     #[\NoDiscard]
-    public function handle(string $versionUuid, int $userId, ?string $title = null): CvEloquentModel
+    public function handle(string $versionUuid, int $userId, ?string $title = null): string
     {
-        $version = StudioCvVersionEloquentModel::query()
-            ->ownedBy($userId)
-            ->where('uuid', $versionUuid)
-            ->first();
+        $version = $this->studioCvs->versionForUser($versionUuid, $userId)
+            ?? throw new VersionNotFoundException("Version {$versionUuid} not found.");
 
-        if ($version === null) {
-            throw new VersionNotFoundException("Version {$versionUuid} not found.");
-        }
-
-        $markdown = self::renderMarkdown((array) $version->content);
+        $markdown = self::renderMarkdown($version->content);
+        $source = $version->cvId > 0 ? $this->cvs->findByIdForUser($version->cvId, $userId) : null;
         $resolvedTitle = $title !== null && trim($title) !== ''
             ? trim($title) |> (fn (string $t): string => mb_substr($t, 0, 255))
             : "Studio {$version->purpose} ({$version->language})";
@@ -54,9 +50,9 @@ final readonly class PromoteVersionToCvsHandler
         $this->storage->put($filePath, $markdown, 'private');
 
         try {
-            $cv = $this->cvs->create([
+            $cvUuid = $this->cvs->create([
                 'title' => $resolvedTitle,
-                'niche' => $this->nicheFor($version, $userId),
+                'niche' => $source?->niche ?? $this->cvs->findPrimaryForUser($userId)?->niche ?? CvNiche::Fullstack,
                 'is_primary' => true,
                 'file_path' => $filePath,
                 'file_type' => 'md',
@@ -64,10 +60,10 @@ final readonly class PromoteVersionToCvsHandler
                 'raw_text' => $markdown,
                 'source' => CvSource::Studio,
                 'language' => $version->language,
-                'parent_cv_uuid' => $this->parentUuid($version, $userId),
+                'parent_cv_uuid' => $source?->uuid,
                 'studio_version_uuid' => $version->uuid,
                 'user_id' => $userId,
-            ]);
+            ])->uuid;
         } catch (Throwable $exception) {
             $this->storage->delete($filePath);
 
@@ -75,38 +71,12 @@ final readonly class PromoteVersionToCvsHandler
         }
 
         try {
-            (void) $this->parse->handle($cv->uuid, $userId);
+            (void) $this->parse->handle($cvUuid, $userId);
         } catch (Throwable) {
             // Promotion stands; re-parse from the Studio UI when the parser recovers.
         }
 
-        return $cv;
-    }
-
-    private function nicheFor(StudioCvVersionEloquentModel $version, int $userId): CvNiche
-    {
-        if ((int) $version->cv_id > 0) {
-            $source = $this->cvs->findByIdForUser((int) $version->cv_id, $userId);
-
-            if ($source instanceof CvEloquentModel) {
-                return $source->niche;
-            }
-        }
-
-        $primary = $this->cvs->findPrimaryForUser($userId);
-
-        return $primary instanceof CvEloquentModel ? $primary->niche : CvNiche::Fullstack;
-    }
-
-    private function parentUuid(StudioCvVersionEloquentModel $version, int $userId): ?string
-    {
-        if ((int) $version->cv_id <= 0) {
-            return null;
-        }
-
-        $source = $this->cvs->findByIdForUser((int) $version->cv_id, $userId);
-
-        return $source instanceof CvEloquentModel ? $source->uuid : null;
+        return $cvUuid;
     }
 
     /**

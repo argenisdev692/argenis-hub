@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -19,9 +20,43 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int $run_id
+ * @property int $jds_analyzed
+ * @property string|null $sample_note
+ * @property array<array-key, mixed>|null $requirements
+ * @property array<array-key, mixed>|null $reach_table
+ * @property array<array-key, mixed>|null $recommendations
+ * @property array<array-key, mixed>|null $outcome_correlation
+ * @property int $rules_version
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read StudioRunEloquentModel|null $run
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereJdsAnalyzed($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereOutcomeCorrelation($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereReachTable($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereRecommendations($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereRequirements($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereRulesVersion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereRunId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereSampleNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioInsightReportEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_insight_reports')]
 #[Fillable(['uuid', 'user_id', 'run_id', 'jds_analyzed', 'sample_note', 'requirements', 'reach_table', 'recommendations', 'outcome_correlation', 'rules_version'])]

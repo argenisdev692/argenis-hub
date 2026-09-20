@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\DTOs;
 
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
 use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapOutputName;
 use Spatie\LaravelData\Data;
@@ -36,22 +35,6 @@ final class StudioProfileData extends Data
         public readonly ?int $yearsBaseline = null,
         public readonly ?string $uuid = null,
     ) {}
-
-    public static function fromModel(StudioProfileEloquentModel $profile): self
-    {
-        return new self(
-            name: $profile->name,
-            slug: $profile->slug,
-            baseCity: $profile->base_city,
-            baseCountry: $profile->base_country,
-            acceptedRemoteScopes: $profile->accepted_remote_scopes,
-            stackMust: $profile->stack_must,
-            stackReject: $profile->stack_reject,
-            geographyDeny: $profile->geography_deny,
-            yearsBaseline: $profile->years_baseline,
-            uuid: $profile->uuid,
-        );
-    }
 
     /** @return array<string, mixed> */
     public static function rules(): array

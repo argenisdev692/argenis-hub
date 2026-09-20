@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -23,9 +24,38 @@ use Illuminate\Support\Str;
  * @property-read StudioScoreEloquentModel $score
  * @property-read StudioRequirementEloquentModel $requirement
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property numeric $credit_base
+ * @property numeric $context_factor
+ * @property numeric $position_factor
+ * @property numeric $credit_final
+ * @property string|null $evidence_text
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereContextFactor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereCreditBase($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereCreditFinal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereEvidenceText($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel wherePositionFactor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereRequirementId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereScoreId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioSkillMatchEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_skill_matches')]
 #[Fillable([

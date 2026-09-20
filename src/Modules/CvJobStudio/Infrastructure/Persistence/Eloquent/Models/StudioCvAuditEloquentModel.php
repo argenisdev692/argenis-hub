@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,9 +24,56 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int $cv_id
+ * @property int|null $structure_id
+ * @property int|null $profile_id
+ * @property array<array-key, mixed>|null $verdict_reasons
+ * @property array<array-key, mixed>|null $structural_checks
+ * @property numeric|null $parse_recovery_ratio
+ * @property array<array-key, mixed>|null $content_issues
+ * @property string|null $target_job_title
+ * @property array<array-key, mixed>|null $strengths
+ * @property array<array-key, mixed>|null $improvements
+ * @property array<array-key, mixed>|null $keyword_gaps
+ * @property array<array-key, mixed>|null $xyz_gaps
+ * @property int $rules_version
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read Collection<int, StudioMetricAnswerEloquentModel> $metricAnswers
+ * @property-read int|null $metric_answers_count
+ * @property-read User|null $user
+ *
+ * @method static Builder<static>|StudioCvAuditEloquentModel newModelQuery()
+ * @method static Builder<static>|StudioCvAuditEloquentModel newQuery()
+ * @method static Builder<static>|StudioCvAuditEloquentModel onlyTrashed()
+ * @method static Builder<static>|StudioCvAuditEloquentModel ownedBy(int $userId)
+ * @method static Builder<static>|StudioCvAuditEloquentModel query()
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereContentIssues($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereCvId($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereDeletedAt($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereId($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereImprovements($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereKeywordGaps($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereParseRecoveryRatio($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereProfileId($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereRulesVersion($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereStrengths($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereStructuralChecks($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereStructureId($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereTargetJobTitle($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereUserId($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereUuid($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereVerdict($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereVerdictReasons($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel whereXyzGaps($value)
+ * @method static Builder<static>|StudioCvAuditEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|StudioCvAuditEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_cv_audits')]
 #[Fillable([
@@ -64,7 +113,7 @@ final class StudioCvAuditEloquentModel extends Model
      * @param  Builder<StudioCvAuditEloquentModel>  $query
      * @return Builder<StudioCvAuditEloquentModel>
      */
-    public function scopeOwnedBy($query, int $userId)
+    public function scopeOwnedBy(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
     }

@@ -12,6 +12,8 @@ use Modules\CourseScripts\Infrastructure\Persistence\Eloquent\Models\CourseResea
 use Modules\CourseScripts\Tests\Support\CourseScriptTestUsers;
 use Modules\CourseScripts\Tests\Support\FakeBibleProposer;
 use Modules\CourseScripts\Tests\Support\FakeResearch;
+use Modules\CourseScripts\Tests\Support\RecordingDispatcher;
+use Spatie\Activitylog\Models\Activity;
 
 uses(RefreshDatabase::class);
 
@@ -131,4 +133,26 @@ it('queues preparation with an allowed provider only', function (): void {
 
     expect($this->course->fresh()->bible)->not->toBeNull()
         ->and($this->bible->calls[0]['provider'])->toBe('gemini');
+});
+
+it('queues preparation through the dispatcher port and audits it', function (): void {
+    $dispatcher = RecordingDispatcher::install();
+
+    $this->actingAs($this->author)
+        ->postJson(route('course-scripts.prepare', $this->course->uuid), ['writer_provider' => 'anthropic'])
+        ->assertStatus(202);
+
+    expect($dispatcher->prepared)->toBe([['course_id' => $this->course->id, 'provider' => 'anthropic']])
+        ->and(Activity::query()->where(fn ($query) => $query->where('event', 'course_scripts.preparation_requested')->orWhere('description', 'course_scripts.preparation_requested'))->exists())->toBeTrue();
+});
+
+it('never queues preparation for another author\'s course', function (): void {
+    $dispatcher = RecordingDispatcher::install();
+    $theirs = CourseEloquentModel::factory()->create();
+
+    $this->actingAs($this->author)
+        ->postJson(route('course-scripts.prepare', $theirs->uuid), ['writer_provider' => 'anthropic'])
+        ->assertNotFound();
+
+    expect($dispatcher->prepared)->toBe([]);
 });

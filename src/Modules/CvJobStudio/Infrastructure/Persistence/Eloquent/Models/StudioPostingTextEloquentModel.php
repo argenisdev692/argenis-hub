@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -22,9 +23,38 @@ use Illuminate\Support\Str;
  * @property Carbon|null $updated_at
  * @property-read StudioPostingEloquentModel $posting
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property string $completeness
+ * @property string $text
+ * @property int $char_count
+ * @property string|null $resolution_note
+ * @property CarbonImmutable|null $fetched_at
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereCharCount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereCompleteness($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereFetchedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereLadderStep($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel wherePostingId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereResolutionNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereText($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioPostingTextEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_posting_texts')]
 #[Fillable([

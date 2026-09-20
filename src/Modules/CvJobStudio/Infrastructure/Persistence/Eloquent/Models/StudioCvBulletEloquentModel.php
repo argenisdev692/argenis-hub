@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -19,9 +20,41 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int $structure_id
+ * @property int $entry_id
+ * @property int $ordinal
+ * @property string $text
+ * @property bool $has_metric
+ * @property bool $xyz_complete
+ * @property int $char_count
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read StudioCvEntryEloquentModel|null $entry
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereCharCount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereEntryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereHasMetric($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereOrdinal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereStructureId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereText($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel whereXyzComplete($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioCvBulletEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_cv_bullets')]
 #[Fillable(['uuid', 'user_id', 'structure_id', 'entry_id', 'ordinal', 'text', 'has_metric', 'xyz_complete', 'char_count'])]

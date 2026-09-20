@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Application\Commands;
 
 use Modules\CvJobStudio\Application\DTOs\ScorePostingInputData;
+use Modules\CvJobStudio\Application\DTOs\StudioScoreData;
 use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
 use Modules\CvJobStudio\Domain\Ports\StudioPostingRepositoryPort;
 use Modules\CvJobStudio\Domain\Ports\StudioScoreRepositoryPort;
 use Modules\CvJobStudio\Domain\Services\MatchScoreCalculator;
 use Modules\CvJobStudio\Domain\Services\RequirementWeigher;
 use Modules\CvJobStudio\Domain\Services\SkillRelationSet;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioScoreEloquentModel;
+use Modules\CvJobStudio\Domain\ValueObjects\PostingScoringContext;
 
 /**
  * Scores a gate-passed posting from stored rows only — no provider call, so
@@ -29,21 +29,24 @@ final readonly class ScorePostingHandler
     ) {}
 
     #[\NoDiscard]
-    public function handle(string $postingUuid, ScorePostingInputData $input, int $userId): StudioScoreEloquentModel
+    public function handle(string $postingUuid, ScorePostingInputData $input, int $userId): StudioScoreData
     {
-        $posting = $this->postings->scoringContext($postingUuid, $userId);
+        $posting = $this->postings->scoringContext($postingUuid, $userId)
+            ?? throw new PostingNotFoundException("Posting {$postingUuid} not found.");
 
-        if ($posting === null) {
-            throw new PostingNotFoundException("Posting {$postingUuid} not found.");
+        $failedGate = $posting->failedGate();
+
+        if ($failedGate !== null) {
+            throw new PostingNotFoundException("Posting {$posting->uuid} failed gate {$failedGate} and cannot be scored.");
         }
 
-        $this->guardGatesPassed($posting);
+        $rules = $posting->rules ?? config('cv-job-studio');
 
-        $rules = $posting->profile->rules ?? config('cv-job-studio');
         $weighed = $this->weigher->weigh(
-            $posting->requirements->map(
-                static fn ($requirement): array => ['tag' => $requirement->tag->value, 'nature' => $requirement->nature->value],
-            )->all(),
+            array_map(
+                static fn (array $requirement): array => ['tag' => $requirement['tag']->value, 'nature' => $requirement['nature']->value],
+                $posting->requirements,
+            ),
             $rules['tag_weights'],
             (float) $rules['soft_cap_ratio'],
         );
@@ -57,21 +60,10 @@ final readonly class ScorePostingHandler
             $input->similarities,
             $input->signals,
             $input->capContext,
-            [...$rules, 'rules_version' => $posting->profile->rules_version],
+            [...$rules, 'rules_version' => $posting->rulesVersion],
         );
 
-        $textHash = hash('sha256', (string) $posting->texts->sortByDesc('id')->first()?->text);
-
-        return $this->scores->store($postingUuid, $userId, $breakdown, $textHash);
-    }
-
-    private function guardGatesPassed(StudioPostingEloquentModel $posting): void
-    {
-        foreach ($posting->gateResults as $result) {
-            if (! $result->passed) {
-                throw new PostingNotFoundException("Posting {$posting->uuid} failed gate {$result->gate_code} and cannot be scored.");
-            }
-        }
+        return $this->scores->store($postingUuid, $userId, $breakdown, hash('sha256', $posting->latestText));
     }
 
     /** @return array<string, true> */
@@ -87,10 +79,10 @@ final readonly class ScorePostingHandler
     }
 
     /**
-     * @param  array{weights: array<int, float>}  $weighed
-     * @return array<int, array{requirement: string, weight: float, evidence: string, position_ratio: float}>
+     * @param  array<int, float>  $weights
+     * @return list<array{requirement: string, weight: float, evidence: string, position_ratio: float}>
      */
-    private function buildSkillRows(StudioPostingEloquentModel $posting, ScorePostingInputData $input, array $weights): array
+    private function buildSkillRows(PostingScoringContext $posting, ScorePostingInputData $input, array $weights): array
     {
         $byName = [];
 
@@ -99,19 +91,16 @@ final readonly class ScorePostingHandler
         }
 
         $rows = [];
-        $index = 0;
 
-        foreach ($posting->requirements as $requirement) {
-            $known = $byName[SkillRelationSet::normalize($requirement->canonical_name)] ?? null;
+        foreach ($posting->requirements as $index => $requirement) {
+            $known = $byName[SkillRelationSet::normalize($requirement['canonical_name'])] ?? null;
 
             $rows[] = [
-                'requirement' => $requirement->canonical_name,
+                'requirement' => $requirement['canonical_name'],
                 'weight' => $weights[$index] ?? 0.0,
                 'evidence' => $known['evidence'] ?? 'list_only',
                 'position_ratio' => (float) ($known['position_ratio'] ?? 1.0),
             ];
-
-            $index++;
         }
 
         return $rows;

@@ -19,9 +19,7 @@ use Modules\CvJobStudio\Application\Commands\ScorePostingHandler;
 use Modules\CvJobStudio\Application\Commands\TailorCvHandler;
 use Modules\CvJobStudio\Application\DTOs\IngestPostingData;
 use Modules\CvJobStudio\Application\DTOs\ScorePostingInputData;
-use Modules\CvJobStudio\Application\DTOs\StudioPostingData;
 use Modules\CvJobStudio\Application\DTOs\StudioPostingFilterData;
-use Modules\CvJobStudio\Application\DTOs\StudioScoreData;
 use Modules\CvJobStudio\Application\DTOs\TailorCvData;
 use Modules\CvJobStudio\Application\Queries\GetPostingHandler;
 use Modules\CvJobStudio\Application\Queries\ListPostingsHandler;
@@ -51,42 +49,16 @@ final readonly class StudioPostingController
             min(max($request->integer('per_page', 15), 1), 100),
         );
 
-        return response()->json(StudioPostingData::collect($postings));
+        return response()->json($postings);
     }
 
     public function show(Request $request, string $uuid, GetPostingHandler $get): InertiaResponse|JsonResponse
     {
-        $posting = $get->handle($uuid, $this->ownerId($request));
-        $data = StudioPostingData::fromModel($posting);
-
-        // Match-report props: the stored breakdown is sufficient to explain
-        // the total without recomputing (SC-2). Scores eager-load matches +
-        // requirement names through the repository's scoring context.
-        $latest = $posting->relationLoaded('scores') ? $posting->scores->first() : null;
-
-        $props = [
-            'posting' => $data,
-            'requirements' => $posting->relationLoaded('requirements')
-                ? $posting->requirements->map(static fn ($requirement): array => [
-                    'uuid' => $requirement->uuid,
-                    'canonical_name' => $requirement->canonical_name,
-                    'tag' => $requirement->tag->value,
-                    'nature' => $requirement->nature->value,
-                ])->all()
-                : [],
-            'gates' => $posting->relationLoaded('gateResults')
-                ? $posting->gateResults->map(static fn ($gate): array => [
-                    'gate_code' => $gate->gate_code,
-                    'passed' => $gate->passed,
-                    'reason_code' => $gate->reason_code,
-                ])->all()
-                : [],
-            'score' => $latest !== null ? StudioScoreData::fromModel($latest) : null,
-        ];
+        $detail = $get->handle($uuid, $this->ownerId($request));
 
         return match ($request->expectsJson()) {
-            true => response()->json($props),
-            false => Inertia::render('cv-studio/Postings/Show', $props),
+            true => response()->json($detail),
+            false => Inertia::render('cv-studio/Postings/Show', $detail->toArray()),
         };
     }
 
@@ -101,14 +73,14 @@ final readonly class StudioPostingController
     {
         $result = $score->handle($uuid, $input, $this->ownerId($request));
 
-        return response()->json(['data' => StudioScoreData::fromModel($result)], 201);
+        return response()->json(['data' => $result], 201);
     }
 
     public function rescore(Request $request, string $uuid, ScorePostingInputData $input, ScorePostingHandler $score): JsonResponse
     {
         $result = $score->handle($uuid, $input, $this->ownerId($request));
 
-        return response()->json(['data' => StudioScoreData::fromModel($result)], 200);
+        return response()->json(['data' => $result], 200);
     }
 
     /**

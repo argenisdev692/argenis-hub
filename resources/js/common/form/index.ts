@@ -28,6 +28,7 @@ export { default as PhoneInput } from './PhoneInput.vue';
  */
 export { default as SignaturePadInput } from './SignaturePadInput.vue';
 export { default as SortableList } from './SortableList.vue';
+export { default as TagsField } from './TagsField.vue';
 export { default as TextField } from './TextField.vue';
 
 export type { DialogForm } from './FormDialog.vue';
@@ -35,6 +36,7 @@ export type { FilterSelectOption, FilterSelectValue } from './FilterSelect.vue';
 export type { PlaceSuggestion, ResolvedAddress } from './useGooglePlaces';
 export { useGooglePlaces } from './useGooglePlaces';
 export {
+    applyHttpErrors,
     applyServerErrors,
     fieldErrorMessages,
     isFieldInvalid,

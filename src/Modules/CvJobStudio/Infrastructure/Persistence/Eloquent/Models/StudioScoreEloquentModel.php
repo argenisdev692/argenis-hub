@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Collection;
@@ -28,9 +29,62 @@ use Illuminate\Support\Str;
  * @property-read StudioPostingEloquentModel $posting
  * @property-read Collection<int, StudioSkillMatchEloquentModel> $skillMatches
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property numeric $h
+ * @property numeric $s
+ * @property numeric $d
+ * @property array<array-key, mixed>|null $h_components
+ * @property array<array-key, mixed>|null $s_components
+ * @property array<array-key, mixed>|null $d_components
+ * @property array<array-key, mixed>|null $caps_applied
+ * @property string|null $cap_reason
+ * @property string|null $embedding_model
+ * @property int|null $embedding_dims
+ * @property array<array-key, mixed>|null $o_components
+ * @property numeric|null $opportunity_static
+ * @property numeric|null $apply_priority
+ * @property CarbonImmutable|null $priority_computed_at
+ * @property CarbonImmutable|null $computed_at
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read int|null $skill_matches_count
+ * @property-read User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereApplyPriority($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereBand($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereCapReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereCapsApplied($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereComputedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereD($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereDComponents($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereEmbeddingDims($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereEmbeddingModel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereH($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereHComponents($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereOComponents($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereOpportunityStatic($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel wherePostingId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel wherePriorityComputedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereRawScore($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereRulesVersion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereS($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereSComponents($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereTotalScore($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|StudioScoreEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_scores')]
 #[Fillable([

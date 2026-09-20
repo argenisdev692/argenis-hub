@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,9 +26,34 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @mixin \Eloquent
- *
  * @internal
+ *
+ * @property int $user_id
+ * @property int $posting_id
+ * @property int $source_id
+ * @property CarbonImmutable|null $observed_at
+ * @property CarbonImmutable|null $deleted_at
+ * @property-read StudioPostingEloquentModel|null $posting
+ * @property-read StudioSourceEloquentModel|null $source
+ * @property-read User|null $user
+ *
+ * @method static Builder<static>|StudioPostingSightingEloquentModel newModelQuery()
+ * @method static Builder<static>|StudioPostingSightingEloquentModel newQuery()
+ * @method static Builder<static>|StudioPostingSightingEloquentModel onlyTrashed()
+ * @method static Builder<static>|StudioPostingSightingEloquentModel query()
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereCreatedAt($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereDeletedAt($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereId($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereObservedAt($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel wherePostingId($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereSourceId($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereUpdatedAt($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereUserId($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel whereUuid($value)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|StudioPostingSightingEloquentModel withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 #[Table('studio_posting_sightings')]
 #[Fillable(['uuid', 'user_id', 'posting_id', 'source_id', 'observed_at'])]

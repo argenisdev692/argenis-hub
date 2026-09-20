@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\CvJobStudio\Application\Queries;
 
-use Modules\CvJobStudio\Domain\Exceptions\PostingNotFoundException;
-use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioInsightReportEloquentModel;
+use Modules\CvJobStudio\Application\DTOs\StudioInsightReportData;
+use Modules\CvJobStudio\Domain\Exceptions\RecordNotFoundException;
+use Modules\CvJobStudio\Domain\Ports\StudioRunRepositoryPort;
 
+/** The newest insight report of one of the owner's runs. */
 final readonly class GetInsightReportHandler
 {
+    public function __construct(private StudioRunRepositoryPort $runs) {}
+
     #[\NoDiscard]
-    public function handle(string $runUuid, int $userId): StudioInsightReportEloquentModel
+    public function handle(string $runUuid, int $userId): StudioInsightReportData
     {
-        return StudioInsightReportEloquentModel::query()
-            ->where('user_id', $userId)
-            ->whereHas('run', static fn ($q) => $q->ownedBy($userId)->where('uuid', $runUuid))
-            ->orderByDesc('id')
-            ->first()
-            ?? throw new PostingNotFoundException("Report for run {$runUuid} not found.");
+        return $this->runs->latestInsightReport($runUuid, $userId)
+            ?? throw RecordNotFoundException::of('report for run', $runUuid);
     }
 }
