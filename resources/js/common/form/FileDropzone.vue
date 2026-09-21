@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const {
+    id,
     accept = [],
     maxSizeMb = 10,
     multiple = false,
@@ -13,6 +14,13 @@ const {
     hint,
     class: className,
 } = defineProps<{
+    /**
+     * Passed through from `AppField`'s `control` (`v-bind="control"`). When
+     * present it MUST win over the internal fallback — otherwise the outer
+     * `<label for="…">` and this component's inner `<label for="…">` point at
+     * different ids and clicking the dropzone opens nothing.
+     */
+    id?: string;
     /**
      * What the picker offers and the client re-checks — the same vocabulary the
      * HTML `accept` attribute uses, so either a MIME type
@@ -35,7 +43,9 @@ const {
 
 const model = defineModel<File[]>({ default: () => [] });
 
-const inputId = useId();
+const fallbackId = useId();
+/** The single id both the inner label and the input share. */
+const resolvedId = computed(() => id ?? fallbackId);
 const isDragging = ref(false);
 const rejections = ref<string[]>([]);
 
@@ -136,7 +146,7 @@ function remove(index: number): void {
 <template>
     <div :class="cn('flex flex-col gap-3', className)">
         <label
-            :for="inputId"
+            :for="resolvedId"
             :class="
                 cn(
                     'flex cursor-pointer flex-col items-center gap-2 rounded-md border border-dashed border-input px-4 py-8 text-center transition-colors hover:bg-accent/50',
@@ -163,13 +173,13 @@ function remove(index: number): void {
                 }}
             </span>
             <input
-                :id="inputId"
+                v-bind="$attrs"
+                :id="resolvedId"
                 type="file"
                 class="sr-only"
                 :accept="acceptAttr"
                 :multiple="multiple"
                 :disabled="disabled"
-                v-bind="$attrs"
                 @change="onPick"
             />
         </label>

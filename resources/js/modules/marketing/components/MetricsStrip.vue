@@ -22,7 +22,7 @@ const metricCascade = staggerContainer(MOTION_STAGGER);
 </script>
 
 <template>
-    <LandingSection id="results" class="py-14 lg:py-20">
+    <LandingSection id="results" class="py-12 lg:py-16">
         <m.dl
             class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-glass-border bg-glass-border lg:grid-cols-4"
             :variants="metricCascade"
