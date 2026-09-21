@@ -81,7 +81,7 @@ it('retrieves top bullets per requirement from stored vectors (T-123)', function
         'char_count' => 42,
     ]);
 
-    (void) $store->handle('cv_bullet', $bullet->id, $bullet->text, $admin->id);
+    $store->handle('cv_bullet', $bullet->id, $bullet->text, $admin->id);
 
     $profile = StudioProfileEloquentModel::query()->create([
         'user_id' => $admin->id,

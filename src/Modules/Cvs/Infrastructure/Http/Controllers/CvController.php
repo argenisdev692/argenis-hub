@@ -67,28 +67,28 @@ final readonly class CvController
 
     public function store(Request $request, UploadCvData $data, CreateCvHandler $create): RedirectResponse
     {
-        (void) $create->handle($data, $this->ownerId($request));
+        $cv = $create->handle($data, $this->ownerId($request));
 
         return back()->with('success', __('CV uploaded.'));
     }
 
     public function update(Request $request, string $uuid, UploadCvData $data, GetCvHandler $get, UpdateCvHandler $update): RedirectResponse
     {
-        (void) $update->handle($get->handle($uuid, $this->ownerId($request)), $data);
+        $cv = $update->handle($get->handle($uuid, $this->ownerId($request)), $data);
 
         return back()->with('success', __('CV updated.'));
     }
 
     public function destroy(Request $request, string $uuid, DeleteCvHandler $delete): RedirectResponse
     {
-        (void) $delete->handle($uuid, $this->ownerId($request));
+        $delete->handle($uuid, $this->ownerId($request));
 
         return back()->with('success', __('CV suspended.'));
     }
 
     public function restore(Request $request, string $uuid, RestoreCvHandler $restore): RedirectResponse
     {
-        (void) $restore->handle($uuid, $this->ownerId($request));
+        $restore->handle($uuid, $this->ownerId($request));
 
         return back()->with('success', __('CV restored.'));
     }

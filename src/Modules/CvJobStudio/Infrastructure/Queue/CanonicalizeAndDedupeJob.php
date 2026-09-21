@@ -36,7 +36,7 @@ final class CanonicalizeAndDedupeJob implements ShouldQueue
             return;
         }
 
-        (void) $dedupe->handle($this->userId);
+        $dedupedCount = $dedupe->handle($this->userId);
 
         DiscoverViaSearchJob::dispatch($run->id, $this->userId);
     }

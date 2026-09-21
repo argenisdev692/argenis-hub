@@ -64,7 +64,7 @@ final readonly class StudioPostingController
 
     public function store(Request $request, IngestPostingData $data, IngestPostingHandler $ingest): RedirectResponse
     {
-        (void) $ingest->handle($data, $this->ownerId($request));
+        $ingestedCount = $ingest->handle($data, $this->ownerId($request));
 
         return back()->with('success', __('Posting ingested.'));
     }
@@ -106,14 +106,14 @@ final readonly class StudioPostingController
 
     public function destroy(Request $request, string $uuid, DeletePostingHandler $delete): RedirectResponse|JsonResponse
     {
-        (void) $delete->handle($uuid, $this->ownerId($request));
+        $delete->handle($uuid, $this->ownerId($request));
 
         return $this->respond($request, __('Posting suspended.'));
     }
 
     public function restore(Request $request, string $uuid, RestorePostingHandler $restore): RedirectResponse|JsonResponse
     {
-        (void) $restore->handle($uuid, $this->ownerId($request));
+        $restore->handle($uuid, $this->ownerId($request));
 
         return $this->respond($request, __('Posting restored.'));
     }
@@ -134,7 +134,7 @@ final readonly class StudioPostingController
 
     public function dismissRequirement(Request $request, string $uuid, string $ruuid, DismissRequirementHandler $handler): RedirectResponse
     {
-        (void) $handler->handle($ruuid, $this->ownerId($request));
+        $handler->handle($ruuid, $this->ownerId($request));
 
         return back()->with('success', __('Requirement dismissed — rescore to apply.'));
     }

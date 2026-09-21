@@ -63,7 +63,7 @@ final readonly class CampaignController
         GetCampaignHandler $get,
         UpdateCampaignHandler $update,
     ): RedirectResponse {
-        (void) $update->handle($get->handle($uuid), $data);
+        $update->handle($get->handle($uuid), $data);
 
         return redirect()->route('campaigns.index')->with('success', __('Campaign updated.'));
     }
@@ -76,21 +76,21 @@ final readonly class CampaignController
         // before this validation.
         $request->validate(['confirm' => ['required', 'accepted']]);
 
-        (void) $publish->handle($get->handle($uuid), $request->user());
+        $publish->handle($get->handle($uuid), $request->user());
 
         return back()->with('success', __('Campaign marked as published.'));
     }
 
     public function destroy(string $uuid, DeleteCampaignHandler $delete): RedirectResponse
     {
-        (void) $delete->handle($uuid);
+        $delete->handle($uuid);
 
         return back()->with('success', __('Campaign suspended.'));
     }
 
     public function restore(string $uuid, RestoreCampaignHandler $restore): RedirectResponse
     {
-        (void) $restore->handle($uuid);
+        $restore->handle($uuid);
 
         return back()->with('success', __('Campaign restored.'));
     }

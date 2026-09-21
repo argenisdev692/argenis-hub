@@ -46,7 +46,7 @@ final class RunDatabaseBackupJob implements ShouldQueue
         $outcome = $runner->run();
 
         if ($outcome->successful()) {
-            (void) $sync->handle();
+            $syncedCount = $sync->handle();
             $audit->log(
                 'backup.run_succeeded',
                 null,

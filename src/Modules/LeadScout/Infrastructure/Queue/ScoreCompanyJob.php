@@ -36,7 +36,7 @@ final class ScoreCompanyJob implements ShouldQueue
 
     public function handle(ScoreCompanyHandler $score, ExtractDecisionMakersHandler $decisors): void
     {
-        (void) $score->handle($this->companyUuid, $this->userId, $this->extraRoundDone);
-        (void) $decisors->persistIfTierAB($this->companyUuid);
+        $score->handle($this->companyUuid, $this->userId, $this->extraRoundDone);
+        $decisors->persistIfTierAB($this->companyUuid);
     }
 }

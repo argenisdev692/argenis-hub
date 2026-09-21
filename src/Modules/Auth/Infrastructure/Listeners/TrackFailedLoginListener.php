@@ -31,7 +31,7 @@ final readonly class TrackFailedLoginListener
             return;
         }
 
-        (void) $this->recordFailure->handle(
+        $failureCount = $this->recordFailure->handle(
             email: $email,
             threshold: (int) config('auth-security.lockout.max_attempts'),
             lockMinutes: (int) config('auth-security.lockout.duration_minutes'),

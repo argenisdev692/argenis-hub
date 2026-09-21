@@ -39,7 +39,7 @@ final readonly class StudioProfileController
 
     public function store(Request $request, StudioProfileData $data, UpsertProfileHandler $upsert): RedirectResponse
     {
-        (void) $upsert->handle($data, $this->ownerId($request));
+        $profileUuid = $upsert->handle($data, $this->ownerId($request));
 
         return back()->with('success', __('Profile saved.'));
     }
@@ -51,7 +51,7 @@ final readonly class StudioProfileController
      */
     public function updatePolicy(Request $request, string $uuid, UpdateOpportunityPolicyData $data, UpdateOpportunityPolicyHandler $handler): RedirectResponse
     {
-        (void) $handler->handle($uuid, $data, $this->ownerId($request));
+        $handler->handle($uuid, $data, $this->ownerId($request));
 
         return back()->with('success', __('Opportunity policy updated.'));
     }

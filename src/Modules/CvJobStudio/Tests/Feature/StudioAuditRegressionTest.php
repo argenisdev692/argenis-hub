@@ -161,8 +161,8 @@ it('charges every LLM call to the real user and stops once the budget is spent',
 
     $executor = app(AiCallExecutor::class);
 
-    (void) $executor->call(AiPurpose::CvJudge, JudgeCvAgent::class, 'cv', $owner->id);
-    (void) $executor->call(AiPurpose::CvJudge, JudgeCvAgent::class, 'cv', $owner->id);
+    $firstCall = $executor->call(AiPurpose::CvJudge, JudgeCvAgent::class, 'cv', $owner->id);
+    $secondCall = $executor->call(AiPurpose::CvJudge, JudgeCvAgent::class, 'cv', $owner->id);
 
     expect(StudioProviderCallEloquentModel::query()->where('user_id', $owner->id)->count())->toBe(2)
         ->and(fn () => $executor->call(AiPurpose::CvJudge, JudgeCvAgent::class, 'cv', $owner->id))

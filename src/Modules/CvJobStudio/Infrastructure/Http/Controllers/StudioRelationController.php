@@ -21,14 +21,14 @@ final readonly class StudioRelationController
 
     public function confirm(Request $request, string $uuid, ConfirmRelationHandler $handler): RedirectResponse
     {
-        (void) $handler->handle($uuid, $this->ownerId($request));
+        $handler->handle($uuid, $this->ownerId($request));
 
         return back()->with('success', __('Relation confirmed.'));
     }
 
     public function reject(Request $request, string $uuid, RejectRelationHandler $handler): RedirectResponse
     {
-        (void) $handler->handle($uuid, $this->ownerId($request));
+        $handler->handle($uuid, $this->ownerId($request));
 
         return back()->with('success', __('Relation rejected.'));
     }

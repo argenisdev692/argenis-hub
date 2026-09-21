@@ -36,7 +36,7 @@ final class BuildInsightReportJob implements ShouldQueue
             return;
         }
 
-        (void) $reports->handle($run->uuid, $this->userId);
+        $report = $reports->handle($run->uuid, $this->userId);
 
         $run->update(['status' => 'finished', 'finished_at' => now()]);
     }

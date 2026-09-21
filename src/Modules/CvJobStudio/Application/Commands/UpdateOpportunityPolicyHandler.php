@@ -29,7 +29,7 @@ final readonly class UpdateOpportunityPolicyHandler
         ];
 
         // Throws on any factor outside [0.1, 1] or missing grade/source.
-        (void) OpportunityPolicy::fromConfig($opportunity, $data->neutral);
+        $policy = OpportunityPolicy::fromConfig($opportunity, $data->neutral);
 
         if (! $this->profiles->updateOpportunityRules($uuid, $userId, $opportunity)) {
             throw RecordNotFoundException::of('profile', $uuid);

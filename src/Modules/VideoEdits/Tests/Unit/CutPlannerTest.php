@@ -116,12 +116,12 @@ it('passes rejected decisions through untouched', function (): void {
 });
 
 it('refuses plans that leave less than the minimum output', function (): void {
-    (void) planner()->plan([manualCut(0, 59_500)], 60_000);
+    $plan = planner()->plan([manualCut(0, 59_500)], 60_000);
 })->throws(InvalidCutRangesException::class);
 
 it('reports the output problem as user-safe details', function (): void {
     try {
-        (void) planner()->plan([manualCut(0, 59_500)], 60_000);
+        $plan = planner()->plan([manualCut(0, 59_500)], 60_000);
     } catch (InvalidCutRangesException $exception) {
         // The 500 ms tail is longer than the 250 ms fragment floor, so it is kept — and still too short.
         expect($exception->details)->toBe(['output' => ['final_duration_ms' => 500, 'minimum_duration_ms' => 1_000]]);

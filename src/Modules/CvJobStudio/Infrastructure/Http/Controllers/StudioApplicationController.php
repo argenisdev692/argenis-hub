@@ -31,7 +31,7 @@ final readonly class StudioApplicationController
     /** JSON for the postings table's row menu (`fetch`), a flash redirect for Inertia. */
     public function updateStatus(Request $request, string $uuid, UpdatePostingStatusData $data, UpdatePostingStatusHandler $handler): RedirectResponse|JsonResponse
     {
-        (void) $handler->handle($uuid, $data->status, $this->ownerId($request));
+        $handler->handle($uuid, $data->status, $this->ownerId($request));
 
         return $request->expectsJson()
             ? response()->json(['message' => __('Posting status updated.'), 'status' => $data->status])
@@ -40,7 +40,7 @@ final readonly class StudioApplicationController
 
     public function recordOutcome(Request $request, string $uuid, RecordOutcomeData $data, RecordOutcomeHandler $handler): RedirectResponse
     {
-        (void) $handler->handle($uuid, $data->outcome, $data->note, $this->ownerId($request));
+        $handler->handle($uuid, $data->outcome, $data->note, $this->ownerId($request));
 
         return back()->with('success', __('Outcome recorded.'));
     }

@@ -14,14 +14,14 @@ final readonly class StudioResolutionController
 {
     public function resolve(Request $request, string $uuid, ResolvePostingSourceHandler $handler): RedirectResponse
     {
-        (void) $handler->handle($uuid, $this->ownerId($request));
+        $handler->handle($uuid, $this->ownerId($request));
 
         return back()->with('success', __('Resolution evaluated.'));
     }
 
     public function unlink(Request $request, string $uuid, UnlinkResolutionHandler $handler): RedirectResponse
     {
-        (void) $handler->handle($uuid, $this->ownerId($request));
+        $handler->handle($uuid, $this->ownerId($request));
 
         return back()->with('success', __('Resolution unlinked.'));
     }

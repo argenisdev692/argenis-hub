@@ -40,7 +40,7 @@ final readonly class HandlePasswordChangedListener
             $this->recordChange->handle($event->userUuid, $event->hashedPassword);
 
             if ($event->signOutOtherSessions && $this->request->hasSession()) {
-                (void) $this->revokeOtherSessions->handle($event->userUuid, $this->request->session()->getId());
+                $revokedCount = $this->revokeOtherSessions->handle($event->userUuid, $this->request->session()->getId());
             }
         });
 

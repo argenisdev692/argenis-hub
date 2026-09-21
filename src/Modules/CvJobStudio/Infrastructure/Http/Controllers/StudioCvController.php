@@ -40,7 +40,7 @@ final readonly class StudioCvController
 
     public function confirm(Request $request, string $uuid, ConfirmCvStructureHandler $confirm): RedirectResponse
     {
-        (void) $confirm->handle($uuid, $this->ownerId($request));
+        $confirm->handle($uuid, $this->ownerId($request));
 
         return back()->with('success', __('Structure confirmed.'));
     }

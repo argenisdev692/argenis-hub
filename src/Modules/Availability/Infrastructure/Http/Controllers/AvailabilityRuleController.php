@@ -51,28 +51,28 @@ final readonly class AvailabilityRuleController
 
     public function store(AvailabilityRuleData $data, CreateAvailabilityRuleHandler $create): RedirectResponse
     {
-        (void) $create->handle($data);
+        $rule = $create->handle($data);
 
         return back()->with('success', __('Availability rule created.'));
     }
 
     public function update(string $uuid, AvailabilityRuleData $data, GetAvailabilityRuleHandler $get, UpdateAvailabilityRuleHandler $update): RedirectResponse
     {
-        (void) $update->handle($get->handle($uuid), $data);
+        $rule = $update->handle($get->handle($uuid), $data);
 
         return back()->with('success', __('Availability rule updated.'));
     }
 
     public function destroy(string $uuid, DeleteAvailabilityRuleHandler $delete): RedirectResponse
     {
-        (void) $delete->handle($uuid);
+        $delete->handle($uuid);
 
         return back()->with('success', __('Availability rule suspended.'));
     }
 
     public function restore(string $uuid, RestoreAvailabilityRuleHandler $restore): RedirectResponse
     {
-        (void) $restore->handle($uuid);
+        $restore->handle($uuid);
 
         return back()->with('success', __('Availability rule restored.'));
     }

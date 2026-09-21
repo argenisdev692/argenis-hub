@@ -49,28 +49,28 @@ final readonly class PermissionController
 
     public function store(PermissionData $data, CreatePermissionHandler $create): RedirectResponse
     {
-        (void) $create->handle($data);
+        $permission = $create->handle($data);
 
         return back()->with('success', __('Permission created.'));
     }
 
     public function update(string $uuid, PermissionData $data, GetPermissionHandler $get, UpdatePermissionHandler $update): RedirectResponse
     {
-        (void) $update->handle($get->handle($uuid), $data);
+        $update->handle($get->handle($uuid), $data);
 
         return back()->with('success', __('Permission updated.'));
     }
 
     public function destroy(string $uuid, DeletePermissionHandler $delete): RedirectResponse
     {
-        (void) $delete->handle($uuid);
+        $delete->handle($uuid);
 
         return back()->with('success', __('Permission suspended.'));
     }
 
     public function restore(string $uuid, RestorePermissionHandler $restore): RedirectResponse
     {
-        (void) $restore->handle($uuid);
+        $restore->handle($uuid);
 
         return back()->with('success', __('Permission restored.'));
     }

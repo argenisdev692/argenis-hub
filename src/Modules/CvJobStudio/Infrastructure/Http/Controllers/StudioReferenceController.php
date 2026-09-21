@@ -28,7 +28,7 @@ final readonly class StudioReferenceController
 
     public function paste(Request $request, string $uuid, PasteJobTextData $data, PasteJobTextHandler $handler): RedirectResponse|JsonResponse
     {
-        (void) $handler->handle($uuid, $data->text, $this->ownerId($request));
+        $handler->handle($uuid, $data->text, $this->ownerId($request));
 
         $message = __('Posting text saved — scored as supplied by you.');
 

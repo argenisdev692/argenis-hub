@@ -214,7 +214,7 @@ it('serves the insight report through a Data allowlist and gives both run pages 
     $profile = boundaryProfile($owner);
     $run = StudioRunEloquentModel::query()->create(['user_id' => $owner->id, 'profile_id' => $profile->id, 'status' => 'scored', 'rules_version' => 2]);
 
-    (void) app(BuildInsightReportHandler::class)->handle($run->uuid, $owner->id);
+    $insightReport = app(BuildInsightReportHandler::class)->handle($run->uuid, $owner->id);
 
     $this->actingAs($owner);
 
@@ -295,10 +295,12 @@ it('refreshes apply priority with a constant number of queries (no N+1)', functi
 
         DB::flushQueryLog();
         DB::enableQueryLog();
-        (void) app(RefreshApplyPriorityHandler::class)->handle($owner->id, true);
+        app(RefreshApplyPriorityHandler::class)->handle($owner->id, true);
         DB::disableQueryLog();
 
-        return count(array_filter(DB::getQueryLog(), static fn (array $query): bool => str_starts_with(strtolower(ltrim($query['query'])), 'select')));
+        $queryLog = (array) DB::getQueryLog();
+
+        return count(array_filter($queryLog, static fn (array $query): bool => str_starts_with(strtolower(ltrim($query['query'])), 'select')));
     };
 
     // Reads must not grow with the number of scores; only the per-row writes do.

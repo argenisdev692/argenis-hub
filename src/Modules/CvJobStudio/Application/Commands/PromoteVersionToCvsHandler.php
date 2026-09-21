@@ -71,7 +71,7 @@ final readonly class PromoteVersionToCvsHandler
         }
 
         try {
-            (void) $this->parse->handle($cvUuid, $userId);
+            $structureUuid = $this->parse->handle($cvUuid, $userId);
         } catch (Throwable) {
             // Promotion stands; re-parse from the Studio UI when the parser recovers.
         }

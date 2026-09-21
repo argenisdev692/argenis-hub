@@ -51,28 +51,28 @@ final readonly class AvailabilityExceptionController
 
     public function store(AvailabilityExceptionData $data, CreateAvailabilityExceptionHandler $create): RedirectResponse
     {
-        (void) $create->handle($data);
+        $exception = $create->handle($data);
 
         return back()->with('success', __('Availability exception created.'));
     }
 
     public function update(string $uuid, AvailabilityExceptionData $data, GetAvailabilityExceptionHandler $get, UpdateAvailabilityExceptionHandler $update): RedirectResponse
     {
-        (void) $update->handle($get->handle($uuid), $data);
+        $exception = $update->handle($get->handle($uuid), $data);
 
         return back()->with('success', __('Availability exception updated.'));
     }
 
     public function destroy(string $uuid, DeleteAvailabilityExceptionHandler $delete): RedirectResponse
     {
-        (void) $delete->handle($uuid);
+        $delete->handle($uuid);
 
         return back()->with('success', __('Availability exception suspended.'));
     }
 
     public function restore(string $uuid, RestoreAvailabilityExceptionHandler $restore): RedirectResponse
     {
-        (void) $restore->handle($uuid);
+        $restore->handle($uuid);
 
         return back()->with('success', __('Availability exception restored.'));
     }

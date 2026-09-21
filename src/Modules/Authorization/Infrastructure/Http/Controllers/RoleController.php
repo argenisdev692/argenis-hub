@@ -58,7 +58,7 @@ final readonly class RoleController
 
     public function store(RoleData $data, CreateRoleHandler $create): RedirectResponse
     {
-        (void) $create->handle($data);
+        $role = $create->handle($data);
 
         return back()->with('success', __('Role created.'));
     }
@@ -66,7 +66,7 @@ final readonly class RoleController
     public function update(string $uuid, RoleData $data, GetRoleHandler $get, UpdateRoleHandler $update): RedirectResponse
     {
         try {
-            (void) $update->handle($get->handle($uuid), $data);
+            $update->handle($get->handle($uuid), $data);
         } catch (ProtectedRoleException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -77,7 +77,7 @@ final readonly class RoleController
     public function destroy(string $uuid, DeleteRoleHandler $delete): RedirectResponse
     {
         try {
-            (void) $delete->handle($uuid);
+            $delete->handle($uuid);
         } catch (ProtectedRoleException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -87,7 +87,7 @@ final readonly class RoleController
 
     public function restore(string $uuid, RestoreRoleHandler $restore): RedirectResponse
     {
-        (void) $restore->handle($uuid);
+        $restore->handle($uuid);
 
         return back()->with('success', __('Role restored.'));
     }

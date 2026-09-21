@@ -14,17 +14,18 @@ use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloqu
 
 uses(RefreshDatabase::class);
 
-beforeEach(function (): void {
-    $this->repository = app(VideoEditRepositoryPort::class);
-});
+function videoEditRepository(): VideoEditRepositoryPort
+{
+    return app(VideoEditRepositoryPort::class);
+}
 
 it('moves an edit only when it is still in an expected status', function (): void {
     $edit = VideoEditEloquentModel::factory()->create(); // draft
 
-    $moved = $this->repository->transitionStatus($edit->uuid, [VideoEditStatus::Draft], VideoEditStatus::Queued, [
+    $moved = videoEditRepository()->transitionStatus($edit->uuid, [VideoEditStatus::Draft], VideoEditStatus::Queued, [
         'queued_at' => now(),
     ]);
-    $movedAgain = $this->repository->transitionStatus($edit->uuid, [VideoEditStatus::Draft], VideoEditStatus::Queued);
+    $movedAgain = videoEditRepository()->transitionStatus($edit->uuid, [VideoEditStatus::Draft], VideoEditStatus::Queued);
 
     expect($moved)->toBeTrue()
         ->and($movedAgain)->toBeFalse()
@@ -35,7 +36,7 @@ it('moves an edit only when it is still in an expected status', function (): voi
 it('refuses transitions the lifecycle does not allow', function (): void {
     $edit = VideoEditEloquentModel::factory()->completed()->create();
 
-    $this->repository->transitionStatus($edit->uuid, [VideoEditStatus::Completed], VideoEditStatus::Queued);
+    videoEditRepository()->transitionStatus($edit->uuid, [VideoEditStatus::Completed], VideoEditStatus::Queued);
 })->throws(InvalidArgumentException::class);
 
 it('turns a second active edit into a state conflict', function (): void {
@@ -44,7 +45,7 @@ it('turns a second active edit into a state conflict', function (): void {
     $draft = VideoEditEloquentModel::factory()->for($user)->create();
 
     try {
-        $this->repository->transitionStatus($draft->uuid, [VideoEditStatus::Draft], VideoEditStatus::Queued);
+        videoEditRepository()->transitionStatus($draft->uuid, [VideoEditStatus::Draft], VideoEditStatus::Queued);
     } catch (VideoEditStateConflictException $exception) {
         expect($exception->reasonCode)->toBe('already_active')
             ->and($draft->fresh()->status)->toBe(VideoEditStatus::Draft);
@@ -58,7 +59,7 @@ it('turns a second active edit into a state conflict', function (): void {
 it('encodes casted attributes written during a transition', function (): void {
     $edit = VideoEditEloquentModel::factory()->processing()->create();
 
-    $this->repository->transitionStatus($edit->uuid, [VideoEditStatus::Processing], VideoEditStatus::Failed, [
+    videoEditRepository()->transitionStatus($edit->uuid, [VideoEditStatus::Processing], VideoEditStatus::Failed, [
         'failure_code' => 'invalid_cut_ranges',
         'failure_details' => ['manual_ranges' => [['index' => 2, 'error' => 'end_beyond_duration']]],
         'current_stage' => ProcessingStage::Download,
@@ -76,8 +77,8 @@ it('records progress only while the edit is processing', function (): void {
     $processing = VideoEditEloquentModel::factory()->processing()->create();
     $completed = VideoEditEloquentModel::factory()->completed()->create();
 
-    $this->repository->updateProgress($processing->uuid, 150, ProcessingStage::Render);
-    $this->repository->updateProgress($completed->uuid, 10, ProcessingStage::Merge);
+    videoEditRepository()->updateProgress($processing->uuid, 150, ProcessingStage::Render);
+    videoEditRepository()->updateProgress($completed->uuid, 10, ProcessingStage::Merge);
 
     expect($processing->fresh()->progress_percent)->toBe(100)
         ->and($processing->fresh()->current_stage)->toBe(ProcessingStage::Render)
@@ -89,12 +90,12 @@ it('hides edits owned by someone else', function (): void {
     $edit = VideoEditEloquentModel::factory()->create();
     $stranger = User::factory()->create();
 
-    expect($this->repository->findOwnedByUuid($edit->uuid, $stranger->id))->toBeNull()
-        ->and($this->repository->findOwnedByUuid($edit->uuid, $edit->user_id)?->is($edit))->toBeTrue();
+    expect(videoEditRepository()->findOwnedByUuid($edit->uuid, $stranger->id))->toBeNull()
+        ->and(videoEditRepository()->findOwnedByUuid($edit->uuid, $edit->user_id)?->is($edit))->toBeTrue();
 });
 
 it('builds the cut planner from the module config', function (): void {
     config()->set('video-edit.cuts.min_output_ms', 5_000);
 
-    (void) app(CutPlanner::class)->plan([], 4_000);
+    $plan = app(CutPlanner::class)->plan([], 4_000);
 })->throws(InvalidCutRangesException::class);

@@ -51,28 +51,28 @@ final readonly class BlogCategoryController
 
     public function store(Request $request, BlogCategoryData $data, CreateBlogCategoryHandler $create): RedirectResponse
     {
-        (void) $create->handle($data, (int) $request->user()->id);
+        $category = $create->handle($data, (int) $request->user()->id);
 
         return back()->with('success', __('Blog category created.'));
     }
 
     public function update(string $uuid, BlogCategoryData $data, GetBlogCategoryHandler $get, UpdateBlogCategoryHandler $update): RedirectResponse
     {
-        (void) $update->handle($get->handle($uuid), $data);
+        $category = $update->handle($get->handle($uuid), $data);
 
         return back()->with('success', __('Blog category updated.'));
     }
 
     public function destroy(string $uuid, DeleteBlogCategoryHandler $delete): RedirectResponse
     {
-        (void) $delete->handle($uuid);
+        $delete->handle($uuid);
 
         return back()->with('success', __('Blog category suspended.'));
     }
 
     public function restore(string $uuid, RestoreBlogCategoryHandler $restore): RedirectResponse
     {
-        (void) $restore->handle($uuid);
+        $restore->handle($uuid);
 
         return back()->with('success', __('Blog category restored.'));
     }
