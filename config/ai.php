@@ -39,7 +39,7 @@ return [
      * it must stay on a different provider than the writer to remain
      * independent. Comma-separated, first match wins.
      */
-    'failover_order' => env('AI_FAILOVER_ORDER', 'openai,anthropic'),
+    'failover_order' => env('AI_FAILOVER_ORDER', 'anthropic,gemini'),
 
     /*
     |--------------------------------------------------------------------------
@@ -217,27 +217,27 @@ return [
 
     'purposes' => [
         'requirement_extraction' => [
-            'provider' => 'openai', 'models' => [], 'timeout' => 60,
+            'provider' => 'anthropic', 'models' => [], 'timeout' => 60,
             'max_input_chars' => 20000, 'max_output_tokens' => 4000,
             'prompt_cache' => true, 'prompt_version' => 'v2',
         ],
         'match_narrative' => [
-            'provider' => 'openai', 'models' => [], 'timeout' => 30,
+            'provider' => 'anthropic', 'models' => [], 'timeout' => 30,
             'max_input_chars' => 8000, 'max_output_tokens' => 500,
             'prompt_cache' => true, 'prompt_version' => 'v2',
         ],
         'tailor' => [
-            'provider' => 'openai', 'models' => [], 'timeout' => 90,
+            'provider' => 'anthropic', 'models' => [], 'timeout' => 90,
             'max_input_chars' => 20000, 'max_output_tokens' => 6000,
             'prompt_cache' => true, 'prompt_version' => 'v2',
         ],
         'translate' => [
-            'provider' => 'openai', 'models' => [], 'timeout' => 90,
+            'provider' => 'anthropic', 'models' => [], 'timeout' => 90,
             'max_input_chars' => 20000, 'max_output_tokens' => 6000,
             'prompt_cache' => true, 'prompt_version' => 'v2',
         ],
         'cv_rewrite' => [
-            'provider' => 'openai', 'models' => [], 'timeout' => 120,
+            'provider' => 'anthropic', 'models' => [], 'timeout' => 120,
             'max_input_chars' => 20000, 'max_output_tokens' => 6000,
             'prompt_cache' => false, 'prompt_version' => 'v2',
         ],
@@ -247,7 +247,7 @@ return [
             'prompt_cache' => false, 'prompt_version' => 'v2',
         ],
         'cv_structure_parse' => [
-            'provider' => 'openai', 'models' => [], 'timeout' => 90,
+            'provider' => 'anthropic', 'models' => [], 'timeout' => 90,
             'max_input_chars' => 20000, 'max_output_tokens' => 6000,
             'prompt_cache' => false, 'prompt_version' => 'v2',
         ],
