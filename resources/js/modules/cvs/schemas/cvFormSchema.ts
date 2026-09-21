@@ -89,7 +89,13 @@ export type CvFormValues = z.infer<typeof cvFormSchema>;
  * text.
  */
 export const cvCreateFormSchema = cvFormSchema.refine(
-    (values) => values.file.length === 1 || values.content !== undefined,
+    /**
+     * Never read `.length` off a possibly-absent value here: a throw inside a
+     * refine is an unhandled TypeError, not a field issue, and it poisons the
+     * async validation pass — the dropzone shows the file while the form keeps
+     * reporting it missing.
+     */
+    (values) => (values.file ?? []).length === 1 || values.content !== undefined,
     {
         path: ['file'],
         message: 'A CV file (PDF or Markdown) or pasted content is required.',
@@ -166,7 +172,7 @@ export function toCvWritePayload(
         ...(isUpdate ? { _method: 'put' as const } : {}),
     };
 
-    const [file] = values.file;
+    const [file] = values.file ?? [];
 
     if (file) {
         payload.file = file;

@@ -35,7 +35,7 @@ const trustCascade = staggerContainer(MOTION_STAGGER * 0.5);
 
 <template>
     <section
-        class="relative isolate overflow-hidden px-4 pt-28 pb-16 sm:px-6 lg:pt-36 lg:pb-20"
+        class="relative isolate overflow-hidden px-4 pt-28 pb-12 sm:px-6 lg:pt-36 lg:pb-16"
         aria-labelledby="hero-title"
     >
         <!-- The badge/headline accent. Kept local (unlike the mesh's other

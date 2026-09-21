@@ -36,7 +36,7 @@ const ctaPanel: MotionVariants = {
 </script>
 
 <template>
-    <section class="px-4 py-16 sm:px-6 lg:py-24" aria-labelledby="cta-title">
+    <section class="px-4 py-12 sm:px-6 sm:py-14 lg:py-16" aria-labelledby="cta-title">
         <m.div
             class="relative isolate mx-auto max-w-4xl overflow-hidden rounded-3xl border border-glass-border bg-surface-glass px-6 py-12 text-center backdrop-blur-md sm:px-12 lg:py-14"
             :variants="ctaPanel"

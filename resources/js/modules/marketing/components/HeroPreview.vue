@@ -142,16 +142,23 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <m.div
+    <!-- Plain host for the tilt `ref`: `useTemplateRef<HTMLDivElement>` must
+         resolve to a real element — `ref` on `<m.div>` yields the motion
+         component instance, which has no `getBoundingClientRect`, so `paintTilt`
+         threw on the first pointermove. -->
+    <div
         ref="frame"
         :class="cn('relative mx-auto w-full max-w-5xl', className)"
         aria-hidden="true"
-        :variants="REVEAL_ITEM"
-        initial="hidden"
-        while-in-view="visible"
-        :style="{ perspective: '1200px' }"
         v-on="tiltListeners"
     >
+        <m.div
+            class="relative"
+            :variants="REVEAL_ITEM"
+            initial="hidden"
+            while-in-view="visible"
+            :style="{ perspective: '1200px' }"
+        >
         <m.div
             class="overflow-hidden rounded-2xl border border-glass-border bg-surface-glass-strong shadow-lifted backdrop-blur-md"
             :style="{ rotateX, rotateY }"
@@ -247,5 +254,6 @@ onBeforeUnmount(() => {
         <div
             class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-background"
         />
-    </m.div>
+        </m.div>
+    </div>
 </template>

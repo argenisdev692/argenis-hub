@@ -56,14 +56,14 @@ const headerCascade = staggerContainer(MOTION_STAGGER);
     <section
         :id="id"
         :aria-labelledby="labelledBy"
-        :class="cn('relative px-4 py-16 sm:px-6 lg:py-24', className)"
+        :class="cn('relative px-4 py-12 sm:px-6 sm:py-14 lg:py-16', className)"
     >
         <div class="mx-auto w-full max-w-6xl">
             <m.header
                 v-if="hasHeader"
                 :class="
                     cn(
-                        'mb-10 flex max-w-2xl flex-col gap-4 lg:mb-12',
+                        'mb-8 flex max-w-2xl flex-col gap-4 lg:mb-10',
                         align === 'center' && 'mx-auto text-center',
                     )
                 "

@@ -117,6 +117,13 @@ const storedFile = computed(() =>
                 >. Leave the field below empty to keep it.
             </p>
 
+            <!--
+                Picking a file is the commit moment, so it validates like a
+                blur. Before the first submit the form only validates on blur,
+                and the hidden file input never blurs through TanStack — so the
+                "file required" error computed while the title was being typed
+                would otherwise stay on screen beside the file just picked.
+            -->
             <form.Field name="file" #default="{ field }">
                 <AppField
                     :field="field"
@@ -127,11 +134,16 @@ const storedFile = computed(() =>
                 >
                     <FileDropzone
                         v-bind="control"
-                        :model-value="field.state.value"
+                        :model-value="field.state.value ?? []"
                         :accept="[...ACCEPTED_CV_TYPES]"
                         :max-size-mb="MAX_CV_MB"
                         hint="PDF or Markdown (.md)"
-                        @update:model-value="field.handleChange($event)"
+                        @update:model-value="
+                            (files) => {
+                                field.handleChange(files);
+                                field.handleBlur();
+                            }
+                        "
                     />
                 </AppField>
             </form.Field>
@@ -162,6 +174,7 @@ const storedFile = computed(() =>
                         @update:model-value="
                             (value) => field.handleChange(String(value))
                         "
+                        @blur="field.handleBlur"
                     />
                 </AppField>
             </form.Field>
