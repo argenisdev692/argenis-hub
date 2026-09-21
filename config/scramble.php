@@ -2,7 +2,6 @@
 
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
 use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
-use Dedoc\Scramble\Support\Generator\SecurityScheme;
 
 return [
     /*
@@ -184,15 +183,11 @@ return [
      * (`/api/auth/refresh|logout|me` behind `auth:sanctum`). `/api/auth/login`
      * has no auth middleware and is therefore documented as public.
      *
-     * `http('bearer')` deliberately carries NO `bearerFormat`: Sanctum personal
-     * access tokens are opaque random strings, not JWTs, and advertising them
-     * as JWT would invite clients to try to decode them (OWASP §2).
+     * NOTE: class-string form only. The array form with
+     * `SecurityScheme::http('bearer')` holds an object and breaks
+     * `php artisan config:cache` (non-serializable). The strategy defaults
+     * to `SecurityScheme::http('bearer')` with no bearerFormat internally,
+     * which is what we want for opaque Sanctum tokens (OWASP §2).
      */
-    'security_strategy' => [
-        MiddlewareAuthSecurityStrategy::class,
-        [
-            'middleware' => ['auth', 'auth:*'],
-            'scheme' => SecurityScheme::http('bearer'),
-        ],
-    ],
+    'security_strategy' => MiddlewareAuthSecurityStrategy::class,
 ];
