@@ -52,7 +52,7 @@ final readonly class TrackAuthSessionActivity
         $userUuid = (string) $user->uuid;
 
         if (! $this->sessions->touch($userUuid, $sessionId)) {
-            (void) $this->registerSession->handle(
+            $isNewDevice = $this->registerSession->handle(
                 userUuid: $userUuid,
                 sessionId: $sessionId,
                 ipAddress: $request->ip(),
