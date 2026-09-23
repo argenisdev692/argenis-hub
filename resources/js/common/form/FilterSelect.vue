@@ -64,6 +64,14 @@ const {
     class?: string;
 }>();
 
+/**
+ * Attrs go to the trigger button only (`v-bind="$attrs"` below). Without this,
+ * they would ALSO fall through to the `ComboboxRoot` `<div>`, duplicating the
+ * `id` that `AppField` binds — and `<label for>` would resolve to that div
+ * instead of the focusable trigger.
+ */
+defineOptions({ inheritAttrs: false });
+
 const model = defineModel<FilterSelectValue | FilterSelectValue[] | null>({
     default: null,
 });

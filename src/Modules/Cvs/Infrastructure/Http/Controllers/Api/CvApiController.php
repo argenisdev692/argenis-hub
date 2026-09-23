@@ -27,8 +27,6 @@ use Shared\Domain\Ports\StoragePort;
  */
 final readonly class CvApiController
 {
-    private const int DOWNLOAD_URL_TTL_MINUTES = 15;
-
     /**
      * List CVs.
      *
@@ -70,7 +68,7 @@ final readonly class CvApiController
         return response()->json([
             'data' => CvData::fromModel(
                 $cv,
-                $storage->temporaryUrl($cv->file_path, now()->addMinutes(self::DOWNLOAD_URL_TTL_MINUTES)),
+                $storage->temporaryUrl($cv->file_path, now()->addMinutes(CvData::DOWNLOAD_URL_TTL_MINUTES)),
             ),
         ]);
     }

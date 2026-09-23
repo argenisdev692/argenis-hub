@@ -24,6 +24,12 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 #[MapOutputName(SnakeCaseMapper::class)]
 final class CvData extends Data
 {
+    /**
+     * A résumé is a personal document, so its signed URL takes the shortest
+     * TTL tier (OWASP §8: PII → 5 minutes).
+     */
+    public const int DOWNLOAD_URL_TTL_MINUTES = 5;
+
     public function __construct(
         public readonly string $uuid,
         public readonly string $title,

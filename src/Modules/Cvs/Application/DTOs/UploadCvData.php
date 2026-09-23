@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Cvs\Application\DTOs;
 
+use Closure;
 use Illuminate\Http\UploadedFile;
+use Modules\Cvs\Domain\Enums\CvFileType;
 use Modules\Cvs\Domain\Enums\CvNiche;
 use Spatie\LaravelData\Attributes\MapInputName;
 use Spatie\LaravelData\Attributes\MapOutputName;
@@ -46,9 +48,28 @@ final class UploadCvData extends Data
                 'max:5120', // 5 MB
                 'extensions:pdf,md,markdown',
                 'mimetypes:text/markdown,text/plain,text/x-markdown,application/pdf',
+                self::extensionMatchesContent(...),
             ],
             'content' => ['nullable', 'string', 'max:500000'],
         ];
+    }
+
+    /**
+     * `extensions` and `mimetypes` pass independently, so on their own they
+     * accept a `.pdf` whose bytes are plain text. This ties the two together;
+     * an unsupported extension is left to the `extensions` rule to report.
+     */
+    private static function extensionMatchesContent(string $attribute, mixed $value, Closure $fail): void
+    {
+        if (! $value instanceof UploadedFile) {
+            return;
+        }
+
+        $declaredType = CvFileType::tryFromExtension($value->getClientOriginalExtension());
+
+        if ($declaredType !== null && ! $declaredType->acceptsMimeType((string) $value->getMimeType())) {
+            $fail(__('The CV file content does not match its extension.'));
+        }
     }
 
     /**

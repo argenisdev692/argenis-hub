@@ -12,5 +12,14 @@ it('resolves supported extensions to their file type', function (): void {
 });
 
 it('rejects unsupported extensions', function (): void {
-    expect(fn (): CvFileType => CvFileType::fromExtension('exe'))->toThrow(InvalidArgumentException::class);
+    expect(fn (): CvFileType => CvFileType::fromExtension('exe'))->toThrow(InvalidArgumentException::class)
+        ->and(CvFileType::tryFromExtension('exe'))->toBeNull();
+});
+
+it('accepts only the mime types consistent with each file type', function (): void {
+    expect(CvFileType::Pdf->acceptsMimeType('application/pdf'))->toBeTrue()
+        ->and(CvFileType::Pdf->acceptsMimeType('text/plain'))->toBeFalse()
+        ->and(CvFileType::Md->acceptsMimeType('text/plain'))->toBeTrue()
+        ->and(CvFileType::Md->acceptsMimeType('text/markdown'))->toBeTrue()
+        ->and(CvFileType::Md->acceptsMimeType('application/pdf'))->toBeFalse();
 });

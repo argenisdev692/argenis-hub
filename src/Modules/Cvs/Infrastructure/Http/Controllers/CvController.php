@@ -30,8 +30,6 @@ use Shared\Domain\Ports\StoragePort;
  */
 final readonly class CvController
 {
-    private const int DOWNLOAD_URL_TTL_MINUTES = 15;
-
     public function index(Request $request, CvFilterData $filters, ListCvsHandler $list): InertiaResponse|JsonResponse
     {
         $cvs = $list->handle(
@@ -56,7 +54,7 @@ final readonly class CvController
         $cv = $get->handle($uuid, $this->ownerId($request));
         $data = CvData::fromModel(
             $cv,
-            $storage->temporaryUrl($cv->file_path, now()->addMinutes(self::DOWNLOAD_URL_TTL_MINUTES)),
+            $storage->temporaryUrl($cv->file_path, now()->addMinutes(CvData::DOWNLOAD_URL_TTL_MINUTES)),
         );
 
         return match ($request->expectsJson()) {
@@ -67,14 +65,14 @@ final readonly class CvController
 
     public function store(Request $request, UploadCvData $data, CreateCvHandler $create): RedirectResponse
     {
-        $cv = $create->handle($data, $this->ownerId($request));
+        (void) $create->handle($data, $this->ownerId($request));
 
         return back()->with('success', __('CV uploaded.'));
     }
 
     public function update(Request $request, string $uuid, UploadCvData $data, GetCvHandler $get, UpdateCvHandler $update): RedirectResponse
     {
-        $cv = $update->handle($get->handle($uuid, $this->ownerId($request)), $data);
+        (void) $update->handle($get->handle($uuid, $this->ownerId($request)), $data);
 
         return back()->with('success', __('CV updated.'));
     }

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Cvs\Domain\Enums\CvFileType;
 use Modules\Cvs\Domain\Enums\CvNiche;
+use Modules\Cvs\Domain\Enums\CvSource;
 use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
 
 uses(RefreshDatabase::class);
@@ -47,6 +48,55 @@ it('uploads a markdown cv', function (): void {
         ->and($cv->is_primary)->toBeTrue()
         ->and($cv->file_type)->toBe(CvFileType::Md)
         ->and($cv->raw_text)->toContain('Fullstack Resume');
+});
+
+it('creates a cv from pasted markdown content', function (): void {
+    $admin = superAdmin();
+
+    $this->actingAs($admin)
+        ->post('/cvs', [
+            'title' => 'Chat CV',
+            'niche' => 'other',
+            'is_primary' => false,
+            'content' => "  # Pasted Resume\n\nPHP  ",
+        ])
+        ->assertRedirect();
+
+    $cv = CvEloquentModel::query()->where('title', 'Chat CV')->firstOrFail();
+
+    expect($cv->source)->toBe(CvSource::Chat)
+        ->and($cv->file_type)->toBe(CvFileType::Md)
+        ->and($cv->original_filename)->toBe('chat-cv.md')
+        ->and($cv->raw_text)->toBe("# Pasted Resume\n\nPHP");
+
+    Storage::disk('r2')->assertExists($cv->file_path);
+});
+
+it('rejects a pdf extension whose content is not a pdf', function (): void {
+    // A fake upload reports the MIME of its extension; a real temp file makes
+    // the validator sniff the bytes, as it does in production.
+    $path = tempnam(sys_get_temp_dir(), 'cv');
+    file_put_contents($path, 'plain text pretending to be a pdf');
+
+    $this->actingAs(superAdmin())
+        ->post('/cvs', [
+            'title' => 'Disguised',
+            'niche' => 'fullstack',
+            'is_primary' => false,
+            'file' => new UploadedFile($path, 'resume.pdf', null, null, true),
+        ])
+        ->assertSessionHasErrors('file');
+
+    expect(CvEloquentModel::query()->count())->toBe(0);
+
+    @unlink($path);
+});
+
+it('returns 404 when restoring a cv that is not suspended', function (): void {
+    $admin = superAdmin();
+    $cv = CvEloquentModel::factory()->create(['user_id' => $admin->id]);
+
+    $this->actingAs($admin)->patch("/cvs/{$cv->uuid}/restore")->assertNotFound();
 });
 
 it('rejects a create without a file', function (): void {

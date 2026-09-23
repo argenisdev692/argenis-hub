@@ -40,10 +40,12 @@ import { useCvMutations } from '@/modules/cvs/composables/useCvMutations';
 import { defaultCvFilters, useCvs } from '@/modules/cvs/composables/useCvs';
 import { buildCvQueryParams } from '@/modules/cvs/helpers/buildCvQueryParams';
 import {
+    CV_LANGUAGE_OPTIONS,
     CV_NICHE_OPTIONS,
     CV_SOURCE_OPTIONS,
     cvFileTypePresentation,
     cvLabel,
+    cvLanguageLabel,
     formatDate,
     isCvNiche,
     isCvSource,
@@ -149,12 +151,6 @@ function onNicheChange(value: FilterSelectModel): void {
     });
 }
 
-const languageOptions: FilterSelectOption[] = [
-    { value: 'en', label: 'English' },
-    { value: 'es', label: 'Español' },
-    { value: 'pt-PT', label: 'Português (PT)' },
-];
-
 /** Clearing the source drops the param entirely — "any source". */
 function onSourceChange(value: FilterSelectModel): void {
     applyFacet(() => {
@@ -181,7 +177,7 @@ const columns: DataTableColumn<Cv>[] = [
     {
         key: 'language',
         header: 'Lang',
-        value: (row) => row.language ?? '—',
+        value: (row) => (row.language ? cvLanguageLabel(row.language) : '—'),
         hideOnMobile: true,
     },
     {
@@ -354,6 +350,7 @@ async function confirmBulkRestore(): Promise<void> {
                 <FilterSelect
                     class="w-40"
                     :options="CV_NICHE_OPTIONS"
+                    aria-label="Filter by niche"
                     placeholder="Any niche"
                     :model-value="filters.niche || null"
                     @update:model-value="onNicheChange"
@@ -362,6 +359,7 @@ async function confirmBulkRestore(): Promise<void> {
                 <FilterSelect
                     class="w-40"
                     :options="CV_SOURCE_OPTIONS"
+                    aria-label="Filter by source"
                     placeholder="Any source"
                     :model-value="filters.source || null"
                     @update:model-value="onSourceChange"
@@ -369,7 +367,8 @@ async function confirmBulkRestore(): Promise<void> {
 
                 <FilterSelect
                     class="w-40"
-                    :options="languageOptions"
+                    :options="CV_LANGUAGE_OPTIONS"
+                    aria-label="Filter by language"
                     placeholder="Any language"
                     :model-value="filters.language"
                     @update:model-value="onLanguageChange"
@@ -378,6 +377,7 @@ async function confirmBulkRestore(): Promise<void> {
                 <FilterSelect
                     class="w-40"
                     :options="statusOptions"
+                    aria-label="Filter by status"
                     :clearable="false"
                     :model-value="filters.status"
                     @update:model-value="onStatusChange"

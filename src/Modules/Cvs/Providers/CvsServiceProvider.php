@@ -25,10 +25,21 @@ final class CvsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Route::middleware('web')->group(__DIR__.'/../Infrastructure/Routes/web.php');
-        Route::middleware('api')->prefix('api')->group(__DIR__.'/../Infrastructure/Routes/api.php');
-
+        $this->registerWebRoutes();
+        $this->registerApiRoutes();
         $this->registerExceptionMapping();
+    }
+
+    private function registerWebRoutes(): void
+    {
+        Route::middleware('web')->group(__DIR__.'/../Infrastructure/Routes/web.php');
+    }
+
+    private function registerApiRoutes(): void
+    {
+        Route::middleware('api')
+            ->prefix('api')
+            ->group(__DIR__.'/../Infrastructure/Routes/api.php');
     }
 
     /**

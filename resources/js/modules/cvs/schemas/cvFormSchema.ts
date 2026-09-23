@@ -95,7 +95,8 @@ export const cvCreateFormSchema = cvFormSchema.refine(
      * async validation pass — the dropzone shows the file while the form keeps
      * reporting it missing.
      */
-    (values) => (values.file ?? []).length === 1 || values.content !== undefined,
+    (values) =>
+        (values.file ?? []).length === 1 || values.content !== undefined,
     {
         path: ['file'],
         message: 'A CV file (PDF or Markdown) or pasted content is required.',

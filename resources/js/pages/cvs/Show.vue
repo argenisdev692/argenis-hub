@@ -16,6 +16,7 @@ import CvStatusBadge from '@/modules/cvs/components/CvStatusBadge.vue';
 import {
     cvFileTypePresentation,
     cvLabel,
+    cvLanguageLabel,
     cvOwnerName,
     formatDateTime,
 } from '@/modules/cvs/helpers/cvPresentation';
@@ -152,7 +153,9 @@ const timeline = computed(() =>
 
                     <div v-if="cv.language">
                         <dt class="text-xs text-muted-foreground">Language</dt>
-                        <dd class="text-sm">{{ cv.language }}</dd>
+                        <dd class="text-sm">
+                            {{ cvLanguageLabel(cv.language) }}
+                        </dd>
                     </div>
 
                     <div>

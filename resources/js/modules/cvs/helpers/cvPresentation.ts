@@ -111,6 +111,24 @@ export function isCvSource(value: unknown): value is CvSource {
     return CV_SOURCES.some((source) => source === value);
 }
 
+/**
+ * The version languages `CvFilterData::$language` filters on. The backend
+ * stores a free string (`max:8`), so an unknown code falls back to itself.
+ */
+export const CV_LANGUAGE_OPTIONS: FilterSelectOption[] = [
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Español' },
+    { value: 'pt-PT', label: 'Português (PT)' },
+];
+
+/** `pt-PT` → "Português (PT)"; an unlisted code renders as-is. */
+export function cvLanguageLabel(language: string): string {
+    return (
+        CV_LANGUAGE_OPTIONS.find((option) => option.value === language)
+            ?.label ?? language
+    );
+}
+
 const FILE_TYPES: Record<CvFileType, { label: string; icon: LucideIcon }> = {
     pdf: { label: 'PDF', icon: FileTextIcon },
     md: { label: 'Markdown', icon: FileCodeIcon },

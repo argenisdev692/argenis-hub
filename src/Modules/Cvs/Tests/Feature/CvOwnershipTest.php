@@ -40,9 +40,19 @@ it('returns 404 when another user cv is fetched by uuid', function (): void {
 it('refuses to soft delete another user cv', function (): void {
     $this->actingAs($this->intruder)
         ->delete("/cvs/{$this->cv->uuid}")
-        ->assertRedirect();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('cvs', ['uuid' => $this->cv->uuid, 'deleted_at' => null]);
+});
+
+it('refuses to restore another user cv', function (): void {
+    $this->cv->delete();
+
+    $this->actingAs($this->intruder)
+        ->patch("/cvs/{$this->cv->uuid}/restore")
+        ->assertNotFound();
+
+    expect($this->cv->fresh()->trashed())->toBeTrue();
 });
 
 it('refuses to bulk delete another user cv', function (): void {
