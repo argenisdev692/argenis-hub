@@ -107,6 +107,29 @@ final readonly class FfmpegCommandBuilder
     }
 
     /**
+     * `freezedetect` on a downscaled copy: whether the screen moves does not
+     * need 1080p, and a small frame keeps this extra pass cheap. Audio is
+     * dropped for the same reason. A blinking caret changes too few pixels to
+     * cross the noise floor, so it still reads as a still screen.
+     *
+     * @return list<string>
+     */
+    #[\NoDiscard]
+    public function detectFrozenFrames(string $path, int $noiseDb, float $minSeconds): array
+    {
+        return [
+            $this->ffmpegBinary,
+            ...self::COMMON_FLAGS,
+            '-i', $path,
+            '-map', '0:v:0',
+            '-an',
+            '-vf', sprintf('scale=480:-2,freezedetect=n=%ddB:d=%s', $noiseDb, self::number($minSeconds)),
+            '-f', 'null',
+            '-',
+        ];
+    }
+
+    /**
      * Normalize-and-join. `$intermediate` selects the near-lossless preset the
      * render pass will re-encode from (AD-4), so the merge does not bake its own
      * compression artefacts into a file that gets encoded a second time.

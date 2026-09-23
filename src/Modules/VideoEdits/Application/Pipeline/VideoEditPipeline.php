@@ -14,6 +14,7 @@ use Modules\VideoEdits\Domain\Exceptions\CutReviewRequiredException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
 use Modules\VideoEdits\Domain\Ports\ScriptTextExtractorPort;
+use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
@@ -24,6 +25,8 @@ use Modules\VideoEdits\Domain\ValueObjects\CutDecision;
 use Modules\VideoEdits\Domain\ValueObjects\DecisionContext;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
+use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
+use Modules\VideoEdits\Domain\ValueObjects\Transcript;
 use Modules\VideoEdits\Domain\ValueObjects\ValidatedDecision;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditSourceEloquentModel;
@@ -56,6 +59,7 @@ final readonly class VideoEditPipeline
         private CutDecisionValidator $validator,
         private CutPlanner $planner,
         private ScriptTextExtractorPort $scriptExtractor,
+        private TranscriptStorePort $transcripts,
         private Config $config,
     ) {}
 
@@ -107,23 +111,22 @@ final readonly class VideoEditPipeline
         // progress reporting and the producer registry stays the only seam.
         $progress->startStage(ProcessingStage::Analysis);
 
+        $context = new DecisionContext(
+            mode: $edit->mode,
+            parameters: $edit->parameters,
+            workingPath: $workingPath,
+            workingProbe: $workingProbe,
+            videoEditId: $edit->id,
+            videoEditUuid: $edit->uuid,
+            ownerId: $edit->user_id,
+            sourceFingerprints: $sourceFingerprints,
+            // A producer owning stages of its own reports them here, so a
+            // long transcription moves the bar instead of looking hung.
+            onStageStart: static fn (ProcessingStage $stage) => $progress->startStage($stage),
+        );
+
         try {
-            $decisions = $this->produceDecisions(
-                new DecisionContext(
-                    mode: $edit->mode,
-                    parameters: $edit->parameters,
-                    workingPath: $workingPath,
-                    workingProbe: $workingProbe,
-                    videoEditId: $edit->id,
-                    videoEditUuid: $edit->uuid,
-                    ownerId: $edit->user_id,
-                    sourceFingerprints: $sourceFingerprints,
-                    // A producer owning stages of its own reports them here, so a
-                    // long transcription moves the bar instead of looking hung.
-                    onStageStart: static fn (ProcessingStage $stage) => $progress->startStage($stage),
-                ),
-                $sourcesDurationMs,
-            );
+            $decisions = $this->produceDecisions($context, $sourcesDurationMs);
         } catch (CutReviewRequiredException) {
             $this->holdForReview($edit);
 
@@ -134,7 +137,13 @@ final readonly class VideoEditPipeline
         $progress->startStage(ProcessingStage::PlanCuts);
         $validated = $this->validator->validate($decisions, $workingProbe->durationMs);
         $this->assertUserDecisionsAccepted($validated);
-        $plan = $this->planner->plan($validated, $workingProbe->durationMs);
+        $transcript = $this->reusableTranscript($context);
+        $plan = $this->planner->plan(
+            $validated,
+            $workingProbe->durationMs,
+            $transcript->words ?? [],
+            $transcript->segments ?? [],
+        );
 
         // ── Render ──────────────────────────────────────────────────────────
         $progress->startStage(ProcessingStage::Render);
@@ -149,6 +158,7 @@ final readonly class VideoEditPipeline
                 $resultLocalPath,
                 $profile,
                 static fn (int $percent) => $progress->advanceStage(ProcessingStage::Render, $percent),
+                RenderEffects::fromPlan($plan, (float) $this->config->get('video-edit.breaths.attenuation_db')),
             );
         }
 
@@ -164,7 +174,7 @@ final readonly class VideoEditPipeline
             $resultPath,
             (int) filesize($resultLocalPath),
             $this->effectiveSettings($profile),
-            $this->warnings($inputProbes, $plan->rejectedDecisionCount()),
+            $this->warnings($inputProbes, $plan->rejectedDecisionCount(), count($plan->compressedRanges)),
         );
 
         if (! $completed) {
@@ -327,6 +337,22 @@ final readonly class VideoEditPipeline
         );
     }
 
+    /**
+     * The transcript the planner keeps silence cuts away from words with, finds
+     * sentence ends and breaths in. Read after the producers ran, so a
+     * speech-cleanup edit sees the transcript it just stored; a silence-only
+     * edit never pays for a transcription it did not ask for, but still reuses
+     * one already stored for the same sources.
+     */
+    private function reusableTranscript(DecisionContext $context): ?Transcript
+    {
+        if ($context->ownerId === null || $context->sourceFingerprints === []) {
+            return null;
+        }
+
+        return $this->transcripts->findReusable($context->ownerId, $context->contentKey());
+    }
+
     private function assertWithinDurationLimit(int $sourcesDurationMs): void
     {
         $maximumMs = (int) $this->config->get('video-edit.limits.max_total_duration_seconds') * 1000;
@@ -398,7 +424,13 @@ final readonly class VideoEditPipeline
     {
         return [
             'noise_floor_db' => (int) $this->config->get('video-edit.silence.noise_floor_db'),
-            'padding_ms' => (int) $this->config->get('video-edit.silence.padding_ms'),
+            'padding_after_speech_ms' => (int) $this->config->get('video-edit.silence.padding_after_speech_ms'),
+            'padding_before_speech_ms' => (int) $this->config->get('video-edit.silence.padding_before_speech_ms'),
+            'word_guard_after_ms' => (int) $this->config->get('video-edit.silence.word_guard_after_ms'),
+            'word_guard_before_ms' => (int) $this->config->get('video-edit.silence.word_guard_before_ms'),
+            'mid_sentence_pause_ms' => (int) $this->config->get('video-edit.silence.mid_sentence_pause_ms'),
+            'screen_activity' => (array) $this->config->get('video-edit.screen_activity'),
+            'breaths' => (array) $this->config->get('video-edit.breaths'),
             'min_kept_fragment_ms' => (int) $this->config->get('video-edit.cuts.min_kept_fragment_ms'),
             'output_profile' => [
                 'width' => $profile->width,
@@ -414,9 +446,13 @@ final readonly class VideoEditPipeline
      * @param  list<MediaProbe>  $probes
      * @return list<string>
      */
-    private function warnings(array $probes, int $rejectedDecisionCount): array
+    private function warnings(array $probes, int $rejectedDecisionCount, int $compressedWaitCount = 0): array
     {
         $warnings = [];
+
+        if ($compressedWaitCount > 0) {
+            $warnings[] = sprintf('%d tool wait(s) with a busy screen were sped up instead of cut.', $compressedWaitCount);
+        }
 
         foreach ($probes as $index => $probe) {
             if (! $probe->hasAudio) {

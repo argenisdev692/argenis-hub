@@ -61,6 +61,15 @@ it('builds a silencedetect filter from the threshold and noise floor', function 
         ->and(array_last($command))->toBe('-');
 });
 
+it('detects a still screen on a small, silent copy of the picture', function (): void {
+    $command = commandBuilder()->detectFrozenFrames('/w/merged.mp4', -50, 0.5);
+
+    expect(valueAfter($command, '-map'))->toBe('0:v:0')
+        ->and($command)->toContain('-an')
+        ->and(valueAfter($command, '-vf'))->toBe('scale=480:-2,freezedetect=n=-50dB:d=0.500')
+        ->and(valueAfter($command, '-f'))->toBe('null');
+});
+
 it('formats the silence duration locale-independently', function (): void {
     $locale = setlocale(LC_NUMERIC, '0');
     setlocale(LC_NUMERIC, 'de_DE.UTF-8', 'de_DE', 'German_Germany');

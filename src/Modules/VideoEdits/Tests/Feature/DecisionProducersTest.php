@@ -66,10 +66,40 @@ it('turns detected silences into system decisions using the requested threshold'
         ->and($decisions[0]->reason)->toBe(CutReason::Silence)
         ->and($decisions[0]->origin)->toBe(DecisionOrigin::SystemDetection)
         ->and([$decisions[1]->startMs, $decisions[1]->endMs])->toBe([40_000, 42_500])
-        ->and($decisions[0]->evidence)->toBe(['threshold_ms' => 2_000])
+        // The fake screen is still throughout, so neither silence is a tool wait.
+        ->and($decisions[0]->evidence)->toBe(['threshold_ms' => 2_000, 'screen_activity' => 0.0])
         ->and($call['threshold']->milliseconds)->toBe(2_000)
-        ->and($call['noiseFloorDb'])->toBe(-30);
+        ->and($call['noiseFloorDb'])->toBe(-40);
 });
+
+it('measures how busy the screen was during each silence', function (): void {
+    // 10–20 s: the picture freezes only for 12–14 s, so it moves 80 % of the silence.
+    // 40–44 s: frozen throughout — dead air.
+    $this->editor->silences = [new TimeRange(10_000, 20_000), new TimeRange(40_000, 44_000)];
+    $this->editor->frozen = [new TimeRange(12_000, 14_000), new TimeRange(30_000, 50_000)];
+
+    $decisions = app(SilenceDecisionProducer::class)->produce(decisionContext(VideoEditMode::AutoEdit, [
+        'silence_removal' => ['enabled' => true, 'threshold_seconds' => 1.0],
+    ]));
+
+    expect($decisions[0]->evidence['screen_activity'])->toBe(0.8)
+        ->and($decisions[1]->evidence['screen_activity'])->toBe(0.0)
+        ->and($this->editor->callsTo('detectFrozenFrames')[0]['noiseDb'])->toBe(-50);
+});
+
+it('still cuts every silence when the screen check fails or is switched off', function (bool $enabled): void {
+    config()->set('video-edit.screen_activity.enabled', $enabled);
+    $this->editor->silences = [new TimeRange(10_000, 20_000)];
+    $this->editor->failOn = 'detectFrozenFrames';
+    $this->editor->failure = new RuntimeException('freezedetect crashed');
+
+    $decisions = app(SilenceDecisionProducer::class)->produce(decisionContext(VideoEditMode::AutoEdit, [
+        'silence_removal' => ['enabled' => true, 'threshold_seconds' => 1.0],
+    ]));
+
+    expect($decisions)->toHaveCount(1)
+        ->and($decisions[0]->evidence)->not->toHaveKey('screen_activity');
+})->with(['failed check' => true, 'switched off' => false]);
 
 it('falls back to the default silence threshold', function (): void {
     app(SilenceDecisionProducer::class)->produce(decisionContext(VideoEditMode::AutoEdit, [

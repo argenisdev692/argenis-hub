@@ -72,6 +72,7 @@ final readonly class OpenAiWhisperTranscriber implements TranscriptionPort
                 ['name' => 'timestamp_granularities[]', 'contents' => 'word'],
                 ['name' => 'timestamp_granularities[]', 'contents' => 'segment'],
                 $language === null ? null : ['name' => 'language', 'contents' => $language],
+                ['name' => 'prompt', 'contents' => $this->verbatimPrompt($language)],
             ])));
 
         if ($response->failed()) {
@@ -86,6 +87,19 @@ final readonly class OpenAiWhisperTranscriber implements TranscriptionPort
         }
 
         return self::toTranscript($response->json() ?? []);
+    }
+
+    /**
+     * A style prompt written with hesitations in it. Whisper imitates the
+     * prompt's style, so without one it returns a cleaned-up transcript with
+     * the "eh"/"mmm" the speech-cleanup stage exists to remove silently gone.
+     */
+    private function verbatimPrompt(?string $language): string
+    {
+        /** @var array<string, string> $prompts */
+        $prompts = (array) $this->config->get('video-edit.speech.openai.prompts', []);
+
+        return $prompts[$language ?? ''] ?? $prompts['default'] ?? '';
     }
 
     /**

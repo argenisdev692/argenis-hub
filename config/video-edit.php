@@ -34,8 +34,56 @@ return [
         'default_threshold_seconds' => 1.0,                    // US-2
         'min_threshold_seconds' => 0.3,                        // D4
         'max_threshold_seconds' => 10.0,                       // D4
-        'noise_floor_db' => -30,                               // D4 — system setting
-        'padding_ms' => 150,                                   // D5
+        // D4 — system setting. -40 rather than -30: a Spanish word decays into
+        // an unstressed last syllable that -30 already reads as silence.
+        'noise_floor_db' => -40,
+        // D5 — asymmetric: word endings fade out slowly, attacks are sharp.
+        'padding_after_speech_ms' => 250,
+        'padding_before_speech_ms' => 100,
+        // Only when a transcript exists (speech cleanup / AI edit): no silence
+        // cut may reach this close to a word Whisper transcribed.
+        'word_guard_after_ms' => 150,
+        'word_guard_before_ms' => 60,
+        // A pause cut inside a sentence keeps this much air, so the two halves
+        // of one intonation are not glued together. Sentence ends (Whisper
+        // segments closing on . ? !) are cut tight. Needs a transcript.
+        'mid_sentence_pause_ms' => 300,
+    ],
+
+    /*
+    |----------------------------------------------------------------------
+    | Tool waits (screen busy while nobody speaks)
+    |----------------------------------------------------------------------
+    |
+    | A silence during which the screen keeps moving is a wait on a tool —
+    | Claude or ChatGPT streaming an answer, a Cursor agent editing files,
+    | Copilot filling a Word document. It is sped up instead of cut, so the
+    | viewer sees the request go out and the result land. Detection is by
+    | picture change (FFmpeg `freezedetect`), so it works for any tool.
+    |
+    */
+    'screen_activity' => [
+        'enabled' => (bool) env('VIDEO_EDIT_SCREEN_ACTIVITY', true),
+        // Pixel change below this counts as still (a blinking caret stays below).
+        'freeze_noise_db' => -50,
+        'freeze_min_seconds' => 0.5,
+        // Share of the silence the screen must spend moving to count as a wait.
+        'min_activity_ratio' => 0.5,
+        'keep_head_ms' => 1500,
+        'keep_tail_ms' => 1000,
+        'speed' => 3.0,
+        // However long the wait, the sped-up middle never lasts longer on screen.
+        'max_compressed_output_ms' => 4000,
+    ],
+
+    /*
+    | Breaths and mouth noise between words are turned down, never cut: cutting
+    | every breath is what makes an edit sound robotic. Needs a transcript.
+    */
+    'breaths' => [
+        'enabled' => (bool) env('VIDEO_EDIT_BREATHS', true),
+        'min_gap_ms' => 250,
+        'attenuation_db' => -15.0,
     ],
 
     /*
@@ -67,6 +115,15 @@ return [
             'api_key' => env('OPENAI_API_KEY'),
             'model' => env('OPENAI_WHISPER_MODEL', 'whisper-1'),
             'timeout_seconds' => (int) env('OPENAI_WHISPER_TIMEOUT', 600),
+            // Whisper tidies its transcript and drops hesitations unless the
+            // prompt shows it verbatim speech; a filler that is never
+            // transcribed can never be cut. Keyed by request language, with
+            // `default` for anything else. Under Whisper's 224-token prompt cap.
+            'prompts' => [
+                'es' => 'Eh, mmm... bueno, este, o sea, vamos a ver. Ehh, ah, pues, digamos que, mmm, sí.',
+                'en' => 'Um, uh... so, like, you know, I mean, uh, let\'s see. Hmm, well, basically.',
+                'default' => 'Um, uh, eh, mmm... hmm, ah.',
+            ],
         ],
 
         'dictionaries' => [

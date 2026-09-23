@@ -7,9 +7,12 @@ use Illuminate\Support\Facades\File;
 use Modules\VideoEdits\Application\Commands\MarkVideoEditFailedHandler;
 use Modules\VideoEdits\Domain\Enums\DecisionOutcome;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
+use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
+use Modules\VideoEdits\Domain\ValueObjects\Transcript;
+use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditSourceEloquentModel;
 use Modules\VideoEdits\Infrastructure\Queue\ProcessVideoEditJob;
@@ -91,10 +94,10 @@ it('runs an auto edit end to end: merge, cut, render, publish and clean up', fun
         ->and($fresh->progress_percent)->toBe(100)
         ->and($fresh->attempts)->toBe(1)
         ->and($fresh->original_duration_ms)->toBe(60_000)
-        ->and($fresh->removed_duration_ms)->toBe(3_700)
-        ->and($fresh->final_duration_ms)->toBe(56_300)
+        ->and($fresh->removed_duration_ms)->toBe(3_650)
+        ->and($fresh->final_duration_ms)->toBe(56_350)
         ->and($fresh->applied_cut_count)->toBe(2)
-        ->and($fresh->appliedCuts->map(fn ($cut) => [$cut->start_ms, $cut->end_ms])->all())->toBe([[10_150, 11_850], [50_000, 52_000]])
+        ->and($fresh->appliedCuts->map(fn ($cut) => [$cut->start_ms, $cut->end_ms])->all())->toBe([[10_250, 11_900], [50_000, 52_000]])
         ->and($fresh->cutDecisions)->toHaveCount(2)
         ->and($fresh->cutDecisions->every(fn ($decision) => $decision->outcome === DecisionOutcome::Applied))->toBeTrue()
         ->and($fresh->effective_settings['output_profile']['width'])->toBe(1920)
@@ -106,6 +109,52 @@ it('runs an auto edit end to end: merge, cut, render, publish and clean up', fun
         ->and($this->editor->callsTo('merge')[0]['intermediate'])->toBeTrue()
         ->and($this->editor->callsTo('render')[0]['keepRanges'])->toHaveCount(3)
         ->and(is_dir($this->workspaceRoot.DIRECTORY_SEPARATOR.$edit->uuid))->toBeFalse();
+});
+
+it('keeps silence cuts off the words of a transcript stored for the same sources', function (): void {
+    $edit = queuedEdit($this->storage, ['parameters' => cutParameters()]);
+    $this->editor->probes = [
+        'source-1.mp4' => probeLasting(30_000),
+        'source-2.mp4' => probeLasting(30_000),
+        'merged.mp4' => probeLasting(60_000),
+    ];
+    $this->editor->silences = [new TimeRange(10_000, 12_000)];
+    app()->instance(TranscriptStorePort::class, new class implements TranscriptStorePort
+    {
+        public function findReusable(int $userId, string $sourceFingerprint): ?Transcript
+        {
+            return new Transcript([new TranscriptWord('compartir', 9_500, 10_400)]);
+        }
+
+        public function store(int $videoEditId, string $sourceFingerprint, Transcript $transcript, string $provider, string $model): void {}
+    });
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    expect($edit->fresh('appliedCuts')->appliedCuts->map(fn ($cut) => [$cut->start_ms, $cut->end_ms])->all())
+        ->toBe([[10_550, 11_900]]);
+});
+
+it('speeds up a wait on an AI tool instead of cutting it', function (): void {
+    $edit = queuedEdit($this->storage, ['parameters' => cutParameters()], sourceCount: 1);
+    $this->editor->probes = ['source-1.mp4' => probeLasting(60_000)];
+    // Nobody speaks from 10 s to 22 s while the screen keeps changing — an
+    // answer streaming in, an agent editing files — so it is a tool wait.
+    $this->editor->silences = [new TimeRange(10_000, 22_000)];
+    $this->editor->frozen = [];
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $fresh = $edit->fresh(['appliedCuts', 'cutDecisions']);
+    $effects = $this->editor->callsTo('render')[0]['effects'];
+
+    expect($fresh->status)->toBe(VideoEditStatus::Completed)
+        ->and($fresh->appliedCuts)->toHaveCount(0)
+        ->and($effects->compressedRanges)->toHaveCount(1)
+        ->and($effects->compressedRanges[0]->speed)->toBe(3.0)
+        ->and($fresh->final_duration_ms)->toBe(60_000 - $effects->savedMs())
+        ->and($fresh->cutDecisions[0]->rejection_reason)->toBe('screen_activity')
+        ->and($fresh->warnings)->toContain('1 tool wait(s) with a busy screen were sped up instead of cut.');
 });
 
 it('merges clips into the final file without a render pass', function (): void {

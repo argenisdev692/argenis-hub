@@ -252,7 +252,7 @@ onBeforeUnmount(() => {
              with the page background, so it has to stay flat against the page
              rather than rotating away from it. -->
         <div
-            class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-background"
+            class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-linear-to-b from-transparent to-background"
         />
         </m.div>
     </div>

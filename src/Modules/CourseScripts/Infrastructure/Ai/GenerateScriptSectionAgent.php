@@ -42,13 +42,22 @@ final class GenerateScriptSectionAgent implements Agent, Conversational, HasProv
               narration, on_screen_prompt, expected_result, on_screen_actions,
               show_on_screen, on_screen_table, presenter_note.
             - narration: text = the exact spoken words, natural and specific, sized to
-              the section's minutes (about 150 spoken words per minute in total, a
-              dynamic pace: short sentences, no pauses written in).
+              the section's minutes (150–160 spoken words per minute in total). Each
+              narration is a continuous spoken paragraph with connectors, said in
+              one breath — never a string of telegraphic one-liners, no pauses
+              written in.
             - on_screen_prompt: prompt = the complete literal prompt to type. Only if
-              the outline says the course uses a tool. Follow it with an
-              expected_result and on_screen_actions. The presenter pastes it: the
-              narration before it states in ONE sentence what it asks for and why,
-              and never repeats the prompt text word for word.
+              the outline says the course uses a tool. The presenter pastes it and
+              never reads it. Segment order around every prompt:
+              narration (the bridge sentence: ONE sentence, at most ~15 words, what
+              it asks for) → on_screen_prompt → narration said while the tool
+              generates (what to notice) → expected_result → narration explaining
+              the result quickly, only its important points, without reading every
+              generated section → on_screen_actions → presenter_note whose items
+              include one "[CORTE] …" naming where the generation wait is trimmed.
+            - Any step that opens a new menu, panel, tab or scene gets its own
+              on_screen_actions with every click, and a presenter_note item
+              "[SIN CORTE] …": it is recorded whole, without cuts.
             - on_screen_actions and presenter_note: items = short imperative steps.
             - show_on_screen: text = what is shown; read_aloud true when the presenter
               reads it; practice_file = the practice file name when the material comes

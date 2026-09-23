@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Modules\VideoEdits\Domain\ValueObjects\CompressedRange;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
+use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
 use Modules\VideoEdits\Infrastructure\Media\FilterGraphBuilder;
 
@@ -65,6 +67,39 @@ it('does not fade a single kept range, which has no join', function (): void {
     );
 
     expect($graph)->not->toContain('afade');
+});
+
+it('plays a tool wait faster, picture and room tone together', function (): void {
+    $graph = (new FilterGraphBuilder)->keepRanges(
+        [new TimeRange(0, 20_000)],
+        new MediaProbe(20_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+        new RenderEffects([new CompressedRange(new TimeRange(5_000, 14_000), 3.0)]),
+    );
+
+    expect(array_slice(explode(';', $graph), 0, 6))->toBe([
+        '[0:v:0]trim=start=0.000:end=5.000,setpts=PTS-STARTPTS[v0]',
+        '[0:a:0]atrim=start=0.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=out:st=4.985:d=0.015[a0]',
+        '[0:v:0]trim=start=5.000:end=14.000,setpts=(PTS-STARTPTS)/3.000[v1]',
+        '[0:a:0]atrim=start=5.000:end=14.000,asetpts=PTS-STARTPTS,atempo=3.000,afade=t=in:st=0:d=0.015,afade=t=out:st=2.985:d=0.015[a1]',
+        '[0:v:0]trim=start=14.000:end=20.000,setpts=PTS-STARTPTS[v2]',
+        '[0:a:0]atrim=start=14.000:end=20.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.015[a2]',
+    ])->and($graph)->toContain('concat=n=3:v=1:a=1[cv][ca]');
+});
+
+it('turns breaths down with ramps, in segment-local time', function (): void {
+    $graph = (new FilterGraphBuilder)->keepRanges(
+        [new TimeRange(0, 10_000), new TimeRange(12_000, 20_000)],
+        new MediaProbe(20_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+        new RenderEffects([], [new TimeRange(13_000, 13_500)], -20.0),
+    );
+
+    // −20 dB is a gain of 0.1, so the curve dips by 0.9 between 1.0 s and 1.5 s
+    // of the second segment, with 60 ms ramps.
+    expect(explode(';', $graph)[3])->toBe(
+        "[0:a:0]atrim=start=12.000:end=20.000,asetpts=PTS-STARTPTS,volume=volume='1-0.9000*clip(min((t-1.000)/0.060,(1.500-t)/0.060),0,1)':eval=frame,afade=t=in:st=0:d=0.015[a1]",
+    )->and(explode(';', $graph)[1])->not->toContain('volume=');
 });
 
 it('fills silent ranges when the input has no audio', function (): void {

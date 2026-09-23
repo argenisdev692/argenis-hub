@@ -8,9 +8,11 @@ use Closure;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
+use Modules\VideoEdits\Domain\Services\FrozenFrameParser;
 use Modules\VideoEdits\Domain\Services\SilenceCutParser;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
+use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
 use Modules\VideoEdits\Domain\ValueObjects\SilenceThreshold;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
 use Psr\Log\LoggerInterface;
@@ -41,6 +43,7 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
         private FfmpegCommandBuilder $commands,
         private FilterGraphBuilder $graphs,
         private SilenceCutParser $silenceParser,
+        private FrozenFrameParser $frozenParser,
         private ConfigRepository $config,
         private LoggerInterface $logger,
     ) {}
@@ -149,6 +152,31 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
     }
 
     /**
+     * Throws on failure rather than answering "never frozen", which would read
+     * every silence as a busy screen. The silence producer catches it and falls
+     * back to plain cuts, so a failed pass costs the wait detection only.
+     */
+    public function detectFrozenFrames(string $path, MediaProbe $probe, int $noiseDb, float $minSeconds): array
+    {
+        if (! $probe->hasVideo) {
+            return [];
+        }
+
+        $process = $this->run(
+            $this->commands->detectFrozenFrames($path, $noiseDb, $minSeconds),
+            $this->timeoutSeconds(),
+        );
+
+        if (! $process->isSuccessful()) {
+            $this->logFailure('detectFrozenFrames', $process);
+
+            throw new RuntimeException('Frozen-frame detection failed.');
+        }
+
+        return $this->frozenParser->parse($process->getErrorOutput(), $probe->durationMs);
+    }
+
+    /**
      * @param  list<TimeRange>  $keepRanges
      */
     public function render(
@@ -158,16 +186,17 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
         string $outputPath,
         OutputProfile $profile,
         Closure $onProgress,
+        ?RenderEffects $effects = null,
     ): void {
         $expectedMs = array_sum(array_map(
             static fn (TimeRange $range): int => $range->durationMs(),
             $keepRanges,
-        ));
+        )) - ($effects?->savedMs() ?? 0);
 
         $this->encode(
             $this->commands->render(
                 $inputPath,
-                $this->writeFilterGraph($outputPath, $this->graphs->keepRanges($keepRanges, $inputProbe, $profile)),
+                $this->writeFilterGraph($outputPath, $this->graphs->keepRanges($keepRanges, $inputProbe, $profile, $effects)),
                 $outputPath,
                 $profile,
             ),

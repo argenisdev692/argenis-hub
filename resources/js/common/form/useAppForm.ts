@@ -102,6 +102,25 @@ export function fieldErrorMessages(field: AnyFieldApi): string[] {
         .filter((message): message is string => Boolean(message));
 }
 
+/** The first client-side validation message across every field, if any. */
+function firstErrorMessage(
+    fieldMeta: Record<string, { errors?: unknown[] } | undefined>,
+): string | null {
+    for (const meta of Object.values(fieldMeta)) {
+        for (const error of meta?.errors ?? []) {
+            if (typeof error === 'string' && error !== '') {
+                return error;
+            }
+
+            if (error && typeof error === 'object' && 'message' in error) {
+                return String((error as { message: unknown }).message);
+            }
+        }
+    }
+
+    return null;
+}
+
 /**
  * Projects Laravel's `errors` bag onto the matching TanStack fields, using the
  * dedicated `onServer` slot so a later client-side pass clears them naturally
@@ -198,6 +217,19 @@ export function useAppForm<TValues extends Record<string, unknown>>(options: {
         validators: {
             ...(schema ? { onDynamic: schema } : {}),
         },
+        /**
+         * TanStack refuses to submit an invalid form without a word. When the
+         * failing path has no rendered field (a nested `file.0`, a form-level
+         * refine) the operator clicks Save and nothing happens at all — so the
+         * first message is always surfaced here too.
+         */
+        onSubmitInvalid: ({ formApi }) => {
+            toast.error('Please check the form', {
+                description:
+                    firstErrorMessage(formApi.state.fieldMeta) ??
+                    'Some fields are not valid yet.',
+            });
+        },
         onSubmit: async ({ value }: { value: TValues }) => {
             if (onSubmit) {
                 await onSubmit(value);
@@ -229,6 +261,13 @@ export function useAppForm<TValues extends Record<string, unknown>>(options: {
                     },
                     onError: (errors: Record<string, string>) => {
                         applyServerErrors(form, errors);
+                        // A 422 keyed to a field this form does not render would
+                        // otherwise land nowhere visible.
+                        toast.error('Could not save', {
+                            description:
+                                Object.values(errors)[0] ??
+                                'The server rejected the form.',
+                        });
                     },
                     onFinish: () => resolve(),
                 });

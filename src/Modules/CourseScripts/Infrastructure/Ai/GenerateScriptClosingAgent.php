@@ -41,14 +41,27 @@ final class GenerateScriptClosingAgent implements Agent, Conversational, HasProv
               this is the last video.
             - preparation: everything to have ready before recording, naming every
               practice file exactly as declared.
-            - during_recording: timing and emphasis cues tied to section numbers.
+            - during_recording: timing and emphasis cues tied to section numbers, and
+              always these recording and editing rules: never read a prompt aloud,
+              only its bridge sentence; keep talking while the tool generates, the
+              excess is trimmed in editing; one breath per narration paragraph; no
+              recording fillers ("pausa acá", "a ver", "vale"); after a mistake,
+              repeat the WHOLE sentence from its start so the cut lands cleanly;
+              cut only at the "[CORTE]" notes, on a still frame, leaving about
+              150 ms of air before and after each cut so no word is clipped; record
+              every "[SIN CORTE]" step whole; compress generation waits longer than
+              3 seconds (speed the video up, never the voice); normalise the audio
+              to −16 LUFS.
             - tools_required: tools, apps or connectors the recording needs; when none
               are needed, leave it empty and explain in tools_none_reason.
             - continuity: how this video connects with the previous and next ones.
             - organisations_used: the fictional organisations that appear. Only names
               from the course bible or from the practice pack.
             - verification_checklist: what must visibly happen on screen, one item per
-              demonstration, plus format checks.
+              demonstration, plus format checks — always including: no prompt read
+              aloud; no audible mini-pauses inside a paragraph; every cut clean, on
+              a still frame and with no clipped word; every menu or scene change
+              shown whole; final duration within ±10 seconds of the target.
             - practice_exercise: the EJERCICIO PRÁCTICO the student does on their own
               after the video — every video has one, conceptual ones included.
               title: a short, inviting name. scenario: a concrete, realistic

@@ -6,7 +6,10 @@ namespace Modules\CourseScripts\Infrastructure\Ai;
 
 /**
  * The author's reference format, distilled from GUIDE/MODULE-VIDEOS
- * (Guion_Video_39/43/46 and Propuestas_Logistica_Heliantia — research §11–§12).
+ * (Guion_Video_39/43/46 and Propuestas_Logistica_Heliantia — research §11–§12),
+ * plus the recording rules of the supervisor-approved re-recording of video 28
+ * (GUION-VIDEO-28-v2-REGRABACION): continuous narration, bridge sentences
+ * instead of read-out prompts, and cuts only on still frames.
  *
  * Shared by the writer and reviewer agents as part of their constant
  * instructions, so it sits in the cached prefix of every call.
@@ -58,6 +61,32 @@ final readonly class ScriptFormatGuide
            explicit statement that none are needed, continuidad, organizaciones
            ficticias usadas) and VERIFICACIÓN FINAL (a checklist of what must
            visibly happen on screen, one item per demo plus format checks).
+
+        RECORDING RULES (from the supervisor-approved format — every script follows them)
+        - Continuous narration. Each narration segment is a spoken paragraph with
+          connectors, said in one breath; never telegraphic one-line sentences
+          that invite a pause between them. Budget 150–160 spoken words per
+          minute. No recording fillers in the words ("pausa acá", "a ver", "vale",
+          "okey", "muy bien", repeated "acá"/"aquí").
+        - Prompts follow a fixed pattern, in this order: (1) a BRIDGE SENTENCE — a
+          single narration sentence of at most ~15 words (under 6 seconds) saying
+          what the prompt asks for; it is the only thing narrated about the
+          prompt; (2) the PROMPT, pasted, never read aloud; (3) a short narration
+          said WHILE THE TOOL GENERATES (what to notice), so there is never live
+          silence; (4) the expected result; (5) narration that explains the result
+          quickly — the important points only, never reading every generated
+          section aloud.
+        - Cuts. Plan them as presenter notes starting "[CORTE]" and place them
+          only where the tool is generating or on a still frame, never inside a
+          sentence. Scene changes, opening a new menu, switching tabs or panels:
+          show the whole step on screen without cuts, with its own
+          on_screen_actions, and mark it with a presenter note starting
+          "[SIN CORTE]" — a student must never lose track of where a click went.
+        - Pacing on screen: hold about 2 seconds on a finished result before
+          moving on, and never chain two new screens without narration between
+          them.
+        - Demos are realistic business cases the student could use tomorrow; they
+          should spark interest, not just illustrate a feature.
 
         Quality bar: specific over generic. Real features, real steps, real
         mistakes people make — grounded first in the author's notes, then the

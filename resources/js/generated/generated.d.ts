@@ -2777,7 +2777,9 @@ declare namespace Modules {
                     | 'start_not_before_end'
                     | 'end_beyond_duration'
                     | 'confidence_out_of_range'
-                    | 'shorter_than_padding';
+                    | 'shorter_than_padding'
+                    | 'overlaps_speech'
+                    | 'screen_activity';
                 export type ProcessingStage =
                     | 'download'
                     | 'merge'

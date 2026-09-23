@@ -38,6 +38,7 @@ use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
 use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
+use Modules\VideoEdits\Domain\ValueObjects\WaitCompressionPolicy;
 use Modules\VideoEdits\Infrastructure\Ai\LaravelAiVideoEditAnalyzer;
 use Modules\VideoEdits\Infrastructure\Ai\ScriptTextExtractor;
 use Modules\VideoEdits\Infrastructure\Console\Commands\PurgeExpiredVideoEditSourcesCommand;
@@ -79,9 +80,22 @@ final class VideoEditsServiceProvider extends ServiceProvider
         $this->registerSpeechDetector();
 
         $this->app->bind(CutPlanner::class, static fn (): CutPlanner => new CutPlanner(
-            silencePaddingMs: (int) config('video-edit.silence.padding_ms'),
+            silencePaddingAfterSpeechMs: (int) config('video-edit.silence.padding_after_speech_ms'),
+            silencePaddingBeforeSpeechMs: (int) config('video-edit.silence.padding_before_speech_ms'),
+            wordGuardAfterMs: (int) config('video-edit.silence.word_guard_after_ms'),
+            wordGuardBeforeMs: (int) config('video-edit.silence.word_guard_before_ms'),
             minKeptFragmentMs: (int) config('video-edit.cuts.min_kept_fragment_ms'),
             minOutputMs: (int) config('video-edit.cuts.min_output_ms'),
+            waitCompression: new WaitCompressionPolicy(
+                enabled: (bool) config('video-edit.screen_activity.enabled'),
+                minActivityRatio: (float) config('video-edit.screen_activity.min_activity_ratio'),
+                keepHeadMs: (int) config('video-edit.screen_activity.keep_head_ms'),
+                keepTailMs: (int) config('video-edit.screen_activity.keep_tail_ms'),
+                speed: (float) config('video-edit.screen_activity.speed'),
+                maxOutputMs: (int) config('video-edit.screen_activity.max_compressed_output_ms'),
+            ),
+            breathMinGapMs: (bool) config('video-edit.breaths.enabled') ? (int) config('video-edit.breaths.min_gap_ms') : 0,
+            midSentencePauseMs: (int) config('video-edit.silence.mid_sentence_pause_ms'),
         ));
 
         $this->registerDecisionProducers();

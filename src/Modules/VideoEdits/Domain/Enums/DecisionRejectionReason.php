@@ -15,4 +15,7 @@ enum DecisionRejectionReason: string
     case EndBeyondDuration = 'end_beyond_duration';
     case ConfidenceOutOfRange = 'confidence_out_of_range';
     case ShorterThanPadding = 'shorter_than_padding';
+    case OverlapsSpeech = 'overlaps_speech';
+    /** The screen was busy (a tool working) — the wait was sped up or kept instead of cut. */
+    case ScreenActivity = 'screen_activity';
 }

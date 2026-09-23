@@ -128,6 +128,11 @@ const { data: suggestion } = useNextInvoiceNumber(
  * year changes, a fresh suggestion arrives, and silently renumbering their
  * invoice underneath them would be indefensible. The "Use 014/2026" button
  * below is how they opt into the new one.
+ *
+ * Every write the form makes on its own passes `dontUpdateMeta`: TanStack marks
+ * a field dirty on any `setFieldValue`, and a form that is dirty before the
+ * operator typed anything makes `FormDialog` answer Cancel with the "Discard
+ * unsaved changes?" prompt instead of closing.
  */
 watch(suggestion, (next) => {
     if (
@@ -135,7 +140,9 @@ watch(suggestion, (next) => {
         !isEditing.value &&
         form.getFieldValue('invoice_number') === ''
     ) {
-        form.setFieldValue('invoice_number', next.invoice_number);
+        form.setFieldValue('invoice_number', next.invoice_number, {
+            dontUpdateMeta: true,
+        });
     }
 });
 
@@ -179,7 +186,9 @@ watch([paymentAccounts, paymentAccountUuid], ([accounts, uuid]) => {
     }
 
     if (!accounts.some((account) => account.uuid === uuid)) {
-        form.setFieldValue('payment_account_uuid', null);
+        form.setFieldValue('payment_account_uuid', null, {
+            dontUpdateMeta: true,
+        });
     }
 });
 
@@ -218,7 +227,7 @@ watch([open, defaultNotes], ([isOpen, notes]) => {
         notes &&
         form.getFieldValue('notes') === ''
     ) {
-        form.setFieldValue('notes', notes);
+        form.setFieldValue('notes', notes, { dontUpdateMeta: true });
     }
 });
 </script>

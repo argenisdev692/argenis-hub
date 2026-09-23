@@ -8,6 +8,7 @@ use Closure;
 use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
+use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
 use Modules\VideoEdits\Domain\ValueObjects\SilenceThreshold;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
 
@@ -53,7 +54,16 @@ interface VideoEditorPort
     public function detectSilences(string $path, MediaProbe $probe, SilenceThreshold $threshold, int $noiseFloorDb): array;
 
     /**
+     * Where the picture stands still. Its complement is where the screen is
+     * busy — the signal that tells a tool wait from dead air, whatever the tool.
+     *
+     * @return list<TimeRange>
+     */
+    public function detectFrozenFrames(string $path, MediaProbe $probe, int $noiseDb, float $minSeconds): array;
+
+    /**
      * Keep only `$keepRanges` (frame-accurate), in order, re-encoded to the profile.
+     * `$effects` speeds up and turns down parts of those ranges.
      *
      * @param  list<TimeRange>  $keepRanges
      * @param  Closure(int): void  $onProgress  0–100 within this operation
@@ -65,5 +75,6 @@ interface VideoEditorPort
         string $outputPath,
         OutputProfile $profile,
         Closure $onProgress,
+        ?RenderEffects $effects = null,
     ): void;
 }

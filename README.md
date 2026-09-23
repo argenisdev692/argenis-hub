@@ -317,8 +317,8 @@ there are load-bearing, not decorative).
 | 🔍 **LeadScout** | Lead discovery, geocoding, AI enrichment | 351 | 39 |
 | 📜 **ActivityLog** | Cross-module audit trail surface | 14 | 1 |
 | 💾 **Backups** | Scheduled backups via spatie/laravel-backup | 26 | 5 |
-| 🎬 **VideoEdits** | FFmpeg pipeline, R2 storage *(spec 001)* | 187 | 43 |
-| 🎓 **CourseScripts** | AI course bibles, scripts, versioned deliverables *(spec 002)* | 209 | 24 |
+| 🎬 **VideoEdits** | FFmpeg pipeline, Whisper word-aware silence cuts, R2 storage *(spec 001)* | 187 | 43 |
+| 🎓 **CourseScripts** | AI course bibles, scripts, versioned deliverables *(spec 002)* | 210 | 25 |
 | ⚙️ **Shared** | Ports, AI stack, resilience, export, storage, audit | — | — |
 
 Specs for the four largest builds live in `specs/`:
@@ -417,8 +417,10 @@ DB_CONNECTION=pgsql                     # host / port / credentials from your PG
 
 AI_PROVIDER=openai                      # default provider
 AI_FAILOVER_ORDER=openai,anthropic      # ordered failover chain
-OPENAI_API_KEY=
+OPENAI_API_KEY=                         # also used by VideoEdits for Whisper transcription
 ANTHROPIC_API_KEY=
+OPENAI_WHISPER_MODEL=whisper-1          # optional — VideoEdits speech cleanup
+VIDEO_EDIT_SPEECH_LANGUAGE=es           # optional — recordings are Spanish-first
 
 FILESYSTEM_DISK=r2                      # Cloudflare R2 (S3-compatible)
 RESEND_API_KEY=                         # transactional mail

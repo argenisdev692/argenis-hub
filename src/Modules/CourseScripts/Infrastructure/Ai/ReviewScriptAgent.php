@@ -43,7 +43,15 @@ final class ReviewScriptAgent implements Agent, Conversational, HasProviderOptio
               are complete and paste-ready and the narration summarises them instead
               of reading them aloud; narration is speakable at a dynamic pace; the
               EJERCICIO PRÁCTICO is a realistic, motivating challenge, not a repeat
-              of a demo.
+              of a demo. Also enforce the RECORDING RULES: every prompt has a
+              one-sentence bridge before it, narration while the tool generates
+              and a brief result explanation that does not read the output aloud;
+              narration is continuous paragraphs, not telegraphic one-liners;
+              planned cuts are "[CORTE]" notes on generation waits or still frames,
+              never inside a sentence; menu and scene changes are "[SIN CORTE]"
+              steps with every click listed; no recording fillers. A draft that
+              breaks any of these scores at most 5 here, with one objection per
+              breach.
             - continuity: correct references to previous/next videos; consistent use
               of the course bible.
             - errors_to_avoid: none of the brief's errors to avoid are committed.

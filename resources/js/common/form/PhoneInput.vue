@@ -81,19 +81,26 @@ watch(
     { immediate: true },
 );
 
+/**
+ * Writes only real changes. Seeding an edit form sets `country`, whose watcher
+ * lands here with the very number the parent passed in; echoing it back would
+ * run the form's `handleChange` and mark a form nobody touched as dirty, which
+ * turns Cancel into a "Discard unsaved changes?" prompt.
+ */
 function emitModel(): void {
     const digits = national.value.replace(/\D/g, '');
+    const parsed = digits
+        ? parsePhoneNumberFromString(national.value, country.value)
+        : undefined;
+    const next = !digits
+        ? null
+        : parsed
+          ? parsed.number
+          : `+${getCountryCallingCode(country.value)}${digits}`;
 
-    if (!digits) {
-        model.value = null;
-
-        return;
+    if (next !== model.value) {
+        model.value = next;
     }
-
-    const parsed = parsePhoneNumberFromString(national.value, country.value);
-    model.value = parsed
-        ? parsed.number
-        : `+${getCountryCallingCode(country.value)}${digits}`;
 }
 
 function onInput(event: Event): void {

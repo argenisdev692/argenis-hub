@@ -8,6 +8,7 @@ use Closure;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
+use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
 use Modules\VideoEdits\Domain\ValueObjects\SilenceThreshold;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
 use Throwable;
@@ -25,6 +26,15 @@ final class FakeVideoEditor implements VideoEditorPort
 
     /** @var list<TimeRange> */
     public array $silences = [];
+
+    /**
+     * Still stretches of the picture. Null means "frozen throughout" — a
+     * static screen, so no silence is ever mistaken for a tool wait unless a
+     * test says so.
+     *
+     * @var list<TimeRange>|null
+     */
+    public ?array $frozen = null;
 
     public ?string $failOn = null;
 
@@ -65,9 +75,16 @@ final class FakeVideoEditor implements VideoEditorPort
         return $this->silences;
     }
 
-    public function render(string $inputPath, MediaProbe $inputProbe, array $keepRanges, string $outputPath, OutputProfile $profile, Closure $onProgress): void
+    public function detectFrozenFrames(string $path, MediaProbe $probe, int $noiseDb, float $minSeconds): array
     {
-        $this->record('render', compact('inputPath', 'keepRanges', 'outputPath', 'profile'));
+        $this->record('detectFrozenFrames', compact('path', 'noiseDb', 'minSeconds'));
+
+        return $this->frozen ?? [new TimeRange(0, $probe->durationMs)];
+    }
+
+    public function render(string $inputPath, MediaProbe $inputProbe, array $keepRanges, string $outputPath, OutputProfile $profile, Closure $onProgress, ?RenderEffects $effects = null): void
+    {
+        $this->record('render', compact('inputPath', 'keepRanges', 'outputPath', 'profile', 'effects'));
         $this->write($outputPath, 'rendered');
         $onProgress(100);
     }

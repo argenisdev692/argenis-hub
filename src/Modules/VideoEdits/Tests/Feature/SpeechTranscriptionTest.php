@@ -53,6 +53,24 @@ it('asks Whisper for word-level timestamps', function (): void {
     });
 });
 
+it('sends a verbatim style prompt so Whisper keeps the hesitations', function (): void {
+    fakeWhisper([
+        'language' => 'spanish',
+        'words' => [['word' => 'Hola', 'start' => 0.0, 'end' => 0.4]],
+        'segments' => [['text' => 'Hola', 'start' => 0.0, 'end' => 0.4]],
+    ]);
+
+    app(TranscriptionPort::class)->transcribe($this->audioPath, 'es');
+    app(TranscriptionPort::class)->transcribe($this->audioPath, 'fr');
+
+    $prompts = collect(Http::recorded())
+        ->map(fn (array $pair) => collect($pair[0]->data())->pluck('contents', 'name')['prompt'] ?? null)
+        ->all();
+
+    expect($prompts[0])->toContain('mmm')->toContain('o sea')
+        ->and($prompts[1])->toBe(config('video-edit.speech.openai.prompts.default'));
+});
+
 it('converts Whisper seconds into the domain\'s milliseconds', function (): void {
     fakeWhisper([
         'language' => 'spanish',

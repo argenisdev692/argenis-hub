@@ -94,6 +94,20 @@ function validate(file: File): string | null {
     return null;
 }
 
+/**
+ * Natural filename order (`video_2` before `video_10`), case-insensitive.
+ *
+ * The order a `FileList` arrives in is whatever the OS dialog or drag source
+ * decided — on Windows a multi-select usually comes back in click order, not
+ * name order. Order is meaningful to callers (VideoEdits joins clips in the
+ * order shown), so each batch is sorted by name before it is appended; batches
+ * added one after another still keep the order they were added in.
+ */
+const byNaturalName = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: 'base',
+});
+
 function addFiles(files: FileList | null): void {
     if (!files || disabled) {
         return;
@@ -101,8 +115,11 @@ function addFiles(files: FileList | null): void {
 
     const errors: string[] = [];
     const accepted: File[] = [];
+    const batch = Array.from(files).sort((left, right) =>
+        byNaturalName.compare(left.name, right.name),
+    );
 
-    for (const file of Array.from(files)) {
+    for (const file of batch) {
         const error = validate(file);
 
         if (error) {
