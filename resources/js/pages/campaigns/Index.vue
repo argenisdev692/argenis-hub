@@ -250,7 +250,7 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: CampaignListItem): string | undefined {
-    return row.deleted_at ? 'course-row-deleted' : undefined;
+    return row.deleted_at ? 'data-row-deleted' : undefined;
 }
 
 /**

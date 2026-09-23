@@ -202,9 +202,7 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: Portfolio): string | undefined {
-    return row.deleted_at
-        ? 'bg-[var(--deleted-row-bg)] opacity-[var(--deleted-row-opacity)]'
-        : undefined;
+    return row.deleted_at ? 'data-row-deleted' : undefined;
 }
 
 const sheetOpen = ref(false);

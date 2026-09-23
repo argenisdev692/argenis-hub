@@ -167,6 +167,37 @@ describe('creating', function (): void {
         'malformed country code' => [['country_code' => 'ESP'], 'country_code'],
         'notes too long' => [['notes' => str_repeat('a', 5001)], 'notes'],
     ]);
+
+    it('stores the client name upper-cased with whitespace collapsed', function (): void {
+        $this->actingAs(clientOperator(['CREATE_CLIENTS']))
+            ->postJson(route('clients.admin.store'), clientPayload(['client_name' => "  acme \t  consulting   s.l. "]))
+            ->assertCreated()
+            ->assertJsonPath('client_name', 'ACME CONSULTING S.L.');
+    });
+
+    it('rejects a duplicate of an existing client', function (array $existing, string $field): void {
+        ClientEloquentModel::factory()->create($existing);
+
+        $this->actingAs(clientOperator(['CREATE_CLIENTS']))
+            ->postJson(route('clients.admin.store'), clientPayload())
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors($field);
+
+        expect(ClientEloquentModel::query()->count())->toBe(1);
+    })->with([
+        'same email' => [['email' => 'info@imagina.example'], 'email'],
+        'same phone' => [['phone' => '+34673566782'], 'phone'],
+    ]);
+
+    it('allows reusing the email and phone of a soft-deleted client', function (): void {
+        ClientEloquentModel::factory()
+            ->create(['email' => 'info@imagina.example', 'phone' => '+34673566782'])
+            ->delete();
+
+        $this->actingAs(clientOperator(['CREATE_CLIENTS']))
+            ->postJson(route('clients.admin.store'), clientPayload())
+            ->assertCreated();
+    });
 });
 
 describe('updating', function (): void {
@@ -176,9 +207,27 @@ describe('updating', function (): void {
         $this->actingAs(clientOperator(['UPDATE_CLIENTS']))
             ->putJson(route('clients.admin.update', $client->uuid), clientPayload(['client_name' => 'After']))
             ->assertOk()
-            ->assertJsonPath('client_name', 'After');
+            ->assertJsonPath('client_name', 'AFTER');
 
-        expect($client->refresh()->client_name)->toBe('After');
+        expect($client->refresh()->client_name)->toBe('AFTER');
+    });
+
+    it('keeps its own email and phone without tripping the duplicate check', function (): void {
+        $client = ClientEloquentModel::factory()->create(['email' => 'info@imagina.example', 'phone' => '+34673566782']);
+
+        $this->actingAs(clientOperator(['UPDATE_CLIENTS']))
+            ->putJson(route('clients.admin.update', $client->uuid), clientPayload())
+            ->assertOk();
+    });
+
+    it('rejects taking over another client\'s email or phone', function (): void {
+        ClientEloquentModel::factory()->create(['email' => 'info@imagina.example', 'phone' => '+34673566782']);
+        $client = ClientEloquentModel::factory()->create();
+
+        $this->actingAs(clientOperator(['UPDATE_CLIENTS']))
+            ->putJson(route('clients.admin.update', $client->uuid), clientPayload())
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email', 'phone']);
     });
 
     it('records the change in the audit trail', function (): void {
@@ -192,7 +241,7 @@ describe('updating', function (): void {
         $changes = $activity?->attribute_changes?->toArray() ?? [];
 
         expect($activity?->log_name)->toBe('clients.client')
-            ->and($changes['attributes']['client_name'] ?? null)->toBe('After');
+            ->and($changes['attributes']['client_name'] ?? null)->toBe('AFTER');
     });
 });
 

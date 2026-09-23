@@ -21,6 +21,9 @@ const open = defineModel<boolean>('open', { default: false });
 const form = useContactSupportForm({
     open,
     support: () => support,
+    onSuccess: () => {
+        open.value = false;
+    },
 });
 
 const smsConsentId = useId();

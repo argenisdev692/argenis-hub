@@ -162,6 +162,15 @@ export function toClientFormValues(client: Client): ClientFormValues {
     };
 }
 
+/**
+ * Mirrors the server's `Str::upper(Str::squish())` on the client name: trimmed,
+ * inner whitespace runs collapsed to one space, upper-cased — the form it is
+ * stored in and printed on invoices.
+ */
+export function normalizeClientName(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
 /** Empty optional strings become `null`; the rest are trimmed at the boundary. */
 function nullable(value: string): string | null {
     const trimmed = value.trim();
@@ -178,7 +187,7 @@ function nullable(value: string): string | null {
  */
 export function toWritePayload(values: ClientFormValues): ClientWritePayload {
     return {
-        client_name: values.client_name.trim(),
+        client_name: normalizeClientName(values.client_name),
         status: values.status,
         email: nullable(values.email),
         phone: values.phone.trim(),

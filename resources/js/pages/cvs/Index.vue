@@ -220,7 +220,7 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: Cv): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at ? 'data-row-deleted' : undefined;
 }
 
 const dialogOpen = ref(false);

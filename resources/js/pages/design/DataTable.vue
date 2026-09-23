@@ -213,7 +213,7 @@ function restoreSelected(): void {
 }
 
 function rowClass(row: DemoRow): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at ? 'data-row-deleted' : undefined;
 }
 
 function statusVariant(

@@ -365,7 +365,7 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: InvoiceListItem): string | undefined {
-    return row.deleted_at ? 'bg-muted/40 opacity-60' : undefined;
+    return row.deleted_at ? 'data-row-deleted' : undefined;
 }
 
 /**

@@ -62,7 +62,8 @@ defineSlots<{
 }>();
 
 const isSubmitting = form.useStore((state) => state.isSubmitting);
-const isDirty = form.useStore((state) => state.isDirty);
+/** See `FormDialog`: `isDirty` is persistent, `isDefaultValue` is not. */
+const hasUnsavedChanges = form.useStore((state) => !state.isDefaultValue);
 const canSubmit = form.useStore((state) => state.canSubmit);
 
 const confirmDiscardOpen = ref(false);
@@ -76,7 +77,7 @@ function requestClose(next: boolean): void {
         return;
     }
 
-    if (guardDirty && isDirty.value && !isSubmitting.value) {
+    if (guardDirty && hasUnsavedChanges.value && !isSubmitting.value) {
         confirmDiscardOpen.value = true;
 
         return;

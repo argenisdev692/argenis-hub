@@ -47,6 +47,9 @@ const open = defineModel<boolean>('open', { default: false });
 const form = useProductForm({
     open,
     product: () => product,
+    onSuccess: () => {
+        open.value = false;
+    },
 });
 
 /** Normalises the prop so the template never branches on its shape. */

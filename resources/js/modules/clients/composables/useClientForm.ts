@@ -1,6 +1,6 @@
 import type { Ref } from 'vue';
 import { watch } from 'vue';
-import { useAppForm } from '@/common/form';
+import { applyHttpErrors, useAppForm } from '@/common/form';
 import {
     clientFormSchema,
     emptyClientFormValues,
@@ -47,11 +47,14 @@ export function useClientForm({ open, client, onSuccess }: ClientFormOptions) {
                 } else {
                     await createClient.mutateAsync(payload);
                 }
-            } catch {
+            } catch (error) {
                 // The mutation's own `onError` already toasted the failure;
-                // swallow it here so it never reaches `handleSubmit`'s caller
-                // (`FormDialog` awaits it without a try/catch) and leaves the
-                // dialog open for another attempt.
+                // a 422 (e.g. a duplicate email/phone) is also pinned to its
+                // field. Swallowed so it never reaches `handleSubmit`'s caller
+                // (`FormDialog` awaits it without a try/catch) and the dialog
+                // stays open for another attempt.
+                applyHttpErrors(form, error);
+
                 return;
             }
 

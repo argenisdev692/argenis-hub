@@ -504,18 +504,28 @@
     }
 }
 
-@layer components {
-    /*
-      Soft-deleted DataTable rows. Bound to the `--deleted-row-*` tokens in
-      globals.css (which redefines them under `.dark`), so the wash tracks the
-      theme instead of hardcoding a tint at each call site. Applied via the
-      table's `rowClass` callback.
-    */
-    .course-row-deleted,
-    .data-row-deleted {
-        background-color: var(--deleted-row-bg);
-        opacity: var(--deleted-row-opacity);
-    }
+/*
+  Soft-deleted DataTable rows. Bound to the `--deleted-row-*` tokens in
+  globals.css (which redefines them under `.dark`), so the wash tracks the
+  theme instead of hardcoding a tint at each call site. Applied via the
+  table's `rowClass` callback.
+
+  Deliberately unlayered: `TableRow` ships `hover:bg-muted/50` and
+  `data-[state=selected]:bg-muted` utilities, which would otherwise repaint a
+  deleted row grey on hover/selection and hide that it is deleted.
+*/
+.data-row-deleted {
+    background-color: var(--deleted-row-bg);
+    opacity: var(--deleted-row-opacity);
+}
+
+.data-row-deleted:hover,
+.data-row-deleted[data-state='selected'] {
+    background-color: var(--deleted-row-bg-hover);
+}
+
+.data-row-deleted > td:first-child {
+    box-shadow: inset 3px 0 0 var(--deleted-row-border);
 }
 
 @layer base {

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Clients\Infrastructure\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Modules\Clients\Domain\Enums\ClientStatus;
 
@@ -25,9 +27,9 @@ final class UpdateClientRequest extends FormRequest
     {
         return [
             'client_name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email:rfc', 'max:255'],
+            'email' => ['nullable', 'email:rfc', 'max:255', Rule::unique('clients', 'email')->ignore($this->route('uuid'), 'uuid')->whereNull('deleted_at')],
             'status' => ['sometimes', 'nullable', new Enum(ClientStatus::class)],
-            'phone' => ['required', 'string', 'max:20', 'regex:/^\+?[0-9]{7,15}$/'],
+            'phone' => ['required', 'string', 'max:20', 'regex:/^\+?[0-9]{7,15}$/', Rule::unique('clients', 'phone')->ignore($this->route('uuid'), 'uuid')->whereNull('deleted_at')],
             'address' => ['nullable', 'string', 'max:255'],
             'country' => ['nullable', 'string', 'max:100'],
             'country_code' => ['nullable', 'string', 'size:2', 'alpha'],
@@ -42,8 +44,29 @@ final class UpdateClientRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.unique' => 'A client with this email already exists.',
+            'phone.unique' => 'A client with this phone number already exists.',
+        ];
+    }
+
+    /**
+     * The client name is stored upper-cased with runs of whitespace collapsed,
+     * because invoices print it as-is and read it straight off this record.
+     */
     protected function prepareForValidation(): void
     {
+        $clientName = $this->input('client_name');
+
+        if (is_string($clientName)) {
+            $this->merge(['client_name' => Str::upper(Str::squish($clientName))]);
+        }
+
         $countryCode = $this->input('country_code');
 
         if (is_string($countryCode)) {

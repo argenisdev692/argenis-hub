@@ -21,6 +21,9 @@ const open = defineModel<boolean>('open', { default: false });
 const form = useServiceForm({
     open,
     service: () => service,
+    onSuccess: () => {
+        open.value = false;
+    },
 });
 
 const activeFieldId = useId();

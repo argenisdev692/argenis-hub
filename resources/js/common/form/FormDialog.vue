@@ -38,7 +38,7 @@ import { cn } from '@/lib/utils';
  */
 type DialogFormState = {
     isSubmitting: boolean;
-    isDirty: boolean;
+    isDefaultValue: boolean;
     canSubmit: boolean;
 };
 
@@ -87,7 +87,13 @@ defineSlots<{
 const isDesktop = useMediaQuery('(min-width: 768px)');
 
 const isSubmitting = form.useStore((state) => state.isSubmitting);
-const isDirty = form.useStore((state) => state.isDirty);
+/**
+ * `isDirty` is persistent in TanStack Form — it stays `true` after a no-op
+ * `handleChange` (e.g. a `Select` re-emitting its current value) or an edit
+ * the user reverted, which made Cancel on an untouched form open the discard
+ * prompt. `isDefaultValue` compares against the seeded values instead.
+ */
+const hasUnsavedChanges = form.useStore((state) => !state.isDefaultValue);
 const canSubmit = form.useStore((state) => state.canSubmit);
 
 const confirmDiscardOpen = ref(false);
@@ -101,7 +107,7 @@ function requestClose(next: boolean): void {
         return;
     }
 
-    if (guardDirty && isDirty.value && !isSubmitting.value) {
+    if (guardDirty && hasUnsavedChanges.value && !isSubmitting.value) {
         confirmDiscardOpen.value = true;
 
         return;

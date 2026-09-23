@@ -31,6 +31,9 @@ const open = defineModel<boolean>('open', { default: false });
 const form = useClientForm({
     open,
     client: () => client,
+    onSuccess: () => {
+        open.value = false;
+    },
 });
 </script>
 
@@ -49,9 +52,10 @@ const form = useClientForm({
                     <TextField
                         :field="field"
                         label="Client name"
+                        class="[&_input]:uppercase"
                         required
                         autocomplete="organization"
-                        placeholder="Acme Inc."
+                        placeholder="ACME INC."
                     />
                 </form.Field>
 

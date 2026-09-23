@@ -30,6 +30,9 @@ const open = defineModel<boolean>('open', { default: false });
 const form = usePaymentAccountForm({
     open,
     account: () => account,
+    onSuccess: () => {
+        open.value = false;
+    },
 });
 
 /**

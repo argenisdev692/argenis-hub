@@ -248,7 +248,7 @@ const selectedDeleted = computed(() =>
 );
 
 function rowClass(row: SocialMediaContentListItem): string | undefined {
-    return row.deleted_at ? 'course-row-deleted' : undefined;
+    return row.deleted_at ? 'data-row-deleted' : undefined;
 }
 
 /**
