@@ -48,6 +48,7 @@ Clients, invoicing, availability, content, campaigns, lead intelligence, CV/ATS 
 | [Module Matrix](#-module-matrix) | [Design Patterns](#-design-patterns-in-use) | [Type Contract](#-the-type-contract) |
 | [Getting Started](#-getting-started) | [Daily Commands](#-daily-commands) | [Quality Gates](#-conventions--quality-gates) |
 | [Security](#-security-posture) | [Testing](#-testing-strategy) | [Module Checklist](#-module-completion-checklist) |
+| [Smart Video Editing](#-smart-video-editing--videoedits) | | |
 
 ---
 
@@ -290,6 +291,83 @@ stateDiagram-v2
 
 ---
 
+## 🎬 Smart Video Editing — VideoEdits
+
+VideoEdits turns raw screen recordings into tutorial-ready cuts. Every signal below becomes a
+**decision**; the `CutPlanner` domain service is the only place that turns decisions into cuts,
+sped-up ranges and turned-down breaths, and the FFmpeg adapter only ever sees validated numbers.
+
+```mermaid
+flowchart LR
+    classDef dom fill:#DCFCE7,stroke:#22C55E,color:#052E16,rx:5,ry:5
+    classDef ad fill:#EDE9FE,stroke:#8B5CF6,color:#2E1065,rx:5,ry:5
+    classDef ext fill:#6B7280,stroke:#4B5563,color:#fff,rx:5,ry:5
+
+    SRC["Clips<br/><i>merged into one timeline</i>"]:::ext
+    SIL["silencedetect<br/><i>where nobody speaks</i>"]:::ad
+    FRZ["freezedetect<br/><i>where the screen stands still</i>"]:::ad
+    WSP["Whisper<br/><i>word + segment timings</i>"]:::ad
+    AI["Gemini<br/><i>'pausa' markers · retakes</i>"]:::ad
+    PLAN{{"CutPlanner<br/><i>domain service</i>"}}:::dom
+    OUT["Render<br/><i>cut · speed up · duck</i>"]:::ext
+
+    SRC --> SIL & FRZ & WSP
+    WSP --> AI
+    SIL & FRZ & WSP & AI --> PLAN --> OUT
+```
+
+### AI-tool wait detection — speed up, never jump-cut
+
+A silence while the **screen keeps changing** is someone waiting on a tool: Claude or ChatGPT
+streaming an answer, a Cursor agent editing files, Copilot filling a Word document. Cutting that
+wait makes the result snap into place and loses the viewer. Detection is by **picture change**, not
+by recognising an app, so it works with any tool.
+
+| Silence + screen | Classified as | What the render does |
+|---|---|---|
+| Screen **moving** ≥ 50 % of the silence | Tool wait | Keeps the first 1.5 s and last 1 s at normal speed; plays the middle at **3×** (picture and room tone), never longer than **4 s** on screen |
+| Screen moving, wait under ~3 s | Short tool wait | Kept exactly as recorded |
+| Screen **still** | Dead air | Cut, as before |
+
+- `freezedetect` runs on a 480p, audio-less copy, so the extra pass is cheap; a blinking caret
+  changes too few pixels to count as activity.
+- Each silence carries a `screen_activity` ratio (0–1) as decision evidence, visible in the report.
+- A failed detection pass never fails the edit — every silence is simply cut as before.
+- The report adds *"N tool wait(s) with a busy screen were sped up instead of cut."*
+
+### Speech-aware cutting
+
+| Fix | Behaviour | Needs a transcript |
+|---|---|:---:|
+| **Word guards** | A silence cut never reaches within 150 ms after / 60 ms before a word Whisper heard; a quiet word inside a "silence" splits the cut in two | ✅ |
+| **Asymmetric padding** | 250 ms kept after speech, 100 ms before it — Spanish words fade out on an unstressed syllable | — |
+| **Sentence-aware pauses** | A pause cut mid-sentence keeps 300 ms of air; a pause after `.` `?` `!` is cut tight | ✅ |
+| **Breath ducking** | Gaps between words (breath, lip noise) are turned down **−15 dB** with 60 ms ramps — never cut, so the voice keeps its rhythm | ✅ |
+| **Verbatim Whisper prompt** | A per-language style prompt with hesitations in it, so Whisper transcribes the "eh" / "mmm" it would otherwise tidy away — and speech cleanup can remove them | ✅ |
+| **Click-free joins** | 15 ms audio fade at every join | — |
+
+"Needs a transcript" means the edit runs with speech cleanup or AI edit enabled; a silence-only
+edit still reuses a transcript already stored for the same clips.
+
+### Configuration
+
+All values live in `config/video-edit.php`; the switches are also environment variables.
+
+| Key | Default | Purpose |
+|---|---|---|
+| `VIDEO_EDIT_SCREEN_ACTIVITY` | `true` | Tool-wait detection on / off |
+| `VIDEO_EDIT_BREATHS` | `true` | Breath ducking on / off |
+| `screen_activity.min_activity_ratio` | `0.5` | Share of the silence the screen must move |
+| `screen_activity.speed` · `max_compressed_output_ms` | `3.0` · `4000` | Speed-up and on-screen cap |
+| `silence.noise_floor_db` | `-40` | Must sit above the room noise — measure with `volumedetect`, use `mean − 12` |
+| `silence.mid_sentence_pause_ms` | `300` | Air kept inside a sentence |
+| `breaths.attenuation_db` | `-15` | How far breaths are turned down |
+
+Verified by 377 module tests and by rendering a real clip through FFmpeg 9: a 5 s wait at 3× came out
+at exactly 1.67 s, and a ducked breath measured −15.0 dB against the surrounding audio.
+
+---
+
 ## 📦 Module Matrix
 
 23 service providers boot in **dependency order** (see `bootstrap/providers.php` — the ordering comments
@@ -317,7 +395,7 @@ there are load-bearing, not decorative).
 | 🔍 **LeadScout** | Lead discovery, geocoding, AI enrichment | 351 | 39 |
 | 📜 **ActivityLog** | Cross-module audit trail surface | 14 | 1 |
 | 💾 **Backups** | Scheduled backups via spatie/laravel-backup | 26 | 5 |
-| 🎬 **VideoEdits** | FFmpeg pipeline, Whisper word-aware silence cuts, R2 storage *(spec 001)* | 187 | 43 |
+| 🎬 **VideoEdits** | FFmpeg pipeline, AI-tool wait detection, Whisper-aware cuts, breath ducking *(spec 001)* | 192 | 44 |
 | 🎓 **CourseScripts** | AI course bibles, scripts, versioned deliverables *(spec 002)* | 210 | 25 |
 | ⚙️ **Shared** | Ports, AI stack, resilience, export, storage, audit | — | — |
 
@@ -421,6 +499,8 @@ OPENAI_API_KEY=                         # also used by VideoEdits for Whisper tr
 ANTHROPIC_API_KEY=
 OPENAI_WHISPER_MODEL=whisper-1          # optional — VideoEdits speech cleanup
 VIDEO_EDIT_SPEECH_LANGUAGE=es           # optional — recordings are Spanish-first
+VIDEO_EDIT_SCREEN_ACTIVITY=true         # optional — speed up AI-tool waits instead of cutting them
+VIDEO_EDIT_BREATHS=true                 # optional — turn breaths down between words
 
 FILESYSTEM_DISK=r2                      # Cloudflare R2 (S3-compatible)
 RESEND_API_KEY=                         # transactional mail

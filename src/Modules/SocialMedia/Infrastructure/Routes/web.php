@@ -32,6 +32,9 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('social-media')->nam
     Route::post('/bulk-restore', [SocialMediaContentController::class, 'bulkRestore'])
         ->middleware('permission:BULK_RESTORE_SOCIAL_MEDIA')->name('bulk-restore');
 
+    Route::post('/publish-due', [SocialMediaContentController::class, 'publishDue'])
+        ->middleware(['permission:PUBLISH_SOCIAL_MEDIA', 'throttle:10,1'])->name('publish-due');
+
     Route::get('/export', SocialMediaContentExportController::class)
         ->middleware(['permission:EXPORT_SOCIAL_MEDIA', 'throttle:10,1'])->name('export');
 

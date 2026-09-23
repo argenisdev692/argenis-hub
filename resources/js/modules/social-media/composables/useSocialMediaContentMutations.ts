@@ -7,6 +7,7 @@ import {
     bulkRestore,
     destroy,
     publish,
+    publishDue,
     restore,
 } from '@/routes/social-media';
 
@@ -89,6 +90,32 @@ export function useSocialMediaContentMutations() {
     });
 
     /**
+     * Runs the scheduler's `social-media:publish-scheduled` pass on demand.
+     * Only packages whose `scheduled_at` has already passed are published;
+     * this endpoint answers JSON, so the count is the server's.
+     */
+    const publishDueContent = useMutation({
+        mutation: () =>
+            httpJson<{ data: { published: number } }>(toUrl(publishDue()), {
+                method: 'POST',
+            }),
+        onSuccess(response) {
+            const { published } = response.data;
+            toast.success(
+                published === 0
+                    ? 'No scheduled content is due yet.'
+                    : `${published} content ${published === 1 ? 'package' : 'packages'} published.`,
+            );
+            queryCache.invalidateQueries({ key: CONTENT_KEY });
+        },
+        onError(error: unknown) {
+            toast.error(
+                errorMessage(error, 'Failed to publish the due content.'),
+            );
+        },
+    });
+
+    /**
      * The count comes from the request, not the response: `bulkDelete()`
      * flashes its total into a redirect this client discards. The two only
      * disagree if a row was already trashed by someone else mid-selection,
@@ -143,6 +170,7 @@ export function useSocialMediaContentMutations() {
         deleteContent,
         restoreContent,
         publishContent,
+        publishDueContent,
         bulkDeleteContent,
         bulkRestoreContent,
     };

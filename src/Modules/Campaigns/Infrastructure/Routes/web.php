@@ -33,6 +33,9 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('campaigns')->name('
     Route::post('/bulk-restore', [CampaignController::class, 'bulkRestore'])
         ->middleware('permission:BULK_RESTORE_CAMPAIGNS')->name('bulk-restore');
 
+    Route::post('/publish-due', [CampaignController::class, 'publishDue'])
+        ->middleware(['permission:PUBLISH_CAMPAIGNS', 'throttle:10,1'])->name('publish-due');
+
     Route::get('/export', CampaignExportController::class)
         ->middleware(['permission:EXPORT_CAMPAIGNS', 'throttle:10,1'])->name('export');
 

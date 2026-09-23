@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import {
+    CalendarClockIcon,
     PencilIcon,
     RotateCcwIcon,
     SendIcon,
@@ -74,6 +75,7 @@ const {
     deleteContent,
     restoreContent,
     publishContent,
+    publishDueContent,
     bulkDeleteContent,
     bulkRestoreContent,
 } = useSocialMediaContentMutations();
@@ -216,9 +218,7 @@ function toggleSelect(
  * they already show instead (`isPlaceholderData`), so paging and filtering
  * never flash an empty table.
  */
-const tableLoading = computed(
-    () => isPending.value || isPlaceholderData.value,
-);
+const tableLoading = computed(() => isPending.value || isPlaceholderData.value);
 
 /** Anything the user narrowed — drives the empty state's reset shortcut. */
 const hasActiveFilters = computed(() => {
@@ -426,6 +426,21 @@ async function onBulkRestore(): Promise<void> {
                         :params="exportParams"
                         :formats="['csv', 'xlsx', 'pdf']"
                     />
+                </PermissionGuard>
+
+                <PermissionGuard permission="PUBLISH_SOCIAL_MEDIA">
+                    <Button
+                        variant="outline"
+                        :disabled="publishDueContent.isLoading.value"
+                        @click="publishDueContent.mutate()"
+                    >
+                        <CalendarClockIcon class="size-4" aria-hidden="true" />
+                        {{
+                            publishDueContent.isLoading.value
+                                ? 'Publishing…'
+                                : 'Publish due now'
+                        }}
+                    </Button>
                 </PermissionGuard>
 
                 <PermissionGuard permission="CREATE_SOCIAL_MEDIA">
@@ -738,7 +753,11 @@ async function onBulkRestore(): Promise<void> {
                     description="Try widening the date range or clearing the search."
                 >
                     <template #action>
-                        <Button variant="outline" size="sm" @click="clearFilters">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            @click="clearFilters"
+                        >
                             Clear filters
                         </Button>
                     </template>
@@ -750,7 +769,11 @@ async function onBulkRestore(): Promise<void> {
                 />
             </div>
 
-            <div v-else class="flex flex-col gap-3 md:hidden" aria-hidden="true">
+            <div
+                v-else
+                class="flex flex-col gap-3 md:hidden"
+                aria-hidden="true"
+            >
                 <div
                     v-for="index in 3"
                     :key="`content-skeleton-${index}`"

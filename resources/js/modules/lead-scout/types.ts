@@ -19,9 +19,9 @@ export type LeadOutreach = Modules.LeadScout.Application.DTOs.OutreachData;
 export type LeadScoreReason =
     Modules.LeadScout.Application.DTOs.LeadDetailData['reasons'][number];
 export type AiSettings = Modules.LeadScout.Application.DTOs.AiSettingsData;
-export type AiCatalogOption =
-    AiSettings['purposes'][string]['options'][number];
+export type AiCatalogOption = AiSettings['purposes'][string]['options'][number];
 export type BudgetStatus = Modules.LeadScout.Application.DTOs.BudgetStatusData;
+export type LeadSource = Modules.LeadScout.Application.DTOs.SourceData;
 
 // --- Enums. ---
 export type LeadTier = Modules.LeadScout.Domain.Enums.Tier | null;
@@ -69,12 +69,10 @@ export type LeadFilters = {
     };
 
 // --- Request payloads (the backend accepts omitted keys as null). ---
-export type DraftPayload = Partial<
-    Modules.LeadScout.Application.DTOs.GenerateDraftData
->;
-export type StagePayload = Partial<
-    Modules.LeadScout.Application.DTOs.UpdateOutreachData
->;
+export type DraftPayload =
+    Partial<Modules.LeadScout.Application.DTOs.GenerateDraftData>;
+export type StagePayload =
+    Partial<Modules.LeadScout.Application.DTOs.UpdateOutreachData>;
 
 type UpsertContactData = Modules.LeadScout.Application.DTOs.UpsertContactData;
 export type ContactPayload = Pick<

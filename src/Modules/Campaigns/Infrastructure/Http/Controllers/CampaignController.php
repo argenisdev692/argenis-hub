@@ -13,6 +13,7 @@ use Modules\Campaigns\Application\Commands\BulkDeleteCampaignsHandler;
 use Modules\Campaigns\Application\Commands\BulkRestoreCampaignsHandler;
 use Modules\Campaigns\Application\Commands\DeleteCampaignHandler;
 use Modules\Campaigns\Application\Commands\PublishCampaignHandler;
+use Modules\Campaigns\Application\Commands\PublishDueCampaignsHandler;
 use Modules\Campaigns\Application\Commands\RestoreCampaignHandler;
 use Modules\Campaigns\Application\Commands\UpdateCampaignHandler;
 use Modules\Campaigns\Application\DTOs\CampaignFilterData;
@@ -107,5 +108,15 @@ final readonly class CampaignController
         $count = $handler->handle($data);
 
         return back()->with('success', __(':count campaigns restored.', ['count' => $count]));
+    }
+
+    /**
+     * Runs the scheduled-publish pass now instead of waiting for the next
+     * `campaigns:publish-scheduled` tick. Only campaigns already due are
+     * published — nothing is pulled forward.
+     */
+    public function publishDue(PublishDueCampaignsHandler $handler): JsonResponse
+    {
+        return response()->json(['data' => ['published' => $handler->handle()]]);
     }
 }

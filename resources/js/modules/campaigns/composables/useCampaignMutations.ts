@@ -7,6 +7,7 @@ import {
     bulkRestore,
     destroy,
     publish,
+    publishDue,
     restore,
 } from '@/routes/campaigns';
 
@@ -91,6 +92,32 @@ export function useCampaignMutations() {
     });
 
     /**
+     * Runs the scheduler's `campaigns:publish-scheduled` pass on demand. Only
+     * campaigns whose `scheduled_at` has already passed are published; this
+     * endpoint answers JSON, so the count is the server's.
+     */
+    const publishDueCampaigns = useMutation({
+        mutation: () =>
+            httpJson<{ data: { published: number } }>(toUrl(publishDue()), {
+                method: 'POST',
+            }),
+        onSuccess(response) {
+            const { published } = response.data;
+            toast.success(
+                published === 0
+                    ? 'No scheduled campaigns are due yet.'
+                    : `${pluralize(published, 'campaign', 'campaigns')} published.`,
+            );
+            queryCache.invalidateQueries({ key: CAMPAIGNS_KEY });
+        },
+        onError(error: unknown) {
+            toast.error(
+                errorMessage(error, 'Failed to publish the due campaigns.'),
+            );
+        },
+    });
+
+    /**
      * The count comes from the request, not the response: `bulkDelete()`
      * flashes its total into a redirect this client discards. The two only
      * disagree if a row was already trashed by someone else mid-selection, and
@@ -151,6 +178,7 @@ export function useCampaignMutations() {
         deleteCampaign,
         restoreCampaign,
         publishCampaign,
+        publishDueCampaigns,
         bulkDeleteCampaigns,
         bulkRestoreCampaigns,
     };

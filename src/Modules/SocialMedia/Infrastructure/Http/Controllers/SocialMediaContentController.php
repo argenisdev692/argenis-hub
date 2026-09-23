@@ -12,6 +12,7 @@ use Inertia\Response as InertiaResponse;
 use Modules\SocialMedia\Application\Commands\BulkDeleteSocialMediaContentHandler;
 use Modules\SocialMedia\Application\Commands\BulkRestoreSocialMediaContentHandler;
 use Modules\SocialMedia\Application\Commands\DeleteSocialMediaContentHandler;
+use Modules\SocialMedia\Application\Commands\PublishDueSocialMediaContentHandler;
 use Modules\SocialMedia\Application\Commands\PublishSocialMediaContentHandler;
 use Modules\SocialMedia\Application\Commands\RestoreSocialMediaContentHandler;
 use Modules\SocialMedia\Application\Commands\UpdateSocialMediaContentHandler;
@@ -107,5 +108,15 @@ final readonly class SocialMediaContentController
         $count = $handler->handle($data);
 
         return back()->with('success', __(':count content packages restored.', ['count' => $count]));
+    }
+
+    /**
+     * Runs the scheduled-publish pass now instead of waiting for the next
+     * `social-media:publish-scheduled` tick. Only packages already due are
+     * published — nothing is pulled forward.
+     */
+    public function publishDue(PublishDueSocialMediaContentHandler $handler): JsonResponse
+    {
+        return response()->json(['data' => ['published' => $handler->handle()]]);
     }
 }

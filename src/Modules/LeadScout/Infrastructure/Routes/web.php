@@ -12,6 +12,7 @@ use Modules\LeadScout\Infrastructure\Http\Controllers\DraftController;
 use Modules\LeadScout\Infrastructure\Http\Controllers\LeadController;
 use Modules\LeadScout\Infrastructure\Http\Controllers\LeadExportController;
 use Modules\LeadScout\Infrastructure\Http\Controllers\LeadPageController;
+use Modules\LeadScout\Infrastructure\Http\Controllers\LeadScoutJobController;
 use Modules\LeadScout\Infrastructure\Http\Controllers\LeadScoutStatusController;
 use Modules\LeadScout\Infrastructure\Http\Controllers\ManualLeadController;
 use Modules\LeadScout\Infrastructure\Http\Controllers\MetricsController;
@@ -44,6 +45,11 @@ Route::middleware(['auth', 'throttle:60,1'])->prefix('data/admin/lead-scout')->n
     Route::get('/sources', [SourceController::class, 'index'])->middleware('permission:VIEW_LEAD_SCOUT')->name('sources.index');
     Route::patch('/sources/{uuid}', [SourceController::class, 'update'])->middleware('permission:UPDATE_LEAD_SCOUT')->whereUuid('uuid')->name('sources.update');
     Route::post('/sources/{uuid}/run', [SourceController::class, 'run'])->middleware('permission:UPDATE_LEAD_SCOUT')->whereUuid('uuid')->name('sources.run');
+
+    // On-demand pipeline runs (same jobs the scheduler queues).
+    Route::post('/jobs/ingest', [LeadScoutJobController::class, 'ingest'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:6,1'])->name('jobs.ingest');
+    Route::post('/jobs/discover', [LeadScoutJobController::class, 'discover'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:2,1'])->name('jobs.discover');
+    Route::post('/jobs/rescore', [LeadScoutJobController::class, 'rescore'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:2,1'])->name('jobs.rescore');
 
     Route::post('/leads', [ManualLeadController::class, 'store'])->middleware('permission:CREATE_LEAD_SCOUT')->name('leads.store');
     Route::post('/suppressions', [SuppressionController::class, 'store'])->middleware('permission:DELETE_LEAD_SCOUT')->name('suppressions.store');

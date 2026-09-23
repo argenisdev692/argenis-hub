@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { EyeIcon, Settings2Icon, WalletIcon } from '@lucide/vue';
+import {
+    EyeIcon,
+    PlayIcon,
+    RadarIcon,
+    RefreshCwIcon,
+    Settings2Icon,
+    WalletIcon,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import type { FilterSelectOption } from '@/common/form';
@@ -44,6 +51,10 @@ import {
     useLeads,
 } from '@/modules/lead-scout/composables/useLeads';
 import {
+    useLeadScoutJobs,
+    useLeadSources,
+} from '@/modules/lead-scout/composables/useLeadScoutJobs';
+import {
     useAiSettings,
     useBudgets,
 } from '@/modules/lead-scout/composables/useSettings';
@@ -70,6 +81,16 @@ const { leads, meta: queryMeta, filters, isLoading } = useLeads();
 const { updateBudgets, updateAiSettings } = useLeadMutations();
 const { settings: aiSettings } = useAiSettings();
 const { budgets } = useBudgets();
+
+const jobsOpen = ref<boolean>(false);
+const { sources, isLoading: sourcesLoading } = useLeadSources(jobsOpen);
+const { runSource, runIngest, runDiscover, runRescore } = useLeadScoutJobs();
+
+function formatLastRun(lastRunAt: string | null): string {
+    return lastRunAt === null
+        ? 'Never run'
+        : `Last run ${new Date(lastRunAt).toLocaleString()}`;
+}
 
 // Shareable URLs: every facet survives reloads and pastes (arrays ride
 // `key[]`, scalars ride `key`; `per_page` stays out to keep links short).
@@ -301,6 +322,10 @@ async function saveAiSettings(purpose: string): Promise<void> {
             </h1>
 
             <PermissionGuard permission="UPDATE_LEAD_SCOUT">
+                <Button size="sm" @click="jobsOpen = true">
+                    <PlayIcon class="size-4" aria-hidden="true" />
+                    Run jobs
+                </Button>
                 <Button variant="outline" size="sm" @click="openBudgets">
                     <WalletIcon class="size-4" aria-hidden="true" />
                     Budgets
@@ -452,6 +477,98 @@ async function saveAiSettings(purpose: string): Promise<void> {
             :meta="meta"
             label="leads"
         />
+
+        <Dialog v-model:open="jobsOpen">
+            <DialogContent class="max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Run jobs now</DialogTitle>
+                    <DialogDescription>
+                        Queues the same jobs the scheduler runs. Results land in
+                        the bandeja as the queue worker processes them.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="flex flex-col gap-6">
+                    <div class="grid gap-2 sm:grid-cols-3">
+                        <Button
+                            :disabled="runIngest.isLoading.value"
+                            @click="runIngest.mutate()"
+                        >
+                            <PlayIcon class="size-4" aria-hidden="true" />
+                            Ingest all
+                        </Button>
+                        <Button
+                            variant="outline"
+                            :disabled="runDiscover.isLoading.value"
+                            @click="runDiscover.mutate()"
+                        >
+                            <RadarIcon class="size-4" aria-hidden="true" />
+                            Discover
+                        </Button>
+                        <Button
+                            variant="outline"
+                            :disabled="runRescore.isLoading.value"
+                            @click="runRescore.mutate()"
+                        >
+                            <RefreshCwIcon class="size-4" aria-hidden="true" />
+                            Re-score all
+                        </Button>
+                    </div>
+
+                    <section class="flex flex-col gap-2" aria-label="Sources">
+                        <h3 class="text-sm font-medium">Sources</h3>
+                        <p
+                            v-if="sourcesLoading && sources.length === 0"
+                            class="text-sm text-muted-foreground"
+                            role="status"
+                        >
+                            Loading sources…
+                        </p>
+                        <p
+                            v-else-if="sources.length === 0"
+                            class="text-sm text-muted-foreground"
+                        >
+                            No sources configured.
+                        </p>
+                        <ul
+                            v-else
+                            class="flex flex-col divide-y rounded-md border"
+                        >
+                            <li
+                                v-for="source in sources"
+                                :key="source.uuid"
+                                class="flex items-center gap-3 p-3"
+                            >
+                                <div class="flex min-w-0 flex-1 flex-col">
+                                    <span class="truncate text-sm font-medium">
+                                        {{ source.name }}
+                                    </span>
+                                    <span class="text-xs text-muted-foreground">
+                                        {{ source.status }} ·
+                                        {{ formatLastRun(source.last_run_at) }}
+                                    </span>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    :disabled="
+                                        source.status !== 'active' ||
+                                        runSource.isLoading.value
+                                    "
+                                    :aria-label="`Run ${source.name} now`"
+                                    @click="runSource.mutate(source.uuid)"
+                                >
+                                    <PlayIcon
+                                        class="size-4"
+                                        aria-hidden="true"
+                                    />
+                                    Run
+                                </Button>
+                            </li>
+                        </ul>
+                    </section>
+                </div>
+            </DialogContent>
+        </Dialog>
 
         <Dialog v-model:open="budgetsOpen">
             <DialogContent>

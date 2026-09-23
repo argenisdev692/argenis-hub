@@ -74,6 +74,10 @@ Schedule::command('model:prune', [
 
 Schedule::command('social-media:publish-scheduled')->everyMinute()->withoutOverlapping();
 
+// Same contract for campaigns (Modules\Campaigns): `scheduled` → `published`
+// once `scheduled_at` is reached.
+Schedule::command('campaigns:publish-scheduled')->everyMinute()->withoutOverlapping();
+
 /*
 |--------------------------------------------------------------------------
 | Video edits maintenance (Modules\VideoEdits · spec 001-video-edit)
