@@ -13,7 +13,11 @@ namespace Shared\Domain\Ports;
 interface WordExportPort
 {
     /**
-     * @param  array{sections: list<array{heading: string, bullets: list<string>}>}  $content
+     * Optional ATS keys: `contact` (`{name, lines}`) renders a centered
+     * header first; a section `skills_line` renders as one keyword-dense
+     * paragraph instead of bullets. Sections-only payloads render as before.
+     *
+     * @param  array{sections: list<array{heading: string, bullets?: list<string>, skills_line?: string}>, contact?: array{name: string, lines?: list<string>}}  $content
      */
     public function render(array $content): string;
 }

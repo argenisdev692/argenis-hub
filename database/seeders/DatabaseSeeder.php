@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -25,6 +27,9 @@ class DatabaseSeeder extends Seeder
             AvailabilitySeeder::class,
             LeadScoutSourcesSeeder::class,
             LeadScoutAiSettingsSeeder::class,
+            StudioSourceSeeder::class,
+            StudioProfileSeeder::class,
+            StudioSkillRelationSeeder::class,
         ]);
     }
 }

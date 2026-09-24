@@ -70,3 +70,52 @@ it('extracts raw_text from an uploaded pdf and stores the file on r2', function 
 
     Storage::disk('r2')->assertExists($cv->file_path);
 });
+
+it('accepts a pdf whose mime type is sniffed from real bytes', function (): void {
+    // UploadedFile::fake() reports the MIME of the extension, bypassing the
+    // finfo sniffing production performs. A real temp file forces the
+    // validator (mimetypes + extensionMatchesContent) to read the bytes,
+    // exactly like a browser upload.
+    $path = tempnam(sys_get_temp_dir(), 'cv');
+    file_put_contents($path, uploadPdfBytes('Staff Platform Engineer'));
+    $file = new UploadedFile($path, 'resume.pdf', null, null, true);
+
+    $this->actingAs(pdfUploadAdmin())
+        ->post('/cvs', [
+            'title' => 'Sniffed PDF CV',
+            'niche' => 'fullstack',
+            'is_primary' => false,
+            'file' => $file,
+        ])
+        ->assertRedirect();
+
+    $cv = CvEloquentModel::query()->where('title', 'Sniffed PDF CV')->firstOrFail();
+
+    expect($cv->file_type)->toBe(CvFileType::Pdf)
+        ->and($cv->raw_text)->toContain('Staff Platform Engineer');
+
+    Storage::disk('r2')->assertExists($cv->file_path);
+
+    @unlink($path);
+});
+
+it('accepts markdown bytes sniffed as text/plain', function (): void {
+    // finfo reports most .md uploads as text/plain (no OS mapping for the
+    // extension); the mimetypes allowlist must keep accepting them.
+    $path = tempnam(sys_get_temp_dir(), 'cv');
+    file_put_contents($path, "# Jane Doe\n\nSenior Laravel Developer\n");
+    $file = new UploadedFile($path, 'resume.md', null, null, true);
+
+    $this->actingAs(pdfUploadAdmin())
+        ->post('/cvs', [
+            'title' => 'Sniffed MD CV',
+            'niche' => 'other',
+            'is_primary' => false,
+            'file' => $file,
+        ])
+        ->assertRedirect();
+
+    expect(CvEloquentModel::query()->where('title', 'Sniffed MD CV')->count())->toBe(1);
+
+    @unlink($path);
+});

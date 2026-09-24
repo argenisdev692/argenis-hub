@@ -37,15 +37,15 @@ final class RewriteCvAgent implements Agent, HasStructuredOutput
     {
         return [
             'sections' => $schema->array()->items(
-                $schema->object(
-                    heading: $schema->string()->required(),
-                    bullets: $schema->array()->items(
-                        $schema->object(
-                            text: $schema->string()->required(),
-                            source_bullet: $schema->string()->required(),
-                        )
+                $schema->object([
+                    'heading' => $schema->string()->required(),
+                    'bullets' => $schema->array()->items(
+                        $schema->object([
+                            'text' => $schema->string()->required(),
+                            'source_bullet' => $schema->string()->required(),
+                        ])
                     )->required(),
-                )
+                ])
             )->required(),
             'cut_notes' => $schema->array()->items($schema->string())->required(),
         ];

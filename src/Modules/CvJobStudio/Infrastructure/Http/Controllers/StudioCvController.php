@@ -77,7 +77,7 @@ final readonly class StudioCvController
      */
     public function export(Request $request, string $uuid, ExportCvVersionData $data, ExportCvVersionHandler $handler, StoragePort $storage): JsonResponse
     {
-        $export = $handler->handle($uuid, $data->format, $this->ownerId($request));
+        $export = $handler->handle($uuid, $data->format, $this->ownerId($request), self::contactHeader($request));
 
         return response()->json(['data' => [
             'uuid' => $export['uuid'],
@@ -127,5 +127,40 @@ final readonly class StudioCvController
         )));
 
         return ($slug !== '' ? $slug : 'cv').'-Resume.'.$format;
+    }
+
+    /**
+     * ATS contact block from the operator's own profile — the document is
+     * theirs, so their name and contact lines are the correct header. Only
+     * non-empty parts are included; never invented.
+     *
+     * @return array{name: string, lines: list<string>}|null
+     */
+    private static function contactHeader(Request $request): ?array
+    {
+        $user = $request->user();
+
+        $name = trim(sprintf(
+            '%s %s',
+            (string) ($user->first_name ?? ''),
+            (string) ($user->last_name ?? ''),
+        ));
+
+        if ($name === '') {
+            return null;
+        }
+
+        $location = trim(implode(', ', array_filter([
+            (string) ($user->city ?? ''),
+            (string) ($user->country ?? ''),
+        ])));
+
+        $lines = array_values(array_filter([
+            (string) ($user->email ?? ''),
+            (string) ($user->phone ?? ''),
+            $location,
+        ]));
+
+        return ['name' => $name, 'lines' => $lines];
     }
 }

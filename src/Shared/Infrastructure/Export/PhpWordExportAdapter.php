@@ -12,6 +12,10 @@ use Shared\Domain\Ports\WordExportPort;
  * First consumer of `phpoffice/phpword` in this codebase (T-074, RK-7):
  * single-column, table-free, standard font at 10pt, standard headings —
  * satisfying the same structural ruleset the checker asserts (SC-6).
+ *
+ * Optional ATS keys (absent = previous behaviour): `contact` renders a
+ * centered name + contact lines first; a section `skills_line` renders as a
+ * single keyword-dense paragraph instead of a bullet list.
  */
 final readonly class PhpWordExportAdapter implements WordExportPort
 {
@@ -23,11 +27,35 @@ final readonly class PhpWordExportAdapter implements WordExportPort
 
         $section = $document->addSection();
 
-        foreach ($content['sections'] as $sectionData) {
-            $section->addTitle($sectionData['heading'], 1);
+        $contact = $content['contact'] ?? null;
 
-            foreach ($sectionData['bullets'] as $bullet) {
-                $section->addListItem($bullet, 0, null, null, ['alignment' => Jc::LEFT]);
+        if (is_array($contact) && trim((string) ($contact['name'] ?? '')) !== '') {
+            $section->addText(trim((string) $contact['name']), ['bold' => true, 'size' => 14], ['alignment' => Jc::CENTER]);
+
+            foreach ((array) ($contact['lines'] ?? []) as $line) {
+                $line = trim((string) $line);
+
+                if ($line !== '') {
+                    $section->addText($line, ['size' => 9], ['alignment' => Jc::CENTER]);
+                }
+            }
+        }
+
+        foreach ($content['sections'] as $sectionData) {
+            $section->addTitle((string) ($sectionData['heading'] ?? ''), 1);
+
+            $skillsLine = trim((string) ($sectionData['skills_line'] ?? ''));
+
+            if ($skillsLine !== '') {
+                $section->addText($skillsLine);
+            }
+
+            foreach ((array) ($sectionData['bullets'] ?? []) as $bullet) {
+                $text = trim((string) (is_array($bullet) ? ($bullet['text'] ?? '') : $bullet));
+
+                if ($text !== '') {
+                    $section->addListItem($text, 0, null, null, ['alignment' => Jc::LEFT]);
+                }
             }
         }
 

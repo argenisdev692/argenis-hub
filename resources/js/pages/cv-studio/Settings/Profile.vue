@@ -307,7 +307,7 @@ async function reject(uuid: string): Promise<void> {
                         v-model="createForm.slug"
                         type="text"
                         required
-                        pattern="[a-z0-9-]+"
+                        pattern="[a-z0-9\-]+"
                         class="rounded-lg border border-border bg-background p-2"
                     />
                 </label>

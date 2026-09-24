@@ -109,6 +109,21 @@ it('rejects a create without a file', function (): void {
         ->assertSessionHasErrors('file');
 });
 
+it('rejects a pdf larger than 5 MB', function (): void {
+    $file = UploadedFile::fake()->createWithContent('big.pdf', str_repeat('a', 6 * 1024 * 1024));
+
+    $this->actingAs(superAdmin())
+        ->post('/cvs', [
+            'title' => 'Oversized',
+            'niche' => 'fullstack',
+            'is_primary' => false,
+            'file' => $file,
+        ])
+        ->assertSessionHasErrors('file');
+
+    expect(CvEloquentModel::query()->count())->toBe(0);
+});
+
 it('rejects an unknown niche', function (): void {
     $this->actingAs(superAdmin())
         ->post('/cvs', [

@@ -12,7 +12,9 @@ interface CvVersionDocumentPort
      *
      * @param  'docx'|'pdf'  $format
      * @param  array<array-key, mixed>  $content
+     * @param  array{name: string, lines: list<string>}|null  $header  ATS
+     *                                                                 contact block (candidate name + contact lines), rendered first.
      * @return array{bytes: string, verified: bool, extracted_chars: int}
      */
-    public function render(string $format, array $content): array;
+    public function render(string $format, array $content, ?array $header = null): array;
 }

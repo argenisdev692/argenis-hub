@@ -42,7 +42,7 @@ final class JudgeCvAgent implements Agent, HasStructuredOutput
             'improvements' => $schema->array()->items($schema->string())->required(),
             'keyword_gaps' => $schema->array()->items($schema->string())->required(),
             'xyz_gaps' => $schema->array()->items($schema->string())->required(),
-            'metric_questions' => $schema->array()->items($schema->string())->maxItems(6)->required(),
+            'metric_questions' => $schema->array()->items($schema->string())->max(6)->required(),
         ];
     }
 }

@@ -12,6 +12,8 @@ use Illuminate\Queue\Attributes\Timeout;
 use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Modules\CvJobStudio\Application\Commands\ExtractRequirementsHandler;
 use Modules\CvJobStudio\Domain\Exceptions\BudgetExceededException;
 use Modules\CvJobStudio\Domain\Ports\SpendGuardPort;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
@@ -20,7 +22,12 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPosting
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingTextEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
 
-/** Pipeline stage 7 (conditional): extraction skipped when text is in hand. */
+/**
+ * Pipeline stage 7 (conditional): fetch skipped when text is in hand.
+ * Requirement extraction rides this stage so the insight report's frequency
+ * section reads every posting fetched — the extractor is hash-idempotent, so
+ * re-runs and the backfill below never pay twice for the same text.
+ */
 #[Tries(3)]
 #[Timeout(600)]
 #[Backoff([10, 60, 300])]
@@ -33,8 +40,12 @@ final class ExtractPostingsJob implements ShouldQueue
         $this->queue = 'studio';
     }
 
-    public function handle(PostingFetchLadder $ladder, PostingTextMinimiser $minimiser, SpendGuardPort $spend): void
-    {
+    public function handle(
+        PostingFetchLadder $ladder,
+        PostingTextMinimiser $minimiser,
+        SpendGuardPort $spend,
+        ExtractRequirementsHandler $requirements,
+    ): void {
         $run = StudioRunEloquentModel::query()->ownedBy($this->userId)->where('id', $this->runId)->first();
 
         if ($run === null) {
@@ -43,11 +54,11 @@ final class ExtractPostingsJob implements ShouldQueue
 
         $extracted = 0;
 
-        StudioPostingEloquentModel::query()
+        $fetchDone = StudioPostingEloquentModel::query()
             ->ownedBy($this->userId)
             ->where('profile_id', $run->profile_id)
             ->whereDoesntHave('texts')
-            ->chunkById(100, function ($postings) use ($ladder, $minimiser, $spend, $run, &$extracted): bool {
+            ->chunkById(100, function ($postings) use ($ladder, $minimiser, $spend, $requirements, $run, &$extracted): bool {
                 foreach ($postings as $posting) {
                     // The Firecrawl step is paid: a spent `extraction` budget
                     // ends the stage instead of scraping unbounded (API4).
@@ -82,13 +93,66 @@ final class ExtractPostingsJob implements ShouldQueue
                     ]);
 
                     $extracted++;
+
+                    if (! $this->extractRequirements($posting->uuid, $requirements)) {
+                        return false;
+                    }
                 }
 
                 return true;
             });
 
+        // Backfill: texts stored by an earlier run (or left requirement-less
+        // by a spent LLM budget) get their requirements now — the handler
+        // skips texts whose hash already has rows, so this is fetch-free.
+        if ($fetchDone !== false) {
+            StudioPostingEloquentModel::query()
+                ->ownedBy($this->userId)
+                ->where('profile_id', $run->profile_id)
+                ->whereHas('texts')
+                ->whereDoesntHave('requirements')
+                ->chunkById(100, function ($postings) use ($requirements): bool {
+                    foreach ($postings as $posting) {
+                        if (! $this->extractRequirements($posting->uuid, $requirements)) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                });
+        }
+
         $run->update(['extracted_count' => $extracted, 'status' => 'extracted']);
 
         BuildInsightReportJob::dispatch($run->id, $this->userId);
+    }
+
+    /**
+     * One posting's requirements, best-effort: a dead extractor degrades the
+     * posting instead of killing the run (NFR-6) — but never silently
+     * (OWASP A09). Class only: the message may echo provider payloads or
+     * posting text. A spent LLM budget stops the stage; the backfill above
+     * resumes it on the next run once the budget resets.
+     *
+     * @return bool false when the stage must stop (budget spent).
+     */
+    private function extractRequirements(string $postingUuid, ExtractRequirementsHandler $requirements): bool
+    {
+        try {
+            // Deliberately discarded: persistence is the effect; the rows
+            // are read back by scoring and the insight report. The (void)
+            // cast satisfies the handler's #[\NoDiscard] contract.
+            (void) $requirements->handle($postingUuid, $this->userId);
+        } catch (BudgetExceededException) {
+            return false;
+        } catch (\Throwable $exception) {
+            Log::warning('cv_studio.requirements.skipped', [
+                'posting_uuid' => $postingUuid,
+                'run_id' => $this->runId,
+                'exception' => $exception::class,
+            ]);
+        }
+
+        return true;
     }
 }

@@ -42,10 +42,10 @@ final class TailorCvAgent implements Agent, HasStructuredOutput
             'summary' => $schema->string()->required(),
             'skills' => $schema->array()->items($schema->string())->required(),
             'provenance' => $schema->array()->items(
-                $schema->object(
-                    output_bullet: $schema->string()->required(),
-                    source_bullet: $schema->string()->required(),
-                )
+                $schema->object([
+                    'output_bullet' => $schema->string()->required(),
+                    'source_bullet' => $schema->string()->required(),
+                ])
             )->required(),
         ];
     }

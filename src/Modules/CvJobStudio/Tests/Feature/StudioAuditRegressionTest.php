@@ -7,11 +7,13 @@ use Database\Seeders\RolePermissionSeeder;
 use GuzzleHttp\Psr7\Uri;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Ai\Responses\StructuredAgentResponse;
+use Modules\CvJobStudio\Application\Commands\ExtractRequirementsHandler;
 use Modules\CvJobStudio\Application\Commands\IngestPostingHandler;
 use Modules\CvJobStudio\Application\DTOs\IngestPostingData;
 use Modules\CvJobStudio\Domain\Enums\AiPurpose;
 use Modules\CvJobStudio\Domain\Exceptions\BudgetExceededException;
 use Modules\CvJobStudio\Domain\Ports\PostingTextFetcherPort;
+use Modules\CvJobStudio\Domain\Ports\RequirementExtractorPort;
 use Modules\CvJobStudio\Domain\Ports\SpendGuardPort;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
 use Modules\CvJobStudio\Infrastructure\Ai\AiCallExecutor;
@@ -209,6 +211,13 @@ it('minimises fetched posting text before storing it (NFR-8)', function (): void
         new PostingFetchLadder([$fetcher]),
         app(PostingTextMinimiser::class),
         app(SpendGuardPort::class),
+        app(ExtractRequirementsHandler::class, ['extractor' => new class implements RequirementExtractorPort
+        {
+            public function extract(string $postingText, int $userId): array
+            {
+                return ['requirements' => [], 'responsibilities' => [], 'provider' => 'fake', 'model' => 'fake-1', 'prompt_version' => 'v2'];
+            }
+        }]),
     );
 
     $stored = StudioPostingTextEloquentModel::query()->where('posting_id', $posting->id)->sole()->text;

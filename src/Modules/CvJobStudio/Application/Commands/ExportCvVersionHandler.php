@@ -25,15 +25,17 @@ final readonly class ExportCvVersionHandler
 
     /**
      * @param  'docx'|'pdf'  $format
+     * @param  array{name: string, lines: list<string>}|null  $header  ATS
+     *                                                                 contact block; null renders the sections without a header.
      * @return array{uuid: string, path: string, verified: bool}
      */
     #[\NoDiscard]
-    public function handle(string $versionUuid, string $format, int $userId): array
+    public function handle(string $versionUuid, string $format, int $userId, ?array $header = null): array
     {
         $version = $this->cvs->versionForUser($versionUuid, $userId)
             ?? throw new VersionNotFoundException("Version {$versionUuid} not found.");
 
-        $document = $this->documents->render($format, $version->content);
+        $document = $this->documents->render($format, $version->content, $header);
         $path = "studio-exports/{$version->uuid}.{$format}";
 
         $this->storage->put($path, $document['bytes'], 'private');

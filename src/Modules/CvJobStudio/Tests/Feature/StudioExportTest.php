@@ -12,6 +12,7 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvStruc
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioCvVersionEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioExportEloquentModel;
 use Shared\Domain\Ports\WordExportPort;
+use Smalot\PdfParser\Parser as PdfTextParser;
 
 uses(RefreshDatabase::class);
 
@@ -26,6 +27,58 @@ function exportAdmin(): User
     $admin->assignRole('SUPER_ADMIN');
 
     return $admin;
+}
+
+function exportTailoredVersion(User $admin): StudioCvVersionEloquentModel
+{
+    $structure = StudioCvStructureEloquentModel::query()->create([
+        'user_id' => $admin->id,
+        'cv_id' => 1,
+        'source_text_hash' => hash('sha256', 'cv-tailored'),
+        'parser_version' => 'v2',
+        'parsed_at' => now(),
+        'confirmed_at' => now(),
+    ]);
+
+    // Tailor shape: summary + skills, no sections — this exported empty
+    // before the ATS normalization.
+    return StudioCvVersionEloquentModel::query()->create([
+        'user_id' => $admin->id,
+        'cv_id' => 1,
+        'structure_id' => $structure->id,
+        'purpose' => 'tailored',
+        'language' => 'en',
+        'content' => [
+            'summary' => 'Senior fullstack developer with Laravel and Vue.js experience.',
+            'skills' => ['Laravel', 'Vue.js', 'PostgreSQL'],
+        ],
+        'rules_version' => 2,
+    ]);
+}
+
+function exportRewriteVersion(User $admin): StudioCvVersionEloquentModel
+{
+    $structure = StudioCvStructureEloquentModel::query()->create([
+        'user_id' => $admin->id,
+        'cv_id' => 1,
+        'source_text_hash' => hash('sha256', 'cv-rewrite'),
+        'parser_version' => 'v2',
+        'parsed_at' => now(),
+        'confirmed_at' => now(),
+    ]);
+
+    // Rewrite shape: a bare section list, no `sections` wrapper.
+    return StudioCvVersionEloquentModel::query()->create([
+        'user_id' => $admin->id,
+        'cv_id' => 1,
+        'structure_id' => $structure->id,
+        'purpose' => 'ats_rewrite',
+        'language' => 'en',
+        'content' => [
+            ['heading' => 'Experience', 'bullets' => ['Built APIs serving 1M requests per day.']],
+        ],
+        'rules_version' => 2,
+    ]);
 }
 
 function exportVersion(User $admin): StudioCvVersionEloquentModel
@@ -125,4 +178,47 @@ it('answers metric questions against a missing audit with 404', function (): voi
     $this->actingAs($admin)->post('/cv-studio/audits/'.(string) Str::uuid7().'/answers', [
         'answers' => ['How many requests?' => '1M per day'],
     ])->assertNotFound();
+});
+
+it('exports a tailored version with ATS contact header and skills line', function (): void {
+    $admin = exportAdmin();
+    $version = exportTailoredVersion($admin);
+    $handler = app(ExportCvVersionHandler::class);
+    $header = ['name' => 'Ada Lovelace', 'lines' => ['ada@example.com']];
+
+    $pdf = $handler->handle($version->uuid, 'pdf', $admin->id, $header);
+    $pdfText = (string) (new PdfTextParser)->parseContent((string) Storage::disk('r2')->get($pdf['path']))->getText();
+
+    expect($pdf['verified'])->toBeTrue()
+        ->and($pdfText)->toContain('Ada Lovelace')
+        ->and($pdfText)->toContain('ada@example.com')
+        ->and($pdfText)->toContain('Professional Summary')
+        ->and($pdfText)->toContain('Core Skills')
+        ->and($pdfText)->toContain('Laravel');
+
+    $docx = $handler->handle($version->uuid, 'docx', $admin->id, $header);
+    $archive = new ZipArchive;
+    $temporary = tempnam(sys_get_temp_dir(), 'ats').'.docx';
+    file_put_contents($temporary, (string) Storage::disk('r2')->get($docx['path']));
+    $archive->open($temporary);
+    $document = (string) $archive->getFromName('word/document.xml');
+    $archive->close();
+    @unlink($temporary);
+
+    expect(substr((string) Storage::disk('r2')->get($docx['path']), 0, 2))->toBe('PK')
+        ->and($document)->toContain('Ada Lovelace')
+        ->and($document)->toContain('Laravel');
+});
+
+it('exports a rewrite bare-list version without a header', function (): void {
+    $admin = exportAdmin();
+    $version = exportRewriteVersion($admin);
+    $handler = app(ExportCvVersionHandler::class);
+
+    $pdf = $handler->handle($version->uuid, 'pdf', $admin->id);
+    $pdfText = (string) (new PdfTextParser)->parseContent((string) Storage::disk('r2')->get($pdf['path']))->getText();
+
+    expect($pdf['verified'])->toBeTrue()
+        ->and($pdfText)->toContain('Experience')
+        ->and($pdfText)->toContain('1M requests');
 });

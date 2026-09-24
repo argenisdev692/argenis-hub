@@ -1,0 +1,229 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Modules\CvJobStudio\Application\Commands\ExtractRequirementsHandler;
+use Modules\CvJobStudio\Domain\Exceptions\BudgetExceededException;
+use Modules\CvJobStudio\Domain\Ports\EmbeddingPort;
+use Modules\CvJobStudio\Domain\Ports\PostingTextFetcherPort;
+use Modules\CvJobStudio\Domain\Ports\RequirementExtractorPort;
+use Modules\CvJobStudio\Domain\Ports\SpendGuardPort;
+use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
+use Modules\CvJobStudio\Infrastructure\Fetching\PostingFetchLadder;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioInsightReportEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingTextEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfileEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
+use Modules\CvJobStudio\Infrastructure\Queue\ExtractPostingsJob;
+
+uses(RefreshDatabase::class);
+
+beforeEach(function (): void {
+    $this->seed(RolePermissionSeeder::class);
+});
+
+function extractPipeOwner(): User
+{
+    $owner = User::factory()->create();
+    $owner->assignRole('SUPER_ADMIN');
+
+    return $owner;
+}
+
+function extractPipeProfile(User $owner): StudioProfileEloquentModel
+{
+    return StudioProfileEloquentModel::query()->create([
+        'user_id' => $owner->id,
+        'name' => 'Fullstack',
+        'slug' => 'fullstack-'.Str::lower(Str::random(6)),
+        'flow' => 'fullstack',
+        'is_active' => true,
+        'accepted_remote_scopes' => ['remote_eu'],
+        'stack_must' => ['Laravel', 'Vue.js'],
+        'stack_reject' => ['WordPress'],
+        'rules' => config('cv-job-studio'),
+        'rules_version' => 2,
+    ]);
+}
+
+function extractPipePosting(User $owner, StudioProfileEloquentModel $profile, string $suffix): StudioPostingEloquentModel
+{
+    return StudioPostingEloquentModel::query()->create([
+        'user_id' => $owner->id,
+        'profile_id' => $profile->id,
+        'canonical_url' => "https://boards.greenhouse.io/acme/jobs/{$suffix}",
+        'url_hash' => hash('sha256', "https://boards.greenhouse.io/acme/jobs/{$suffix}"),
+        'title' => 'Senior Fullstack Developer',
+        'remote_scope' => 'remote_eu',
+        'status' => 'new',
+    ]);
+}
+
+function extractPipeRun(User $owner, StudioProfileEloquentModel $profile): StudioRunEloquentModel
+{
+    return StudioRunEloquentModel::query()->create([
+        'user_id' => $owner->id,
+        'profile_id' => $profile->id,
+        'status' => 'queued',
+    ]);
+}
+
+function extractPipeFetcher(string $text, stdClass $calls): PostingTextFetcherPort
+{
+    return new class($text, $calls) implements PostingTextFetcherPort
+    {
+        public function __construct(private string $text, private stdClass $calls) {}
+
+        public function fetch(string $url): ?array
+        {
+            $this->calls->fetch++;
+
+            return ['text' => $this->text, 'completeness' => 'full', 'cost_micros' => 0];
+        }
+
+        public function stepName(): string
+        {
+            return 'direct_http';
+        }
+    };
+}
+
+function extractPipeExtractor(stdClass $calls): RequirementExtractorPort
+{
+    return new class($calls) implements RequirementExtractorPort
+    {
+        public function __construct(private stdClass $calls) {}
+
+        public function extract(string $postingText, int $userId): array
+        {
+            $this->calls->extract++;
+
+            return [
+                'requirements' => [
+                    ['canonical_name' => 'Laravel', 'raw_text' => 'Laravel', 'tag' => 'required', 'nature' => 'hard'],
+                    ['canonical_name' => 'Bogus', 'raw_text' => 'x', 'tag' => 'weird', 'nature' => 'hard'],
+                ],
+                'responsibilities' => [],
+                'provider' => 'fake',
+                'model' => 'fake-1',
+                'prompt_version' => 'v2',
+            ];
+        }
+    };
+}
+
+function extractPipeHandler(RequirementExtractorPort $extractor): ExtractRequirementsHandler
+{
+    app()->instance(EmbeddingPort::class, new class implements EmbeddingPort
+    {
+        public function embed(array $texts): array
+        {
+            return ['vectors' => [array_fill(0, 3, 0.1)], 'model' => 'fake', 'dims' => 3];
+        }
+    });
+
+    return app(ExtractRequirementsHandler::class, ['extractor' => $extractor]);
+}
+
+function extractPipeCalls(): stdClass
+{
+    $calls = new stdClass;
+    $calls->fetch = 0;
+    $calls->extract = 0;
+
+    return $calls;
+}
+
+it('extracts requirements for freshly fetched texts and feeds the insight report', function (): void {
+    $owner = extractPipeOwner();
+    $profile = extractPipeProfile($owner);
+    $posting = extractPipePosting($owner, $profile, 'fresh-1');
+    $run = extractPipeRun($owner, $profile);
+    $calls = extractPipeCalls();
+
+    (new ExtractPostingsJob($run->id, $owner->id))->handle(
+        new PostingFetchLadder([extractPipeFetcher('We need Laravel and Vue.js experience.', $calls)]),
+        app(PostingTextMinimiser::class),
+        app(SpendGuardPort::class),
+        extractPipeHandler(extractPipeExtractor($calls)),
+    );
+
+    // Invalid enum tags rejected on the way out; the text was fetched once
+    // and extracted exactly once.
+    expect(StudioPostingEloquentModel::query()->count())->toBe(1)
+        ->and(StudioPostingTextEloquentModel::query()->count())->toBe(1)
+        ->and($run->refresh()->extracted_count)->toBe(1)
+        ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->count())->toBe(1)
+        ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->value('canonical_name'))->toBe('Laravel')
+        ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->value('extracted_by_provider'))->toBe('fake')
+        ->and($calls->fetch)->toBe(1)
+        ->and($calls->extract)->toBe(1)
+        ->and($run->refresh()->extracted_count)->toBe(1)
+        // The sync-dispatched report stage closes the run afterwards.
+        ->and($run->refresh()->status)->toBe('finished');
+
+    // The sync-dispatched report stage now sees the posting: the frequency
+    // section that used to render "No postings read in this run" populates.
+    expect(StudioInsightReportEloquentModel::query()->where('run_id', $run->id)->value('jds_analyzed'))->toBe(1);
+});
+
+it('backfills requirements for texts stored by an earlier run', function (): void {
+    $owner = extractPipeOwner();
+    $profile = extractPipeProfile($owner);
+    $posting = extractPipePosting($owner, $profile, 'backfill-1');
+    $posting->texts()->create([
+        'user_id' => $owner->id,
+        'ladder_step' => 'direct_http',
+        'completeness' => 'full',
+        'text' => 'We need Laravel experience.',
+        'char_count' => 27,
+    ]);
+    $run = extractPipeRun($owner, $profile);
+    $calls = extractPipeCalls();
+
+    (new ExtractPostingsJob($run->id, $owner->id))->handle(
+        new PostingFetchLadder([extractPipeFetcher('UNUSED', $calls)]),
+        app(PostingTextMinimiser::class),
+        app(SpendGuardPort::class),
+        extractPipeHandler(extractPipeExtractor($calls)),
+    );
+
+    // No fetch (the text already exists), yet the requirement lands.
+    expect($calls->fetch)->toBe(0)
+        ->and($calls->extract)->toBe(1)
+        ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->value('canonical_name'))->toBe('Laravel');
+});
+
+it('stops the stage on a spent LLM budget without failing the run', function (): void {
+    $owner = extractPipeOwner();
+    $profile = extractPipeProfile($owner);
+    $posting = extractPipePosting($owner, $profile, 'budget-1');
+    $run = extractPipeRun($owner, $profile);
+    $calls = extractPipeCalls();
+
+    $spent = new class implements RequirementExtractorPort
+    {
+        public function extract(string $postingText, int $userId): array
+        {
+            throw new BudgetExceededException('llm budget spent');
+        }
+    };
+
+    (new ExtractPostingsJob($run->id, $owner->id))->handle(
+        new PostingFetchLadder([extractPipeFetcher('We need Laravel experience.', $calls)]),
+        app(PostingTextMinimiser::class),
+        app(SpendGuardPort::class),
+        extractPipeHandler($spent),
+    );
+
+    // The text was still fetched, but no requirement rows exist; the run
+    // degrades through the pipeline instead of throwing.
+    expect($run->refresh()->extracted_count)->toBe(1)
+        ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->count())->toBe(0);
+});

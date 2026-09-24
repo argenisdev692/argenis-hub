@@ -38,10 +38,10 @@ final class TranslateCvAgent implements Agent, HasStructuredOutput
     {
         return [
             'sections' => $schema->array()->items(
-                $schema->object(
-                    heading: $schema->string()->required(),
-                    bullets: $schema->array()->items($schema->string())->required(),
-                )
+                $schema->object([
+                    'heading' => $schema->string()->required(),
+                    'bullets' => $schema->array()->items($schema->string())->required(),
+                ])
             )->required(),
         ];
     }

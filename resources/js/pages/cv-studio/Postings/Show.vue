@@ -44,10 +44,13 @@ const {
 }>();
 
 defineOptions({
+    // Static crumbs only: `defineOptions` is evaluated outside `setup()`,
+    // so referencing the `posting` prop here throws `ReferenceError` and
+    // blue-screens the page. The dynamic title lives in `<Head>` below.
     layout: {
         breadcrumbs: [
             { title: 'CV Studio', href: index() },
-            { title: posting.title },
+            { title: 'Posting' },
         ],
     },
 });

@@ -39,18 +39,18 @@ final class ExtractRequirementsAgent implements Agent, HasStructuredOutput
     {
         return [
             'requirements' => $schema->array()->items(
-                $schema->object(
-                    canonical_name: $schema->string()->required(),
-                    raw_text: $schema->string()->required(),
-                    tag: $schema->string()->required(),
-                    nature: $schema->string()->required(),
-                )
+                $schema->object([
+                    'canonical_name' => $schema->string()->required(),
+                    'raw_text' => $schema->string()->required(),
+                    'tag' => $schema->string()->required(),
+                    'nature' => $schema->string()->required(),
+                ])
             )->required(),
             'responsibilities' => $schema->array()->items(
-                $schema->object(
-                    text: $schema->string()->required(),
-                    must_do: $schema->boolean()->required(),
-                )
+                $schema->object([
+                    'text' => $schema->string()->required(),
+                    'must_do' => $schema->boolean()->required(),
+                ])
             )->required(),
         ];
     }
