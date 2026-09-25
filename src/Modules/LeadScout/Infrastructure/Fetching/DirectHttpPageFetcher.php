@@ -113,16 +113,32 @@ final readonly class DirectHttpPageFetcher implements PageFetcherPort
     #[\NoDiscard('Markdown must be captured')]
     public static function toMarkdown(string $html): string
     {
+        // JSON-LD Organization blocks are the primary company-identity source
+        // (FR-38: never the <title>). Script tags are stripped below, so the
+        // blocks are preserved first as fenced JSON the extractor can parse.
+        $jsonLd = '';
+
+        if (preg_match_all('/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $html, $blocks) > 0) {
+            foreach ($blocks[1] as $block) {
+                $block = trim($block);
+
+                if ($block !== '') {
+                    $jsonLd .= "\n\n```json\n".mb_substr($block, 0, 4000)."\n```";
+                }
+            }
+        }
+
         $text = (string) preg_replace('/<script\b[^>]*>.*?<\/script>/is', ' ', $html);
         $text = (string) preg_replace('/<style\b[^>]*>.*?<\/style>/is', ' ', $text);
         $text = (string) preg_replace('/<nav\b[^>]*>.*?<\/nav>/is', ' ', $text);
-        $text = (string) preg_replace('/<footer\b[^>]*>.*?<\/footer>/is', ' ', $text);
+        // NOTE: <footer> is intentionally KEPT: legal name, city and registry
+        // data live in the footer (FR-38). Only nav/chrome is stripped.
         $text = strip_tags($text);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5);
         $text = (string) preg_replace('/[ \t]+/', ' ', $text);
         $text = (string) preg_replace('/\n\s*\n+/', "\n\n", $text);
 
-        return trim($text);
+        return trim(trim($text).$jsonLd);
     }
 
     private function finalUrl(mixed $response, string $fallback): string

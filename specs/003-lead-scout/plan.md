@@ -370,7 +370,7 @@ Todos los países de las olas 2 y 3 quedan **sin email en frío** hasta que OP-2
 en config. El RGPD se aplica igualmente a los decisores de empresas fuera de la UE, porque el
 responsable está establecido en Portugal (art. 3.1).
 
-### 3.3 Modelo de scoring (determinista, versionado `rules_version = 2026.09.3`)
+### 3.3 Modelo de scoring (determinista, versionado `rules_version = 2026.09.4`)
 
 **Qué es una «agencia buena» para este perfil (A14):** está **viva** (publica, contrata o actualiza
 su web), tiene **equipo real** (no es un freelancer de una persona), **compra capacidad de forma
@@ -398,7 +398,7 @@ salen de esa definición.
 | Comercial | Contrato/freelance +35 · acepta freelancers/subcontratistas/marca blanca/partners +35 · tipo agencia de software +25 · consultora/nearshore +15 · empresa de producto +10 · reclutadora 0 (señal de mercado) · outsourcer grande −30 · ≥ 2 vacantes dev abiertas +15 · oferta de empleo fijo +10 · precios públicos bajos −25 |
 | Recurrente | Staff augmentation / team extension +35 · planes de mantenimiento, soporte o SLA publicados / retainer +30 · «long-term/ongoing» +25 · ≥ 5 casos o clientes activos +20 · clientes o casos con relación de varios años +15 · **vacante dev activa (no caducada) +15** · proyecto puntual +5 |
 | **Vitalidad y tamaño** | **Contenido fechado más reciente** (blog, casos, noticias, portfolio): ≤ 6 meses +40 · 6-12 meses +25 · 12-24 meses +5 · > 24 meses −30 · **`lastmod` más reciente del sitemap**: ≤ 6 meses +20 · > 24 meses −20 (**no cuenta** si todas las URLs comparten el mismo `lastmod`: suele ser una fecha autogenerada por el CMS) · **vacante dev activa** +20 · **año del copyright** ≥ año actual − 1 +5 · ≤ año actual − 3 −10 (siempre `inference`) · **tamaño observado**: 5-50 +30 · 51-200 +15 · 2-4 0 · desconocido 0 (baja confianza) |
-| Comunicación (B1) | Idioma de trabajo ES/PT = 100 · **inglés escrito/asíncrono demostrado** (remote-first, equipo distribuido, procesos documentados, trabajo por tickets/chat) = 80 · inglés sin más datos = 55 (baja confianza) · reuniones diarias en inglés, trato directo con el cliente o «fluent/native English» exigido = 25 |
+| Comunicación (B1) | Idioma de trabajo ES/PT = 100 (se detecta también por la redacción de la web: «nosotros/servicios/contacto», «nós/serviços/equipa»; antes una web en español caía en «inglés sin más datos» y valía 33) · **salvo inglés hablado exigido documentado** (`english_fluent_required` como `fact`): entonces 25 y se explica · **inglés escrito/asíncrono demostrado** (remote-first, equipo distribuido, procesos documentados, trabajo por tickets/chat) = 80 · inglés sin más datos = 55 (baja confianza) · reuniones diarias en inglés, trato directo con el cliente o «fluent/native English» exigido = 25 |
 | Geo/contrato | Empresa PT/ES +50 · resto de la UE +35 · UK/IE +30 · US/CA +15 · resto +10 · acepta contractors de la UE/extranjeros +30 · **solape horario con Portugal** ≥ 4 h +10 · 1-3 h 0 · < 1 h −15 · exige contrato local o residencia fuera de PT −40 |
 | Remoto | Remoto = 100 · híbrido = 30 · presencial = 0 · desconocido = 40 (baja confianza) |
 
@@ -420,11 +420,23 @@ si la evidencia más reciente tiene > 90 días.
 actual − 3 → Descartar) · `unknown` = no se encontró ninguna fecha.
 
 **Marca `needs_research`** (aporte MUSE-SPARK): Lead Score ≥ 80 **y** Confianza < 70, **o** sin
-ninguna fecha encontrada (`activity_status = unknown`) con Lead Score ≥ 65. No es un tier: el lead
-conserva el suyo y recibe **una** ronda extra de enriquecimiento barato (paso 4: casos, blog,
-sitemap). Evita que un buen encaje con poca evidencia muera en C o se contacte sin pruebas.
+ninguna fecha encontrada (`activity_status = unknown`) con Lead Score ≥ 65, **o**
+`team_size_observed = 1` / `employee_range = solo` **sin** hecho `solo_freelancer` (posible
+solo-freelancer: **siempre** revisión humana obligatoria, nunca pasa en silencio). No es un tier:
+el lead conserva el suyo y recibe **una** ronda extra de enriquecimiento barato (paso 4: casos,
+blog, sitemap). Evita que un buen encaje con poca evidencia muera en C o se contacte sin pruebas.
 **Tamaño:** 1 persona descarta; 2-4 limita a Tier B salvo señal de compra fuerte; 5-50 suma más
 en Vitalidad; > 200 descarta. Sin dato de tamaño **no** se descarta (baja la confianza).
+
+**FR-7 como invariante de base de datos:** `scout_score_reasons.evidence_url` y
+`evidence_excerpt` son **NOT NULL**. Cada razón guarda su evidencia en línea (la de su señal; para
+las derivadas sin señal — `overlap_ok`/`overlap_low`, `unconfirmed_tech` — la del país o de la
+oferta que la motiva). Una razón sin evidencia es un «+5 fantasma» que nadie puede explicar
+(«¿por qué 87?»): el handler la descarta y cuenta, el repositorio la vuelve a descartar, y la
+base de datos la rechaza. La verificación 5c se endurece: una señal comercial de la IA exige
+**soporte semántico** en el excerpt (`freelanc*`, `partner*`, `colabor*`, `subcontrat*`,
+«marca blanca», «white label», `extern*`), y los excerpts de sitemaps o listas de URLs
+(`<loc>`/`<lastmod>`, ≥ 3 URLs) se rechazan como prueba.
 
 **Ejemplo 1 («¿por qué 87?»)** — agencia hipotética en Sevilla, 11-50 personas, con una oferta
 activa «Desarrollador Laravel + Vue, freelance, remoto» y casos publicados en 2026:

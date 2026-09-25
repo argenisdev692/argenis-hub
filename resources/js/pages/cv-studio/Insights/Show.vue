@@ -19,41 +19,18 @@ defineOptions({
 const { report: reportData } = useInsightReport(uuid, true);
 const { rates } = useOwnRates();
 
-type FrequencyRow = {
-    name: string;
-    count: number;
-    covered: boolean;
-    percentage: number | null;
-};
-
-type ReachRow = {
-    cap: string;
-    capped_count: number;
-    unlocked_count: number;
-};
-
-const requirements = computed<FrequencyRow[]>(
-    () =>
-        (reportData.value?.requirements as unknown as {
-            requirements: FrequencyRow[];
-        })?.requirements ?? [],
-);
-
-const reachTable = computed<ReachRow[]>(
-    () => (reportData.value?.reach_table as unknown as ReachRow[]) ?? [],
-);
-
+const requirements = computed(() => reportData.value?.requirements.requirements ?? []);
+const reachTable = computed(() => reportData.value?.reach_table ?? []);
+const recommendations = computed(() => reportData.value?.recommendations ?? []);
 const correlation = computed(
     () =>
-        (reportData.value?.outcome_correlation as unknown as {
-            suppressed: boolean;
-            rows: {
-                requirement: string;
-                answered_rate: number | null;
-                silent_rate: number | null;
-            }[];
-        }) ?? { suppressed: true, rows: [] },
+        reportData.value?.outcome_correlation ?? {
+            suppressed: true,
+            rows: [],
+        },
 );
+const jdsAnalyzed = computed(() => reportData.value?.jds_analyzed ?? 0);
+const sampleNote = computed(() => reportData.value?.sample_note ?? null);
 </script>
 
 <template>
@@ -68,7 +45,33 @@ const correlation = computed(
                 Requirement frequency across every posting read — including
                 capped and below-threshold ones. Directional, never causal.
             </p>
+            <p class="text-sm text-muted-foreground">
+                <span class="tabular-nums font-medium text-foreground">{{
+                    jdsAnalyzed
+                }}</span>
+                {{ jdsAnalyzed === 1 ? 'job' : 'jobs' }} analysed
+                <span v-if="sampleNote" class="text-amber-500">
+                    · {{ sampleNote }}
+                </span>
+            </p>
         </header>
+
+        <section
+            v-if="recommendations.length > 0"
+            class="rounded-xl border border-border bg-card p-4"
+            aria-label="Recommendations"
+        >
+            <h2 class="mb-2 text-sm font-semibold">What to lead with</h2>
+            <ul class="flex list-disc flex-col gap-1 pl-5 text-sm">
+                <li v-for="line in recommendations" :key="line">
+                    {{ line }}
+                </li>
+            </ul>
+            <p class="mt-2 text-xs text-muted-foreground">
+                Built only from requirements your CV already evidences — this
+                report never suggests adding a skill you do not have.
+            </p>
+        </section>
 
         <section
             class="rounded-xl border border-border bg-card p-4"
@@ -91,7 +94,7 @@ const correlation = computed(
                         </span>
                     </span>
                     <span class="tabular-nums text-muted-foreground">
-                        {{ row.count }}
+                        {{ row.count }} of {{ jdsAnalyzed }}
                         <template v-if="row.percentage !== null">
                             ({{ row.percentage }}%)
                         </template>

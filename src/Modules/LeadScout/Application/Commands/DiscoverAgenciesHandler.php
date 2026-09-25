@@ -212,9 +212,13 @@ final readonly class DiscoverAgenciesHandler
             return null;
         }
 
+        // The search result title is usually a post/page <title>, never the
+        // company identity (FR-38). The display name starts as the domain and
+        // is resolved later from JSON-LD Organization → legal notice → footer
+        // during enrichment; the raw title is kept out of the name entirely.
         return $this->companies->register(
             canonicalDomain: $domain,
-            name: mb_substr(trim($title) !== '' ? trim($title) : $domain, 0, 255),
+            name: mb_substr($domain, 0, 255),
             origin: CompanyOrigin::Discovery,
             originRef: mb_substr($plan['text'], 0, 255),
             country: $plan['country'],

@@ -4,7 +4,11 @@ import { toast } from 'vue-sonner';
 import { HttpError, httpJson } from '@/lib/http';
 import { toUrl } from '@/lib/utils';
 import { report, show, store } from '@/routes/cv-studio/runs';
-import type { StudioRun, StudioRunTerminalStatus } from '../types';
+import type {
+    StudioInsightReport,
+    StudioRun,
+    StudioRunTerminalStatus,
+} from '../types';
 
 export const STUDIO_RUNS_KEY = ['studio-runs'];
 
@@ -91,9 +95,9 @@ export function useStartRun() {
 }
 
 export function useInsightReport(uuid: string, enabled: boolean) {
-    const { data, ...query } = useQuery<{ report: Record<string, unknown> }>({
+    const { data, ...query } = useQuery<{ report: StudioInsightReport }>({
         key: () => ['studio-runs', uuid, 'report'],
-        query: () => httpJson<{ report: Record<string, unknown> }>(toUrl(report(uuid))),
+        query: () => httpJson<{ report: StudioInsightReport }>(toUrl(report(uuid))),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
         enabled,

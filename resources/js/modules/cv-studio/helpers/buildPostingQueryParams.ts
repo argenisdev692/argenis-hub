@@ -22,6 +22,7 @@ export function buildPostingQueryParams(
         stages: filters.stages.length > 0 ? filters.stages : undefined,
         date_from: filters.date_from ?? undefined,
         date_to: filters.date_to ?? undefined,
+        scored_only: filters.scored_only ? undefined : 0,
         sort_field: filters.sort_field,
         sort_order: filters.sort_order,
     };

@@ -168,7 +168,7 @@ it('returns the canonical url on the postings list', function (): void {
     $owner = boundaryOwner();
     $posting = boundaryPosting($owner, boundaryProfile($owner));
 
-    $row = $this->actingAs($owner)->getJson('/cv-studio/postings')->assertOk()->json('data.0');
+    $row = $this->actingAs($owner)->getJson('/cv-studio/postings?scored_only=0')->assertOk()->json('data.0');
 
     expect($row['uuid'])->toBe($posting->uuid)
         ->and($row['canonical_url'])->toBe('https://boards.greenhouse.io/acme/jobs/boundary');

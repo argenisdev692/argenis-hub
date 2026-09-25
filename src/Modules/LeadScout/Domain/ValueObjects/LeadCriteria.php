@@ -14,6 +14,11 @@ use Modules\LeadScout\Domain\Enums\Tier;
 /**
  * Which leads the bandeja and its exports select (spec US-5, FR-21). A
  * null list means "no filter on that field". Date bounds are inclusive.
+ *
+ * `scoredOnly` defaults to TRUE: a company with no current score is not a
+ * lead, it is work in progress (discovery just created it, enrichment has
+ * not finished). Showing those rows filled the bandeja with unscored
+ * placeholders, so they are opt-in via `scored_only=false`.
  */
 final readonly class LeadCriteria
 {
@@ -36,5 +41,6 @@ final readonly class LeadCriteria
         public ?string $search = null,
         public ?DateTimeImmutable $createdFrom = null,
         public ?DateTimeImmutable $createdTo = null,
+        public bool $scoredOnly = true,
     ) {}
 }

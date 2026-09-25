@@ -45,6 +45,12 @@ export type StudioPostingFilters = {
     stages: StudioPostingStage[];
     date_from: string | null;
     date_to: string | null;
+    /**
+     * `false` opts into unscored postings (queued, mid-pipeline, link-only
+     * references). The backend defaults to `true`, so this is only sent when
+     * the user has switched it off.
+     */
+    scored_only: boolean;
     sort_field: StudioPostingSortField;
     sort_order: 1 | -1;
     page: number;
@@ -65,6 +71,8 @@ export type StudioCvVersion =
 export type StudioRelation =
     Modules.CvJobStudio.Application.DTOs.StudioSkillRelationData;
 export type StudioSource = Modules.CvJobStudio.Application.DTOs.StudioSourceData;
+export type StudioInsightReport =
+    Modules.CvJobStudio.Application.DTOs.StudioInsightReportData;
 
 export type StudioApplicationPage = PaginatedPage<StudioApplication>;
 export type StudioCvVersionPage = PaginatedPage<StudioCvVersion>;

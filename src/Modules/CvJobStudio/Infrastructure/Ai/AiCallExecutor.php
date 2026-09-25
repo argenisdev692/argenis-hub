@@ -34,6 +34,16 @@ final readonly class AiCallExecutor
      * loop (so `UsesPromptCache` agents emit provider cache fields) and
      * cleared afterwards — one synchronous call, no leakage across calls.
      *
+     * Caching is opt-in twice over: the global `ai.prompt_cache.enabled` switch
+     * and the purpose's own `prompt_cache` flag (CHG-20 decides it per purpose
+     * — a one-off call is not worth an Anthropic cache-write premium). A prompt
+     * handed in while the purpose opts out is still honoured, just sent whole.
+     *
+     * Anthropic carries the layers in cached system blocks, so only the tail
+     * travels as the user message; every other provider gets the whole prompt
+     * as one message whose prefix repeats. The `max_input_chars` ceiling is
+     * applied to what is actually sent, so the untrusted tail is what it bounds.
+     *
      * @param  class-string  $agentClass
      * @return array{response: mixed, provider: string, model: string|null}
      */
@@ -42,13 +52,16 @@ final readonly class AiCallExecutor
     {
         $purposeConfig = (array) config("ai.purposes.{$purpose->value}", []);
         $maxInputChars = (int) ($purposeConfig['max_input_chars'] ?? 0);
-        $prompt = $maxInputChars > 0 ? mb_substr($prompt, 0, $maxInputChars) : $prompt;
         $callCostMicros = (int) round((float) config('cv-job-studio.llm_call_estimate_eur', 0) * 1_000_000);
         $lastException = null;
 
-        if ($cached !== null) {
-            app(PromptCacheScope::class)->set($cached);
-        }
+        $scope = $cached !== null
+            && (bool) config('ai.prompt_cache.enabled', true)
+            && (bool) ($purposeConfig['prompt_cache'] ?? false)
+                ? app(PromptCacheScope::class)
+                : null;
+
+        $scope?->set($cached);
 
         try {
             foreach ($this->failover->attempts($purposeConfig['provider'] ?? null) as $provider) {
@@ -56,9 +69,17 @@ final readonly class AiCallExecutor
                 $this->spend->ensure('llm', $userId, $runId);
 
                 try {
+                    $userMessage = $scope !== null && strtolower($provider) === 'anthropic'
+                        ? $cached->tail
+                        : $prompt;
+
+                    if ($maxInputChars > 0) {
+                        $userMessage = mb_substr($userMessage, 0, $maxInputChars);
+                    }
+
                     $response = $this->ai->generateStructured(
                         $agentClass,
-                        $prompt,
+                        $userMessage,
                         $provider,
                         $purposeConfig['models'][$provider] ?? null,
                         $purposeConfig['timeout'] ?? null,
@@ -81,9 +102,7 @@ final readonly class AiCallExecutor
                 "All LLM providers failed for {$purpose->value}: ".($lastException !== null ? $lastException::class : 'unknown'),
             );
         } finally {
-            if ($cached !== null) {
-                app(PromptCacheScope::class)->clear();
-            }
+            $scope?->clear();
         }
     }
 }

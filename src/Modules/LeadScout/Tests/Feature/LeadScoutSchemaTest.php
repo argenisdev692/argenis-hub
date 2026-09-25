@@ -85,6 +85,18 @@ it('enforces the current-row partial uniques', function (): void {
     }
 });
 
+it('requires evidence on every score reason (FR-7: no phantom points)', function (): void {
+    foreach (['evidence_url', 'evidence_excerpt'] as $column) {
+        $row = DB::selectOne(
+            "SELECT is_nullable FROM information_schema.columns WHERE table_name = 'scout_score_reasons' AND column_name = ?",
+            [$column],
+        );
+
+        expect($row)->not->toBeNull("column {$column} is missing")
+            ->and($row->is_nullable)->toBe('NO', "scout_score_reasons.{$column} must be NOT NULL (FR-7)");
+    }
+});
+
 it('enforces the terms and sent CHECK constraints', function (): void {
     foreach (['ck_scout_sources_terms', 'ck_scout_outreaches_sent'] as $name) {
         $row = DB::selectOne(

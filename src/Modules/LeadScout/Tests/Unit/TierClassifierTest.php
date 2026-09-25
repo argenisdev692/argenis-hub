@@ -100,3 +100,22 @@ it('marks unknown-activity leads for research instead of discarding', function (
     expect($result['tier'])->toBe(Tier::B)
         ->and($result['needsResearch'])->toBeTrue();
 });
+
+it('flags team_size_observed=1 for mandatory review instead of passing silently', function (): void {
+    $solo = app(TierClassifier::class)->classify(
+        70, 60, 70, 'active', 'unknown', 1, ['freelance_contract'], flags(), 'ES', thresholds(),
+    );
+    $soloRange = app(TierClassifier::class)->classify(
+        70, 60, 70, 'active', 'solo', null, ['freelance_contract'], flags(), 'ES', thresholds(),
+    );
+    $normal = app(TierClassifier::class)->classify(
+        70, 60, 70, 'active', 'unknown', 12, ['freelance_contract'], flags(), 'ES', thresholds(),
+    );
+
+    // Possible solo-freelancer without a solo_freelancer fact: B-tier at best,
+    // always marked for human review — never a silent pass.
+    expect($solo['tier'])->toBe(Tier::B)
+        ->and($solo['needsResearch'])->toBeTrue('team_size_observed=1 must force review')
+        ->and($soloRange['needsResearch'])->toBeTrue('employee_range solo must force review')
+        ->and($normal['needsResearch'])->toBeFalse();
+});

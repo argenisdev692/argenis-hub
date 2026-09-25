@@ -13,6 +13,8 @@ use Modules\CvJobStudio\Domain\Ports\PostingTextFetcherPort;
 use Modules\CvJobStudio\Domain\Ports\RequirementExtractorPort;
 use Modules\CvJobStudio\Domain\Ports\SpendGuardPort;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
+use Modules\CvJobStudio\Infrastructure\Ai\ExtractRequirementsAgent;
+use Modules\CvJobStudio\Infrastructure\Ai\LaravelAiRequirementExtractor;
 use Modules\CvJobStudio\Infrastructure\Fetching\PostingFetchLadder;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioInsightReportEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
@@ -21,6 +23,7 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioProfile
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRequirementEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Queue\ExtractPostingsJob;
+use Modules\CvJobStudio\Tests\Support\RecordingAiClient;
 
 uses(RefreshDatabase::class);
 
@@ -264,4 +267,31 @@ it('stops the stage on a spent LLM budget without failing the run', function ():
     // degrades through the pipeline instead of throwing.
     expect($run->refresh()->extracted_count)->toBe(1)
         ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->count())->toBe(0);
+});
+
+it('reads the agent payload through array access, not the response property table', function (): void {
+    // `(array) $response` yields `structured`/`usage`/`meta`, never the
+    // payload keys — every test above fakes the port, so only a real adapter
+    // call proves the extraction path survives a real provider response.
+    $owner = extractPipeOwner();
+
+    $ai = RecordingAiClient::install([
+        ExtractRequirementsAgent::class => [
+            'requirements' => [
+                ['canonical_name' => 'Laravel', 'raw_text' => 'Laravel', 'tag' => 'required', 'nature' => 'hard'],
+            ],
+            'responsibilities' => [
+                ['text' => 'Ship features', 'must_do' => true],
+            ],
+        ],
+    ]);
+
+    $result = app(LaravelAiRequirementExtractor::class)->extract('We need Laravel experience.', $owner->id);
+
+    expect($result['requirements'])->toHaveCount(1)
+        ->and($result['requirements'][0]['canonical_name'])->toBe('Laravel')
+        ->and($result['responsibilities'])->toHaveCount(1)
+        ->and($result['provider'])->toBeString();
+
+    $ai->requireCall();
 });

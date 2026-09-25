@@ -80,14 +80,14 @@ final readonly class TierClassifier
             return [
                 'tier' => Tier::B,
                 'discardReason' => null,
-                'needsResearch' => $this->needsResearch($leadScore, $confidence, $thresholds, $activityStatus),
+                'needsResearch' => $this->needsResearch($leadScore, $confidence, $thresholds, $activityStatus, $teamObserved, $employeeRange),
             ];
         }
 
         return [
             'tier' => Tier::C,
             'discardReason' => null,
-            'needsResearch' => $this->needsResearch($leadScore, $confidence, $thresholds, $activityStatus),
+            'needsResearch' => $this->needsResearch($leadScore, $confidence, $thresholds, $activityStatus, $teamObserved, $employeeRange),
         ];
     }
 
@@ -135,7 +135,7 @@ final readonly class TierClassifier
         };
     }
 
-    private function needsResearch(int $leadScore, int $confidence, array $thresholds, string $activityStatus): bool
+    private function needsResearch(int $leadScore, int $confidence, array $thresholds, string $activityStatus, ?int $teamObserved = null, ?string $employeeRange = null): bool
     {
         $bar = $thresholds['needs_research'] ?? [];
 
@@ -144,8 +144,19 @@ final readonly class TierClassifier
             return true;
         }
 
-        return $activityStatus === ActivityStatus::Unknown->value
-            && $leadScore >= ($bar['unknown_activity_min_score'] ?? 65);
+        if ($activityStatus === ActivityStatus::Unknown->value
+            && $leadScore >= ($bar['unknown_activity_min_score'] ?? 65)) {
+            return true;
+        }
+
+        // A single observed person is a possible solo-freelancer slipping
+        // through without a `solo_freelancer` fact: never pass silently,
+        // always force mandatory human review (spec fix team_size_observed=1).
+        if ($teamObserved === 1 || $employeeRange === EmployeeRange::Solo->value) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

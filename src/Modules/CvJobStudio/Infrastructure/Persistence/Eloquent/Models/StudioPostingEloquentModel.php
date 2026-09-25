@@ -238,7 +238,9 @@ final class StudioPostingEloquentModel extends Model
 
     /**
      * Shared list/export filter (BACKEND-PHP §5.2) — single source for
-     * ListPostingsHandler and the Excel/PDF exports.
+     * ListPostingsHandler and the Excel/PDF exports. `scoredOnly` keeps
+     * unscored postings (queued, mid-pipeline, or link-only `reference` rows)
+     * out of the default list; they have no fit to rank and cannot be tailored.
      *
      * @param  Builder<StudioPostingEloquentModel>  $query
      * @return Builder<StudioPostingEloquentModel>
@@ -274,6 +276,7 @@ final class StudioPostingEloquentModel extends Model
                 fn ($q) => $q->where('created_at', '<=', CarbonImmutable::parse($filters->dateTo)->endOfDay()),
             )
             ->when($filters->stages !== null && $filters->stages !== [], fn ($q) => $q->whereIn('status', $filters->stages))
+            ->when($filters->scoredOnly, fn ($q) => $q->whereHas('scores'))
             ->applySort($filters);
     }
 

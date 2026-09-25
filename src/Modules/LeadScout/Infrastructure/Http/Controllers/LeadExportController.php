@@ -33,7 +33,8 @@ final readonly class LeadExportController
 
     #[QueryParameter('dataset', description: 'Export dataset: `leads` (bandeja) or `funnel` (outreaches + stages + deals).', type: 'string', default: 'leads', example: 'leads')]
     #[QueryParameter('format', description: 'Export file format: `csv`, `xlsx` or `pdf`.', type: 'string', default: 'csv', example: 'xlsx')]
-    public function __invoke(Request $request, LeadFilterData $filters): StreamedResponse|Response
+    #[QueryParameter('scored_only', description: 'Only companies with a current score (default `true`; set `false` to export unscored rows too).', type: 'boolean', default: true, example: true)]
+    public function __invoke(Request $request): StreamedResponse|Response
     {
         /** @var array{dataset?: string, format?: string} $validated */
         $validated = $request->validate([
@@ -43,6 +44,8 @@ final readonly class LeadExportController
 
         $dataset = $validated['dataset'] ?? 'leads';
         $format = $validated['format'] ?? 'csv';
+        // Same normalization as the bandeja: "false" must not reach a ?bool.
+        $filters = LeadFilterData::from($request->merge(['scored_only' => $request->boolean('scored_only', true)]));
 
         return match ($dataset) {
             'funnel' => $this->funnel($filters, $format),

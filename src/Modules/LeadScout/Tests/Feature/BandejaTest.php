@@ -8,6 +8,7 @@ use Database\Factories\ScoutScoreResultFactory;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSuppressionEloquentModel;
 
 uses(RefreshDatabase::class);
 
@@ -25,7 +26,8 @@ function bandejaAdmin(): User
 
 it('lists filtered leads in a bounded query count', function (): void {
     $admin = bandejaAdmin();
-    ScoutCompanyFactory::new()->count(50)->create();
+    // Scored companies: an unscored row is not a lead (see the next test).
+    ScoutCompanyFactory::new()->count(50)->tierA()->create();
     DB::enableQueryLog();
 
     // N+1 proof: tripling the rows must not add a single query. The absolute
@@ -61,10 +63,11 @@ it('orders the bandeja by tier, score and confidence', function (): void {
 
     $low = ScoutCompanyFactory::new()->create(['name' => 'Low Co']);
     $high = ScoutCompanyFactory::new()->create(['name' => 'High Co']);
-    $unscored = ScoutCompanyFactory::new()->create(['name' => 'New Co']);
+    $scored = ScoutCompanyFactory::new()->create(['name' => 'New Co']);
 
     ScoutScoreResultFactory::new()->forCompany($low)->create(['tier' => 'C', 'lead_score' => 40, 'confidence' => 60]);
     ScoutScoreResultFactory::new()->forCompany($high)->create(['tier' => 'A', 'lead_score' => 90, 'confidence' => 80]);
+    ScoutScoreResultFactory::new()->forCompany($scored)->create(['tier' => 'C', 'lead_score' => 10, 'confidence' => 20]);
 
     $names = $this->actingAs($admin)
         ->getJson('/data/admin/lead-scout/leads?per_page=15')
@@ -72,6 +75,62 @@ it('orders the bandeja by tier, score and confidence', function (): void {
         ->json('data.*.name');
 
     expect($names)->toBe(['High Co', 'Low Co', 'New Co']);
+});
+
+it('hides unscored companies and shows them only on demand', function (): void {
+    $admin = bandejaAdmin();
+    $scored = ScoutCompanyFactory::new()->create(['name' => 'Scored Co']);
+    ScoutCompanyFactory::new()->create(['name' => 'Still Enriching']);
+
+    ScoutScoreResultFactory::new()->forCompany($scored)->create(['tier' => 'B', 'lead_score' => 70, 'confidence' => 60]);
+
+    // Default: only the scored lead. A company without a current score cannot
+    // be contacted, explained or exported — it is pipeline work, not a lead.
+    $default = $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads')
+        ->assertOk();
+
+    expect($default->json('data.*.name'))->toBe(['Scored Co'])
+        ->and($default->json('meta.total'))->toBe(1);
+
+    // Opt-in for debugging an incomplete pipeline.
+    $all = $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads?scored_only=false')
+        ->assertOk();
+
+    expect($all->json('meta.total'))->toBe(2);
+
+    // A discarded lead is still a scored lead: the reason must stay visible.
+    $discarded = ScoutCompanyFactory::new()->create(['name' => 'Solo Freelancer']);
+    ScoutScoreResultFactory::new()->forCompany($discarded)->create(['tier' => 'discarded', 'lead_score' => 5, 'confidence' => 50, 'discard_reason' => 'solo_freelancer']);
+
+    $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads?tier[]=discarded')
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.name', 'Solo Freelancer');
+});
+
+it('never offers a suppressed company to the bandeja', function (): void {
+    $admin = bandejaAdmin();
+    $company = ScoutCompanyFactory::new()->create(['name' => 'Retired Co']);
+    ScoutScoreResultFactory::new()->forCompany($company)->create(['tier' => 'B', 'lead_score' => 70, 'confidence' => 60]);
+    ScoutSuppressionEloquentModel::query()->create([
+        'canonical_domain' => $company->canonical_domain,
+        'source' => 'manual',
+        'reason' => 'DNC',
+    ]);
+
+    $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads')
+        ->assertOk()
+        ->assertJsonPath('meta.total', 0);
+
+    // Even with the unscored opt-in, suppression prevails (FR-43).
+    $this->actingAs($admin)
+        ->getJson('/data/admin/lead-scout/leads?scored_only=false')
+        ->assertOk()
+        ->assertJsonPath('meta.total', 0);
 });
 
 it('shows the full detail graph in a bounded query count', function (): void {
@@ -108,8 +167,10 @@ it('denies bandeja routes without permission', function (): void {
 
 it('accepts single-bound date filters and rejects an inverted range', function (): void {
     $admin = bandejaAdmin();
-    ScoutCompanyFactory::new()->create(['created_at' => '2026-03-10 12:00:00']);
-    ScoutCompanyFactory::new()->create(['created_at' => '2026-06-10 12:00:00']);
+    $march = ScoutCompanyFactory::new()->create(['created_at' => '2026-03-10 12:00:00']);
+    $june = ScoutCompanyFactory::new()->create(['created_at' => '2026-06-10 12:00:00']);
+    ScoutScoreResultFactory::new()->forCompany($march)->create(['tier' => 'B', 'lead_score' => 70, 'confidence' => 60]);
+    ScoutScoreResultFactory::new()->forCompany($june)->create(['tier' => 'B', 'lead_score' => 70, 'confidence' => 60]);
 
     $this->actingAs($admin)
         ->getJson('/data/admin/lead-scout/leads?date_from=2026-05-01')

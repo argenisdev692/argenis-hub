@@ -391,7 +391,12 @@ de emails en frío y no perder el contacto en un buzón de RRHH.
   (acepta freelancers/subcontratistas, marca blanca, staff augmentation, vacantes múltiples,
   crecimiento, mantenimiento de proyectos existentes) con evidencia.
 - **FR-7**: El sistema DEBE guardar para cada señal: URL de origen, fragmento textual, marca
-  temporal, confianza, método de extracción y naturaleza (hecho | inferencia).
+  temporal, confianza, método de extracción y naturaleza (hecho | inferencia). Cada razón de
+  score DEBE guardar su propia evidencia (URL + fragmento) con **`NOT NULL` en la base de datos**:
+  una razón sin evidencia es un «+5 fantasma» y DEBE descartarse. Una señal comercial obtenida
+  por interpretación automática DEBE tener **soporte semántico** en el fragmento (`freelanc*`,
+  `partner*`, `colabor*`, `subcontrat*`, «marca blanca», «white label», `extern*`), no solo una
+  coincidencia literal, y los fragmentos de sitemaps o listas de URLs NO sirven como prueba.
 - **FR-8**: El sistema DEBE calcular los subscores, el Lead Score y la Confianza de la evidencia
   de forma determinista a partir de las señales guardadas y de una versión de reglas.
 - **FR-9**: El sistema DEBE asignar el tier según reglas explícitas y umbrales configurables.
@@ -510,7 +515,10 @@ de emails en frío y no perder el contacto en un buzón de RRHH.
   idiomas de la web, clientes y casos **como empresas**, programas de partners o certificaciones
   de empresa, buzones genéricos, URL del formulario de contacto y URL de páginas de empresa en
   redes enlazadas desde su web. Cada dato DEBE guardar su evidencia (URL, fragmento, fecha, método).
-  NO DEBE guardar nada fuera de la allowlist.
+  NO DEBE guardar nada fuera de la allowlist. El **nombre de la empresa DEBE resolverse** en este
+  orden: JSON-LD `Organization` → aviso legal / términos / privacidad → pie de página (sufijo
+  legal). **NUNCA** del `<title>` de la página de aterrizaje ni del título de un resultado de
+  búsqueda: en una web con blog suele ser el título de un post, no la identidad de la empresa.
 - **FR-39** (empresa = persona física): Si los datos de identificación indican que la empresa es
   una **persona física** (autónomo, empresário em nome individual, freelancer: denominación con
   nombre propio, NIF de persona física o web en primera persona del singular), el sistema NO DEBE

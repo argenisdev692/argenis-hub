@@ -126,10 +126,19 @@ final readonly class ExtractSignalsHandler
 
     private function needsAi(Company $company): bool
     {
-        $dimensions = array_map(
-            static fn (Signal $signal): SignalDimension => $signal->dimension,
-            $this->signals->forCompany($company->id),
-        );
+        $dimensions = [];
+
+        foreach ($this->signals->forCompany($company->id) as $signal) {
+            $dimensions[] = $signal->dimension;
+
+            // A discard proven by rules cannot be rescued by a model call
+            // (US-4 discard rules: dead web, natural person). Paying for a
+            // Gemini/Sonnet call there is pure waste — on 2026-09-25 every
+            // parked/directory page consumed a full extraction.
+            if ($signal->signalKey === 'solo_freelancer' || $signal->signalKey === 'dead_web') {
+                return false;
+            }
+        }
 
         foreach (self::LLM_DIMENSIONS as $dimension) {
             if (! in_array($dimension, $dimensions, true)) {

@@ -103,10 +103,10 @@ final readonly class ScoreCompanyHandler
                 + ['needs_research' => (array) $this->config->get('lead-scout.scoring.needs_research', [])],
         );
 
-        $signalIdByKey = [];
+        $signalByKey = [];
 
         foreach ($signals as $signal) {
-            $signalIdByKey[$signal->signalKey] ??= $signal->id;
+            $signalByKey[$signal->signalKey] ??= $signal;
         }
 
         // A pre-existing flag clears once its extra round was consumed
@@ -115,7 +115,61 @@ final readonly class ScoreCompanyHandler
         $hadFlag = $company->needsResearch;
         $needsResearch = $hadFlag ? ! $extraRoundDone : $classified['needsResearch'];
 
-        $result = $this->transaction->run(function () use ($company, $profile, $scored, $classified, $signalIdByKey, $needsResearch): ScoreResult {
+        // FR-7: every persisted reason carries its evidence inline. Derived
+        // keys with no stored signal (overlap_ok/low, unconfirmed_tech) are
+        // anchored to real sources (country signal, active postings); a
+        // reason that still has no evidence is a phantom and is dropped
+        // rather than stored — the DB constraint below would reject it.
+        $postings = $this->postings->activeForCompany($company->id);
+        $firstPosting = array_first($postings);
+
+        $reasons = [];
+
+        foreach ($scored['reasons'] as $reason) {
+            $signal = $signalByKey[$reason['signal_key']] ?? null;
+            $evidenceUrl = $signal?->evidenceUrl;
+            $evidenceExcerpt = $signal?->evidenceExcerpt;
+
+            if (($evidenceUrl === null || trim($evidenceUrl) === '' || $evidenceExcerpt === null || trim($evidenceExcerpt) === '') && $reason['signal_key'] === 'unconfirmed_tech' && $firstPosting !== null) {
+                $evidenceUrl = $firstPosting->sourceUrl;
+                $evidenceExcerpt = mb_substr($firstPosting->title, 0, 500);
+            }
+
+            if (($evidenceUrl === null || trim($evidenceUrl) === '' || $evidenceExcerpt === null || trim($evidenceExcerpt) === '') && in_array($reason['signal_key'], ['overlap_ok', 'overlap_low'], true)) {
+                $countrySignal = null;
+
+                foreach (['country_pt_es', 'country_eu', 'country_uk_ie', 'country_us_ca', 'country_other'] as $countryKey) {
+                    if (isset($signalByKey[$countryKey])) {
+                        $countrySignal = $signalByKey[$countryKey];
+
+                        break;
+                    }
+                }
+
+                $evidenceUrl = $countrySignal?->evidenceUrl;
+                $evidenceExcerpt = $countrySignal?->evidenceExcerpt !== null ? $countrySignal->evidenceExcerpt.' | '.$reason['explanation'] : null;
+            }
+
+            if ($evidenceUrl === null || trim($evidenceUrl) === '' || $evidenceExcerpt === null || trim($evidenceExcerpt) === '') {
+                $this->log->pipeline('phantom_reason_dropped', [
+                    'company' => $company->uuid,
+                    'signal_key' => $reason['signal_key'],
+                    'points' => $reason['points'],
+                ]);
+
+                continue;
+            }
+
+            $reasons[] = [
+                'signal_id' => $signal?->id,
+                'points' => $reason['points'],
+                'explanation' => $reason['explanation'],
+                'evidence_url' => $evidenceUrl,
+                'evidence_excerpt' => mb_substr($evidenceExcerpt, 0, 2000),
+            ];
+        }
+
+        $result = $this->transaction->run(function () use ($company, $profile, $scored, $classified, $reasons, $needsResearch): ScoreResult {
             $result = $this->scores->recordCurrent(
                 companyId: $company->id,
                 profileId: $profile?->id,
@@ -125,11 +179,7 @@ final readonly class ScoreCompanyHandler
                 confidence: $scored['confidence'],
                 tier: $classified['tier'],
                 discardReason: $classified['discardReason'],
-                reasons: array_map(static fn (array $reason): array => [
-                    'signal_id' => $signalIdByKey[$reason['signal_key']] ?? null,
-                    'points' => $reason['points'],
-                    'explanation' => $reason['explanation'],
-                ], $scored['reasons']),
+                reasons: $reasons,
             );
 
             $this->companies->setNeedsResearch($company, $needsResearch);

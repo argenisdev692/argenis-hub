@@ -14,6 +14,11 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
  * (BACKEND-PHP §5.2) — one validated contract, never a duplicated `when()`
  * chain. `status` is the soft-delete axis; `stages` is the pipeline axis
  * (`new` → `saved` → `applied`, or `dismissed`/`skipped`).
+ *
+ * `scoredOnly` is on by default: the list is a shortlist, not a pipeline dump.
+ * A posting with no score — still queued, still waiting on extraction, or a
+ * `reference` row that is only a link — has no fit to rank and cannot produce a
+ * tailored CV, so it stays out of the way until `scored_only=false` asks for it.
  */
 #[MapInputName(SnakeCaseMapper::class)]
 #[MapOutputName(SnakeCaseMapper::class)]
@@ -35,6 +40,7 @@ final class StudioPostingFilterData extends SoftDeleteFilterData
         ?string $dateTo = null,
         public ?string $remoteScope = null,
         public ?array $stages = null,
+        public bool $scoredOnly = true,
         public string $sortField = 'created_at',
         public int $sortOrder = -1,
     ) {
@@ -50,6 +56,7 @@ final class StudioPostingFilterData extends SoftDeleteFilterData
             'remote_scope' => ['nullable', 'string', 'in:remote_global,remote_eu,remote_pt_es,remote_unclear,hybrid_local'],
             'stages' => ['nullable', 'array', 'max:'.count(self::STAGES)],
             'stages.*' => ['string', 'in:'.implode(',', self::STAGES)],
+            'scored_only' => ['sometimes', 'boolean'],
             'sort_field' => ['sometimes', 'string', 'in:'.implode(',', self::SORTABLE)],
             'sort_order' => ['sometimes', 'integer', 'in:1,-1'],
         ];

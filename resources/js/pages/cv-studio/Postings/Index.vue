@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import {
     EyeIcon,
     FilterXIcon,
+    LayersIcon,
     PlayIcon,
     RotateCcwIcon,
     Trash2Icon,
@@ -206,8 +207,19 @@ const hasActiveFilters = computed(() => {
         current.stages.length > 0 ||
         current.status !== 'active' ||
         current.date_from !== null ||
-        current.date_to !== null
+        current.date_to !== null ||
+        !current.scored_only
     );
+});
+
+/**
+ * Unscored postings (queued, mid-pipeline, link-only references) are hidden by
+ * default: they carry no fit score, so they cannot be ranked or tailored.
+ * Switching this on is the only way to see them.
+ */
+const showUnscoredModel = computed({
+    get: () => !filters.value.scored_only,
+    set: (value: boolean) => applyFilter(() => (filters.value.scored_only = !value)),
 });
 
 function clearFilters(): void {
@@ -497,6 +509,16 @@ async function startRun(): Promise<void> {
                             :options="statusOptions"
                             :clearable="false"
                         />
+
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            :aria-pressed="showUnscoredModel"
+                            @click="showUnscoredModel = !showUnscoredModel"
+                        >
+                            <LayersIcon class="size-4" aria-hidden="true" />
+                            {{ showUnscoredModel ? 'Hide unscored' : 'Show unscored' }}
+                        </Button>
 
                         <Button
                             v-if="hasActiveFilters"

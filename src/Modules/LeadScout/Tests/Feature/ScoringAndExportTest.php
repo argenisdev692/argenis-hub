@@ -7,6 +7,7 @@ use Carbon\CarbonImmutable;
 use Database\Factories\ScoutCompanyFactory;
 use Database\Factories\ScoutProfileFactory;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\LeadScout\Application\Commands\ScoreCompanyHandler;
 use Modules\LeadScout\Domain\Enums\ActivityStatus;
@@ -89,6 +90,18 @@ it('scores deterministically with a single current result and linked reasons', f
         ->and(ScoutScoreResultEloquentModel::query()->where('company_id', $company->id)->where('is_current', true)->count())->toBe(1)
         ->and($first->reasons)->toHaveCount(20)
         ->and(ScoutScoreReasonEloquentModel::query()->where('score_result_id', $first->id)->whereNotNull('signal_id')->count())->toBeGreaterThanOrEqual(19);
+
+    // FR-7: every persisted reason carries evidence — no phantom points.
+    foreach ($first->reasons as $reason) {
+        expect($reason['evidence_url'])->not->toBeNull("{$reason['signal_key']} has no evidence_url")
+            ->and(trim((string) $reason['evidence_url']))->not->toBe('')
+            ->and($reason['evidence_excerpt'])->not->toBeNull("{$reason['signal_key']} has no evidence_excerpt")
+            ->and(trim((string) $reason['evidence_excerpt']))->not->toBe('');
+    }
+
+    expect(ScoutScoreReasonEloquentModel::query()->where('score_result_id', $first->id)
+        ->where(fn ($query): mixed => $query->whereNull('evidence_url')->orWhere('evidence_url', '')->orWhereNull('evidence_excerpt')->orWhere('evidence_excerpt', ''))
+        ->count())->toBe(0);
 });
 
 it('rescores over http with reasons and answers 404 unknown', function (): void {
@@ -106,6 +119,21 @@ it('rescores over http with reasons and answers 404 unknown', function (): void 
     $this->actingAs($admin)
         ->postJson('/data/admin/lead-scout/leads/00000000-0000-7000-8000-000000000000/rescore')
         ->assertNotFound();
+});
+
+it('refuses a score reason without evidence at the database level', function (): void {
+    $admin = scoringAdmin();
+    ScoutProfileFactory::new()->create(['user_id' => $admin->id]);
+    $company = sevillaCompany();
+    $result = app(ScoreCompanyHandler::class)->handle($company->uuid, $admin->id);
+
+    // FR-7 as a DB constraint: the phantom +points row can no longer exist,
+    // even if some future caller skips the application-level guard.
+    expect(fn (): ScoutScoreReasonEloquentModel => ScoutScoreReasonEloquentModel::query()->create([
+        'score_result_id' => $result->id,
+        'points' => 5,
+        'explanation' => 'Phantom +5 without evidence.',
+    ]))->toThrow(QueryException::class);
 });
 
 it('exports leads and funnel as xlsx and pdf with filters applied', function (): void {

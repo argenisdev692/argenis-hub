@@ -18,8 +18,9 @@ final readonly class LaravelAiCvRewriter implements CvRewriterPort
 
         $result = $this->calls->call(AiPurpose::CvRewrite, RewriteCvAgent::class, $prompt, $userId);
 
-        /** @var array<string, mixed> $data */
-        $data = (array) $result['response'];
+        // The rewritten CV lives in the structured payload, not in the
+        // response object's property table.
+        $data = (array) ($result['response']->structured ?? []);
 
         return [...$data, 'provider' => $result['provider'], 'model' => $result['model'] ?? 'default'];
     }

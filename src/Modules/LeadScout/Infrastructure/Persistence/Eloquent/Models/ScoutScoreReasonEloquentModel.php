@@ -26,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'signal_id',
     'points',
     'explanation',
+    'evidence_url',
+    'evidence_excerpt',
 ])]
 final class ScoutScoreReasonEloquentModel extends Model
 {

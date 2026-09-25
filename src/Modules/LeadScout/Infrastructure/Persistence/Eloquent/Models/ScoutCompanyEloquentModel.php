@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\LeadScout\Domain\Enums\ActivityStatus;
 use Modules\LeadScout\Domain\Enums\CompanyOrigin;
 use Modules\LeadScout\Domain\Enums\CompanyType;
@@ -191,6 +192,17 @@ final class ScoutCompanyEloquentModel extends Model
         $values = static fn (array $cases): array => array_map(static fn (\BackedEnum $case): string|int => $case->value, $cases);
 
         return $query
+            // FR-43: a suppressed company is never a lead to work. It stays in
+            // `scout_suppressions` with its reason; the bandeja and the export
+            // do not offer it for action.
+            ->whereNotExists(fn (QueryBuilder $q): QueryBuilder => $q->selectRaw('1')
+                ->from('scout_suppressions as sup')
+                ->whereColumn('sup.canonical_domain', 'scout_companies.canonical_domain'))
+            // Default: only companies with a CURRENT score. An unscored row is
+            // discovery work in progress, not a lead (2026-09-25: the bandeja
+            // showed 7 placeholders that could not be contacted or explained).
+            ->when($criteria->scoredOnly, fn (Builder $q): Builder => $q->whereHas('scoreResults', fn (Builder $q): Builder => $q
+                ->where('is_current', true)))
             ->when($criteria->search !== null, fn (Builder $q): Builder => $q->where(function (Builder $q) use ($criteria): void {
                 $term = '%'.$criteria->search.'%';
                 $q->where('name', 'like', $term)->orWhere('canonical_domain', 'like', $term);

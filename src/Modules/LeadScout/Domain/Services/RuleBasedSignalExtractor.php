@@ -54,22 +54,23 @@ final readonly class RuleBasedSignalExtractor
             $signals[] = $signal;
         };
 
-        $this->extractTechnical($texts, $push);
+        $this->extractTechnical($company, $texts, $push);
         $this->extractCommercial($texts, $postings, $push);
-        $this->extractRecurrent($texts, $postings, $push);
-        $this->extractVitality($texts, $postings, $context, $now, $push);
-        $this->extractCommunication($texts, $postings, $push);
+        $this->extractRecurrent($company, $texts, $postings, $push);
+        $this->extractVitality($company, $texts, $postings, $context, $now, $push);
+        $this->extractCommunication($company, $texts, $postings, $push);
         $this->extractGeo($company, $texts, $push);
-        $this->extractRemote($texts, $postings, $push);
+        $this->extractRemote($company, $texts, $postings, $push);
 
         return $signals;
     }
 
     /**
+     * @param  array{country: ?string, canonical_domain: string}  $company
      * @param  array<int, array{text: string, url: string}>  $texts
      * @param  callable(array): void  $push
      */
-    private function extractTechnical(array $texts, callable $push): void
+    private function extractTechnical(array $company, array $texts, callable $push): void
     {
         $joined = implode("\n", array_column($texts, 'text'));
 
@@ -88,14 +89,18 @@ final readonly class RuleBasedSignalExtractor
         }
 
         $stackHits = 0;
+        $stackExcerpt = null;
+        $stackUrl = null;
         foreach (['postgresql', 'postgres', '\bmysql\b', 'redis', 'docker', '\bci\b', 'github actions', 'gitlab ci'] as $cue) {
             if ($this->findCue($joined, [$cue], $excerpt, $url, $texts)) {
                 $stackHits++;
+                $stackExcerpt ??= $excerpt;
+                $stackUrl ??= $url;
             }
         }
 
         if ($stackHits > 0) {
-            $push($this->fact('technical', 'stack_db', "{$stackHits} stack items", 75, null, null));
+            $push($this->fact('technical', 'stack_db', "{$stackHits} stack items", 75, $stackUrl ?? $this->firstUrl($texts, $company), $stackExcerpt ?? "{$stackHits} stack items"));
         }
 
         if ($this->findCue($joined, ['\bapi\b', '\brest\b', 'integra', 'openai', 'inteligencia artificial', '\bia\b'], $excerpt, $url, $texts)) {
@@ -112,8 +117,31 @@ final readonly class RuleBasedSignalExtractor
     {
         $joined = implode("\n", array_column($texts, 'text'));
 
-        if ($this->findCue($joined, ['freelance', 'contractor', 'autónomo', 'autonomo', 'recibos verdes', 'por proyecto'], $excerpt, $url, $texts)) {
+        // Invitation/acceptance phrasing, NOT the bare noun. A page that
+        // COMPARES nearshore with freelancers ("los freelancers encajan muy
+        // bien…") is not a company that hires them: unimedia.tech scored
+        // freelance_contract +35 on that sentence and nothing else (2026-09-25).
+        if ($this->findCue($joined, [
+            'trabajamos con (freelancers?|contractors?|aut[oó]nomos?)',
+            'trabaja con nosotros como (freelance|contractor|aut[oó]nomo)',
+            '(buscamos|contratamos|aceptamos|invitamos|contamos con|necesitamos) (a )?(freelancers?|contractors?|colaboradores externos)',
+            'freelancers? welcome',
+            'colaboradores externos',
+            'recibos verdes',
+            'proyectos? por proyecto',
+            'contrato[s]? freelance',
+        ], $excerpt, $url, $texts)) {
             $push($this->fact('commercial', 'freelance_contract', 'Freelance/contract', 85, $url, $excerpt));
+        }
+
+        // Structured source: an offer whose contract type IS freelance is the
+        // strongest possible evidence, and it needs no prose at all.
+        foreach ($postings as $posting) {
+            if (($posting['contract_type'] ?? '') === 'freelance') {
+                $push($this->fact('commercial', 'freelance_contract', 'Freelance/contract', 90, $posting['source_url'], mb_substr($posting['title'], 0, 200)));
+
+                break;
+            }
         }
 
         if ($this->findCue($joined, ['colaboradores externos', 'colaborador externo', 'trabajamos con freelancers', 'freelancers welcome', 'partner program', 'white label', 'marca blanca', 'subcontrata', 'parceiros'], $excerpt, $url, $texts)) {
@@ -132,10 +160,11 @@ final readonly class RuleBasedSignalExtractor
             $push($this->fact('commercial', 'recruiter', 'Recruiter/intermediary signal', 65, $url, $excerpt));
         }
 
-        $active = array_filter($postings, static fn (array $p): bool => ($p['status'] ?? '') === 'active');
+        $active = array_values(array_filter($postings, static fn (array $p): bool => ($p['status'] ?? '') === 'active'));
 
         if (count($active) >= 2) {
-            $push($this->fact('commercial', 'multi_vacancies', count($active).' open dev vacancies', 85, null, null));
+            $first = $active[0];
+            $push($this->fact('commercial', 'multi_vacancies', count($active).' open dev vacancies', 85, $first['source_url'] ?? $this->firstUrl($texts), mb_substr((string) ($first['title'] ?? count($active).' open dev vacancies'), 0, 300)));
         }
 
         foreach ($postings as $posting) {
@@ -146,17 +175,28 @@ final readonly class RuleBasedSignalExtractor
             }
         }
 
-        if ($this->findCue($joined, ['low.?cost', 'barato', 'desde \d{1,2}€', 'preços baixos', 'precios bajos'], $excerpt, $url, $texts)) {
+        // A PRICE, not a comparative adjective. "El offshore puede parecer
+        // más barato por hora" is a market comparison, not this company's
+        // own pricing (unimedia.tech lost 25 points to that sentence alone).
+        if ($this->findCue($joined, [
+            'precio[s]? (desde|bajos?|de)',
+            'tarifa[s]? (desde|bajas?|de)',
+            'desde \d{1,4}\s?[€$£]',
+            '\d{1,4}\s?[€$£]\s?\/?\s?(hora|hour|mes|month|a.o|año|year|proyecto|jornada)',
+            'hourly rate[s]? (from|starting)',
+            'low[- ]cost (pricing|rates|model|development)',
+        ], $excerpt, $url, $texts)) {
             $push($this->fact('commercial', 'low_prices', 'Public low prices', 60, $url, $excerpt));
         }
     }
 
     /**
+     * @param  array{country: ?string, canonical_domain: string}  $company
      * @param  array<int, array{text: string, url: string}>  $texts
      * @param  array<int, array{title: string, body: ?string, remote_mode: string, contract_type: string, language: ?string, published_at: ?string, status: string, source_url: string}>  $postings
      * @param  callable(array): void  $push
      */
-    private function extractRecurrent(array $texts, array $postings, callable $push): void
+    private function extractRecurrent(array $company, array $texts, array $postings, callable $push): void
     {
         $joined = implode("\n", array_column($texts, 'text'));
 
@@ -175,7 +215,8 @@ final readonly class RuleBasedSignalExtractor
         $caseHits = preg_match_all('/caso de .xito|case stud|nuestros clientes|our clients|clientes:/i', $joined);
 
         if ($caseHits >= 5) {
-            $push($this->fact('recurrent', 'many_cases', "{$caseHits} case/client mentions", 65, null, null));
+            $this->findCue($joined, ['caso de .xito', 'case stud', 'nuestros clientes', 'our clients'], $excerpt, $url, $texts);
+            $push($this->fact('recurrent', 'many_cases', "{$caseHits} case/client mentions", 65, $url ?? $this->firstUrl($texts, $company), $excerpt ?? "{$caseHits} case/client mentions"));
         }
 
         if ($this->findCue($joined, ['varios a.os', 'several years', 'desde 20\d\d.*cliente', 'client since'], $excerpt, $url, $texts)) {
@@ -196,12 +237,13 @@ final readonly class RuleBasedSignalExtractor
     }
 
     /**
+     * @param  array{country: ?string, canonical_domain: string}  $company
      * @param  array<int, array{text: string, url: string}>  $texts
      * @param  array<int, array{title: string, body: ?string, remote_mode: string, contract_type: string, language: ?string, published_at: ?string, status: string, source_url: string}>  $postings
      * @param  array{sitemap_lastmod: ?string, final_domain: ?string, now: ?CarbonImmutable}  $context
      * @param  callable(array): void  $push
      */
-    private function extractVitality(array $texts, array $postings, array $context, CarbonImmutable $now, callable $push): void
+    private function extractVitality(array $company, array $texts, array $postings, array $context, CarbonImmutable $now, callable $push): void
     {
         $joined = implode("\n", array_column($texts, 'text'));
 
@@ -216,15 +258,23 @@ final readonly class RuleBasedSignalExtractor
 
         if ($latest !== null) {
             $months = $latest->diffInMonths($now);
+            // FR-7: a vitality date without its source page is a phantom —
+            // anchor it to the page carrying the date string.
+            $dateCue = $latest->format('Y-m-d');
+            $dateExcerpt = null;
+            $dateUrl = null;
+            $this->findCue($joined, [preg_quote($dateCue, '/'), $latest->format('d'), (string) $latest->year], $dateExcerpt, $dateUrl, $texts);
+            $dateUrl ??= $this->firstUrl($texts, $company);
+            $dateExcerpt ??= "Content from {$latest->toDateString()}";
 
             if ($months <= 6) {
-                $push($this->fact('vitality', 'recent_content', "Content from {$latest->toDateString()}", 90, null, null));
+                $push($this->fact('vitality', 'recent_content', "Content from {$latest->toDateString()}", 90, $dateUrl, $dateExcerpt));
             } elseif ($months <= 12) {
-                $push($this->fact('vitality', 'recent_content', "Content from {$latest->toDateString()}", 80, null, null));
+                $push($this->fact('vitality', 'recent_content', "Content from {$latest->toDateString()}", 80, $dateUrl, $dateExcerpt));
             } elseif ($months <= 24) {
-                $push($this->fact('vitality', 'stale_content', "Content from {$latest->toDateString()}", 70, null, null));
+                $push($this->fact('vitality', 'stale_content', "Content from {$latest->toDateString()}", 70, $dateUrl, $dateExcerpt));
             } else {
-                $push($this->fact('vitality', 'stale_content', "Content from {$latest->toDateString()}", 85, null, null));
+                $push($this->fact('vitality', 'stale_content', "Content from {$latest->toDateString()}", 85, $dateUrl, $dateExcerpt));
             }
         }
 
@@ -232,11 +282,12 @@ final readonly class RuleBasedSignalExtractor
             try {
                 $lastmod = CarbonImmutable::parse($context['sitemap_lastmod']);
                 $months = $lastmod->diffInMonths($now);
+                $sitemapUrl = 'https://'.($company['canonical_domain'] ?? '').'/sitemap.xml';
 
                 if ($months <= 6) {
-                    $push($this->fact('vitality', 'sitemap_fresh', "Sitemap {$lastmod->toDateString()}", 75, null, null));
+                    $push($this->fact('vitality', 'sitemap_fresh', "Sitemap {$lastmod->toDateString()}", 75, $sitemapUrl, "Sitemap {$lastmod->toDateString()}"));
                 } elseif ($months > 24) {
-                    $push($this->fact('vitality', 'old_sitemap', "Sitemap {$lastmod->toDateString()}", 70, null, null));
+                    $push($this->fact('vitality', 'old_sitemap', "Sitemap {$lastmod->toDateString()}", 70, $sitemapUrl, "Sitemap {$lastmod->toDateString()}"));
                 }
             } catch (\Exception) {
                 // Unparseable sitemap date: no signal, never a crash.
@@ -246,11 +297,14 @@ final readonly class RuleBasedSignalExtractor
         if (preg_match_all('/©\s?(20\d\d)/', $joined, $years) > 0) {
             $year = (int) max($years[1]);
             $current = $now->year;
+            $copyExcerpt = null;
+            $copyUrl = null;
+            $this->findCue($joined, ['©\s?'.((string) $year)], $copyExcerpt, $copyUrl, $texts);
 
             if ($year >= $current - 1) {
-                $push($this->fact('vitality', 'copyright_recent', "© {$year}", 60, null, null));
+                $push($this->fact('vitality', 'copyright_recent', "© {$year}", 60, $copyUrl ?? $this->firstUrl($texts, $company), $copyExcerpt ?? "© {$year}"));
             } elseif ($year <= $current - 3) {
-                $push($this->inference('vitality', 'old_copyright', "© {$year}", 60, null, null));
+                $push($this->inference('vitality', 'old_copyright', "© {$year}", 60, $copyUrl ?? $this->firstUrl($texts, $company), $copyExcerpt ?? "© {$year}"));
             }
         }
 
@@ -262,14 +316,15 @@ final readonly class RuleBasedSignalExtractor
             }
         }
 
-        $this->extractTeamSize($joined, $texts, $push);
+        $this->extractTeamSize($company, $joined, $texts, $push);
     }
 
     /**
+     * @param  array{country: ?string, canonical_domain: string}  $company
      * @param  array<int, array{text: string, url: string}>  $texts
      * @param  callable(array): void  $push
      */
-    private function extractTeamSize(string $joined, array $texts, callable $push): void
+    private function extractTeamSize(array $company, string $joined, array $texts, callable $push): void
     {
         if ($this->findCue($joined, ['\bsoy\b', '\bsou\b', "i'm a freelance", 'freelance developer.*portfolio', 'desarrollador freelance.*portfolio'], $excerpt, $url, $texts)) {
             $push($this->fact('vitality', 'solo_freelancer', 'First-person freelancer site', 85, $url, $excerpt));
@@ -286,27 +341,41 @@ final readonly class RuleBasedSignalExtractor
             }
         }
 
+        // FR-7: anchor the headcount to the line stating it; a bare number
+        // without its source line is a phantom. team_unknown keeps the first
+        // checked page as its (negative) evidence.
+        $sizeExcerpt = null;
+        $sizeUrl = null;
+
+        if ($max > 0) {
+            $this->findCue($joined, ['team of '.((string) $max), 'somos '.((string) $max), 'equipa de '.((string) $max), 'equipo de '.((string) $max), ((string) $max).' (people|personas|pessoas|colaboradores)'], $sizeExcerpt, $sizeUrl, $texts);
+        }
+
+        $sizeUrl ??= $this->firstUrl($texts, $company);
+        $sizeExcerpt ??= $max > 0 ? "Team of {$max}" : 'No team size found in checked pages';
+
         if ($max >= 5 && $max <= 50) {
-            $push($this->fact('vitality', 'team_5_50', "Team of {$max}", 80, null, null));
+            $push($this->fact('vitality', 'team_5_50', "Team of {$max}", 80, $sizeUrl, $sizeExcerpt));
         } elseif ($max > 200) {
-            $push($this->fact('vitality', 'team_over_200', "Team of {$max}", 80, null, null));
+            $push($this->fact('vitality', 'team_over_200', "Team of {$max}", 80, $sizeUrl, $sizeExcerpt));
         } elseif ($max >= 51 && $max <= 200) {
-            $push($this->fact('vitality', 'team_51_200', "Team of {$max}", 80, null, null));
+            $push($this->fact('vitality', 'team_51_200', "Team of {$max}", 80, $sizeUrl, $sizeExcerpt));
         } elseif ($max >= 2 && $max <= 4) {
-            $push($this->fact('vitality', 'team_2_4', "Team of {$max}", 80, null, null));
+            $push($this->fact('vitality', 'team_2_4', "Team of {$max}", 80, $sizeUrl, $sizeExcerpt));
         } elseif ($max === 1) {
-            $push($this->fact('vitality', 'solo_freelancer', 'Team of 1', 80, null, null));
+            $push($this->fact('vitality', 'solo_freelancer', 'Team of 1', 80, $sizeUrl, $sizeExcerpt));
         } else {
-            $push($this->fact('vitality', 'team_unknown', 'No team size found', 50, null, null));
+            $push($this->fact('vitality', 'team_unknown', 'No team size found', 50, $sizeUrl, $sizeExcerpt));
         }
     }
 
     /**
+     * @param  array{country: ?string, canonical_domain: string}  $company
      * @param  array<int, array{text: string, url: string}>  $texts
      * @param  array<int, array{title: string, body: ?string, remote_mode: string, contract_type: string, language: ?string, published_at: ?string, status: string, source_url: string}>  $postings
      * @param  callable(array): void  $push
      */
-    private function extractCommunication(array $texts, array $postings, callable $push): void
+    private function extractCommunication(array $company, array $texts, array $postings, callable $push): void
     {
         $joined = implode("\n", array_column($texts, 'text'));
         $postingText = implode("\n", array_map(static fn (array $p): string => ($p['title'] ?? '').' '.($p['body'] ?? ''), $postings));
@@ -328,10 +397,34 @@ final readonly class RuleBasedSignalExtractor
         $url = null;
 
         if (! $hasEsPt) {
-            $hasEsPt = $this->findCue($joined."\n".$postingText, ['\bespañol\b', '\bespaña\b', '\bportuguês\b', '\bportugal\b', 'idioma: es', 'idioma: pt'], $excerpt, $url, $texts);
+            // Explicit mentions first, then working-language proof: a page
+            // written in Spanish/Portuguese IS the signal — agencies rarely
+            // write the word "español" about themselves (fix comm-33: ES
+            // pages fell through to english_unknown × 0.6 = 33).
+            $hasEsPt = $this->findCue($joined."\n".$postingText, ['\bespañol\b', '\bespaña\b', '\bportuguês\b', '\bportugal\b', 'idioma: es', 'idioma: pt'], $excerpt, $url, $texts)
+                || $this->findCue($joined, ['\bnosotros\b', '\bservicios\b', '\bcontacto\b', '\bempresa\b', '\bnuestros clientes\b'], $excerpt, $url, $texts)
+                || $this->findCue($joined, ['\bnós\b', '\bserviços\b', '\bcontactos\b', '\bequipa\b', '\bnossos clientes\b'], $excerpt, $url, $texts);
         }
 
         if ($hasEsPt) {
+            if ($url === null) {
+                // Language came from a posting's language tag: the posting
+                // itself is the evidence (FR-7), not a null.
+                foreach ($postings as $posting) {
+                    $lang = mb_strtolower(trim((string) ($posting['language'] ?? '')));
+
+                    if (in_array($lang, ['es', 'es-es', 'pt', 'pt-pt', 'pt-br'], true)) {
+                        $url = $posting['source_url'];
+                        $excerpt = mb_substr((string) ($posting['title'] ?? 'ES/PT working language'), 0, 300);
+
+                        break;
+                    }
+                }
+
+                $url ??= $this->firstUrl($texts, $company);
+                $excerpt ??= 'ES/PT working language';
+            }
+
             $push($this->fact('communication', 'lang_es_pt', 'ES/PT working language', 95, $url, $excerpt));
         }
 
@@ -362,16 +455,22 @@ final readonly class RuleBasedSignalExtractor
         $country = $company['country'];
         $joined = implode("\n", array_column($texts, 'text'));
 
+        // FR-7: the country comes from the company record (posting payload
+        // or discovery plan), so the first checked page anchors it — a bare
+        // country code without a source page is a phantom.
+        $geoUrl = $this->firstUrl($texts, $company);
+        $geoExcerpt = 'Company country '.($country ?? 'unknown').' from company record';
+
         if ($country === 'PT' || $country === 'ES') {
-            $push($this->fact('geo_contract', 'country_pt_es', $country, 95, null, null));
+            $push($this->fact('geo_contract', 'country_pt_es', $country, 95, $geoUrl, $geoExcerpt));
         } elseif ($country !== null && in_array($country, ['DE', 'FR', 'IT', 'NL', 'BE', 'AT', 'IE', 'DK', 'SE', 'FI', 'PL', 'CZ', 'GR', 'RO', 'LT', 'LV', 'EE'], true)) {
-            $push($this->fact('geo_contract', 'country_eu', $country, 90, null, null));
+            $push($this->fact('geo_contract', 'country_eu', $country, 90, $geoUrl, $geoExcerpt));
         } elseif ($country === 'GB' || $country === 'UK') {
-            $push($this->fact('geo_contract', 'country_uk_ie', $country, 90, null, null));
+            $push($this->fact('geo_contract', 'country_uk_ie', $country, 90, $geoUrl, $geoExcerpt));
         } elseif ($country === 'US' || $country === 'CA') {
-            $push($this->fact('geo_contract', 'country_us_ca', $country, 90, null, null));
+            $push($this->fact('geo_contract', 'country_us_ca', $country, 90, $geoUrl, $geoExcerpt));
         } elseif ($country !== null) {
-            $push($this->fact('geo_contract', 'country_other', $country, 85, null, null));
+            $push($this->fact('geo_contract', 'country_other', $country, 85, $geoUrl, $geoExcerpt));
         }
 
         if ($this->findCue($joined, ['contrato local', 'residencia en', 'must reside', 'only .* residents', 'local contract'], $excerpt, $url, $texts)) {
@@ -380,11 +479,12 @@ final readonly class RuleBasedSignalExtractor
     }
 
     /**
+     * @param  array{country: ?string, canonical_domain: string}  $company
      * @param  array<int, array{text: string, url: string}>  $texts
      * @param  array<int, array{title: string, body: ?string, remote_mode: string, contract_type: string, language: ?string, published_at: ?string, status: string, source_url: string}>  $postings
      * @param  callable(array): void  $push
      */
-    private function extractRemote(array $texts, array $postings, callable $push): void
+    private function extractRemote(array $company, array $texts, array $postings, callable $push): void
     {
         foreach ($postings as $posting) {
             if (($posting['remote_mode'] ?? '') === 'remote') {
@@ -418,7 +518,7 @@ final readonly class RuleBasedSignalExtractor
             }
         }
 
-        $push($this->fact('remote', 'remote_unknown', 'No remote cues', 40, null, null));
+        $push($this->fact('remote', 'remote_unknown', 'No remote cues', 40, $this->firstUrl($texts, $company), 'No remote cues in checked pages'));
     }
 
     /**
@@ -444,6 +544,26 @@ final readonly class RuleBasedSignalExtractor
         $url = null;
 
         return false;
+    }
+
+    /**
+     * First checked source: the honest fallback anchor when a signal is
+     * derived from the record rather than a quoted line (FR-7: never null).
+     *
+     * @param  array{country: ?string, canonical_domain: string}|null  $company
+     * @param  array<int, array{text: string, url: string}>  $texts
+     */
+    private function firstUrl(array $texts, ?array $company = null): ?string
+    {
+        foreach ($texts as $entry) {
+            if (trim((string) ($entry['url'] ?? '')) !== '') {
+                return $entry['url'];
+            }
+        }
+
+        $domain = trim((string) ($company['canonical_domain'] ?? ''));
+
+        return $domain === '' ? null : 'https://'.$domain.'/';
     }
 
     /**

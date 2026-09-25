@@ -101,6 +101,58 @@ it('extracts public company data with evidence and detects freelancers', functio
         ->and($result['is_natural_person'])->toBeFalse();
 });
 
+it('resolves the company name from the footer legal suffix, never from a title', function (): void {
+    $result = app(PublicCompanyDataExtractor::class)->extract([
+        [
+            'url' => 'https://agencia.example/blog/laravel-2026',
+            'page_type' => 'blog',
+            'markdown' => "10 trucos de Laravel que debes conocer en 2026\n© 2026 Agencia Ejemplo, S.L.\nTodos los derechos reservados. Madrid",
+        ],
+    ]);
+
+    // The post title is not a company identity; the footer's legal suffix is.
+    expect($result['data']['legal_name'])->toBe('© 2026 Agencia Ejemplo, S.L.')
+        ->and($result['data']['city'])->toBe('Madrid')
+        ->and($result['evidence']['legal_name']['url'])->toContain('agencia.example');
+});
+
+it('never flags an agency that advertises working with freelancers', function (): void {
+    // 2026-09-25 regression: a whole-site search for «freelancer»/«autónomo»
+    // discarded six real agencies (mitsoftware, modulardigital, acquaintsoft…)
+    // because they say "trabajamos con freelancers" / "servicios para
+    // autónomos" — which is precisely the buying signal we are looking for.
+    $result = app(PublicCompanyDataExtractor::class)->extract([
+        ['url' => 'https://mitsoftware.com/', 'page_type' => 'home', 'markdown' => 'Servicios de desarrollo en Laravel para freelancers y autónomos. Trabajamos con freelancers y colaboradores externos. Soporte 24/7. © 2026.'],
+        ['url' => 'https://mitsoftware.com/servicios', 'page_type' => 'services', 'markdown' => 'Desarrollo Laravel, Vue y APIs. Planes de horas para freelancer. latitude: 2 developers.'],
+    ]);
+
+    expect($result['is_natural_person'])->toBeFalse();
+});
+
+it('still flags a sole trader proven by identification data', function (): void {
+    $byLegalPage = app(PublicCompanyDataExtractor::class)->extract([
+        ['url' => 'https://juan.example/', 'page_type' => 'home', 'markdown' => 'Desarrollo Laravel freelance.'],
+        ['url' => 'https://juan.example/aviso-legal', 'page_type' => 'legal', 'markdown' => "Juan Pérez Pérez, autónomo\nNIF 12345678Z"],
+    ]);
+
+    $bySelfDescription = app(PublicCompanyDataExtractor::class)->extract([
+        ['url' => 'https://solo.example/', 'page_type' => 'home', 'markdown' => 'Hola, soy Juan Pérez, desarrollador Laravel freelance. Este es mi portfolio personal.'],
+    ]);
+
+    expect($byLegalPage['is_natural_person'])->toBeTrue()
+        ->and($bySelfDescription['is_natural_person'])->toBeTrue();
+});
+
+it('does not read a marketplace as a sole trader', function (): void {
+    // "Soy cliente, busco agencias" + the word freelance elsewhere on a
+    // directory page must never be a discard signal.
+    $result = app(PublicCompanyDataExtractor::class)->extract([
+        ['url' => 'https://directorio.example/', 'page_type' => 'home', 'markdown' => 'Únase como proveedor o cliente. Soy cliente, busco agencias. Directors: Freelance Laravel, PHP, Vue. Con miles de freelancers verificados.'],
+    ]);
+
+    expect($result['is_natural_person'])->toBeFalse();
+});
+
 it('flags natural persons and never stores phones or street addresses', function (): void {
     $result = app(PublicCompanyDataExtractor::class)->extract([
         ['url' => 'https://juan.example/aviso', 'page_type' => 'legal', 'markdown' => "Juan Pérez, autónomo\nNIF 12345678Z\nCalle Mayor 1, 28001 Madrid\nTel: +34 910 111 222"],

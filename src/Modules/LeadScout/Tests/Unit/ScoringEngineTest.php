@@ -147,6 +147,18 @@ it('weighs inferences less than facts and penalizes unconfirmed tech', function 
     expect($gap['subscores']['technical'])->toBe(10);
 });
 
+it('scores ES working language at 100 unless fluent English is documented', function (): void {
+    $engine = app(ScoringEngine::class);
+    $es = [signal('lang_es_pt', 'communication', 'fact', 95)];
+    $esFluent = [signal('lang_es_pt', 'communication', 'fact', 95), signal('english_fluent_required', 'communication', 'fact', 80)];
+
+    $plain = $engine->score($es, ['laravel'], [], scoringRules(), 'ES', CarbonImmutable::parse('2026-09-17'));
+    $overridden = $engine->score($esFluent, ['laravel'], [], scoringRules(), 'ES', CarbonImmutable::parse('2026-09-17'));
+
+    expect($plain['subscores']['communication'])->toBe(100)
+        ->and($overridden['subscores']['communication'])->toBe(25);
+});
+
 it('is deterministic for identical inputs', function (): void {
     $engine = app(ScoringEngine::class);
     $args = [sevillaSignals(), ['laravel'], ['laravel'], scoringRules(), 'ES', CarbonImmutable::parse('2026-09-17')];

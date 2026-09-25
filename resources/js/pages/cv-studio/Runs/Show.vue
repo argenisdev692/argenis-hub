@@ -3,6 +3,8 @@ import { Head, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useRunStatus } from '@/modules/cv-studio/composables/useRuns';
 import { formatMicros } from '@/modules/cv-studio/helpers/studioPresentation';
 import { index as postingsIndex } from '@/routes/cv-studio/postings';
@@ -19,7 +21,23 @@ defineOptions({
     },
 });
 
-const { run, isLoading } = useRunStatus(uuid);
+/**
+ * `isPending` is the first load only; `isLoading` is true for every fetch,
+ * including the 3s poll. Gating the panel on `isLoading` unmounted and
+ * remounted the whole sequence on each poll — a skeleton that flickers is worse
+ * than no skeleton. The panel now stays mounted and the poll only drives a
+ * quiet "updating" hint.
+ */
+const { run, isPending, isLoading } = useRunStatus(uuid);
+
+/**
+ * A poll in flight while the run is already on screen. `isLoading` covers the
+ * first load too, so the first load is excluded — that difference is the whole
+ * fix for a panel that blinks every 3 seconds.
+ */
+const isBackgroundRefresh = computed(
+    () => isLoading.value && !isPending.value,
+);
 
 const STAGES = [
     { key: 'queued', label: 'Queued' },
@@ -60,6 +78,39 @@ const STAGE_DOT: Record<StageState, string> = {
 
 const isFailed = computed(() => run.value?.status === 'failed');
 
+const isRunning = computed(
+    () => !isFailed.value && run.value?.status !== 'finished',
+);
+
+/**
+ * Progress is stage-based, and only that: the run counts the funnel
+ * (`candidates` → `gate_passed` → `extracted`) but never how far scoring has
+ * got — `scored_count` is never written by a job — so a finer percentage would
+ * be invented precision that jumps around and loses trust. Each stage counts
+ * the same, and a failed run keeps the share it had reached.
+ */
+const progressPercent = computed(() => {
+    if (run.value?.status === 'finished') {
+        return 100;
+    }
+
+    if (currentIndex.value < 0) {
+        return 0;
+    }
+
+    return Math.round((currentIndex.value / STAGES.length) * 100);
+});
+
+const currentStageLabel = computed(() => {
+    if (run.value?.status === 'finished') {
+        return 'Finished';
+    }
+
+    return currentIndex.value >= 0
+        ? STAGES[currentIndex.value].label
+        : 'Starting';
+});
+
 function openReport(): void {
     router.visit(report(uuid).url);
 }
@@ -76,11 +127,74 @@ function openReport(): void {
             <p class="font-mono text-xs text-muted-foreground">{{ uuid }}</p>
         </header>
 
-        <div v-if="isLoading" class="text-sm text-muted-foreground">
-            Loading run status…
+        <!-- First load only: mirrors the real layout so nothing reflows. -->
+        <div v-if="isPending" class="flex flex-col gap-6" aria-busy="true">
+            <div class="flex flex-col gap-2">
+                <Skeleton class="h-2 w-full rounded-full" />
+                <Skeleton class="h-4 w-48" />
+            </div>
+            <div class="flex flex-col gap-2">
+                <Skeleton v-for="stage in STAGES" :key="stage.key" class="h-14 w-full rounded-xl" />
+            </div>
+            <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <Skeleton v-for="tile in 4" :key="tile" class="h-20 rounded-lg" />
+            </div>
+            <span class="sr-only">Loading run status…</span>
         </div>
 
         <template v-else-if="run">
+            <section
+                class="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
+                aria-label="Run progress"
+            >
+                <div class="flex items-baseline justify-between gap-2">
+                    <p class="text-sm font-medium">
+                        {{ isFailed ? 'Stopped' : currentStageLabel }}
+                    </p>
+                    <p
+                        v-if="!isFailed"
+                        class="text-sm tabular-nums text-muted-foreground"
+                    >
+                        <span class="font-semibold text-foreground">{{
+                            progressPercent
+                        }}</span>
+                        %
+                        <span
+                            v-if="isBackgroundRefresh"
+                            class="ml-1 text-xs text-muted-foreground"
+                        >
+                            · updating
+                        </span>
+                    </p>
+                </div>
+
+                <Progress
+                    v-if="!isFailed"
+                    :model-value="progressPercent"
+                    :aria-label="`Run progress: ${progressPercent}%`"
+                />
+
+                <p
+                    class="text-xs text-muted-foreground"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <template v-if="isFailed">
+                        The backend does not record which stage broke, so no
+                        progress is claimed here. Everything collected before the
+                        failure is kept.
+                    </template>
+                    <template v-else-if="isRunning">
+                        Working through the pipeline. This page refreshes every
+                        few seconds.
+                    </template>
+                    <template v-else>
+                        Pipeline complete. Open the insight report for what the
+                        market asked for.
+                    </template>
+                </p>
+            </section>
+
             <div
                 v-if="isFailed"
                 role="alert"

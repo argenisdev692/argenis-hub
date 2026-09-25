@@ -251,12 +251,19 @@ it('lists postings with the latest score so the fit column is populated', functi
         ->and($row['total_score'])->toBeNumeric();
 });
 
-it('sorts by fit with unscored postings last in both directions', function (): void {
+it('hides unscored postings by default and sorts them last when asked for', function (): void {
     [$admin, $scored, $unscored] = studioTwoPostings($this);
+
+    $default = $this->actingAs($admin)
+        ->getJson('/cv-studio/postings')
+        ->assertOk()
+        ->json('data.*.uuid');
+
+    expect($default)->toBe([$scored->uuid]);
 
     foreach ([-1, 1] as $order) {
         $uuids = $this->actingAs($admin)
-            ->getJson("/cv-studio/postings?sort_field=fit&sort_order={$order}")
+            ->getJson("/cv-studio/postings?scored_only=0&sort_field=fit&sort_order={$order}")
             ->assertOk()
             ->json('data.*.uuid');
 

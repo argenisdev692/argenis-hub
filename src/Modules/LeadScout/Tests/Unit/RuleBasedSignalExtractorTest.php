@@ -98,6 +98,71 @@ it('grades english cues without discarding', function (): void {
         ->and(keysOf($fluent))->toContain('english_fluent_required')->not->toContain('async_english');
 });
 
+it('detects ES working language from page wording without the word español', function (): void {
+    $signals = extractor()->extract(
+        ['country' => 'ES', 'canonical_domain' => 'agencia.example'],
+        pages('Nosotros somos una agencia de desarrollo. Nuestros servicios incluyen Laravel y soporte. Empresa fundada en Madrid.'),
+        [],
+        ['sitemap_lastmod' => null, 'final_domain' => null, 'now' => CarbonImmutable::parse('2026-09-17')],
+    );
+
+    $lang = null;
+
+    foreach ($signals as $signal) {
+        if ($signal['signal_key'] === 'lang_es_pt') {
+            $lang = $signal;
+        }
+    }
+
+    // Fix comm-33: this page previously fell through to english_unknown × 0.6 = 33.
+    expect($lang)->not->toBeNull()
+        ->and($lang['evidence_url'])->not->toBeNull()
+        ->and($lang['evidence_excerpt'])->not->toBeNull();
+});
+
+it('anchors every signal to evidence (FR-7: no null URL/excerpt)', function (): void {
+    $signals = extractor()->extract(
+        ['country' => 'ES', 'canonical_domain' => 'agencia.example'],
+        pages('Desarrollamos con Laravel y Vue, PostgreSQL y Redis. Somos 12 personas. © 2026. Caso de éxito del 12 de mayo de 2026. Nuestros clientes nos recomiendan.'),
+        [posting()],
+        ['sitemap_lastmod' => '2026-08-01', 'final_domain' => null, 'now' => CarbonImmutable::parse('2026-09-17')],
+    );
+
+    expect($signals)->not->toBeEmpty();
+
+    foreach ($signals as $signal) {
+        expect($signal['evidence_url'])->not->toBeNull("{$signal['signal_key']} has no evidence_url")
+            ->and($signal['evidence_excerpt'])->not->toBeNull("{$signal['signal_key']} has no evidence_excerpt");
+    }
+});
+
+it('needs an invitation, not a market comparison, to fire freelance_contract', function (): void {
+    $now = CarbonImmutable::parse('2026-09-17');
+    $company = ['country' => 'ES', 'canonical_domain' => 'unimedia.tech'];
+
+    // Regression 2026-09-25: unimedia.tech's own nearshore page COMPARES the
+    // model with freelancers and says offshore "puede parecer más barato".
+    // The bare nouns fired +35 and −25 on a page with no commercial offer.
+    $comparison = extractor()->extract(
+        $company,
+        pages("¿En qué se diferencia del offshore o de trabajar con freelancers?\nLos freelancers encajan muy bien en proyectos concretos, pero pueden generar dependencia.\nEl offshore suele ofrecer tarifas más bajas. El offshore puede parecer más barato por hora."),
+        [],
+        ['sitemap_lastmod' => null, 'final_domain' => null, 'now' => $now],
+    );
+
+    expect(keysOf($comparison))->not->toContain('freelance_contract', 'low_prices');
+
+    // A real invitation and a real price still fire.
+    $invitation = extractor()->extract(
+        $company,
+        pages('Trabajamos con freelancers y colaboradores externos. Mantenimiento desde 300€ al mes. Somos una agencia de software.'),
+        [],
+        ['sitemap_lastmod' => null, 'final_domain' => null, 'now' => $now],
+    );
+
+    expect(keysOf($invitation))->toContain('freelance_contract', 'low_prices');
+});
+
 it('keeps every excerpt literal to its source text', function (): void {
     $signals = extractor()->extract(
         ['country' => 'ES', 'canonical_domain' => 'agencia.example'],

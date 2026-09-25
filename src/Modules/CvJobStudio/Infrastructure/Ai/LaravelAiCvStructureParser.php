@@ -16,8 +16,9 @@ final readonly class LaravelAiCvStructureParser implements CvStructureParserPort
     {
         $result = $this->calls->call(AiPurpose::CvStructureParse, CvStructureParserAgent::class, $rawText, $userId);
 
-        /** @var array<string, mixed> $data */
-        $data = (array) $result['response'];
+        // The parsed structure lives in the structured payload, not in the
+        // response object's property table.
+        $data = (array) ($result['response']->structured ?? []);
 
         return [...$data, 'provider' => $result['provider'], 'model' => $result['model'] ?? 'default', 'parser_version' => 'v2'];
     }

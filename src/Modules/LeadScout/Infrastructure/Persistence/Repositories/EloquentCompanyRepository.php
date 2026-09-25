@@ -82,7 +82,28 @@ final readonly class EloquentCompanyRepository implements CompanyRepositoryPort
             $clamped[$key] = is_string($value) ? mb_substr($value, 0, self::STRING_COLUMN_LENGTH) : $value;
         }
 
+        // Display-name resolution (FR-38): JSON-LD Organization → legal
+        // notice → footer wins over the domain placeholder and over any
+        // search/post title. Operator-provided names (manual/import) are
+        // preserved; natural persons never lend their identity (FR-39).
+        $legalName = isset($fields['legal_name']) && is_string($fields['legal_name']) ? trim($fields['legal_name']) : '';
+
+        if ($legalName !== '' && $this->mayRename($company)) {
+            $clamped['name'] = mb_substr($legalName, 0, self::STRING_COLUMN_LENGTH);
+        }
+
         $this->write($company, $clamped);
+    }
+
+    private function mayRename(Company $company): bool
+    {
+        $name = trim($company->name);
+
+        if ($name === '' || $name === 'Unknown' || mb_strtolower($name) === mb_strtolower($company->canonicalDomain)) {
+            return true;
+        }
+
+        return in_array($company->origin, [CompanyOrigin::Discovery, CompanyOrigin::JobPosting], true);
     }
 
     public function recordDecisionMakers(Company $company, bool $hasDecisionMaker, ?int $teamSizeObserved): void

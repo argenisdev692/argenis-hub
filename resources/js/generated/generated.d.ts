@@ -1149,6 +1149,7 @@ declare namespace Modules {
                 export type StudioPostingFilterData = {
                     remote_scope: string | null;
                     stages: string[] | null;
+                    scored_only: boolean;
                     sort_field: string;
                     sort_order: number;
                     search: string | null;
@@ -1592,6 +1593,7 @@ declare namespace Modules {
                     date_from: string | null;
                     date_to: string | null;
                     per_page: number | null;
+                    scored_only: boolean | null;
                 };
                 export type LeadListItemData = {
                     readonly uuid: string;

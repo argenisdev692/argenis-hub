@@ -1,7 +1,7 @@
 {
   "version": 3,
   "mode": "fullstack",
-  "updated_at": "2026-09-11T15:00:00+01:00",
+  "updated_at": "2026-09-25T20:00:00+01:00",
   "seen_urls": {
     "https://www.linkedin.com/jobs/view/highly-skilled-full-stack-laravel-vue-developer-at-reputation-arm-4446814950": {
       "title": "Highly Skilled Full-Stack Laravel & Vue Developer",
@@ -478,22 +478,23 @@
       "title": "PHP Freelance Developer (remoto Spain)",
       "company": "Michael Page (client: Spanish GRC SaaS)",
       "source": "firecrawl",
-      "match_score": 83,
+      "match_score": 76,
       "score_breakdown": {
-        "H": 75,
-        "S": 77,
-        "D": 99,
+        "H": 72,
+        "S": 72,
+        "D": 85,
         "semantic_note": "proxy"
       },
       "modality": "remote-pt-es",
       "location": "100% remoto (Spain) · freelance, contrato temporal · 325 CVs registered",
       "status": "new",
       "first_seen": "2026-09-11",
-      "last_seen": "2026-09-11",
+      "last_seen": "2026-09-25",
       "posted": "2026-09-04",
       "why": "Laravel/Symfony backend on a SaaS moving from monolith to services, with DDD + hexagonal architecture explicitly asked – exactly the Vidula architecture. API integrations, Docker, CI/CD and AI tooling also match. 1-year experience floor, no English line.",
       "gaps": "Kubernetes, Kafka/RabbitMQ, observability absent; AWS, microservices, event-driven only adjacent. Freelance 'remoto Spain': confirm invoicing from Portugal is accepted. Posted 7 days ago with 325 applicants – apply early or skip.",
-      "notes": "extract: firecrawl (full JD)."
+      "notes": "extract: firecrawl (full JD).",
+      "rescore_note": "Re-scored 83 -> 76 on the 2026-09-25 run (Symfony/Kafka/K8s gaps, freelance-temporal contract). first_seen kept."
     },
     "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer": {
       "title": "Senior PHP/Laravel Developer",
@@ -659,6 +660,68 @@
       "last_seen": "2026-09-11",
       "posted": "~2026-09-09",
       "notes": "7+ yrs backend PHP + 4+ Laravel/Symfony -> G4 cap 55 (uncapped 68, would not enter the table anyway). Distributed/event-driven with SQS/PubSub, AWS, NoSQL at scale absent or adjacent. English is the working language (comfortable, no cap). extract: tavily_advanced (partial)."
+    },
+    "https://www.tecnoempleo.com/software-engineer-php-python-knowmad-mood/laravel/rf-ea5a129f62a0f330fd42": {
+      "title": "Software Engineer (PHP & Python)",
+      "company": "knowmad mood",
+      "source": "firecrawl",
+      "match_score": 79,
+      "score_breakdown": {
+        "H": 82,
+        "S": 78,
+        "D": 76,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-pt-es",
+      "location": "Remote PT/ES (knowmad mood, ES enterprise)",
+      "status": "new",
+      "posted": "2026-09-24",
+      "why": "Full stack PHP + Python on a scalable platform; REST APIs, MySQL/PostgreSQL, CI/CD, AI tooling (Copilot) in the stack.",
+      "gaps": "English C1 required vs CV B1 (main drag); Python depth is one FastAPI microservice; 325+ applicants style listing.",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-09-25",
+      "liveness_check": "2026-09-25: still listed (remoterocketship mirror + knowmad PHP roles on tecnoempleo)."
+    },
+    "https://www.wearedevelopers.com/jobs/ext/2995351-senior-php-laravel-developer": {
+      "title": "Senior PHP Laravel Developer",
+      "company": "Sparktraffic (SaaS)",
+      "source": "firecrawl",
+      "match_score": 76,
+      "score_breakdown": {
+        "H": 85,
+        "S": 68,
+        "D": 68,
+        "semantic_note": "proxy"
+      },
+      "modality": "remote-unclear",
+      "location": "Remote, country scope unstated",
+      "status": "new",
+      "posted": "2026-09-19",
+      "why": "Laravel core with the mid-stack the CV already ships.",
+      "gaps": "Senior band vs ~4y; English level unstated; no country lock = residency unknown. Liveness on 2026-09-25 not confirmed by search.",
+      "verify_note": "Present in the 2026-09-25 report; a Tavily check the same day did not return this URL. Re-verify before applying.",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-09-25"
+    },
+    "https://www.linkedin.com/jobs/view/senior-back-end-developer-laravel-at-noux-talent-4468701757": {
+      "title": "Senior Backend Engineer - PHP/Laravel",
+      "company": "Noux Talent",
+      "source": "tavily",
+      "match_score": 75,
+      "score_breakdown": {
+        "H": 78,
+        "S": 70,
+        "D": 73,
+        "semantic_note": "snippet-only"
+      },
+      "modality": "remote-eu",
+      "location": "Remote EU (Talent agency)",
+      "status": "new",
+      "posted": "2026-09",
+      "why": "Laravel backend role matching the shipped stack.",
+      "gaps": "Senior band; snippet-only extract (LinkedIn blocked) so H/S/D are estimates; intermediary agency, not the end employer.",
+      "first_seen": "2026-09-25",
+      "last_seen": "2026-09-25"
     }
   },
   "runs": [
@@ -1143,61 +1206,606 @@
         "jds_analyzed": 16,
         "sample_note": "12 gate-passed JDs (6 table, 4 skipped 60–69, 2 G4-capped) with full or near-full text, plus 4 G1-fail JDs counted for requirements only (UserGems, SnappyCX, PrimeIT Backend PHP+IA, TRIGÉNIUS). Inveert and Apryse/Airalo are partial extracts. G2 fails, stale/closed G3 listings and ambiguous-modality pages excluded.",
         "requirements": [
-          {"name": "AI-assisted development tools (Claude Code / Cursor / agentic)", "bucket": "process", "seen": 9, "of": 16, "required": 7, "preferred": 2, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php", "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
-          {"name": "Laravel named", "bucket": "backend", "seen": 11, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.itjobs.pt/oferta/516770/php-software-engineer"]},
-          {"name": "AWS", "bucket": "infra", "seen": 7, "of": 16, "required": 3, "preferred": 4, "in_cv": "adjacent", "verdict": "recurring", "persistent": true, "evidence_urls": ["https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350", "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
-          {"name": "Docker", "bucket": "infra", "seen": 6, "of": 16, "required": 3, "preferred": 3, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157", "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel"]},
-          {"name": "Automated / unit testing", "bucket": "testing", "seen": 6, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
-          {"name": "MySQL", "bucket": "data", "seen": 6, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.itjobs.pt/oferta/516770/php-software-engineer"]},
-          {"name": "Third-party / ERP / CRM API integrations", "bucket": "backend", "seen": 6, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
-          {"name": "Symfony", "bucket": "backend", "seen": 5, "of": 16, "required": 2, "preferred": 3, "in_cv": false, "verdict": "recurring", "persistent": true, "evidence_urls": ["https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php", "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
-          {"name": "CI/CD", "bucket": "infra", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
-          {"name": "Queues / background jobs / events", "bucket": "architecture", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel"]},
-          {"name": "SQL performance / EXPLAIN / query optimisation", "bucket": "data", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
-          {"name": "REST APIs", "bucket": "backend", "seen": 5, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
-          {"name": "English B2+ required (fluent / excellent / strong written & verbal)", "bucket": "language", "seen": 4, "of": 16, "required": 4, "preferred": 0, "in_cv": false, "verdict": "recurring", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
-          {"name": "English good / comfortable, no CEFR (no cap)", "bucket": "language", "seen": 4, "of": 16, "required": 0, "preferred": 4, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549"]},
-          {"name": "English B1 or lower explicitly accepted", "bucket": "language", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer", "https://www.net-empregos.com/15934192/senior-wordpress-developer-freelancer", "https://www.wearedevelopers.com/jobs/ext/2785466-desarrollador-a-backend-php-ia"]},
-          {"name": "Remote bound to Spanish residency / tax / EOR", "bucket": "process", "seen": 4, "of": 16, "in_cv": false, "verdict": "recurring", "persistent": false, "evidence_urls": ["https://es.linkedin.com/jobs/view/full-stack-developer-php-%2B-modern-javascript-at-inveert-4464480520", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350", "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549"]},
-          {"name": "Portugal residency required (fits the candidate)", "bucket": "process", "seen": 2, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://www.net-empregos.com/15934192/senior-wordpress-developer-freelancer"]},
-          {"name": "Legacy PHP codebases", "bucket": "backend", "seen": 4, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.itjobs.pt/oferta/516770/php-software-engineer"]},
-          {"name": "Code review", "bucket": "process", "seen": 4, "of": 16, "in_cv": "adjacent", "verdict": "recurring", "persistent": true, "evidence_urls": ["https://www.itjobs.pt/oferta/516770/php-software-engineer", "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php"]},
-          {"name": "Timezone overlap demand", "bucket": "process", "seen": 4, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel", "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
-          {"name": "Redis / caching", "bucket": "architecture", "seen": 4, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
-          {"name": "5-year floor (exactly 5, no cap)", "bucket": "process", "seen": 4, "of": 16, "in_cv": false, "verdict": "recurring", "persistent": true, "evidence_urls": ["https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php", "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"]},
-          {"name": "DDD / hexagonal / design patterns", "bucket": "architecture", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
-          {"name": "Event-driven / distributed systems", "bucket": "architecture", "seen": 3, "of": 16, "in_cv": "adjacent", "verdict": "noise", "persistent": false, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"]},
-          {"name": "Vue", "bucket": "frontend", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
-          {"name": "Tailwind CSS", "bucket": "frontend", "seen": 3, "of": 16, "in_cv": true, "verdict": "covered", "persistent": false, "evidence_urls": ["https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
-          {"name": "React", "bucket": "frontend", "seen": 2, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
-          {"name": "TypeScript", "bucket": "frontend", "seen": 2, "of": 16, "in_cv": true, "verdict": "covered", "persistent": true, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"]},
-          {"name": "Kubernetes", "bucket": "infra", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": true, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
-          {"name": "Message brokers (Kafka / RabbitMQ / SQS / PubSub)", "bucket": "architecture", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": false, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"]},
-          {"name": "Microservices / SOA", "bucket": "architecture", "seen": 2, "of": 16, "in_cv": "adjacent", "verdict": "noise", "persistent": true, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"]},
-          {"name": "TDD / BDD", "bucket": "testing", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer", "https://www.wearedevelopers.com/jobs/ext/2785466-desarrollador-a-backend-php-ia"]},
-          {"name": "7+ years floor", "bucket": "process", "seen": 2, "of": 16, "in_cv": false, "verdict": "noise", "persistent": false, "evidence_urls": ["https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476", "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"]},
-          {"name": "Freelance / contract (not employee)", "bucket": "process", "seen": 3, "of": 16, "in_cv": true, "verdict": "noise", "persistent": false, "evidence_urls": ["https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e", "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"]},
-          {"name": "Static analysis (PHPStan / Psalm / Rector)", "bucket": "testing", "seen": 1, "of": 16, "in_cv": "pending_user_confirmation", "verdict": "noise", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
-          {"name": "Inertia.js", "bucket": "frontend", "seen": 1, "of": 16, "in_cv": true, "verdict": "noise", "persistent": false, "evidence_urls": ["https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"]},
-          {"name": "Pest", "bucket": "testing", "seen": 0, "of": 16, "in_cv": "pending_user_confirmation", "verdict": "noise", "persistent": false, "evidence_urls": []}
+          {
+            "name": "AI-assisted development tools (Claude Code / Cursor / agentic)",
+            "bucket": "process",
+            "seen": 9,
+            "of": 16,
+            "required": 7,
+            "preferred": 2,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel",
+              "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php",
+              "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"
+            ]
+          },
+          {
+            "name": "Laravel named",
+            "bucket": "backend",
+            "seen": 11,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476",
+              "https://www.itjobs.pt/oferta/516770/php-software-engineer"
+            ]
+          },
+          {
+            "name": "AWS",
+            "bucket": "infra",
+            "seen": 7,
+            "of": 16,
+            "required": 3,
+            "preferred": 4,
+            "in_cv": "adjacent",
+            "verdict": "recurring",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157",
+              "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350",
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"
+            ]
+          },
+          {
+            "name": "Docker",
+            "bucket": "infra",
+            "seen": 6,
+            "of": 16,
+            "required": 3,
+            "preferred": 3,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157",
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel"
+            ]
+          },
+          {
+            "name": "Automated / unit testing",
+            "bucket": "testing",
+            "seen": 6,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.itjobs.pt/oferta/516770/php-software-engineer",
+              "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"
+            ]
+          },
+          {
+            "name": "MySQL",
+            "bucket": "data",
+            "seen": 6,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel",
+              "https://www.itjobs.pt/oferta/516770/php-software-engineer"
+            ]
+          },
+          {
+            "name": "Third-party / ERP / CRM API integrations",
+            "bucket": "backend",
+            "seen": 6,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476",
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"
+            ]
+          },
+          {
+            "name": "Symfony",
+            "bucket": "backend",
+            "seen": 5,
+            "of": 16,
+            "required": 2,
+            "preferred": 3,
+            "in_cv": false,
+            "verdict": "recurring",
+            "persistent": true,
+            "evidence_urls": [
+              "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php",
+              "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"
+            ]
+          },
+          {
+            "name": "CI/CD",
+            "bucket": "infra",
+            "seen": 5,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.itjobs.pt/oferta/516770/php-software-engineer",
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"
+            ]
+          },
+          {
+            "name": "Queues / background jobs / events",
+            "bucket": "architecture",
+            "seen": 5,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476",
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel"
+            ]
+          },
+          {
+            "name": "SQL performance / EXPLAIN / query optimisation",
+            "bucket": "data",
+            "seen": 5,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel",
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"
+            ]
+          },
+          {
+            "name": "REST APIs",
+            "bucket": "backend",
+            "seen": 5,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"
+            ]
+          },
+          {
+            "name": "English B2+ required (fluent / excellent / strong written & verbal)",
+            "bucket": "language",
+            "seen": 4,
+            "of": 16,
+            "required": 4,
+            "preferred": 0,
+            "in_cv": false,
+            "verdict": "recurring",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.itjobs.pt/oferta/516770/php-software-engineer",
+              "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"
+            ]
+          },
+          {
+            "name": "English good / comfortable, no CEFR (no cap)",
+            "bucket": "language",
+            "seen": 4,
+            "of": 16,
+            "required": 0,
+            "preferred": 4,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel",
+              "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549"
+            ]
+          },
+          {
+            "name": "English B1 or lower explicitly accepted",
+            "bucket": "language",
+            "seen": 3,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer",
+              "https://www.net-empregos.com/15934192/senior-wordpress-developer-freelancer",
+              "https://www.wearedevelopers.com/jobs/ext/2785466-desarrollador-a-backend-php-ia"
+            ]
+          },
+          {
+            "name": "Remote bound to Spanish residency / tax / EOR",
+            "bucket": "process",
+            "seen": 4,
+            "of": 16,
+            "in_cv": false,
+            "verdict": "recurring",
+            "persistent": false,
+            "evidence_urls": [
+              "https://es.linkedin.com/jobs/view/full-stack-developer-php-%2B-modern-javascript-at-inveert-4464480520",
+              "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350",
+              "https://www.tecnoempleo.com/remote-located-full-stack-dev-in-manas-spain/vue-react/rf-bfc415884276034ad549"
+            ]
+          },
+          {
+            "name": "Portugal residency required (fits the candidate)",
+            "bucket": "process",
+            "seen": 2,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476",
+              "https://www.net-empregos.com/15934192/senior-wordpress-developer-freelancer"
+            ]
+          },
+          {
+            "name": "Legacy PHP codebases",
+            "bucket": "backend",
+            "seen": 4,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel",
+              "https://www.itjobs.pt/oferta/516770/php-software-engineer"
+            ]
+          },
+          {
+            "name": "Code review",
+            "bucket": "process",
+            "seen": 4,
+            "of": 16,
+            "in_cv": "adjacent",
+            "verdict": "recurring",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.itjobs.pt/oferta/516770/php-software-engineer",
+              "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php"
+            ]
+          },
+          {
+            "name": "Timezone overlap demand",
+            "bucket": "process",
+            "seen": 4,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://www.wearedevelopers.com/jobs/ext/2788871-back-end-developer-php-laravel",
+              "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"
+            ]
+          },
+          {
+            "name": "Redis / caching",
+            "bucket": "architecture",
+            "seen": 4,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"
+            ]
+          },
+          {
+            "name": "5-year floor (exactly 5, no cap)",
+            "bucket": "process",
+            "seen": 4,
+            "of": 16,
+            "in_cv": false,
+            "verdict": "recurring",
+            "persistent": true,
+            "evidence_urls": [
+              "https://justjoin.it/job-offer/jobleads-gmbh-senior-php-developer---fully-remote-within-europe-m-f-d--hamburg-php",
+              "https://www.linkedin.com/jobs/view/senior-backend-php-engineer-emea-at-apryse-4462462157"
+            ]
+          },
+          {
+            "name": "DDD / hexagonal / design patterns",
+            "bucket": "architecture",
+            "seen": 3,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e",
+              "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"
+            ]
+          },
+          {
+            "name": "Event-driven / distributed systems",
+            "bucket": "architecture",
+            "seen": 3,
+            "of": 16,
+            "in_cv": "adjacent",
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": [
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e",
+              "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"
+            ]
+          },
+          {
+            "name": "Vue",
+            "bucket": "frontend",
+            "seen": 3,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"
+            ]
+          },
+          {
+            "name": "Tailwind CSS",
+            "bucket": "frontend",
+            "seen": 3,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": false,
+            "evidence_urls": [
+              "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"
+            ]
+          },
+          {
+            "name": "React",
+            "bucket": "frontend",
+            "seen": 2,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"
+            ]
+          },
+          {
+            "name": "TypeScript",
+            "bucket": "frontend",
+            "seen": 2,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "covered",
+            "persistent": true,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476"
+            ]
+          },
+          {
+            "name": "Kubernetes",
+            "bucket": "infra",
+            "seen": 2,
+            "of": 16,
+            "in_cv": false,
+            "verdict": "noise",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"
+            ]
+          },
+          {
+            "name": "Message brokers (Kafka / RabbitMQ / SQS / PubSub)",
+            "bucket": "architecture",
+            "seen": 2,
+            "of": 16,
+            "in_cv": false,
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": [
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e",
+              "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"
+            ]
+          },
+          {
+            "name": "Microservices / SOA",
+            "bucket": "architecture",
+            "seen": 2,
+            "of": 16,
+            "in_cv": "adjacent",
+            "verdict": "noise",
+            "persistent": true,
+            "evidence_urls": [
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e"
+            ]
+          },
+          {
+            "name": "TDD / BDD",
+            "bucket": "testing",
+            "seen": 2,
+            "of": 16,
+            "in_cv": false,
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": [
+              "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer",
+              "https://www.wearedevelopers.com/jobs/ext/2785466-desarrollador-a-backend-php-ia"
+            ]
+          },
+          {
+            "name": "7+ years floor",
+            "bucket": "process",
+            "seen": 2,
+            "of": 16,
+            "in_cv": false,
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": [
+              "https://pt.linkedin.com/jobs/view/senior-backend-engineer-php-laravel-at-lucidhorizon-4464467476",
+              "https://es.linkedin.com/jobs/view/senior-php-engineer-at-airalo-4463536350"
+            ]
+          },
+          {
+            "name": "Freelance / contract (not employee)",
+            "bucket": "process",
+            "seen": 3,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": [
+              "https://www.tecnoempleo.com/php-freelance-developer-remoto-spain-michael-page/laravel-symfony/rf-b2571736f2619398754e",
+              "https://www.linkedin.com/jobs/view/full-stack-laravel-developer-at-globaltize-4464332538"
+            ]
+          },
+          {
+            "name": "Static analysis (PHPStan / Psalm / Rector)",
+            "bucket": "testing",
+            "seen": 1,
+            "of": 16,
+            "in_cv": "pending_user_confirmation",
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": [
+              "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"
+            ]
+          },
+          {
+            "name": "Inertia.js",
+            "bucket": "frontend",
+            "seen": 1,
+            "of": 16,
+            "in_cv": true,
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": [
+              "https://nodesk.co/remote-jobs/interaction-design-foundation-senior-php-laravel-developer"
+            ]
+          },
+          {
+            "name": "Pest",
+            "bucket": "testing",
+            "seen": 0,
+            "of": 16,
+            "in_cv": "pending_user_confirmation",
+            "verdict": "noise",
+            "persistent": false,
+            "evidence_urls": []
+          }
         ],
         "reach": [
-          {"blocker": "lang_cap_b2", "jds_blocked": 2, "uncapped": [78, 71], "would_enter_table": 2, "two_run_total": {"jds_blocked": 4, "uncapped": [83, 80, 78, 71], "would_enter_table": 4}, "note": "Neotalent (78) is a Portugal-remote permanent role – the only blocker was 'Fluent in English'."},
-          {"blocker": "lang_cap_c1", "jds_blocked": 0, "uncapped": [], "would_enter_table": 0},
-          {"blocker": "years_cap", "jds_blocked": 2, "uncapped": [83, 68], "would_enter_table": 1, "note": "LucidHorizon (83, 8+ yrs, Portugal residency) would top the Portugal list; Airalo (68) would not enter even uncapped."},
-          {"blocker": "evidence_cap", "jds_blocked": 1, "uncapped": [69], "would_enter_table": 0},
-          {"blocker": "skills_only", "jds_blocked": 1, "uncapped": [60], "would_enter_table": 0, "note": "QUARZAZATE – WordPress/WooCommerce gap, not a cap."}
+          {
+            "blocker": "lang_cap_b2",
+            "jds_blocked": 2,
+            "uncapped": [
+              78,
+              71
+            ],
+            "would_enter_table": 2,
+            "two_run_total": {
+              "jds_blocked": 4,
+              "uncapped": [
+                83,
+                80,
+                78,
+                71
+              ],
+              "would_enter_table": 4
+            },
+            "note": "Neotalent (78) is a Portugal-remote permanent role – the only blocker was 'Fluent in English'."
+          },
+          {
+            "blocker": "lang_cap_c1",
+            "jds_blocked": 0,
+            "uncapped": [],
+            "would_enter_table": 0
+          },
+          {
+            "blocker": "years_cap",
+            "jds_blocked": 2,
+            "uncapped": [
+              83,
+              68
+            ],
+            "would_enter_table": 1,
+            "note": "LucidHorizon (83, 8+ yrs, Portugal residency) would top the Portugal list; Airalo (68) would not enter even uncapped."
+          },
+          {
+            "blocker": "evidence_cap",
+            "jds_blocked": 1,
+            "uncapped": [
+              69
+            ],
+            "would_enter_table": 0
+          },
+          {
+            "blocker": "skills_only",
+            "jds_blocked": 1,
+            "uncapped": [
+              60
+            ],
+            "would_enter_table": 0,
+            "note": "QUARZAZATE – WordPress/WooCommerce gap, not a cap."
+          }
         ],
         "cross_run": "Two runs now store market_insights (2026-08-25 N=9, 2026-09-11 N=16); 'persistent' = present in both. English B2+ required: 3/9 -> 4/16 (persistent). AWS: 3/9 -> 7/16 (persistent, rising). Symfony: 3/9 -> 5/16 (persistent). AI-assisted development: 2/9 -> 9/16 (persistent, sharply rising). Pest: 2/9 -> 0/16.",
         "outcome_correlation": "Updated 2026-09-11 after user confirmation: REIZ TECH and JobLeads Senior Full Stack (both first seen 2026-08-25) were applied in August with no reply. Totals: 16 applied, 14 no_reply, 1 rejected (Quental), 1 screening (Coalition, last reported 2026-08-25, left unchanged because no new outcome was stated). Usable outcomes 16 >= 8, but the responded group is n=1, so counts only and no direction column. Response rate 1/16 (6%).",
         "recommendations": [
-          {"type": "wording", "text": "Move AI-assisted development from the trainer roles into the engineering bullets: Vidula was built with coding agents under enforced architecture/security rule files (laravel/boost MCP, .claude skills) behind CI gates – evidence already in the selected Vidula README. 9/16 JDs asked for this; Tomplay's application literally asks how you used AI while building something."},
-          {"type": "wording", "text": "Use the market's vocabulary for evidence the CV already has: 'third-party API integrations' (Google Calendar, SumUp, DocuSign, Resend – 6/16), 'background jobs and event-driven processing' (Horizon queues, domain events, Reverb – 5/16 + 3/16), 'legacy PHP maintenance' (4/16), 'S3-compatible object storage (Cloudflare R2)'. Never write AWS."},
-          {"type": "skill_gap", "text": "English B1 -> B2 (certifiable). Blocked 2 otherwise-qualifying JDs this run (78, 71) and 4 across the last two runs – all four would have entered the table. A CV edit cannot fix this.", "effort": "3–6 months of structured study to a B2 certificate"},
-          {"type": "skill_gap", "text": "AWS fundamentals: 7/16 JDs, required in 3 (Apryse, Airalo, Michael Page). Deploy one existing Laravel project (Servispin or Vidula) on ECS/RDS/S3 so it can be written honestly.", "effort": "4–6 weeks part-time"},
-          {"type": "skill_gap", "text": "Symfony: 5/16 JDs, required-extensive at JobLeads (twice across runs). A Laravel developer ramps fast; build one small Symfony + Doctrine service to have real evidence.", "effort": "4–8 weeks part-time"}
+          {
+            "type": "wording",
+            "text": "Move AI-assisted development from the trainer roles into the engineering bullets: Vidula was built with coding agents under enforced architecture/security rule files (laravel/boost MCP, .claude skills) behind CI gates – evidence already in the selected Vidula README. 9/16 JDs asked for this; Tomplay's application literally asks how you used AI while building something."
+          },
+          {
+            "type": "wording",
+            "text": "Use the market's vocabulary for evidence the CV already has: 'third-party API integrations' (Google Calendar, SumUp, DocuSign, Resend – 6/16), 'background jobs and event-driven processing' (Horizon queues, domain events, Reverb – 5/16 + 3/16), 'legacy PHP maintenance' (4/16), 'S3-compatible object storage (Cloudflare R2)'. Never write AWS."
+          },
+          {
+            "type": "skill_gap",
+            "text": "English B1 -> B2 (certifiable). Blocked 2 otherwise-qualifying JDs this run (78, 71) and 4 across the last two runs – all four would have entered the table. A CV edit cannot fix this.",
+            "effort": "3–6 months of structured study to a B2 certificate"
+          },
+          {
+            "type": "skill_gap",
+            "text": "AWS fundamentals: 7/16 JDs, required in 3 (Apryse, Airalo, Michael Page). Deploy one existing Laravel project (Servispin or Vidula) on ECS/RDS/S3 so it can be written honestly.",
+            "effort": "4–6 weeks part-time"
+          },
+          {
+            "type": "skill_gap",
+            "text": "Symfony: 5/16 JDs, required-extensive at JobLeads (twice across runs). A Laravel developer ramps fast; build one small Symfony + Doctrine service to have real evidence.",
+            "effort": "4–8 weeks part-time"
+          }
         ]
       }
+    },
+    {
+      "date": "2026-09-25",
+      "run": 1,
+      "queries": [
+        "EN core",
+        "ES",
+        "LinkedIn EN/ES",
+        "WWR/RemoteOK/Landing",
+        "ATS grounding"
+      ],
+      "new_matches": 3,
+      "excluded_count": 11,
+      "ats_score": null,
+      "target_job_title": "Full Stack Developer (PHP / Laravel + Vue / Inertia)",
+      "notes": "Extract: Firecrawl Tecnoempleo x2, LinkedIn -> Tavily snippet-only. New: knowmad mood, Michael Page, Noux Talent. Gates: G1 residency/modality (Greenwood, IThinkUPC, SlashMobility/HAYS, Altia, Bluelight, Outforce, Uvation, 5x US-only), G2 stack (IN MANAS, KCS), G3 quality (FB post, aggregators). G4 notes-only: Safeminds, eCarsTrade."
+    },
+    {
+      "date": "2026-09-25",
+      "run": 2,
+      "kind": "low-yield rescue -> expansion portals",
+      "queries": [
+        "EN",
+        "ES",
+        "LinkedIn site:",
+        "landing/itjobs/remoterocketship/remoteok"
+      ],
+      "new_matches": 1,
+      "excluded_count": 22,
+      "ats_score": null,
+      "target_job_title": "Full Stack Developer (PHP / Laravel + Vue / Inertia)",
+      "notes": "Extract: Firecrawl Jooble + WeAreDevelopers, Tavily advanced Safeminds PT. New: Sparktraffic (WeAreDevelopers 2995351). Prior new still open: Happy Team 84 (PL residency unclear), Coalition 70 (evening hours). Cache write-back performed after the fact: this run had not updated the cache (step 9 of the skill), so its 4 matches would have been re-discovered."
     }
   ],
   "outcome_policy": {

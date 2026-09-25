@@ -99,6 +99,10 @@ function extractionPayload(): array
 it('lists ai options with availability and edits defaults within the catalog', function (): void {
     $admin = aiAdmin();
 
+    // Hermetic: availability must not depend on a real key in .env.
+    config()->set('ai.providers.gemini.key', null);
+    config()->set('ai.providers.anthropic.key', null);
+
     $shown = $this->actingAs($admin)->getJson('/data/admin/lead-scout/ai-settings')->assertOk()->json('data');
 
     expect($shown['purposes']['extraction']['options'][0])->toHaveKeys(['provider', 'model', 'available', 'est_cost_per_100_usd'])
@@ -206,6 +210,116 @@ it('redacts personal data echoed by a failing provider before logging the fallba
             && str_contains($context['error'], '[email]')
             && ! str_contains($context['error'], 'ana@example.com'),
     );
+});
+
+it('rejects commercial excerpts without semantic support (5c)', function (): void {
+    config()->set('ai.providers.gemini.key', 'test-gemini-key');
+    RecordingAiClient::install([ExtractCompanySignalsAgent::class => [
+        'signals' => [
+            [
+                // Literally present in the page, but semantically empty: no
+                // freelanc*/partner*/colabor*/subcontrat*/marca blanca/white
+                // label/extern* term supports the commercial claim.
+                'signal_key' => 'accepts_external',
+                'nature' => 'fact',
+                'excerpt' => 'Nuestro equipo trabaja en remoto.',
+                'confidence' => 90,
+                'source_url' => 'https://semantica.example/servicios',
+            ],
+            [
+                'signal_key' => 'accepts_external',
+                'nature' => 'fact',
+                'excerpt' => 'Hacemos partners de integración.',
+                'confidence' => 90,
+                'source_url' => 'https://semantica.example/servicios',
+            ],
+        ],
+        'company_type' => 'other',
+        'team_size_observed' => null,
+    ]]);
+
+    // Controlled page: no rule-level accepts_external cue (no "partner
+    // program"/"trabajamos con freelancers"), so the AI verdict decides.
+    $company = ScoutCompanyFactory::new()->create(['canonical_domain' => 'semantica.example']);
+    ScoutFetchedPageEloquentModel::query()->create([
+        'company_id' => $company->id,
+        'url' => 'https://semantica.example/servicios',
+        'page_type' => 'services',
+        'content_markdown' => 'Desarrollamos con Laravel. Somos una agencia de software. Nuestro equipo trabaja en remoto. Hacemos partners de integración.',
+        'content_hash' => hash('sha256', 'semantic-5c'),
+        'fetched_at' => now(),
+    ]);
+
+    $report = app(ExtractSignalsHandler::class)->handle($company->uuid);
+
+    expect($report['ai'])->toBe(1)
+        ->and($report['discarded'])->toBe(1)
+        ->and(ScoutSignalEloquentModel::query()
+            ->where('company_id', $company->id)->where('signal_key', 'accepts_external')->value('evidence_excerpt'))
+        ->toContain('partners');
+});
+
+it('rejects sitemap and url-list excerpts as commercial proof (5c)', function (): void {
+    config()->set('ai.providers.gemini.key', 'test-gemini-key');
+    RecordingAiClient::install([ExtractCompanySignalsAgent::class => [
+        'signals' => [
+            [
+                'signal_key' => 'accepts_external',
+                'nature' => 'fact',
+                'excerpt' => '<loc>https://example.com/partners</loc><lastmod>2026-08-01</lastmod> white label',
+                'confidence' => 90,
+                'source_url' => 'https://example.com/sitemap.xml',
+            ],
+            [
+                'signal_key' => 'freelance_contract',
+                'nature' => 'fact',
+                'excerpt' => 'Freelance work at https://a.example/1 https://a.example/2 https://a.example/3',
+                'confidence' => 90,
+                'source_url' => 'https://example.com/servicios',
+            ],
+        ],
+        'company_type' => 'other',
+        'team_size_observed' => null,
+    ]]);
+
+    // The source text must literally contain the excerpts for the
+    // sitemap-rejection (not the literal check) to be what discards them.
+    $company = signalCompany();
+    ScoutFetchedPageEloquentModel::query()->where('company_id', $company->id)->update([
+        'content_markdown' => 'Desarrollamos con Laravel. Trabajamos con freelancers. Nuestro equipo trabaja en remoto. '
+            .'<loc>https://example.com/partners</loc><lastmod>2026-08-01</lastmod> white label '
+            .'Freelance work at https://a.example/1 https://a.example/2 https://a.example/3',
+    ]);
+
+    $report = app(ExtractSignalsHandler::class)->handle($company->uuid);
+
+    expect($report['ai'])->toBe(0)->and($report['discarded'])->toBe(2);
+});
+
+it('spends no model call when the rules already discarded the lead', function (): void {
+    config()->set('ai.providers.gemini.key', 'test-gemini-key');
+    $spy = RecordingAiClient::install([ExtractCompanySignalsAgent::class => extractionPayload()]);
+    $company = signalCompany();
+
+    // A parked/sole-trader/dead-web verdict cannot be rescued by a model call
+    // (2026-09-25: every junk page paid for a full Gemini/Sonnet extraction).
+    ScoutSignalEloquentModel::query()->create([
+        'company_id' => $company->id,
+        'dimension' => 'vitality',
+        'signal_key' => 'solo_freelancer',
+        'nature' => 'fact',
+        'confidence' => 85,
+        'evidence_url' => 'https://example.com/',
+        'evidence_excerpt' => 'Natural person (sole trader).',
+        'captured_at' => now(),
+        'extraction_method' => 'rule',
+    ]);
+
+    $report = app(ExtractSignalsHandler::class)->handle($company->uuid);
+
+    expect($report['ai'])->toBe(0)
+        ->and($report['provider'])->toBeNull()
+        ->and($spy->calls)->toBeEmpty();
 });
 
 it('drops non-web evidence urls proposed by the model', function (): void {

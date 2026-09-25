@@ -3668,6 +3668,13 @@
                         }
                     },
                     {
+                        "name": "scored_only",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
                         "name": "sort_field",
                         "in": "query",
                         "schema": {
@@ -4188,6 +4195,13 @@
                                     "skipped"
                                 ]
                             }
+                        }
+                    },
+                    {
+                        "name": "scored_only",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
                         }
                     },
                     {

@@ -9,8 +9,11 @@ return [
     |--------------------------------------------------------------------------
     | Deterministic scoring rules version. Bump when weights/thresholds change;
     | every score_result records the version it was computed with (plan §3.3).
+    | 2026.09.4 — FR-7 evidence on every score reason (NOT NULL), ES/PT working
+    | language scored 100 unless spoken English is documented, team_size=1
+    | always flagged for review.
     */
-    'rules_version' => '2026.09.3',
+    'rules_version' => '2026.09.4',
 
     'scoring' => [
         // Lead Score = Σ(subscore × peso) / 100 (plan §3.3).
@@ -156,10 +159,30 @@ return [
     'query_denylist' => ['linkedin', 'site:linkedin.com', 'xing', 'apollo', 'zoominfo', 'rocketreach', 'lusha', 'kaspr', 'hunter.io'],
 
     // Result domains discarded locally (second barrier after exclude_domains).
+    // Widened 2026-09-25 after the first run created 6 rows that are
+    // directories, marketplaces, social networks or SEO listicles: they are
+    // never leads (plan §3.2.1) and every one of them cost pages + an AI call.
     'result_domain_denylist' => [
-        'linkedin.com', 'xing.com', 'indeed.com', 'glassdoor.com', 'sortlist.com', 'clutch.co',
-        'goodfirms.co', 'apollo.io', 'zoominfo.com', 'rocketreach.co', 'lusha.com', 'kaspr.io',
-        'hunter.io', 'wikipedia.org',
+        // Professional networks, social and data brokers.
+        'linkedin.com', 'xing.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+        'youtube.com', 't.me', 'apollo.io', 'zoominfo.com', 'rocketreach.co', 'lusha.com',
+        'kaspr.io', 'hunter.io', 'signalhire.com', 'clearbit.com', 'contactout.com',
+        // Directories, rankings and listicles.
+        'sortlist.com', 'sortlist.es', 'clutch.co', 'clutch.com', 'goodfirms.co', 'goodfirms.com',
+        'themanifest.com', 'techbehemoths.com', 'designrush.com', 'insanevalues.in', 'wikipedia.org',
+        'crunchbase.com', 'bloomberg.com', 'g2.com', 'capterra.com', 'trustpilot.com',
+        'laravelspain.com', 'laravel.com', 'partners.laravel.com', 'packagist.org',
+        // Freelance marketplaces and gig platforms.
+        'workana.com', 'freelancer.es', 'freelancer.com', 'malt.com', 'toptal.com', 'upwork.com',
+        'fiverr.com', 'truelancer.com', 'guru.com', 'peopleperhour.com', 'arc.dev', 'remoteok.com',
+        'weworkremotely.com', 'remotive.com', 'remoterocketship.com', 'nodesk.co', 'jobleads.com',
+        // Job portals and aggregators (not buyers; US-2 sources live in `job_sources`).
+        'tecnoempleo.com', 'infojobs.net', 'infojobs.com', 'indeed.com', 'glassdoor.com',
+        'glassdoor.es', 'jobsora.com', 'jooble.com', 'ziprecruiter.com',
+        'arbeitnow.com', 'larajobs.com', 'remojobs.com', 'himalayas.app', 'remoteanywherejob.com',
+        'justjoin.it', 'devitjobs.com', 'itjobs.pt', 'net-empregos.com', 'trabajo.org',
+        'freelancer.cat', 'bebjobs.com', 'jobgether.com', 'welcometothejungle.com',
+        'zaask.pt', 'zaask.com', 'usemeup.pt', 'randstad.pt', 'kellyservices.com', 'adecco.com',
     ],
 
     'vitality' => [

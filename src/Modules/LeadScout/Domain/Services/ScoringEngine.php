@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\LeadScout\Domain\Enums\SignalNature;
 
 /**
- * Deterministic scoring (plan §3.3, `rules_version = 2026.09.3`): stored
+ * Deterministic scoring (plan §3.3, `rules_version = 2026.09.4`): stored
  * signals + profile + required techs → 7 subscores, Lead Score, evidence
  * confidence and point-by-point reasons. Same input always yields the same
  * output (spec US-4 CA-4). Inferences weigh ×0.6 (US-4 CA-3).
@@ -279,6 +279,16 @@ final readonly class ScoringEngine
     private function communication(array $facts, array $inferences, callable $weight, array &$reasons): int
     {
         if (isset($facts['lang_es_pt']) || isset($inferences['lang_es_pt'])) {
+            // ES/PT working language scores 100 — UNLESS spoken/native
+            // English is documentably required (fact, not guess): B1 then
+            // faces client calls, so the documented penalty applies.
+            if (isset($facts['english_fluent_required'])) {
+                $penalized = $this->keyPoints('english_fluent_required', 25, $facts, $inferences, $weight);
+                $reasons[] = ['signal_key' => 'english_fluent_required', 'points' => $penalized, 'explanation' => "ES/PT pero inglés hablado exigido (documentado): {$penalized}"];
+
+                return $penalized;
+            }
+
             $reasons[] = ['signal_key' => 'lang_es_pt', 'points' => 100, 'explanation' => 'Idioma ES/PT: 100'];
 
             return 100;

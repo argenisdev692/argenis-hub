@@ -197,6 +197,10 @@ final readonly class PublicCompanyDataExtractor
     }
 
     /**
+     * Footer as third identity source (spec FR-38: JSON-LD → aviso legal →
+     * footer, NEVER the landing `<title>`, which is usually a post). A
+     * company suffix in the footer is the only accepted trigger.
+     *
      * @param  callable(string, mixed, string, string): void  $set
      */
     private function fromFooter(string $markdown, string $url, callable $set): void
@@ -211,6 +215,12 @@ final readonly class PublicCompanyDataExtractor
 
             if (preg_match('/\b(Lisboa|Porto|Braga|Coimbra|Madrid|Barcelona|Valencia|Sevilla|Málaga|Bilbao|Berlin|Amsterdam|Paris)\b/u', $line, $m) === 1) {
                 $set('city', $m[1], $url, $line);
+            }
+
+            // «© 2026 Agencia Ejemplo, S.L.» / «Agencia Ejemplo Lda.» in the
+            // footer: the legal suffix is what makes it a company identity.
+            if (preg_match('/^.{2,120}?\s*,?\s*('.implode('|', array_map(static fn (string $form): string => preg_quote($form, '/'), self::LEGAL_FORMS['company'])).')\.?$/iu', $line, $m) === 1) {
+                $set('legal_name', trim($m[0]), $url, $line);
             }
         }
     }
@@ -324,6 +334,15 @@ final readonly class PublicCompanyDataExtractor
     }
 
     /**
+     * Natural person (spec FR-39), from IDENTIFICATION data only.
+     *
+     * The scan is deliberately narrow after the 2026-09-25 audit: a blanket
+     * search for the words «freelancer»/«autónomo» across every page flagged
+     * six real agencies as solo freelancers (they advertise working *with*
+     * freelancers — the exact ICP). A natural person is now proven by the
+     * legal form, by a personal tax id, or by a self-description bounded to
+     * one sentence; the commercial copy of an agency never matches.
+     *
      * @param  array<string, mixed>  $data
      * @param  array<int, array{url: string, page_type: ?string, markdown: string}>  $pages
      */
@@ -344,17 +363,37 @@ final readonly class PublicCompanyDataExtractor
             return true;
         }
 
-        $joined = implode("\n", array_column($pages, 'markdown'));
-        $joinedLower = mb_strtolower($joined);
+        $legalPages = array_values(array_filter(
+            $pages,
+            static fn (array $page): bool => in_array($page['page_type'] ?? null, ['legal', 'privacy'], true),
+        ));
 
-        foreach (self::LEGAL_FORMS['natural'] as $cue) {
-            // Whole-word match: `eni` must not fire inside `bienvenidos`.
-            if (preg_match('/(?<![\p{L}\p{N}_])'.preg_quote(mb_strtolower($cue), '/').'(?![\p{L}\p{N}_])/u', $joinedLower) === 1) {
-                return true;
+        // Identification page: «Juan Pérez, autónomo» — a person NAME followed
+        // by the natural-person cue. Only on the legal notice / privacy page,
+        // where a sole trader is obliged to identify himself (FR-38/FR-39).
+        foreach ($legalPages as $page) {
+            foreach (explode("\n", (string) ($page['markdown'] ?? '')) as $line) {
+                $line = trim($line);
+
+                if ($line === '' || mb_strlen($line) > 200) {
+                    continue;
+                }
+
+                $pattern = '/\p{Lu}\p{Ll}+(?:[\s\'’-]+\p{Lu}\p{Ll}+){1,2}\s*[,–—-]?\s*'
+                    .'(autónomo|autonomo|freelancer|self-employed|sole trader|empresário em nome individual|empresario en nombre individual)\b/iu';
+
+                if (preg_match($pattern, $line) === 1) {
+                    return true;
+                }
             }
         }
 
-        return preg_match('/\b(soy|sou)\b.{0,60}(freelance|desarrollador|desenvolvedor)/i', $joined) === 1;
+        // First-person identity claim, bounded to ONE sentence: «Soy
+        // desarrollador Laravel freelance», never «Soy cliente, busco
+        // agencias» on a marketplace.
+        $joined = implode("\n", array_column($pages, 'markdown'));
+
+        return preg_match('/\b(soy|sou|estou|i am|i.m)\b[^.\n]{0,40}\b(freelancer|freelance|independiente|desarrollador|programador|desenvolvedor|consultor|developer)\b/i', $joined) === 1;
     }
 
     private function str(mixed $value): ?string

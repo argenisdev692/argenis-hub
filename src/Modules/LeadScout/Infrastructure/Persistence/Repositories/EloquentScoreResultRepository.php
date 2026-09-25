@@ -46,6 +46,15 @@ final readonly class EloquentScoreResultRepository implements ScoreResultReposit
             ]);
 
             foreach ($reasons as $reason) {
+                // FR-7: a reason without evidence is a phantom — refuse it at
+                // the persistence boundary even if a caller forgot to filter.
+                $evidenceUrl = trim((string) ($reason['evidence_url'] ?? ''));
+                $evidenceExcerpt = trim((string) ($reason['evidence_excerpt'] ?? ''));
+
+                if ($evidenceUrl === '' || $evidenceExcerpt === '') {
+                    continue;
+                }
+
                 $result->reasons()->create($reason);
             }
 
@@ -77,13 +86,16 @@ final readonly class EloquentScoreResultRepository implements ScoreResultReposit
         $reasons = $result->reasons()
             ->with('signal:id,signal_key,evidence_url,evidence_excerpt')
             ->orderBy('id')
-            ->get(['id', 'signal_id', 'points', 'explanation'])
+            ->get(['id', 'signal_id', 'points', 'explanation', 'evidence_url', 'evidence_excerpt'])
             ->map(static fn (ScoutScoreReasonEloquentModel $reason): array => [
                 'signal_key' => $reason->signal?->signal_key,
                 'points' => (int) $reason->points,
                 'explanation' => (string) $reason->explanation,
-                'evidence_url' => $reason->signal?->evidence_url,
-                'evidence_excerpt' => $reason->signal?->evidence_excerpt,
+                // FR-7: the reason's own denormalized evidence is authoritative
+                // (it also covers derived keys with no linked signal); the
+                // signal relation is only a fallback for pre-migration rows.
+                'evidence_url' => $reason->evidence_url ?? $reason->signal?->evidence_url,
+                'evidence_excerpt' => $reason->evidence_excerpt ?? $reason->signal?->evidence_excerpt,
             ])
             ->values()
             ->all();

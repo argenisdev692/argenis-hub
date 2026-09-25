@@ -48,20 +48,36 @@ it('discovers agencies while discarding portals and networks', function (): void
     Http::fake(['https://api.tavily.com/search' => Http::response(tavilyResults([
         'https://novita-labs.example/servicios',
         'https://sortlist.com/agency/novita',
+        // 2026-09-25: these six reached the database as leads because the
+        // denylist only knew the .com/primary hosts of each marketplace.
+        'https://sortlist.es/agencias/laravel',
+        'https://workana.com/freelancer/laravel',
+        'https://zaask.pt/trabalhar/freelancer',
+        'https://facebook.com/laraveljobs',
         'https://www.linkedin.com/company/novita',
         'not-a-url',
     ]), 200)]);
 
     $report = app(DiscoverAgenciesHandler::class)->handle('wave1', 'ES', 'agencia desarrollo Laravel');
 
-    expect($report['new_companies'])->toBe(1);
+    expect($report['new_companies'])->toBe(1)
+        ->and($report['skipped'])->toBe(7);
 
     $company = ScoutCompanyEloquentModel::query()->where('canonical_domain', 'novita-labs.example')->firstOrFail();
+
+    // FR-38: the display name is the domain, never the search result
+    // <title> (usually a post title, not the company identity).
+    expect($company->name)->toBe('novita-labs.example');
 
     expect($company->origin->value)->toBe(CompanyOrigin::Discovery->value)
         ->and($company->discovery_wave)->toBe('wave1')
         ->and($company->origin_ref)->toContain('agencia desarrollo Laravel')
         ->and($company->timezone_overlap_hours)->toBe(8);
+
+    // Not one marketplace, directory or social row created.
+    expect(ScoutCompanyEloquentModel::query()
+        ->whereIn('canonical_domain', ['sortlist.es', 'workana.com', 'zaask.pt', 'facebook.com', 'sortlist.com', 'linkedin.com'])
+        ->count())->toBe(0);
 
     Queue::assertPushed(EnrichCompanyJob::class);
 });
@@ -158,6 +174,35 @@ it('enriches pages, channels and public data, then chains scoring', function ():
         ->where('company_id', $company->id)->count())->toBeGreaterThanOrEqual(2);
 
     Queue::assertPushed(ExtractSignalsJob::class, fn (ExtractSignalsJob $job): bool => $job->companyUuid === $company->uuid);
+});
+
+it('resolves the company name from JSON-LD, never from a page title', function (): void {
+    $html = fn (string $body): string => "<html><head><title>10 trucos de Laravel que debes conocer</title></head><body>{$body}</body></html>";
+
+    Http::fake([
+        'https://legalname.example/robots.txt' => Http::response("User-agent: *\nDisallow:\n", 200),
+        'https://legalname.example/sitemap.xml' => Http::response('oops', 404),
+        'https://legalname.example/' => Http::response($html(
+            '<script type="application/ld+json">{"@type":"Organization","legalName":"Legalname Consulting S.L.","taxID":"B87654321","address":{"addressLocality":"Valencia"}}</script>'
+            .'<h1>10 trucos de Laravel que debes conocer</h1><a href="https://legalname.example/servicios">Servicios</a>'
+        ), 200, ['Content-Type' => 'text/html']),
+        'https://legalname.example/servicios' => Http::response($html(
+            '<h2>Desarrollamos con Laravel.</h2><p>Somos 8 personas.</p>'
+        ), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    // Discovery seeds the domain placeholder (FR-38: never the <title>).
+    $company = ScoutCompanyFactory::new()->discovered()->create([
+        'canonical_domain' => 'legalname.example',
+        'name' => 'legalname.example',
+        'country' => 'ES',
+    ]);
+
+    $report = app(EnrichCompanyHandler::class)->handle($company->uuid);
+
+    expect($report['status'])->toBe('enriched')
+        ->and($company->refresh()->legal_name)->toBe('Legalname Consulting S.L.')
+        ->and($company->refresh()->name)->toBe('Legalname Consulting S.L.');
 });
 
 it('discards natural persons without storing identification', function (): void {

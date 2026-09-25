@@ -25,8 +25,9 @@ final readonly class LaravelAiCvJudge implements CvJudgePort
 
         $result = $this->calls->call(AiPurpose::CvJudge, JudgeCvAgent::class, $prompt, $userId);
 
-        /** @var array<string, mixed> $data */
-        $data = (array) $result['response'];
+        // The verdict lives in the structured payload, not in the response
+        // object's property table (`(array) $response` would yield usage/meta).
+        $data = (array) ($result['response']->structured ?? []);
 
         return [...$data, 'provider' => $result['provider'], 'model' => $result['model'] ?? 'default'];
     }

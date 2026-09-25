@@ -6,6 +6,7 @@ namespace Modules\LeadScout\Infrastructure\Console\Commands;
 
 use Illuminate\Console\Command;
 use Modules\LeadScout\Application\Commands\ScoreCompanyHandler;
+use Modules\LeadScout\Domain\Exceptions\SuppressedException;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
 
 /**
@@ -29,14 +30,30 @@ final class LeadScoutScoreCommand extends Command
         }
 
         $count = 0;
+        $skipped = 0;
 
         foreach ($query->pluck('uuid') as $uuid) {
-            $result = $score->handle($uuid);
+            try {
+                $result = $score->handle($uuid);
+            } catch (SuppressedException) {
+                // FR-43: a suppression prevails over any re-score. It must SKIP
+                // this company, not abort the pass — one suppressed domain used
+                // to stop the re-score of every company after it.
+                $skipped++;
+                $this->warn("{$uuid}: suppressed (FR-43), skipped.");
+
+                continue;
+            }
+
             $this->line("{$uuid}: {$result->leadScore} ({$result->tier->value}, conf {$result->confidence})");
             $count++;
         }
 
         $this->info("Scored {$count} companie(s).");
+
+        if ($skipped > 0) {
+            $this->info("Skipped {$skipped} suppressed companie(s).");
+        }
 
         return self::SUCCESS;
     }

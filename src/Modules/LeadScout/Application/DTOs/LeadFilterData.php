@@ -50,6 +50,7 @@ final class LeadFilterData extends Data
         public ?string $dateFrom = null,
         public ?string $dateTo = null,
         public ?int $perPage = 15,
+        public ?bool $scoredOnly = null,
     ) {}
 
     #[\NoDiscard]
@@ -66,6 +67,7 @@ final class LeadFilterData extends Data
             search: $this->search === null || trim($this->search) === '' ? null : trim($this->search),
             createdFrom: $this->dateFrom === null ? null : CarbonImmutable::parse($this->dateFrom)->startOfDay(),
             createdTo: $this->dateTo === null ? null : CarbonImmutable::parse($this->dateTo)->endOfDay(),
+            scoredOnly: $this->scoredOnly ?? true,
         );
     }
 
@@ -101,6 +103,7 @@ final class LeadFilterData extends Data
             'dateFrom' => ['nullable', 'date', ...($hasBothBounds ? ['before_or_equal:date_to'] : [])],
             'dateTo' => ['nullable', 'date', ...($hasBothBounds ? ['after_or_equal:date_from'] : [])],
             'perPage' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'scoredOnly' => ['sometimes', 'boolean'],
         ];
     }
 }

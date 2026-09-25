@@ -19,6 +19,7 @@ export function defaultPostingFilters(): StudioPostingFilters {
         stages: [],
         date_from: null,
         date_to: null,
+        scored_only: true,
         sort_field: 'created_at',
         sort_order: -1,
         page: 1,

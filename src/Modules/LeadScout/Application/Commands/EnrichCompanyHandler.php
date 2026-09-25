@@ -146,8 +146,9 @@ final readonly class EnrichCompanyHandler
     private function persistSitemapVitality(Company $company, array $sitemapUrls): void
     {
         $latest = null;
+        $latestLoc = null;
 
-        foreach ($sitemapUrls as $lastmod) {
+        foreach ($sitemapUrls as $loc => $lastmod) {
             if ($lastmod === null) {
                 continue;
             }
@@ -157,6 +158,7 @@ final readonly class EnrichCompanyHandler
 
                 if ($latest === null || $date->gt($latest)) {
                     $latest = $date;
+                    $latestLoc = $loc;
                 }
             } catch (\Exception) {
             }
@@ -174,14 +176,18 @@ final readonly class EnrichCompanyHandler
         $months = $latest->diffInMonths(CarbonImmutable::now());
 
         if ($months <= 6) {
-            $this->vitalitySignal($company, 'sitemap_fresh', "Sitemap {$latest->toDateString()}");
+            $this->vitalitySignal($company, 'sitemap_fresh', "Sitemap {$latest->toDateString()}", $latestLoc);
         } elseif ($months > 24) {
-            $this->vitalitySignal($company, 'old_sitemap', "Sitemap {$latest->toDateString()}");
+            $this->vitalitySignal($company, 'old_sitemap', "Sitemap {$latest->toDateString()}", $latestLoc);
         }
     }
 
-    private function vitalitySignal(Company $company, string $key, string $value): void
+    private function vitalitySignal(Company $company, string $key, string $value, ?string $sitemapLoc = null): void
     {
+        // FR-7: the sitemap location carrying the lastmod is the evidence —
+        // never a bare date without its source.
+        $url = $sitemapLoc ?? 'https://'.$company->canonicalDomain.'/sitemap.xml';
+
         $this->signals->addIfAbsent($company->id, new NewSignal(
             dimension: SignalDimension::Vitality,
             signalKey: $key,
@@ -190,6 +196,8 @@ final readonly class EnrichCompanyHandler
             extractionMethod: ExtractionMethod::Rule,
             capturedAt: CarbonImmutable::now(),
             valueText: $value,
+            evidenceUrl: $url,
+            evidenceExcerpt: $value,
         ));
     }
 
@@ -256,7 +264,10 @@ final readonly class EnrichCompanyHandler
 
         $visited = $this->pages->urlsFor($company->id);
         $targets = [];
-        $priority = $extraRound ? ['cases', 'blog', 'services', 'about'] : ['services', 'about', 'team', 'jobs', 'contact', 'cases'];
+        // The extra round (needs_research) is where the legal notice and the
+        // partners page get read: without them FR-38 has no `legal_name`/
+        // `legal_form` and `accepts_external` has no first-party page (2026-09-25).
+        $priority = $extraRound ? ['cases', 'legal', 'partners', 'about', 'services'] : ['services', 'about', 'team', 'jobs', 'contact', 'cases'];
 
         foreach ($priority as $type) {
             if (count($targets) >= self::MAX_TARGETS) {
@@ -325,6 +336,7 @@ final readonly class EnrichCompanyHandler
         }
 
         $firstEvidence = array_first($extracted['evidence']);
+        $firstPage = array_first($pages);
 
         $this->signals->addIfAbsent($company->id, new NewSignal(
             dimension: SignalDimension::Vitality,
@@ -333,8 +345,9 @@ final readonly class EnrichCompanyHandler
             confidence: 85,
             extractionMethod: ExtractionMethod::Rule,
             capturedAt: CarbonImmutable::now(),
-            evidenceUrl: $firstEvidence['url'] ?? null,
-            evidenceExcerpt: 'Natural person (sole trader).',
+            // FR-7: always a real source page, never a null URL.
+            evidenceUrl: $firstEvidence['url'] ?? $firstPage['url'] ?? 'https://'.$company->canonicalDomain.'/',
+            evidenceExcerpt: $firstEvidence['excerpt'] ?? 'Natural person (sole trader).',
         ));
 
         return true;
