@@ -46,10 +46,13 @@ Route::middleware(['auth', 'throttle:60,1'])->prefix('data/admin/lead-scout')->n
     Route::patch('/sources/{uuid}', [SourceController::class, 'update'])->middleware('permission:UPDATE_LEAD_SCOUT')->whereUuid('uuid')->name('sources.update');
     Route::post('/sources/{uuid}/run', [SourceController::class, 'run'])->middleware('permission:UPDATE_LEAD_SCOUT')->whereUuid('uuid')->name('sources.run');
 
-    // On-demand pipeline runs (same jobs the scheduler queues).
-    Route::post('/jobs/ingest', [LeadScoutJobController::class, 'ingest'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:6,1'])->name('jobs.ingest');
-    Route::post('/jobs/discover', [LeadScoutJobController::class, 'discover'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:2,1'])->name('jobs.discover');
-    Route::post('/jobs/rescore', [LeadScoutJobController::class, 'rescore'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:2,1'])->name('jobs.rescore');
+    // On-demand pipeline runs (same jobs the scheduler queues). Named
+    // per-user limiters (see LeadScoutServiceProvider): anonymous inline
+    // throttles share one bucket per user with the group throttle, so group
+    // traffic drained these budgets and the first click already answered 429.
+    Route::post('/jobs/ingest', [LeadScoutJobController::class, 'ingest'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:lead-scout-jobs-ingest'])->name('jobs.ingest');
+    Route::post('/jobs/discover', [LeadScoutJobController::class, 'discover'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:lead-scout-jobs-discover'])->name('jobs.discover');
+    Route::post('/jobs/rescore', [LeadScoutJobController::class, 'rescore'])->middleware(['permission:UPDATE_LEAD_SCOUT', 'throttle:lead-scout-jobs-rescore'])->name('jobs.rescore');
 
     Route::post('/leads', [ManualLeadController::class, 'store'])->middleware('permission:CREATE_LEAD_SCOUT')->name('leads.store');
     Route::post('/suppressions', [SuppressionController::class, 'store'])->middleware('permission:DELETE_LEAD_SCOUT')->name('suppressions.store');

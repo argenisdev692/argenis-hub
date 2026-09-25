@@ -200,6 +200,44 @@ it('backfills requirements for texts stored by an earlier run', function (): voi
         ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->value('canonical_name'))->toBe('Laravel');
 });
 
+it('normalizes loosely-tagged model output instead of dropping paid rows', function (): void {
+    $owner = extractPipeOwner();
+    $profile = extractPipeProfile($owner);
+    $posting = extractPipePosting($owner, $profile, 'loose-1');
+    $posting->texts()->create([
+        'user_id' => $owner->id,
+        'ladder_step' => 'direct_http',
+        'completeness' => 'full',
+        'text' => 'We need Laravel experience.',
+        'char_count' => 27,
+    ]);
+
+    $loose = new class implements RequirementExtractorPort
+    {
+        public function extract(string $postingText, int $userId): array
+        {
+            return [
+                'requirements' => [
+                    ['canonical_name' => 'Laravel', 'raw_text' => 'Laravel', 'tag' => 'Required', 'nature' => 'Hard Skill'],
+                    ['canonical_name' => 'Vue.js', 'raw_text' => 'Vue', 'tag' => 'must-have', 'nature' => 'technical'],
+                    ['canonical_name' => 'Coffee', 'raw_text' => 'x', 'tag' => 'whatever', 'nature' => 'hard'],
+                ],
+                'responsibilities' => [],
+                'provider' => 'fake',
+                'model' => 'fake-1',
+                'prompt_version' => 'v2',
+            ];
+        }
+    };
+
+    $rows = extractPipeHandler($loose)->handle($posting->uuid, $owner->id);
+
+    // Capitalization and common aliases normalize; the unknown tag drops.
+    expect($rows)->toHaveCount(2)
+        ->and(StudioRequirementEloquentModel::query()->where('posting_id', $posting->id)->pluck('canonical_name')->all())
+        ->toBe(['Laravel', 'Vue.js']);
+});
+
 it('stops the stage on a spent LLM budget without failing the run', function (): void {
     $owner = extractPipeOwner();
     $profile = extractPipeProfile($owner);

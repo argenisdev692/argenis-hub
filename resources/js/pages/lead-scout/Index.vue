@@ -52,6 +52,7 @@ import {
 } from '@/modules/lead-scout/composables/useLeads';
 import {
     useLeadScoutJobs,
+    useLeadScoutStatus,
     useLeadSources,
 } from '@/modules/lead-scout/composables/useLeadScoutJobs';
 import {
@@ -84,7 +85,71 @@ const { budgets } = useBudgets();
 
 const jobsOpen = ref<boolean>(false);
 const { sources, isLoading: sourcesLoading } = useLeadSources(jobsOpen);
-const { runSource, runIngest, runDiscover, runRescore } = useLeadScoutJobs();
+const {
+    runSource,
+    runIngest,
+    runDiscover,
+    runRescore,
+    ingestCooldown,
+    discoverCooldown,
+    rescoreCooldown,
+} = useLeadScoutJobs();
+const { pendingJobs, pendingExtractions } = useLeadScoutStatus(jobsOpen);
+
+const queueStatusText = computed<string>(() => {
+    const parts: string[] = [];
+
+    if (pendingJobs.value > 0) {
+        parts.push(
+            pendingJobs.value === 1 ? '1 job' : `${pendingJobs.value} jobs`,
+        );
+    }
+
+    if (pendingExtractions.value > 0) {
+        parts.push(
+            pendingExtractions.value === 1
+                ? '1 AI extraction'
+                : `${pendingExtractions.value} AI extractions`,
+        );
+    }
+
+    return parts.length > 0 ? `${parts.join(' + ')} waiting in the queue…` : '';
+});
+
+/**
+ * Global runs close the dialog on success — the toast carries the queued
+ * count and the cooldown blocks an accidental double queue. Failures keep
+ * it open so the operator sees the reason and the retry countdown.
+ */
+async function queueIngest(): Promise<void> {
+    try {
+        await runIngest.mutateAsync();
+    } catch {
+        return;
+    }
+
+    jobsOpen.value = false;
+}
+
+async function queueDiscover(): Promise<void> {
+    try {
+        await runDiscover.mutateAsync();
+    } catch {
+        return;
+    }
+
+    jobsOpen.value = false;
+}
+
+async function queueRescore(): Promise<void> {
+    try {
+        await runRescore.mutateAsync();
+    } catch {
+        return;
+    }
+
+    jobsOpen.value = false;
+}
 
 function formatLastRun(lastRunAt: string | null): string {
     return lastRunAt === null
@@ -488,29 +553,56 @@ async function saveAiSettings(purpose: string): Promise<void> {
                     </DialogDescription>
                 </DialogHeader>
                 <div class="flex flex-col gap-6">
+                    <p
+                        v-if="queueStatusText !== ''"
+                        class="text-sm text-muted-foreground"
+                        role="status"
+                    >
+                        {{ queueStatusText }}
+                    </p>
                     <div class="grid gap-2 sm:grid-cols-3">
                         <Button
-                            :disabled="runIngest.isLoading.value"
-                            @click="runIngest.mutate()"
+                            :disabled="
+                                runIngest.isLoading.value || ingestCooldown > 0
+                            "
+                            @click="queueIngest()"
                         >
                             <PlayIcon class="size-4" aria-hidden="true" />
-                            Ingest all
+                            {{
+                                ingestCooldown > 0
+                                    ? `Ingest all (${ingestCooldown}s)`
+                                    : 'Ingest all'
+                            }}
                         </Button>
                         <Button
                             variant="outline"
-                            :disabled="runDiscover.isLoading.value"
-                            @click="runDiscover.mutate()"
+                            :disabled="
+                                runDiscover.isLoading.value ||
+                                discoverCooldown > 0
+                            "
+                            @click="queueDiscover()"
                         >
                             <RadarIcon class="size-4" aria-hidden="true" />
-                            Discover
+                            {{
+                                discoverCooldown > 0
+                                    ? `Discover (${discoverCooldown}s)`
+                                    : 'Discover'
+                            }}
                         </Button>
                         <Button
                             variant="outline"
-                            :disabled="runRescore.isLoading.value"
-                            @click="runRescore.mutate()"
+                            :disabled="
+                                runRescore.isLoading.value ||
+                                rescoreCooldown > 0
+                            "
+                            @click="queueRescore()"
                         >
                             <RefreshCwIcon class="size-4" aria-hidden="true" />
-                            Re-score all
+                            {{
+                                rescoreCooldown > 0
+                                    ? `Re-score all (${rescoreCooldown}s)`
+                                    : 'Re-score all'
+                            }}
                         </Button>
                     </div>
 

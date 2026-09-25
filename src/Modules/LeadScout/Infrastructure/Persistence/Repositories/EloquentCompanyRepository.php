@@ -17,6 +17,15 @@ use Modules\LeadScout\Infrastructure\Persistence\Mappers\CompanyMapper;
  */
 final readonly class EloquentCompanyRepository implements CompanyRepositoryPort
 {
+    /**
+     * Width of the `scout_companies` varchar columns (migration
+     * `..._create_scout_companies_table`). Scraped text is unbounded — a
+     * full markdown line landed in `registry_info` and crashed enrichment
+     * with SQLSTATE 22001 — so free-text fields are clamped here, at the
+     * persistence boundary, never in the Domain.
+     */
+    private const int STRING_COLUMN_LENGTH = 255;
+
     public function byUuid(string $uuid): ?Company
     {
         $model = ScoutCompanyEloquentModel::query()->where('uuid', $uuid)->first();
@@ -67,7 +76,13 @@ final readonly class EloquentCompanyRepository implements CompanyRepositoryPort
 
     public function recordPublicData(Company $company, array $fields, array $evidence): void
     {
-        $this->write($company, [...$fields, 'public_data_evidence' => $evidence]);
+        $clamped = [];
+
+        foreach ([...$fields, 'public_data_evidence' => $evidence] as $key => $value) {
+            $clamped[$key] = is_string($value) ? mb_substr($value, 0, self::STRING_COLUMN_LENGTH) : $value;
+        }
+
+        $this->write($company, $clamped);
     }
 
     public function recordDecisionMakers(Company $company, bool $hasDecisionMaker, ?int $teamSizeObserved): void

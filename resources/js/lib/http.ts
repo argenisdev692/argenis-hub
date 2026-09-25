@@ -16,6 +16,7 @@ export class HttpError extends Error {
         message: string,
         public readonly status: number,
         public readonly errors?: Record<string, string[]>,
+        public readonly retryAfter: number | null = null,
     ) {
         super(message);
     }
@@ -33,10 +34,20 @@ async function toHttpError(res: Response): Promise<HttpError> {
         errors?: Record<string, string[]>;
     } | null;
 
+    // Laravel answers 429 with a `Retry-After` header in seconds, so callers
+    // behind a tight throttle can hold a cooldown instead of inviting a retry
+    // that can only fail again.
+    const retryAfterHeader = res.headers.get('Retry-After');
+    const retryAfterSeconds =
+        retryAfterHeader === null ? Number.NaN : Number(retryAfterHeader);
+
     return new HttpError(
         body?.message ?? 'Something went wrong. Please try again.',
         res.status,
         body?.errors,
+        Number.isFinite(retryAfterSeconds)
+            ? Math.max(0, Math.floor(retryAfterSeconds))
+            : null,
     );
 }
 

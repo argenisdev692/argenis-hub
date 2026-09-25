@@ -23,7 +23,10 @@ it('boots the provider and exposes the status route', function (): void {
     $this->actingAs($admin)
         ->getJson('/data/admin/lead-scout/status')
         ->assertOk()
-        ->assertJson(['module' => 'lead-scout', 'rules_version' => '2026.09.3', 'ok' => true]);
+        ->assertJson(['module' => 'lead-scout', 'rules_version' => '2026.09.3', 'ok' => true])
+        ->assertJsonPath('queues.lead-scout', 0)
+        ->assertJsonPath('queues.lead-scout-llm', 0)
+        ->assertJsonPath('queues.default', 0);
 });
 
 it('seeds the six lead-scout permissions onto admin', function (): void {

@@ -171,6 +171,13 @@ final class LeadScoutServiceProvider extends ServiceProvider
     /**
      * Per user, per minute (OWASP §14, LLM10). The `lead-scout-llm` limiter
      * guards every draft/signal generation route (T075).
+     *
+     * The on-demand job triggers get their own named buckets on purpose:
+     * anonymous `throttle:N,1` middlewares share one counter per user with the
+     * `throttle:60,1` group, so ordinary reads (leads list, budgets, status)
+     * drained the 2/min rescore/discover budget and the first click already
+     * answered 429. A named limiter with its own `by()` prefix isolates each
+     * budget from group traffic.
      */
     private function registerRateLimiters(): void
     {
@@ -186,6 +193,24 @@ final class LeadScoutServiceProvider extends ServiceProvider
             static fn (Request $request): Limit => Limit::perMinute(
                 (int) config('lead-scout.rate_limits.export', 10),
             )->by('lead-scout-export:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+        );
+
+        RateLimiter::for(
+            'lead-scout-jobs-ingest',
+            static fn (Request $request): Limit => Limit::perMinute(6)
+                ->by('lead-scout-jobs-ingest:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+        );
+
+        RateLimiter::for(
+            'lead-scout-jobs-discover',
+            static fn (Request $request): Limit => Limit::perMinute(2)
+                ->by('lead-scout-jobs-discover:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+        );
+
+        RateLimiter::for(
+            'lead-scout-jobs-rescore',
+            static fn (Request $request): Limit => Limit::perMinute(2)
+                ->by('lead-scout-jobs-rescore:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
         );
     }
 

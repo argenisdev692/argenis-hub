@@ -37,7 +37,7 @@ final readonly class ExtractRequirementsHandler
     public function handle(string $postingUuid, int $userId, int $maxInputChars = 20000): array
     {
         $posting = $this->postings->scoringContext($postingUuid, $userId)
-            ?? throw new PostingNotFoundException("Posting {$postingUuid} not found.");
+                ?? throw new PostingNotFoundException("Posting {$postingUuid} not found.");
 
         $hash = hash('sha256', $posting->latestText);
         $existing = $this->postings->requirementsForText($posting->id, $userId, $hash);
@@ -51,8 +51,8 @@ final readonly class ExtractRequirementsHandler
         $valid = [];
 
         foreach ($extracted['requirements'] as $requirement) {
-            $tag = RequirementTag::tryFrom((string) ($requirement['tag'] ?? ''));
-            $nature = RequirementNature::tryFrom((string) ($requirement['nature'] ?? ''));
+            $tag = self::tag((string) ($requirement['tag'] ?? ''));
+            $nature = self::nature((string) ($requirement['nature'] ?? ''));
 
             if ($tag === null || $nature === null) {
                 continue;
@@ -88,4 +88,48 @@ final readonly class ExtractRequirementsHandler
 
         return $rows;
     }
+
+    /**
+     * Model output is case- and wording-unstable ("Required", "must-have",
+     * "hard skill") while the domain enums are exact. Normalize before the
+     * strict lookup so a capitalization never costs a paid extraction.
+     */
+    private static function tag(string $raw): ?RequirementTag
+    {
+        $normalized = mb_strtolower(trim($raw));
+
+        return RequirementTag::tryFrom($normalized)
+            ?? RequirementTag::tryFrom(self::TAG_ALIASES[$normalized] ?? '');
+    }
+
+    private static function nature(string $raw): ?RequirementNature
+    {
+        $normalized = mb_strtolower(trim($raw));
+
+        return RequirementNature::tryFrom($normalized)
+            ?? RequirementNature::tryFrom(self::NATURE_ALIASES[$normalized] ?? '');
+    }
+
+    /** @var array<string, string> */
+    private const array TAG_ALIASES = [
+        'must-have' => 'required',
+        'must have' => 'required',
+        'mandatory' => 'required',
+        'essential' => 'required',
+        'musthave' => 'required',
+        'nice-to-have' => 'preferred',
+        'nice to have' => 'preferred',
+        'plus' => 'bonus',
+    ];
+
+    /** @var array<string, string> */
+    private const array NATURE_ALIASES = [
+        'hard skill' => 'hard',
+        'hard skills' => 'hard',
+        'technical' => 'hard',
+        'soft skill' => 'soft',
+        'soft skills' => 'soft',
+        'interpersonal' => 'soft',
+        'communication' => 'soft',
+    ];
 }
