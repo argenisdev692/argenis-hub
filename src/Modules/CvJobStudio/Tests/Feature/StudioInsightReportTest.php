@@ -156,9 +156,10 @@ it('counts requirement frequency per posting instead of per distinct name (FR-26
     expect($rows['Laravel']['count'])->toBe(3)
         ->and($rows['Laravel']['covered'])->toBeTrue();
 
-    // Vue.js: two of the three postings, and never matched by a score.
-    expect($rows['Vue.js']['count'])->toBe(2)
-        ->and($rows['Vue.js']['covered'])->toBeFalse();
+    // Vue: two of the three postings, and never matched by a score. The
+    // "Vue.js" spelling folds onto the "Vue" label.
+    expect($rows['Vue']['count'])->toBe(2)
+        ->and($rows['Vue']['covered'])->toBeFalse();
 
     // Three postings is under the 30-job gate, so the report carries counts
     // without percentages and says why.
@@ -166,7 +167,81 @@ it('counts requirement frequency per posting instead of per distinct name (FR-26
         ->and($report->sampleNote)->toContain('30');
 });
 
-it('expresses the percentage over postings once the sample supports it (FR-26)', function (): void {
+it('merges one real signal that arrives spelled six ways (FR-26)', function (): void {
+    // The exact fragmentation a 21-posting corpus produced: six spellings of
+    // English proficiency, three of "attention to detail", three of application
+    // architecture, and two of Laravel — each counted at a fraction of its real
+    // frequency, which is how the report hid the reader's own blocker.
+    $rows = (new RequirementFrequencyCounter)->count([
+        ['posting_id' => 1, 'canonical_name' => 'English Communication Skills', 'covered' => false],
+        ['posting_id' => 2, 'canonical_name' => 'English communication skills', 'covered' => false],
+        ['posting_id' => 3, 'canonical_name' => 'English Communication', 'covered' => false],
+        ['posting_id' => 4, 'canonical_name' => 'English Proficiency', 'covered' => false],
+        ['posting_id' => 5, 'canonical_name' => 'English proficiency', 'covered' => false],
+        ['posting_id' => 6, 'canonical_name' => 'English language assessment', 'covered' => false],
+        ['posting_id' => 7, 'canonical_name' => 'Application Architecture', 'covered' => false],
+        ['posting_id' => 8, 'canonical_name' => 'Application Architecture Expertise', 'covered' => false],
+        ['posting_id' => 9, 'canonical_name' => 'application_architecture_skill', 'covered' => false],
+        ['posting_id' => 1, 'canonical_name' => 'Laravel', 'covered' => true],
+        ['posting_id' => 2, 'canonical_name' => 'Laravel/PHP/Nuxt Knowledge', 'covered' => true],
+    ], 1);
+
+    $byKey = collect($rows['requirements'])->keyBy('key');
+
+    expect($byKey->keys()->all())->toBe(['english', 'application_architecture', 'laravel'])
+        ->and($byKey['english']['count'])->toBe(6)
+        ->and($byKey['english']['name'])->toBe('English')
+        ->and($byKey['laravel']['count'])->toBe(2)
+        ->and($byKey['application_architecture']['count'])->toBe(3)
+        ->and($byKey['laravel']['covered'])->toBeTrue();
+});
+
+it('keeps logistics and HR filler out of the skill table (FR-26)', function (): void {
+    // Connectivity, equipment and scraped admin are not skills. A real corpus
+    // listed "Stable internet connection (min 50 Mbit/s)", "Required equipment:
+    // headset, two monitors, webcam, powerful PC" and "Gmail and social media
+    // usage" as requirements; none may reach a skill-frequency table.
+    $rows = (new RequirementFrequencyCounter)->count([
+        ['posting_id' => 1, 'canonical_name' => 'Stable internet connection (min 50 Mbit/s)', 'covered' => false],
+        ['posting_id' => 2, 'canonical_name' => 'Reliable Internet & Deadline Adherence', 'covered' => false],
+        ['posting_id' => 3, 'canonical_name' => 'Required equipment: headset, two monitors, webcam, powerful PC', 'covered' => false],
+        ['posting_id' => 4, 'canonical_name' => 'Home Office Setup', 'covered' => false],
+        ['posting_id' => 5, 'canonical_name' => 'Gmail and social media usage', 'covered' => false],
+        ['posting_id' => 6, 'canonical_name' => 'Bookkeeping experience', 'covered' => false],
+        ['posting_id' => 7, 'canonical_name' => 'Word Processing Software Usage', 'covered' => false],
+        ['posting_id' => 8, 'canonical_name' => 'Politeness', 'covered' => false],
+        ['posting_id' => 9, 'canonical_name' => 'Minimum 4 years experience', 'covered' => false],
+        ['posting_id' => 10, 'canonical_name' => 'Laravel', 'covered' => true],
+    ], 1);
+
+    $names = collect($rows['requirements'])->pluck('name')->all();
+
+    // Soft skills are kept on purpose — they are genuine requirements, and
+    // dropping them would make the table disagree with its own data.
+    expect($names)->not->toContain('Laravel', 'Internet Connection', 'Bookkeeping', 'Politeness')
+        ->and($names)->toContain('Laravel')
+        ->and(collect($names)->join(' '))->not->toContain('Internet', 'equipment', 'Gmail', 'Bookkeeping', 'Politeness', 'headset')
+        ->and($rows['total'])->toBe(10);
+});
+
+it('counts eligibility clauses apart from skills instead of dropping them', function (): void {
+    $rows = (new RequirementFrequencyCounter)->count([
+        ['posting_id' => 1, 'canonical_name' => 'EU residency outside Germany', 'covered' => false],
+        ['posting_id' => 2, 'canonical_name' => 'EU residency outside Germany', 'covered' => false],
+        ['posting_id' => 1, 'canonical_name' => 'Full-time availability', 'covered' => false],
+        ['posting_id' => 3, 'canonical_name' => 'Preference for contract work over full-time roles', 'covered' => false],
+        ['posting_id' => 2, 'canonical_name' => 'React', 'covered' => false],
+    ], 1);
+
+    expect(collect($rows['requirements'])->pluck('name')->all())->toBe(['React'])
+        ->and($rows['eligibility'])->toBe([
+            'EU residency outside Germany' => 2,
+            'Full-time availability' => 1,
+            'Preference for contract work over full-time roles' => 1,
+        ]);
+});
+
+it('exposes the percentage over postings once the sample supports it (FR-26)', function (): void {
     $rows = (new RequirementFrequencyCounter)->count([
         ['posting_id' => 1, 'canonical_name' => 'Laravel', 'covered' => true],
         ['posting_id' => 2, 'canonical_name' => 'Laravel', 'covered' => true],
@@ -178,8 +253,9 @@ it('expresses the percentage over postings once the sample supports it (FR-26)',
     // The repeat mention inside posting 1 counts once: frequency is a property
     // of postings, not of how often a posting repeats itself.
     expect($rows['total'])->toBe(3)
-        ->and($rows['requirements'][0])->toBe(['name' => 'Laravel', 'count' => 3, 'covered' => true, 'percentage' => 100.0])
-        ->and($rows['requirements'][1])->toBe(['name' => 'Vue.js', 'count' => 1, 'covered' => false, 'percentage' => 33.3]);
+        ->and($rows['requirements'][0])->toBe(['name' => 'Laravel', 'key' => 'laravel', 'count' => 3, 'covered' => true, 'percentage' => 100.0])
+        ->and($rows['requirements'][1])->toBe(['name' => 'Vue', 'key' => 'vue', 'count' => 1, 'covered' => false, 'percentage' => 33.3])
+        ->and($rows['eligibility'])->toBe([]);
 });
 
 it('suppresses percentages under the 30-posting gate but keeps the counts (FR-26)', function (): void {
@@ -199,11 +275,12 @@ it('recommends only requirements the CV already evidences (FR-8)', function (): 
     $frequency = [
         'total' => 12,
         'requirements' => [
-            ['name' => 'Laravel', 'count' => 9, 'covered' => true, 'percentage' => 75.0],
-            ['name' => 'Vue.js', 'count' => 6, 'covered' => true, 'percentage' => 50.0],
-            ['name' => 'Kubernetes', 'count' => 8, 'covered' => false, 'percentage' => 66.7],
-            ['name' => 'GraphQL', 'count' => 4, 'covered' => false, 'percentage' => 33.3],
+            ['name' => 'Laravel', 'key' => 'Laravel', 'count' => 9, 'covered' => true, 'percentage' => 75.0],
+            ['name' => 'Vue', 'key' => 'Vue', 'count' => 6, 'covered' => true, 'percentage' => 50.0],
+            ['name' => 'Kubernetes', 'key' => 'Kubernetes', 'count' => 8, 'covered' => false, 'percentage' => 66.7],
+            ['name' => 'GraphQL', 'key' => 'GraphQL', 'count' => 4, 'covered' => false, 'percentage' => 33.3],
         ],
+        'eligibility' => [],
     ];
 
     $recommendations = $recommender->recommend($frequency);
@@ -220,12 +297,12 @@ it('never recommends a one-off requirement and caps the list at five', function 
     $requirements = [];
 
     for ($i = 1; $i <= 8; $i++) {
-        $requirements[] = ['name' => "Skill {$i}", 'count' => 4, 'covered' => true, 'percentage' => 20.0];
+        $requirements[] = ['name' => "Skill {$i}", 'key' => "skill {$i}", 'count' => 4, 'covered' => true, 'percentage' => 20.0];
     }
 
-    $requirements[] = ['name' => 'Lonely', 'count' => 1, 'covered' => true, 'percentage' => 5.0];
+    $requirements[] = ['name' => 'Lonely', 'key' => 'lonely', 'count' => 1, 'covered' => true, 'percentage' => 5.0];
 
-    $recommendations = (new InsightRecommender)->recommend(['total' => 20, 'requirements' => $requirements]);
+    $recommendations = (new InsightRecommender)->recommend(['total' => 20, 'requirements' => $requirements, 'eligibility' => []]);
 
     expect($recommendations)->toHaveCount(5)
         ->and(implode(' ', $recommendations))->not->toContain('Lonely');

@@ -26,7 +26,7 @@ final readonly class InsightRecommender
     private const int MAX_RECOMMENDATIONS = 5;
 
     /**
-     * @param  array{total: int, requirements: array<int, array{name: string, count: int, covered: bool, percentage: float|null}>}  $frequency
+     * @param  array{total: int, requirements: array<int, array{name: string, key: string, count: int, covered: bool, percentage: float|null}>, eligibility: array<string, int>}  $frequency
      * @return list<string>
      */
     #[\NoDiscard]

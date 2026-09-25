@@ -1083,10 +1083,12 @@ declare namespace Modules {
                         total: number;
                         requirements: {
                             name: string;
+                            key: string;
                             count: number;
                             covered: boolean;
                             percentage: number | null;
                         }[];
+                        eligibility: Record<string, number>;
                     };
                     readonly reach_table: {
                         cap: string;

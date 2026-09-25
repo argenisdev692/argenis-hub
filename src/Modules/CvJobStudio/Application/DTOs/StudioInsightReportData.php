@@ -13,7 +13,7 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 final class StudioInsightReportData extends Data
 {
     /**
-     * @param  array{total: int, requirements: list<array{name: string, count: int, covered: bool, percentage: float|null}>}  $requirements
+     * @param  array{total: int, requirements: list<array{name: string, key: string, count: int, covered: bool, percentage: float|null}>, eligibility: array<string, int>}  $requirements
      * @param  list<array{cap: string, capped_count: int, unlocked_count: int}>  $reachTable
      * @param  list<string>  $recommendations
      * @param  array{suppressed: bool, rows: list<array{requirement: string, answered_rate: float|null, silent_rate: float|null}>}  $outcomeCorrelation

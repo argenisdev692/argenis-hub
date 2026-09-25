@@ -20,6 +20,7 @@ const { report: reportData } = useInsightReport(uuid, true);
 const { rates } = useOwnRates();
 
 const requirements = computed(() => reportData.value?.requirements.requirements ?? []);
+const eligibility = computed(() => reportData.value?.requirements.eligibility ?? {});
 const reachTable = computed(() => reportData.value?.reach_table ?? []);
 const recommendations = computed(() => reportData.value?.recommendations ?? []);
 const correlation = computed(
@@ -31,6 +32,12 @@ const correlation = computed(
 );
 const jdsAnalyzed = computed(() => reportData.value?.jds_analyzed ?? 0);
 const sampleNote = computed(() => reportData.value?.sample_note ?? null);
+
+const eligibilityEntries = computed(() =>
+    Object.entries(eligibility.value)
+        .map(([requirement, count]) => ({ requirement, count }))
+        .sort((a, b) => b.count - a.count || a.requirement.localeCompare(b.requirement)),
+);
 </script>
 
 <template>
@@ -71,6 +78,32 @@ const sampleNote = computed(() => reportData.value?.sample_note ?? null);
                 Built only from requirements your CV already evidences — this
                 report never suggests adding a skill you do not have.
             </p>
+        </section>
+
+        <section
+            v-if="eligibilityEntries.length > 0"
+            class="rounded-xl border border-border bg-card p-4"
+            aria-label="Eligibility and availability"
+        >
+            <h2 class="mb-2 text-sm font-semibold">
+                Eligibility &amp; availability
+            </h2>
+            <p class="mb-2 text-xs text-muted-foreground">
+                Counted apart from skills: these are the clauses that decide
+                whether you can take the job at all, not what it is built with.
+            </p>
+            <ul class="flex flex-col gap-1 text-sm">
+                <li
+                    v-for="row in eligibilityEntries"
+                    :key="row.requirement"
+                    class="flex items-center justify-between gap-2"
+                >
+                    <span>{{ row.requirement }}</span>
+                    <span class="tabular-nums text-muted-foreground">
+                        {{ row.count }} of {{ jdsAnalyzed }}
+                    </span>
+                </li>
+            </ul>
         </section>
 
         <section
