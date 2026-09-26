@@ -14,6 +14,14 @@ use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioSkillRe
  * JavaScript ⇄ JS/ES6/ECMAScript, TypeScript ⇄ TS, Vue.js ⇄ Vue/VueJS/Vue 3,
  * Node.js ⇄ Node/NodeJS, PostgreSQL ⇄ Postgres, REST APIs ⇄ REST/RESTful,
  * family CI/CD ⇄ GitHub Actions.
+ *
+ * React and Inertia.js rows added 2026-09-25 with the React pivot. Without
+ * them a posting asking for "React.js" or "ReactJS" scored an UNCOVERED
+ * requirement against a CV that ships React in production: `SkillRelationSet`
+ * credits a match by exact name or by a confirmed relation, so a missing alias
+ * is a false negative in the insight report and a lost credit in the score.
+ * `stack_must` already listed `Inertia.js`, but a posting saying plain
+ * `Inertia` did not resolve to it for the same reason.
  */
 class StudioSkillRelationSeeder extends Seeder
 {
@@ -23,6 +31,11 @@ class StudioSkillRelationSeeder extends Seeder
         ['from' => 'JavaScript', 'to' => 'ES6', 'kind' => 'alias'],
         ['from' => 'JavaScript', 'to' => 'ECMAScript', 'kind' => 'alias'],
         ['from' => 'TypeScript', 'to' => 'TS', 'kind' => 'alias'],
+        ['from' => 'React', 'to' => 'React.js', 'kind' => 'alias'],
+        ['from' => 'React', 'to' => 'ReactJS', 'kind' => 'alias'],
+        ['from' => 'React', 'to' => 'React 19', 'kind' => 'alias'],
+        ['from' => 'Inertia.js', 'to' => 'Inertia', 'kind' => 'alias'],
+        ['from' => 'Inertia.js', 'to' => 'Inertia v3', 'kind' => 'alias'],
         ['from' => 'Vue.js', 'to' => 'Vue', 'kind' => 'alias'],
         ['from' => 'Vue.js', 'to' => 'VueJS', 'kind' => 'alias'],
         ['from' => 'Vue.js', 'to' => 'Vue 3', 'kind' => 'alias'],

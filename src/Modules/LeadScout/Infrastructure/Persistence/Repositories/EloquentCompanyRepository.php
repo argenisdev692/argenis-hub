@@ -95,6 +95,33 @@ final readonly class EloquentCompanyRepository implements CompanyRepositoryPort
         $this->write($company, $clamped);
     }
 
+    public function recordVerifiedCountry(
+        Company $company,
+        ?string $country,
+        string $source,
+        ?string $evidenceUrl,
+        ?int $overlapHours,
+    ): void {
+        // The search-derived country is preserved once, on the first
+        // resolution, as provenance. Discovery guessed it from the query that
+        // happened to surface the company, so keeping it is the only way an
+        // auditor can see that the two disagreed (FR-37).
+        $attributes = [
+            'country' => $country,
+            'country_source' => $source,
+            'country_evidence_url' => $evidenceUrl !== null
+                ? mb_substr($evidenceUrl, 0, self::STRING_COLUMN_LENGTH)
+                : null,
+            'timezone_overlap_hours' => $overlapHours,
+        ];
+
+        if ($company->countryOrigin === null && $company->country !== null) {
+            $attributes['country_origin'] = $company->country;
+        }
+
+        $this->write($company, $attributes);
+    }
+
     private function mayRename(Company $company): bool
     {
         $name = trim($company->name);

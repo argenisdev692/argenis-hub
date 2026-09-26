@@ -40,6 +40,23 @@ interface CompanyRepositoryPort
      */
     public function recordPublicData(Company $company, array $fields, array $evidence): void;
 
+    /**
+     * The country resolved from the company's own pages, replacing the one
+     * discovery guessed from the search country, plus the signal that produced
+     * it and the re-derived timezone overlap (FR-37).
+     *
+     * `country` null means "no evidence", not "no country": the column stays
+     * empty so the lead is visibly unplaced instead of silently mislabelled.
+     * `$overlapHours` null follows the same rule.
+     */
+    public function recordVerifiedCountry(
+        Company $company,
+        ?string $country,
+        string $source,
+        ?string $evidenceUrl,
+        ?int $overlapHours,
+    ): void;
+
     public function recordDecisionMakers(Company $company, bool $hasDecisionMaker, ?int $teamSizeObserved): void;
 
     /**

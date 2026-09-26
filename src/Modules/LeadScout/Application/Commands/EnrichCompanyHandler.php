@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\LeadScout\Application\Commands;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Config\Repository as Config;
 use Modules\LeadScout\Domain\Entities\Company;
 use Modules\LeadScout\Domain\Entities\FetchedPage;
 use Modules\LeadScout\Domain\Enums\ExtractionMethod;
@@ -20,6 +21,7 @@ use Modules\LeadScout\Domain\Ports\PipelineLoggerPort;
 use Modules\LeadScout\Domain\Ports\PipelineQueuePort;
 use Modules\LeadScout\Domain\Ports\SignalRepositoryPort;
 use Modules\LeadScout\Domain\Ports\SuppressionRepositoryPort;
+use Modules\LeadScout\Domain\Services\CompanyCountryResolver;
 use Modules\LeadScout\Domain\Services\PublicCompanyDataExtractor;
 use Modules\LeadScout\Domain\Services\SuppressionGate;
 use Modules\LeadScout\Domain\ValueObjects\CanonicalDomain;
@@ -65,6 +67,8 @@ final readonly class EnrichCompanyHandler
         private PublicCompanyDataExtractor $publicData,
         private DetectContactChannelsHandler $channels,
         private CompanyRepositoryPort $companies,
+        private CompanyCountryResolver $countryResolver,
+        private Config $config,
         private FetchedPageRepositoryPort $pages,
         private SignalRepositoryPort $signals,
         private SuppressionGate $gate,
@@ -326,11 +330,11 @@ final readonly class EnrichCompanyHandler
         $extracted = $this->publicData->extract($pages);
 
         if (! $extracted['is_natural_person']) {
-            $this->companies->recordPublicData(
-                $company,
-                array_intersect_key($extracted['data'], array_flip(self::PUBLIC_FIELDS)),
-                $extracted['evidence'],
-            );
+            $publicData = array_intersect_key($extracted['data'], array_flip(self::PUBLIC_FIELDS));
+
+            $this->companies->recordPublicData($company, $publicData, $extracted['evidence']);
+
+            $this->recordVerifiedCountry($company, $publicData, $extracted['evidence']);
 
             return false;
         }
@@ -351,5 +355,67 @@ final readonly class EnrichCompanyHandler
         ));
 
         return true;
+    }
+
+    /**
+     * Overlap with a 09:00-18:00 Portugal day, from the verified country. An
+     * unknown country scores 0 rather than inheriting the search's country:
+     * "we could not place this company" is the honest answer, and a lead whose
+     * overlap cannot be established should not outrank one that can.
+     */
+    private function overlapHoursFor(?string $country): ?int
+    {
+        if ($country === null) {
+            return null;
+        }
+
+        $overlap = (array) $this->config->get('lead-scout.geo.overlap_hours', []);
+
+        return isset($overlap[$country]) ? (int) $overlap[$country] : null;
+    }
+
+    /**
+     * Replace the country discovery guessed from the search with one resolved
+     * from the company's own pages, and re-derive the timezone overlap from it
+     * (FR-37).
+     *
+     * Discovery wrote `country` from the country of the planned query, so a
+     * Portuguese search recorded an India company as `PT` — and because
+     * `timezone_overlap_hours` was derived from the same value, the
+     * `geo_contract` (weight 10) and `remote` (weight 5) subscores were computed
+     * from a country nobody had checked.
+     *
+     * The search country is kept in `country_origin` rather than discarded: it
+     * is genuine provenance, and an auditor needs to see that the two disagreed.
+     * When the site yields no country at all the column is left NULL — an
+     * unknown country is visible and reviewable, a wrong one is neither.
+     */
+    private function recordVerifiedCountry(Company $company, array $publicData, array $evidence): void
+    {
+        $resolved = $this->countryResolver->resolve(
+            [
+                'jsonld_country' => $publicData['country'] ?? null,
+                'tax_id' => $publicData['tax_id'] ?? null,
+                'registry_info' => $publicData['registry_info'] ?? null,
+                'legal_form' => $publicData['legal_form'] ?? null,
+                'city' => $publicData['city'] ?? null,
+                'site_languages' => isset($publicData['site_languages'])
+                    ? json_encode($publicData['site_languages'], JSON_THROW_ON_ERROR)
+                    : null,
+            ],
+            $company->canonicalDomain,
+        );
+
+        $evidenceUrl = $resolved['evidence_url'] !== null
+            ? $resolved['evidence_url']
+            : ($evidence['legal_form']['url'] ?? $evidence['city']['url'] ?? $evidence['tax_id']['url'] ?? null);
+
+        $this->companies->recordVerifiedCountry(
+            $company,
+            $resolved['country'],
+            $resolved['source'],
+            $evidenceUrl,
+            $this->overlapHoursFor($resolved['country']),
+        );
     }
 }

@@ -117,8 +117,33 @@ final readonly class PublicCompanyDataExtractor
 
             if (is_array($address)) {
                 $set('city', $this->str($address['addressLocality'] ?? null), $url, 'JSON-LD Organization address');
+                // The registered country of a legal person, stated by the legal
+                // person. This is the strongest public country signal there is,
+                // and the reason the country is resolved here rather than
+                // inherited from the search that found the company (FR-37).
+                $set('country', $this->jsonLdCountry($address['addressCountry'] ?? null), $url, 'JSON-LD Organization addressCountry');
             }
         }
+    }
+
+    /**
+     * `addressCountry` arrives either as `"PT"` or as
+     * `{"@type":"Country","name":"Portugal"}`; both are kept as raw text so the
+     * resolver owns the name→ISO mapping and the evidence URL is not lost.
+     */
+    private function jsonLdCountry(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            return trim($value) === '' ? null : trim($value);
+        }
+
+        if (is_array($value)) {
+            $name = $this->str($value['name'] ?? $value['identifier'] ?? null);
+
+            return $name !== null ? $name : null;
+        }
+
+        return null;
     }
 
     /**
@@ -221,6 +246,14 @@ final readonly class PublicCompanyDataExtractor
             // footer: the legal suffix is what makes it a company identity.
             if (preg_match('/^.{2,120}?\s*,?\s*('.implode('|', array_map(static fn (string $form): string => preg_quote($form, '/'), self::LEGAL_FORMS['company'])).')\.?$/iu', $line, $m) === 1) {
                 $set('legal_name', trim($m[0]), $url, $line);
+            }
+
+            // A legal suffix in running footer text (not only at the end of a
+            // line) is a jurisdiction claim: «© 2026 Acme Kft.». `legal_form` is
+            // already in the FR-38 allowlist, so this widens nothing — it feeds
+            // the country resolver instead of storing a new field (FR-37).
+            if (preg_match('/('.implode('|', array_map(static fn (string $form): string => preg_quote($form, '/'), self::LEGAL_FORMS['company'])).')/iu', $line) === 1) {
+                $set('legal_form', $line, $url, $line);
             }
         }
     }
