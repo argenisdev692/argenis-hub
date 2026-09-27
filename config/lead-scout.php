@@ -271,13 +271,9 @@ return [
     | selector shows the estimate per 100 uses; `price_valid_until` warns.
     */
     'ai_catalog' => [
-        'gemini-3.7-flash' => [
-            'provider' => 'gemini',
-            'label' => 'Gemini 3.7 Flash',
-            'input_per_mtok_usd' => 0.75,
-            'output_per_mtok_usd' => 3.75,
-            'price_valid_until' => '2026-12-31',
-        ],
+        // Anthropic first: it is the primary for both purposes, so it heads
+        // the selector. Cost is the reason it is not simply "the best model" —
+        // see the note on `ai_defaults` before swapping these.
         'claude-sonnet-5' => [
             'provider' => 'anthropic',
             'label' => 'Claude Sonnet 5',
@@ -285,14 +281,53 @@ return [
             'output_per_mtok_usd' => 10.0,
             'price_valid_until' => null,
         ],
+        'gemini-3.7-flash' => [
+            'provider' => 'gemini',
+            'label' => 'Gemini 3.7 Flash',
+            'input_per_mtok_usd' => 0.75,
+            'output_per_mtok_usd' => 3.75,
+            'price_valid_until' => '2026-12-31',
+        ],
+    ],
+
+    /*
+    | Extraction runs once per scraped page (`max_pages_per_company`), so its
+    | provider choice is a cost decision, not a quality one: at Sonnet 5 rates
+    | a page is roughly $0.014 against ~3k input / 800 output tokens, which is
+    | ~550 pages inside the `ai` budget. Gemini Flash is ~2.7x cheaper per page
+    | but its free tier allows ~1 generation request per minute, which is below
+    | the throughput this stage needs — so it is the fallback, not the primary.
+    |
+    | NOTE: these defaults only seed a row that does not exist yet.
+    | `LeadScoutAiSettingsSeeder` is create-once on purpose so the settings UI
+    | stays authoritative, and `ConfigAiModelCatalog` prefers the stored row
+    | over both this config and `.env`. Changing a default here does NOT
+    | change an already-seeded database — the row has to be updated too.
+    */
+    /*
+    | Pricing for a model that is NOT in `ai_catalog`.
+    |
+    | A server-side default may name any model (see the note above), and the
+    | budget guard must still price it. Pricing an unknown model at zero —
+    | which is what a missing catalog entry used to do — silently disables the
+    | `ai` budget, so an uncatalogued model is billed at this rate instead.
+    |
+    | The defaults are deliberately the PAID tier, not the cheap one: an
+    | over-estimate trips the budget guard early, while an under-estimate
+    | lets a run overspend. Erring toward refusing work is the recoverable
+    | direction; erring toward spending is not.
+    */
+    'ai_pricing_default' => [
+        'input_per_mtok_usd' => (float) env('LEAD_SCOUT_AI_INPUT_PER_MTOK_USD', 2.0),
+        'output_per_mtok_usd' => (float) env('LEAD_SCOUT_AI_OUTPUT_PER_MTOK_USD', 10.0),
     ],
 
     'ai_defaults' => [
         'extraction' => [
-            'provider' => env('LEAD_SCOUT_AI_EXTRACTION_PROVIDER', 'gemini'),
-            'model' => env('LEAD_SCOUT_AI_EXTRACTION_MODEL', 'gemini-3.7-flash'),
-            'fallback_provider' => env('LEAD_SCOUT_AI_EXTRACTION_FALLBACK_PROVIDER', 'anthropic'),
-            'fallback_model' => env('LEAD_SCOUT_AI_EXTRACTION_FALLBACK_MODEL', 'claude-sonnet-5'),
+            'provider' => env('LEAD_SCOUT_AI_EXTRACTION_PROVIDER', 'anthropic'),
+            'model' => env('LEAD_SCOUT_AI_EXTRACTION_MODEL', 'claude-sonnet-5'),
+            'fallback_provider' => env('LEAD_SCOUT_AI_EXTRACTION_FALLBACK_PROVIDER', 'gemini'),
+            'fallback_model' => env('LEAD_SCOUT_AI_EXTRACTION_FALLBACK_MODEL', 'gemini-3.7-flash'),
         ],
         'drafting' => [
             'provider' => env('LEAD_SCOUT_AI_DRAFTING_PROVIDER', 'anthropic'),

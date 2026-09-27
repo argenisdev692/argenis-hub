@@ -2,10 +2,55 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Events\Dispatcher;
+use Laravel\Ai\Contracts\Gateway\Gateway;
+use Laravel\Ai\Providers\GeminiProvider;
 use Laravel\Ai\Reranking;
 use Laravel\Ai\Responses\Data\RankedDocument;
 use Shared\Infrastructure\AI\ProviderFailover;
 use Shared\Infrastructure\AI\ResearchReranker;
+
+/*
+| These guard the shared AI wiring, not one module's behaviour.
+|
+| The model ids used to be decided by laravel/ai itself: the provider configs
+| carried no `models` key, so the driver fell back to a model id hardcoded
+| inside the package. `ANTHROPIC_TEXT_MODEL` / `GEMINI_TEXT_MODEL` sat in
+| `.env` matching those defaults by coincidence and were read by nothing. A
+| `composer update` that bumped the package default would have changed the
+| model in production with no diff in this repository.
+*/
+
+it('takes the text model from config instead of the package default', function (): void {
+    foreach (['anthropic', 'gemini'] as $provider) {
+        expect(config("ai.providers.{$provider}.models.text.default"))
+            ->toBeString()
+            ->not->toBe('');
+    }
+});
+
+it('binds the configured model ids to the env keys that name them', function (): void {
+    // The property that was missing, asserted against the driver itself: hand
+    // the provider a config with a model id the package does not know, and it
+    // must hand that id back. Before the wiring this always returned the id
+    // hardcoded inside laravel/ai.
+    $provider = new GeminiProvider(
+        gateway: Mockery::mock(Gateway::class),
+        config: ['models' => ['text' => ['default' => 'gemini-9-flash']]],
+        events: Mockery::mock(Dispatcher::class),
+    );
+
+    expect($provider->defaultTextModel())->toBe('gemini-9-flash')
+        ->and(config('ai.providers.gemini.models.text.default'))->toBeString();
+});
+
+it('keeps the gemini base url on a versioned path', function (): void {
+    // The driver appends `models/{model}:generateContent`. A bare host makes
+    // every call 404, which reads exactly like a bad key or a lapsed billing
+    // account and is neither.
+    expect(config('ai.providers.gemini.url'))
+        ->toMatch('#^https://generativelanguage\.googleapis\.com/v1[a-z]*/$#');
+});
 
 it('prefers the requested provider, then follows the configured order without duplicates', function (): void {
     config()->set('ai.failover_order', 'openai,anthropic,gemini');

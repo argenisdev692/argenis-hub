@@ -59,6 +59,17 @@ class StudioProfileSeeder extends Seeder
             'geography_prefer' => ['PT', 'ES', 'EU'],
             'geography_deny' => [],
             'years_baseline' => 4,
+            // The defensibility filter, not a score input. Laravel is the
+            // anchor the profile is built on; React and Vue are the second
+            // frontend the candidate is still consolidating, so they are
+            // declared as `mid` — a job whose required core names neither
+            // Laravel nor a `solid` skill gets skipped by G5 even though it
+            // would still score mid-band. See `GateEvaluator::gateSkillFloor()`.
+            'skill_floors' => [
+                'Laravel' => 4,
+                'React' => 2,
+                'Vue.js' => 2,
+            ],
             'education_level' => 'bachelor',
             'language_levels' => ['es' => 'native', 'pt' => 'b2', 'en' => 'b1'],
             'protected_block' => [],
@@ -85,6 +96,7 @@ class StudioProfileSeeder extends Seeder
                 'never_seed' => $attributes['never_seed'],
                 'search_languages' => $attributes['search_languages'],
                 'years_baseline' => $attributes['years_baseline'],
+                'skill_floors' => $attributes['skill_floors'],
             ])->save();
         }
     }

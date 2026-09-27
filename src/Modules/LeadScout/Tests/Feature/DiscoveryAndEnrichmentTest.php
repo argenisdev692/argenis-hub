@@ -13,6 +13,7 @@ use Modules\LeadScout\Application\Commands\DiscoverAgenciesHandler;
 use Modules\LeadScout\Application\Commands\EnrichCompanyHandler;
 use Modules\LeadScout\Application\Commands\ResolveCompanyHandler;
 use Modules\LeadScout\Domain\Enums\CompanyOrigin;
+use Modules\LeadScout\Domain\Services\CompanyCountryResolver;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutContactChannelEloquentModel;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSignalEloquentModel;
@@ -203,6 +204,46 @@ it('resolves the company name from JSON-LD, never from a page title', function (
     expect($report['status'])->toBe('enriched')
         ->and($company->refresh()->legal_name)->toBe('Legalname Consulting S.L.')
         ->and($company->refresh()->name)->toBe('Legalname Consulting S.L.');
+});
+
+it('carries the JSON-LD country through with its source and evidence', function (): void {
+    // The wiring, not the resolver: the country is read from the extractor
+    // output, which is filtered by the public-field allowlist before anything
+    // else is stored. `country` is deliberately NOT on that allowlist — it is
+    // the conclusion of the resolution, not public data — so the wiring has to
+    // pass the unfiltered array or the value silently disappears and the
+    // search-derived country stands unchallenged.
+    $html = fn (string $body): string => "<html><body>{$body}</body></html>";
+
+    Http::fake([
+        'https://warsawdev.example/robots.txt' => Http::response("User-agent: *\nDisallow:\n", 200),
+        'https://warsawdev.example/sitemap.xml' => Http::response('oops', 404),
+        'https://warsawdev.example/' => Http::response($html(
+            '<script type="application/ld+json">{"@type":"Organization","legalName":"Warsaw Dev Sp. z o.o.","address":{"addressCountry":"PL"}}</script>'
+            .'<a href="https://warsawdev.example/servicios">Servicios</a>'
+        ), 200, ['Content-Type' => 'text/html']),
+        'https://warsawdev.example/servicios' => Http::response($html(
+            '<h2>Developers for Laravel.</h2><p>We are 20 people.</p>'
+        ), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    // Discovery guessed PT from the query that surfaced the company.
+    $company = ScoutCompanyFactory::new()->discovered()->create([
+        'canonical_domain' => 'warsawdev.example',
+        'name' => 'warsawdev.example',
+        'country' => 'PT',
+    ]);
+
+    app(EnrichCompanyHandler::class)->handle($company->uuid);
+
+    $company->refresh();
+
+    expect($company->country)->toBe('PL')
+        ->and($company->country_source)->toBe(CompanyCountryResolver::SOURCE_JSONLD)
+        ->and($company->country_evidence_url)->toBe('https://warsawdev.example/')
+        // The search-derived guess is kept, so an auditor can see the two
+        // disagreed rather than having to trust that they did.
+        ->and($company->country_origin)->toBe('PT');
 });
 
 it('discards natural persons without storing identification', function (): void {

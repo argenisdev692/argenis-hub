@@ -86,16 +86,20 @@ final readonly class MeteredAiCall
     }
 
     /**
-     * Price in USD micros from the catalog's per-MTok rates; unknown models
-     * price at zero so a missing catalog entry never blocks the pipeline.
+     * Price in USD micros from the per-MTok rates.
+     *
+     * An uncatalogued model resolves to the paid-tier default rate rather than
+     * zero. Pricing it at zero would let the `ai` budget be bypassed entirely
+     * by naming a model the catalog has never heard of, so the pre-flight
+     * `ensure()` above would approve every call.
      */
     private function priceMicros(string $model, int $promptTokens, int $completionTokens): int
     {
-        $rates = (array) (config('lead-scout.ai_catalog', [])[$model] ?? []);
+        $rates = $this->catalog->rates($model);
 
         return (int) round(
-            $promptTokens * (float) ($rates['input_per_mtok_usd'] ?? 0)
-            + $completionTokens * (float) ($rates['output_per_mtok_usd'] ?? 0),
+            $promptTokens * $rates['input_per_mtok_usd']
+            + $completionTokens * $rates['output_per_mtok_usd'],
         );
     }
 }

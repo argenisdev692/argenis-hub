@@ -11,6 +11,7 @@ final readonly class StudioProfileSnapshot
      * @param  list<string>  $acceptedRemoteScopes
      * @param  list<string>  $stackMust
      * @param  list<string>  $stackReject
+     * @param  array<string, int>  $skillFloors  per-skill defensibility, read by the shortlist filter
      * @param  array<string, mixed>  $rules
      */
     public function __construct(
@@ -19,6 +20,7 @@ final readonly class StudioProfileSnapshot
         public array $acceptedRemoteScopes,
         public array $stackMust,
         public array $stackReject,
+        public array $skillFloors,
         public array $rules,
     ) {}
 }

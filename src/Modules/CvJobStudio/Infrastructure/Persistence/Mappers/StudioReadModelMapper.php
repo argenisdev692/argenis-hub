@@ -109,6 +109,7 @@ final readonly class StudioReadModelMapper
             acceptedRemoteScopes: $profile->accepted_remote_scopes,
             stackMust: $profile->stack_must,
             stackReject: $profile->stack_reject,
+            skillFloors: self::skillFloors($profile->skill_floors ?? []),
             geographyDeny: $profile->geography_deny,
             yearsBaseline: $profile->years_baseline,
             uuid: $profile->uuid,
@@ -124,8 +125,42 @@ final readonly class StudioReadModelMapper
             acceptedRemoteScopes: array_values($profile->accepted_remote_scopes ?? []),
             stackMust: array_values($profile->stack_must ?? []),
             stackReject: array_values($profile->stack_reject ?? []),
+            skillFloors: self::skillFloors($profile->skill_floors ?? []),
             rules: (array) ($profile->rules ?? []),
         );
+    }
+
+    /**
+     * Levels arrive from the form as ints, from JSON as whatever `json_decode`
+     * produced. Anything outside 0-4 is dropped rather than clamped: a level of
+     * 9 is a mistake, and silently turning it into 4 would make the filter
+     * block postings the operator never asked it to block.
+     *
+     * @return array<string, int>
+     */
+    private static function skillFloors(mixed $raw): array
+    {
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $floors = [];
+
+        foreach ($raw as $skill => $level) {
+            $skill = trim((string) $skill);
+            $level = is_numeric($level) ? (int) $level : -1;
+
+            if ($skill !== '' && $level >= 0 && $level <= 4) {
+                $floors[$skill] = $level;
+            }
+        }
+
+        return $floors;
     }
 
     #[\NoDiscard]

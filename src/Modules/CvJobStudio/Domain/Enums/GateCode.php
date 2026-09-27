@@ -11,4 +11,10 @@ enum GateCode: string
     case ListingQuality = 'G3';
     case SnippetRequirements = 'G4';
     case SnippetSeniority = 'G4b';
+
+    /**
+     * No required requirement matches a skill the candidate declared an anchor
+     * for. A FILTER, not a score input — see `studio_profiles.skill_floors`.
+     */
+    case SkillFloor = 'G5';
 }

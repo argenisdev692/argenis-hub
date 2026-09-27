@@ -30,6 +30,20 @@ interface StudioProfileRepositoryPort
     public function upsert(StudioProfileData $data, int $userId, array $defaultRules): string;
 
     /**
+     * Update an existing profile BY UUID, addressed by the route rather than
+     * by the slug the form happens to send.
+     *
+     * `upsert()` matches on slug, which made editing an accident: the operator
+     * had to retype the exact slug or a second profile was created instead. The
+     * slug is now editable like any other field, and this method is what
+     * resolves the collision.
+     *
+     * @param  array<string, mixed>  $defaultRules  not touched on update
+     * @return bool false when the profile is not the owner's
+     */
+    public function updateByUuid(StudioProfileData $data, string $uuid, int $userId, array $defaultRules): bool;
+
+    /**
      * @param  array<string, mixed>  $opportunity
      * @return bool false when the profile is not the owner's
      */

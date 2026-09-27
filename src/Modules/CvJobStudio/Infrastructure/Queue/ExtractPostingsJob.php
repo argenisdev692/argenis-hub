@@ -16,8 +16,10 @@ use Illuminate\Support\Facades\Log;
 use Modules\CvJobStudio\Application\Commands\ExtractRequirementsHandler;
 use Modules\CvJobStudio\Domain\Exceptions\BudgetExceededException;
 use Modules\CvJobStudio\Domain\Ports\SpendGuardPort;
+use Modules\CvJobStudio\Domain\Services\GateEvaluator;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
 use Modules\CvJobStudio\Infrastructure\Fetching\PostingFetchLadder;
+use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioGateResultEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioPostingTextEloquentModel;
 use Modules\CvJobStudio\Infrastructure\Persistence\Eloquent\Models\StudioRunEloquentModel;
@@ -45,8 +47,9 @@ final class ExtractPostingsJob implements ShouldQueue
         PostingTextMinimiser $minimiser,
         SpendGuardPort $spend,
         ExtractRequirementsHandler $requirements,
+        GateEvaluator $gates,
     ): void {
-        $run = StudioRunEloquentModel::query()->ownedBy($this->userId)->where('id', $this->runId)->first();
+        $run = StudioRunEloquentModel::query()->ownedBy($this->userId)->with('profile')->where('id', $this->runId)->first();
 
         if ($run === null) {
             return;
@@ -122,9 +125,74 @@ final class ExtractPostingsJob implements ShouldQueue
                 });
         }
 
+        // G5's authoritative pass. It is the only gate that needs the extracted
+        // requirements, and it needs them AFTER they exist — so it cannot be
+        // decided in the gate stage, where it can only pass provisionally.
+        $this->evaluateSkillFloor($gates, $run);
+
         $run->update(['extracted_count' => $extracted, 'status' => 'extracted']);
 
         BuildInsightReportJob::dispatch($run->id, $this->userId);
+    }
+
+    /**
+     * Record the skill-floor verdict for every posting that now has
+     * requirements, then restate the run's gate tally.
+     *
+     * The recount is not cosmetic: `gate_passed_count` was written by the gate
+     * stage, when G5 could only pass. Leaving it alone would keep reporting a
+     * pass rate that includes postings this stage has just filtered out.
+     */
+    private function evaluateSkillFloor(GateEvaluator $gates, StudioRunEloquentModel $run): void
+    {
+        $profile = [
+            'skill_floors' => $run->profile?->skill_floors ?? [],
+            'stack_must' => $run->profile?->stack_must ?? [],
+        ];
+
+        StudioPostingEloquentModel::query()
+            ->ownedBy($this->userId)
+            ->where('profile_id', $run->profile_id)
+            ->whereHas('requirements')
+            ->with('requirements:id,posting_id,canonical_name,tag,nature')
+            ->chunkById(200, function ($postings) use ($gates, $profile): void {
+                foreach ($postings as $posting) {
+                    $verdict = $gates->skillFloorVerdict(
+                        [
+                            'title' => $posting->title,
+                            'url' => $posting->canonical_url,
+                            'requirements' => $posting->requirements
+                                ->map(static fn ($requirement): array => [
+                                    'canonical_name' => $requirement->canonical_name,
+                                    // The Eloquent model casts these to enums;
+                                    // the gate's contract is the scalar shape
+                                    // the repository stores.
+                                    'tag' => $requirement->tag?->value,
+                                    'nature' => $requirement->nature?->value,
+                                ])->all(),
+                        ],
+                        $profile,
+                    );
+
+                    StudioGateResultEloquentModel::query()->updateOrCreate(
+                        ['posting_id' => $posting->id, 'gate_code' => $verdict->gate->value],
+                        [
+                            'user_id' => $this->userId,
+                            'passed' => $verdict->passed,
+                            'reason_code' => $verdict->reasonCode,
+                            'detail' => $verdict->detail,
+                        ],
+                    );
+                }
+            });
+
+        $run->update([
+            'gate_passed_count' => StudioPostingEloquentModel::query()
+                ->ownedBy($this->userId)
+                ->where('profile_id', $run->profile_id)
+                ->whereDoesntHave('gateResults', static fn ($results) => $results->where('passed', false))
+                ->count(),
+        ]);
     }
 
     /**

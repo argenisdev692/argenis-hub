@@ -334,7 +334,7 @@ final readonly class EnrichCompanyHandler
 
             $this->companies->recordPublicData($company, $publicData, $extracted['evidence']);
 
-            $this->recordVerifiedCountry($company, $publicData, $extracted['evidence']);
+            $this->recordVerifiedCountry($company, $extracted['data'], $extracted['evidence']);
 
             return false;
         }
@@ -389,6 +389,13 @@ final readonly class EnrichCompanyHandler
      * is genuine provenance, and an auditor needs to see that the two disagreed.
      * When the site yields no country at all the column is left NULL — an
      * unknown country is visible and reviewable, a wrong one is neither.
+     *
+     * The array it reads is the UNFILTERED extractor output, and `country` is
+     * deliberately absent from {@see self::PUBLIC_FIELDS}. The country is not
+     * public data to be stamped on the row; it is the conclusion of this
+     * resolution. Letting `recordPublicData()` write it first would set the
+     * column with no `country_source` and no evidence URL — precisely the
+     * unverified value this method exists to replace.
      */
     private function recordVerifiedCountry(Company $company, array $publicData, array $evidence): void
     {
@@ -406,9 +413,17 @@ final readonly class EnrichCompanyHandler
             $company->canonicalDomain,
         );
 
+        // FR-7: the resolved country must cite a real page. `country` leads the
+        // fallback because a JSON-LD addressCountry is the common case and the
+        // extractor records its own evidence entry for it; the other fields are
+        // the fallbacks for a country inferred from a legal form or a city.
         $evidenceUrl = $resolved['evidence_url'] !== null
             ? $resolved['evidence_url']
-            : ($evidence['legal_form']['url'] ?? $evidence['city']['url'] ?? $evidence['tax_id']['url'] ?? null);
+            : ($evidence['country']['url']
+                ?? $evidence['legal_form']['url']
+                ?? $evidence['city']['url']
+                ?? $evidence['tax_id']['url']
+                ?? null);
 
         $this->companies->recordVerifiedCountry(
             $company,

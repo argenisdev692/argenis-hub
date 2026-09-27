@@ -101,6 +101,19 @@ return [
             'driver' => 'anthropic',
             'key' => env('ANTHROPIC_API_KEY'),
             'url' => env('ANTHROPIC_URL', 'https://api.anthropic.com/v1'),
+            // Wired from env on purpose. Without this block the driver falls
+            // back to the model id hardcoded inside laravel/ai, so the model
+            // is decided by the installed package version and a `composer
+            // update` can change it with no diff in this repository. A new
+            // model is then a one-line `.env` change.
+            'models' => [
+                'text' => [
+                    'default' => env('ANTHROPIC_TEXT_MODEL', 'claude-sonnet-5'),
+                ],
+                'image' => [
+                    'default' => env('ANTHROPIC_IMAGE_MODEL', 'claude-sonnet-5'),
+                ],
+            ],
         ],
 
         'azure' => [
@@ -148,7 +161,19 @@ return [
         'gemini' => [
             'driver' => 'gemini',
             'key' => env('GEMINI_API_KEY'),
+            // The driver appends `models/{model}:generateContent` to this, so
+            // it MUST include the API version segment. A bare host returns
+            // 404 for every model — which looks exactly like a bad key or an
+            // unpaid account, and is neither.
             'url' => env('GEMINI_URL', 'https://generativelanguage.googleapis.com/v1beta/'),
+            'models' => [
+                'text' => [
+                    'default' => env('GEMINI_TEXT_MODEL', 'gemini-3.7-flash'),
+                ],
+                'image' => [
+                    'default' => env('GEMINI_IMAGE_MODEL', 'gemini-3.1-flash-image-preview'),
+                ],
+            ],
         ],
 
         'groq' => [

@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Modules\CvJobStudio\Application\Commands\UpdateOpportunityPolicyHandler;
+use Modules\CvJobStudio\Application\Commands\UpdateProfileHandler;
 use Modules\CvJobStudio\Application\Commands\UpsertProfileHandler;
 use Modules\CvJobStudio\Application\DTOs\StudioProfileData;
 use Modules\CvJobStudio\Application\DTOs\UpdateOpportunityPolicyData;
@@ -42,6 +43,18 @@ final readonly class StudioProfileController
         $profileUuid = $upsert->handle($data, $this->ownerId($request));
 
         return back()->with('success', __('Profile saved.'));
+    }
+
+    /**
+     * Edit an existing profile. Addressed by the uuid in the route, so the slug
+     * is an ordinary editable field instead of the accidental identity the
+     * create route had to match on.
+     */
+    public function update(Request $request, string $uuid, StudioProfileData $data, UpdateProfileHandler $handler): RedirectResponse
+    {
+        $handler->handle($data, $uuid, $this->ownerId($request));
+
+        return back()->with('success', __('Profile updated.'));
     }
 
     /**

@@ -1167,6 +1167,7 @@ declare namespace Modules {
                     readonly accepted_remote_scopes: string[] | null;
                     readonly stack_must: string[] | null;
                     readonly stack_reject: string[] | null;
+                    readonly skill_floors: Record<string, number> | null;
                     readonly geography_deny: string[] | null;
                     readonly years_baseline: number | null;
                     readonly uuid: string | null;
@@ -1262,7 +1263,7 @@ declare namespace Modules {
                     | 'unreadable_requirements'
                     | 'credential_or_floor_or_language'
                     | 'weak_evidence';
-                export type GateCode = 'G1' | 'G2' | 'G3' | 'G4' | 'G4b';
+                export type GateCode = 'G1' | 'G2' | 'G3' | 'G4' | 'G4b' | 'G5';
                 export type RemoteScope =
                     | 'remote_global'
                     | 'remote_eu'

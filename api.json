@@ -4323,6 +4323,50 @@
                 }
             }
         },
+        "/cv-studio/profiles/{uuid}": {
+            "put": {
+                "operationId": "cv-studio.profiles.update",
+                "summary": "Edit an existing profile. Addressed by the uuid in the route, so the slug\nis an ordinary editable field instead of the accidental identity the\ncreate route had to match on",
+                "tags": [
+                    "StudioProfile"
+                ],
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StudioProfileData"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/cv-studio/profiles/{uuid}/policy": {
             "put": {
                 "operationId": "cv-studio.profiles.policy",
@@ -7936,7 +7980,7 @@
             },
             "StudioProfileData": {
                 "type": "object",
-                "description": "Profile create/update shape (fused: \u226590% identical). Gates, stack lock,\ngeography, languages, seniority band and protected block are profile data,\nnever engine constants (FR-30). `rules` carries the full ruleset versioned\nsnapshot; null means \"use the config defaults at score time\".",
+                "description": "Profile create/update shape (fused: \u226590% identical). Gates, stack lock,\ngeography, languages, seniority band and protected block are profile data,\nnever engine constants (FR-30). `rules` carries the full ruleset versioned\nsnapshot; null means \"use the config defaults at score time\".\n\n`skillFloors` is the per-skill defensibility the shortlist filter reads:\n`{\"Laravel\": 4, \"React\": 2}`. It is a FILTER, never a score input \u2014 see the\n`skill_floors` migration for why it must stay out of `creditFor()`.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -7993,6 +8037,19 @@
                         ],
                         "items": {
                             "type": "string"
+                        }
+                    },
+                    "skill_floors": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "maxLength": 64
+                            }
                         }
                     },
                     "geography_deny": {

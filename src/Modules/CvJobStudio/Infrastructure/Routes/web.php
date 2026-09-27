@@ -30,6 +30,12 @@ Route::middleware(['web', 'auth', 'throttle:60,1'])->prefix('cv-studio')->name('
     Route::post('/profiles', [StudioProfileController::class, 'store'])
         ->middleware('permission:CREATE_STUDIO_PROFILES')->name('profiles.store');
 
+    // Editing existed only as an accident of `upsert()` matching on the slug
+    // the form happened to send, so a profile whose slug moved could not be
+    // edited at all without creating a duplicate. Addressed by uuid.
+    Route::put('/profiles/{uuid}', [StudioProfileController::class, 'update'])
+        ->middleware('permission:UPDATE_STUDIO_PROFILES')->whereUuid('uuid')->name('profiles.update');
+
     Route::get('/postings', [StudioPostingController::class, 'index'])
         ->middleware('permission:VIEW_ANY_STUDIO_POSTINGS')->name('postings.index');
 

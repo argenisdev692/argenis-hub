@@ -26,7 +26,7 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
     private const array LIST_COLUMNS = [
         'id', 'uuid', 'user_id', 'name', 'slug', 'flow', 'is_active',
         'base_city', 'base_country', 'accepted_remote_scopes', 'stack_must',
-        'stack_reject', 'geography_deny', 'years_baseline',
+        'stack_reject', 'skill_floors', 'geography_deny', 'years_baseline',
         'rules_version', 'created_at', 'updated_at', 'deleted_at',
     ];
 
@@ -47,30 +47,21 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
         $profile = StudioProfileEloquentModel::query()
             ->ownedBy($userId)
             ->where('uuid', $uuid)
-            ->first(['id', 'uuid', 'accepted_remote_scopes', 'stack_must', 'stack_reject', 'rules']);
+            ->first(['id', 'uuid', 'accepted_remote_scopes', 'stack_must', 'stack_reject', 'skill_floors', 'rules']);
 
         return $profile !== null ? StudioReadModelMapper::profileSnapshot($profile) : null;
     }
 
     public function upsert(StudioProfileData $data, int $userId, array $defaultRules): string
     {
-        return DB::transaction(static function () use ($data, $userId, $defaultRules): string {
+        $attributes = $this->editableAttributes($data);
+
+        return DB::transaction(static function () use ($data, $userId, $defaultRules, $attributes): string {
             $existing = StudioProfileEloquentModel::query()
                 ->ownedBy($userId)
                 ->where('slug', $data->slug)
                 ->lockForUpdate()
                 ->first();
-
-            $attributes = [
-                'name' => $data->name,
-                'base_city' => $data->baseCity,
-                'base_country' => $data->baseCountry,
-                'accepted_remote_scopes' => $data->acceptedRemoteScopes,
-                'stack_must' => $data->stackMust,
-                'stack_reject' => $data->stackReject,
-                'geography_deny' => $data->geographyDeny,
-                'years_baseline' => $data->yearsBaseline,
-            ];
 
             if ($existing !== null) {
                 $existing->update($attributes);
@@ -88,6 +79,73 @@ final readonly class EloquentStudioProfileRepository implements StudioProfileRep
                 ...$attributes,
             ])->uuid;
         });
+    }
+
+    /**
+     * Update by uuid, so the route owns the address and the slug becomes an
+     * ordinary editable field. Returns false when the profile is not the
+     * owner's — the caller turns that into a 404 rather than a silent success.
+     */
+    public function updateByUuid(StudioProfileData $data, string $uuid, int $userId, array $defaultRules): bool
+    {
+        $attributes = $this->editableAttributes($data);
+
+        return DB::transaction(static function () use ($data, $uuid, $userId, $attributes): bool {
+            $profile = StudioProfileEloquentModel::query()
+                ->ownedBy($userId)
+                ->where('uuid', $uuid)
+                ->lockForUpdate()
+                ->first();
+
+            if ($profile === null) {
+                return false;
+            }
+
+            // The slug is unique per owner, so an edit that changes it can
+            // collide with another of the candidate's profiles. Rather than
+            // failing on the unique index, the row already holding the wanted
+            // name is moved aside: the operator named this row, so this row
+            // wins the name and the other one is displaced.
+            $clash = StudioProfileEloquentModel::query()
+                ->ownedBy($userId)
+                ->where('slug', $data->slug)
+                ->where('id', '!=', $profile->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($clash !== null) {
+                $clash->update([
+                    'slug' => $data->slug.'-'.mb_substr($profile->uuid, 0, 8),
+                ]);
+            }
+
+            $profile->update([...$attributes, 'slug' => $data->slug]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Every field the operator may change from the interface. `flow`,
+     * `is_active`, `rules` and `rules_version` are deliberately absent: the
+     * ruleset is a versioned snapshot (FR-31) and an edit may not silently
+     * repoint a run at a different ruleset.
+     *
+     * @return array<string, mixed>
+     */
+    private function editableAttributes(StudioProfileData $data): array
+    {
+        return [
+            'name' => $data->name,
+            'base_city' => $data->baseCity,
+            'base_country' => $data->baseCountry,
+            'accepted_remote_scopes' => $data->acceptedRemoteScopes,
+            'stack_must' => $data->stackMust,
+            'stack_reject' => $data->stackReject,
+            'skill_floors' => $data->skillFloors ?? [],
+            'geography_deny' => $data->geographyDeny,
+            'years_baseline' => $data->yearsBaseline,
+        ];
     }
 
     public function updateOpportunityRules(string $uuid, int $userId, array $opportunity): bool

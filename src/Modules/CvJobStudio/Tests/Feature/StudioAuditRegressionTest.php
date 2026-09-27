@@ -15,6 +15,7 @@ use Modules\CvJobStudio\Domain\Exceptions\BudgetExceededException;
 use Modules\CvJobStudio\Domain\Ports\PostingTextFetcherPort;
 use Modules\CvJobStudio\Domain\Ports\RequirementExtractorPort;
 use Modules\CvJobStudio\Domain\Ports\SpendGuardPort;
+use Modules\CvJobStudio\Domain\Services\GateEvaluator;
 use Modules\CvJobStudio\Domain\Services\PostingTextMinimiser;
 use Modules\CvJobStudio\Infrastructure\Ai\AiCallExecutor;
 use Modules\CvJobStudio\Infrastructure\Ai\JudgeCvAgent;
@@ -218,6 +219,7 @@ it('minimises fetched posting text before storing it (NFR-8)', function (): void
                 return ['requirements' => [], 'responsibilities' => [], 'provider' => 'fake', 'model' => 'fake-1', 'prompt_version' => 'v2'];
             }
         }]),
+        app(GateEvaluator::class),
     );
 
     $stored = StudioPostingTextEloquentModel::query()->where('posting_id', $posting->id)->sole()->text;

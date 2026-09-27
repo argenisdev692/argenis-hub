@@ -27,6 +27,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->prefix('cv-studio')->name(
     Route::post('/profiles', [StudioProfileController::class, 'store'])
         ->middleware('permission:CREATE_STUDIO_PROFILES')->name('profiles.store');
 
+    Route::put('/profiles/{uuid}', [StudioProfileController::class, 'update'])
+        ->middleware('permission:UPDATE_STUDIO_PROFILES')->whereUuid('uuid')->name('profiles.update');
+
     Route::get('/postings', [StudioPostingController::class, 'index'])
         ->middleware('permission:VIEW_ANY_STUDIO_POSTINGS')->name('postings.index');
 
