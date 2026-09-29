@@ -7,6 +7,7 @@ namespace Shared\Providers;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\URL as UrlGeneratorFacade;
 use Illuminate\Support\Facades\View as ViewFactory;
 use Illuminate\Support\ServiceProvider;
 use Shared\Domain\Ports\AuditPort;
@@ -93,6 +94,8 @@ final class SharedServiceProvider extends ServiceProvider
             ]);
         }
 
+        $this->forceConfiguredScheme();
+
         // Without this, every Spatie Data response is documented as an empty
         // schema — Scramble's own Laravel-Data support is a paid feature.
         Scramble::registerExtension(SpatieDataToSchema::class);
@@ -102,5 +105,37 @@ final class SharedServiceProvider extends ServiceProvider
         ViewFactory::composer('exports.pdf.layout', static function (View $view): void {
             $view->with('company', CompanyProfile::pdfBranding());
         });
+    }
+
+    /**
+     * Make the scheme of APP_URL authoritative for every generated URL.
+     *
+     * On Railway (and every PaaS that terminates TLS at its edge) the browser
+     * connects over HTTPS while PHP is reached over plain HTTP inside the
+     * container, so `$request->isSecure()` is false and `asset()` / `url()` /
+     * `route()` emit `http://` URLs. The page then asks the browser for its own
+     * bundles over http:// — mixed content — and every font, stylesheet and
+     * script is blocked, leaving an unstyled, dead SPA.
+     *
+     * `trustProxies(at: '*')` in bootstrap/app.php is the intended fix, but it
+     * only works while the platform forwards `X-Forwarded-Proto`. APP_URL is
+     * operator-supplied, verified at deploy time, and already pinned to the
+     * public https origin, so deriving the scheme from it removes the dependency
+     * on the header entirely. Local development keeps http, because APP_URL is
+     * http there.
+     */
+    private function forceConfiguredScheme(): void
+    {
+        $configuredUrl = (string) config('app.url');
+
+        if (str_starts_with($configuredUrl, 'https://')) {
+            UrlGeneratorFacade::forceScheme('https');
+
+            // Same reasoning for the session cookie: PHP cannot see that the client
+            // is on TLS, so without this the cookie is issued without `secure` and
+            // the browser may send it back over a downgraded connection. An explicit
+            // SESSION_SECURE_COOKIE always wins.
+            config()->set('session.secure', config('session.secure') ?? true);
+        }
     }
 }

@@ -6,6 +6,7 @@ namespace Shared\Infrastructure\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL as UrlGeneratorFacade;
 use Illuminate\Support\Facades\Vite;
 use Laravel\Horizon\Horizon;
 use Laravel\Telescope\Telescope;
@@ -73,7 +74,10 @@ final class SecurityHeaders
         ];
 
         // HSTS only over HTTPS to avoid pinning plain-HTTP local development.
-        if ((bool) config('security.headers.hsts.enabled') && $request->isSecure()) {
+        // `isSecure()` alone is not enough: behind a platform proxy that terminates
+        // TLS (Railway) PHP never sees an https request, so the effective scheme is
+        // read from the URL generator, which SharedServiceProvider pins to APP_URL.
+        if ((bool) config('security.headers.hsts.enabled') && $this->isHttpsRequest($request)) {
             $value = 'max-age='.(int) config('security.headers.hsts.max_age');
 
             if ((bool) config('security.headers.hsts.include_subdomains')) {
@@ -88,6 +92,27 @@ final class SecurityHeaders
         }
 
         return $headers;
+    }
+
+    /**
+     * Whether the client reached this application over HTTPS.
+     *
+     * True when the request itself is secure (direct TLS, or a trusted proxy that
+     * forwarded `X-Forwarded-Proto`), and also when the scheme has been pinned from
+     * APP_URL by {@see \Shared\Providers\SharedServiceProvider::forceConfiguredScheme()}
+     * — the only signal available when the platform proxy strips TLS before the
+     * request reaches PHP.
+     */
+    private function isHttpsRequest(Request $request): bool
+    {
+        if ($request->isSecure()) {
+            return true;
+        }
+
+        // Read the effective scheme back off the URL generator: when the platform
+        // proxy terminates TLS, SharedServiceProvider pins the scheme from APP_URL
+        // and this is the only place that truth is available.
+        return str_starts_with(UrlGeneratorFacade::to('/'), 'https://');
     }
 
     /**
