@@ -4,8 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
-        <script>
+        {{-- Inline script to detect system dark mode preference and apply it immediately.
+             The nonce must match the Content-Security-Policy script-src emitted by
+             Shared\Infrastructure\Http\Middleware\SecurityHeaders; without it the
+             browser blocks the tag and the page flashes the wrong theme. --}}
+        <script nonce="{{ app('csp-nonce') }}">
             (function() {
                 const appearance = '{{ $appearance ?? "system" }}';
 

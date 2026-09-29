@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Vite;
 use Laravel\Horizon\Horizon;
 use Laravel\Telescope\Telescope;
+use Shared\Infrastructure\Http\Csp\DirectUploadStoragePreset;
 use Shared\Providers\SharedServiceProvider;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -148,9 +149,7 @@ final class SecurityHeaders
             'connect-src' => ["'self'"],
         ];
 
-        return collect($directives)
-            ->map(static fn (array $sources, string $name): string => $name.' '.implode(' ', $sources))
-            ->implode('; ');
+        return $this->renderPolicy($directives);
     }
 
     /**
@@ -176,9 +175,7 @@ final class SecurityHeaders
             'connect-src' => ["'self'"],
         ];
 
-        return collect($directives)
-            ->map(static fn (array $sources, string $name): string => $name.' '.implode(' ', $sources))
-            ->implode('; ');
+        return $this->renderPolicy($directives);
     }
 
     /**
@@ -193,9 +190,16 @@ final class SecurityHeaders
     {
         $isLocal = app()->environment('local');
 
+        // The single R2 origin the S3 SDK signs against (see
+        // DirectUploadStoragePreset). Resolved per request from the disk config
+        // so it follows the endpoint instead of being hardcoded here. It is both
+        // a PUT target (connect-src) and a GET source for presigned media
+        // (img-src), so it belongs in both lists.
+        $storageOrigin = array_filter([DirectUploadStoragePreset::uploadOrigin()]);
+
         $scriptSrc = ["'self'", "'nonce-{$nonce}'", ...(array) config('security.headers.csp.script_src', [])];
-        $connectSrc = ["'self'", ...(array) config('security.headers.csp.connect_src', [])];
-        $imgSrc = ["'self'", ...(array) config('security.headers.csp.img_src', [])];
+        $connectSrc = ["'self'", ...(array) config('security.headers.csp.connect_src', []), ...$storageOrigin];
+        $imgSrc = ["'self'", ...(array) config('security.headers.csp.img_src', []), ...$storageOrigin];
         $fontSrc = ["'self'", ...(array) config('security.headers.csp.font_src', [])];
 
         // External stylesheets (`@vite` → /build/assets/*.css) + runtime <style>
@@ -224,8 +228,32 @@ final class SecurityHeaders
             'connect-src' => $connectSrc,
         ];
 
-        return collect($directives)
+        return $this->renderPolicy($directives);
+    }
+
+    /**
+     * Renders a Content-Security-Policy header value.
+     *
+     * Every policy ends with `upgrade-insecure-requests`. Mixed content is split
+     * in two by the spec: *upgradable* content (images, audio, video) is rewritten
+     * to https:// by the browser on its own, while *blockable* content — fonts,
+     * stylesheets, scripts, XHR — is refused outright and the page silently loses
+     * the asset. This directive upgrades the blockable half too, which is what
+     * turns "Mixed Content: ... This request has been blocked" into a request the
+     * browser actually makes. An asset whose host does not serve TLS simply fails
+     * to load, so nothing insecure is ever fetched either way.
+     *
+     * `block-all-mixed-content` is deliberately NOT used: the Mixed Content spec
+     * retired it, since everything that cannot be autoupgraded is blocked already.
+     *
+     * @param  array<string, array<int, string>>  $directives
+     */
+    private function renderPolicy(array $directives): string
+    {
+        $rendered = collect($directives)
             ->map(static fn (array $sources, string $name): string => $name.' '.implode(' ', $sources))
             ->implode('; ');
+
+        return $rendered.'; upgrade-insecure-requests';
     }
 }

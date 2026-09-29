@@ -7,6 +7,7 @@ use Spatie\Csp\Presets\Basic;
 
 // use Spatie\Csp\Directive;
 // use Spatie\Csp\Keyword;
+// use Spatie\Csp\Value;
 
 return [
 
@@ -25,6 +26,11 @@ return [
      */
     'directives' => [
         // [Directive::SCRIPT, [Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE]],
+        //
+        // NOTE: this package's middleware is NOT registered. The Content-Security-Policy
+        // header is built by Shared\Infrastructure\Http\Middleware\SecurityHeaders, which is
+        // appended to the global middleware stack in bootstrap/app.php. Anything declared here
+        // has no effect — edit SecurityHeaders (or config/security.php) instead.
     ],
 
     /*

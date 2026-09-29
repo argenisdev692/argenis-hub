@@ -8,6 +8,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Modules\Company\Domain\Exceptions\CompanyNotConfigured;
+use Shared\Infrastructure\Http\Middleware\SecurityHeaders;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -27,6 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+
+        // Global stack, so it wraps the `web` group and runs BEFORE
+        // HandleInertiaRequests: the CSP nonce is bound to Vite before any view
+        // renders, so every @vite tag carries a matching nonce and the
+        // Content-Security-Policy survives Inertia (SSR) responses.
+        $middleware->append(SecurityHeaders::class);
 
         // Authorization aliases used across every module's route files.
         $middleware->alias([
