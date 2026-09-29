@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Railway terminates TLS at its proxy and forwards plain HTTP.
+        // Without this Laravel sees http:// and generates http:// asset
+        // URLs, which browsers block as mixed-content (white page).
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         // Authorization aliases used across every module's route files.

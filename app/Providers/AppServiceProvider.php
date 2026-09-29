@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +25,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Railway terminates TLS at its proxy. trustProxies (bootstrap/app.php)
+        // lets Laravel see the forwarded proto; this forces generated URLs
+        // (Vite assets) to https:// in production so browsers do not block
+        // them as mixed-content (white page).
+        if ($this->app->isProduction()) {
+            URL::forceScheme('https');
+        }
+
         $this->configureDefaults();
     }
 
