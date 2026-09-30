@@ -55,11 +55,14 @@ COPY . .
 
 # --no-scripts above skips package:discover and bootstrap/cache/packages.php
 # is gitignored, so without this `php artisan wayfinder:generate` (invoked by
-# the Vite build below) fails with "command not defined".
-RUN composer dump-autoload --optimize --no-dev \
-    && php artisan package:discover --ansi \
-    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache
+# the Vite build below) fails with "command not defined". The mkdir comes
+# FIRST: Laravel resolves the view cache path with realpath(), so any artisan
+# command (including package:discover) fatals with "Please provide a valid
+# cache path" when storage/framework/views does not exist yet.
+RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && composer dump-autoload --optimize --no-dev \
+    && php artisan package:discover --ansi
 
 RUN npm run build
 
