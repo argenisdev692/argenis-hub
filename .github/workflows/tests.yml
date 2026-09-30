@@ -33,6 +33,15 @@ jobs:
 
       - name: Setup Application
         run: composer setup
+        env:
+          # No Redis service in this runner: the stock .env.example points
+          # CACHE_STORE/SESSION_DRIVER/QUEUE_CONNECTION at redis, and the
+          # Spatie permission migration clears the cache store mid-migrate,
+          # which fails with "Connection refused". Array/sync drivers keep
+          # `composer setup` (migrate --force) network-free in CI only.
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
 
       - name: Run CI Checks
         run: composer ci:check
