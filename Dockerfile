@@ -33,7 +33,6 @@ RUN mkdir -p /etc/apt/keyrings \
         php${PHP_VERSION}-zip \
         php${PHP_VERSION}-bcmath \
         php${PHP_VERSION}-intl \
-        php${PHP_VERSION}-pcntl \
         nodejs \
         supervisor \
         ffmpeg \
