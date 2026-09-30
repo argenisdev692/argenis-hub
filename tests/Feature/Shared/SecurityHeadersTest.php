@@ -25,13 +25,28 @@ it('emits a content security policy on web responses', function (): void {
 });
 
 it('upgrades insecure requests so blocked mixed content is fetched over https', function (): void {
-    $policy = securityHeadersFrom('/')->headers->get('Content-Security-Policy');
+    $policy = securityHeadersFrom('https://argenis-hub-production.up.railway.app/')
+        ->headers->get('Content-Security-Policy');
 
     // Blockable mixed content (fonts, stylesheets, scripts) is refused outright
     // without this directive; `block-all-mixed-content` is obsolete and must not
     // appear in its place.
     expect($policy)->toContain('upgrade-insecure-requests')
         ->not->toContain('block-all-mixed-content');
+});
+
+it('omits upgrade-insecure-requests on plain http so local navigation survives', function (): void {
+    // On an HTTP page the directive rewrites every http:// URL the page holds —
+    // Inertia XHR calls included — to https://, which a cleartext dev server
+    // (Herd's `artisan serve`, PHP's built-in server) cannot answer. Symptom:
+    // `ERR_CONNECTION_CLOSED` on the first post-login visit, with
+    // "Invalid request (Unsupported SSL request)" in the serve log.
+    $policy = securityHeadersFrom('http://localhost:8000/')
+        ->headers->get('Content-Security-Policy');
+
+    expect($policy)
+        ->toContain("default-src 'self'")
+        ->not->toContain('upgrade-insecure-requests');
 });
 
 it('keeps the policy locked down on the directives that matter', function (): void {
@@ -87,7 +102,7 @@ it('opens connect-src for the r2 bucket the s3 sdk signs against', function (): 
 });
 
 it('still emits the policy for json api responses', function (): void {
-    $response = test()->getJson('/api/does-not-exist');
+    $response = test()->getJson('https://argenis-hub-production.up.railway.app/api/does-not-exist');
 
     expect($response->headers->get('Content-Security-Policy'))->toContain('upgrade-insecure-requests');
 });

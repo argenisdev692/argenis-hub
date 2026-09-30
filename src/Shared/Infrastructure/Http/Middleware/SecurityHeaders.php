@@ -44,12 +44,14 @@ final class SecurityHeaders
             $response->headers->set($header, $value);
         }
 
+        $upgradeInsecureRequests = $this->isHttpsRequest($request);
+
         $response->headers->set(
             'Content-Security-Policy',
             match (true) {
-                $this->isApiDocsRequest($request) => $this->apiDocsContentSecurityPolicy(),
-                $this->isMonitoringRequest($request) => $this->monitoringContentSecurityPolicy(),
-                default => $this->contentSecurityPolicy($nonce),
+                $this->isApiDocsRequest($request) => $this->apiDocsContentSecurityPolicy($upgradeInsecureRequests),
+                $this->isMonitoringRequest($request) => $this->monitoringContentSecurityPolicy($upgradeInsecureRequests),
+                default => $this->contentSecurityPolicy($nonce, $upgradeInsecureRequests),
             },
         );
 
@@ -157,7 +159,7 @@ final class SecurityHeaders
      * `connect-src` is enough because the OpenAPI document is inlined into the page
      * and "Try It" calls hit this app's own API under the current session.
      */
-    private function apiDocsContentSecurityPolicy(): string
+    private function apiDocsContentSecurityPolicy(bool $upgradeInsecureRequests): string
     {
         $directives = [
             'default-src' => ["'self'"],
@@ -174,7 +176,7 @@ final class SecurityHeaders
             'connect-src' => ["'self'"],
         ];
 
-        return $this->renderPolicy($directives);
+        return $this->renderPolicy($directives, $upgradeInsecureRequests);
     }
 
     /**
@@ -185,7 +187,7 @@ final class SecurityHeaders
      * is required on `script-src`. `fonts.bunny.net` serves the Figtree
      * webfont both dashboards load.
      */
-    private function monitoringContentSecurityPolicy(): string
+    private function monitoringContentSecurityPolicy(bool $upgradeInsecureRequests): string
     {
         $directives = [
             'default-src' => ["'self'"],
@@ -200,7 +202,7 @@ final class SecurityHeaders
             'connect-src' => ["'self'"],
         ];
 
-        return $this->renderPolicy($directives);
+        return $this->renderPolicy($directives, $upgradeInsecureRequests);
     }
 
     /**
@@ -211,7 +213,7 @@ final class SecurityHeaders
      * makes browsers ignore `'unsafe-inline'` (see the console error the SPA
      * hits otherwise). Local development also relaxes scripts for Vite HMR.
      */
-    private function contentSecurityPolicy(string $nonce): string
+    private function contentSecurityPolicy(string $nonce, bool $upgradeInsecureRequests): string
     {
         $isLocal = app()->environment('local');
 
@@ -253,32 +255,41 @@ final class SecurityHeaders
             'connect-src' => $connectSrc,
         ];
 
-        return $this->renderPolicy($directives);
+        return $this->renderPolicy($directives, $upgradeInsecureRequests);
     }
 
     /**
      * Renders a Content-Security-Policy header value.
      *
-     * Every policy ends with `upgrade-insecure-requests`. Mixed content is split
-     * in two by the spec: *upgradable* content (images, audio, video) is rewritten
-     * to https:// by the browser on its own, while *blockable* content — fonts,
-     * stylesheets, scripts, XHR — is refused outright and the page silently loses
-     * the asset. This directive upgrades the blockable half too, which is what
-     * turns "Mixed Content: ... This request has been blocked" into a request the
-     * browser actually makes. An asset whose host does not serve TLS simply fails
-     * to load, so nothing insecure is ever fetched either way.
+     * On an HTTPS page the policy ends with `upgrade-insecure-requests`. Mixed
+     * content is split in two by the spec: *upgradable* content (images, audio,
+     * video) is rewritten to https:// by the browser on its own, while *blockable*
+     * content — fonts, stylesheets, scripts, XHR — is refused outright and the page
+     * silently loses the asset. This directive upgrades the blockable half too,
+     * which is what turns "Mixed Content: ... This request has been blocked" into a
+     * request the browser actually makes. An asset whose host does not serve TLS
+     * simply fails to load, so nothing insecure is ever fetched either way.
+     *
+     * It is omitted on plain-HTTP requests, where it is actively destructive: the
+     * browser rewrites every `http://` URL it holds — Inertia XHR calls included —
+     * to `https://`, and a dev server that only speaks cleartext (Herd's `artisan
+     * serve`, PHP's built-in server) closes the connection with
+     * `ERR_CONNECTION_CLOSED` instead of answering. Since there is no mixed content
+     * to fix on an HTTP page, the directive has no upside there and only breakage.
      *
      * `block-all-mixed-content` is deliberately NOT used: the Mixed Content spec
      * retired it, since everything that cannot be autoupgraded is blocked already.
      *
      * @param  array<string, array<int, string>>  $directives
      */
-    private function renderPolicy(array $directives): string
+    private function renderPolicy(array $directives, bool $upgradeInsecureRequests): string
     {
         $rendered = collect($directives)
             ->map(static fn (array $sources, string $name): string => $name.' '.implode(' ', $sources))
             ->implode('; ');
 
-        return $rendered.'; upgrade-insecure-requests';
+        return $upgradeInsecureRequests
+            ? $rendered.'; upgrade-insecure-requests'
+            : $rendered;
     }
 }
