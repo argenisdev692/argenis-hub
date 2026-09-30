@@ -31,7 +31,7 @@ import {
   statSync,
   unlinkSync,
 } from 'node:fs';
-import { join, resolve, dirname, relative, sep, basename } from 'node:path';
+import { join, resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -69,13 +69,16 @@ const readJson = (rel) => JSON.parse(read(rel));
 // ------------------------------------------------------------------
 function parseFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+
   if (!match) {
     return { frontmatter: {}, body: content };
   }
 
   const frontmatter = {};
+
   for (const line of match[1].split('\n')) {
     const m = line.match(/^([\w-]+)\s*:\s*(.+)$/);
+
     if (m) {
       frontmatter[m[1]] = m[2].replace(/^['"]|['"]$/g, '').trim();
     }
@@ -86,6 +89,7 @@ function parseFrontmatter(content) {
 
 function extractFirstHeading(body) {
   const m = body.match(/^#\s+(.+)$/m);
+
   return m ? m[1].trim() : null;
 }
 
@@ -96,12 +100,14 @@ function relPath(abs) {
 /** Deterministic recursive file listing — sorted so output never depends on FS order. */
 function listFiles(absDir) {
   const out = [];
+
   if (!existsSync(absDir)) {
     return out;
   }
 
   for (const entry of readdirSync(absDir).sort()) {
     const abs = join(absDir, entry);
+
     if (statSync(abs).isDirectory()) {
       out.push(...listFiles(abs));
     } else {
@@ -119,9 +125,11 @@ function detectUiLibrary(deps) {
   if (deps.primevue) {
     return { name: 'primevue', version: deps.primevue };
   }
+
   if (deps['reka-ui']) {
     return { name: 'shadcn-vue (reka-ui)', version: deps['reka-ui'] };
   }
+
   return { name: 'unknown', version: 'absent' };
 }
 
@@ -169,8 +177,12 @@ function collectDocs() {
 
   if (existsSync(claudeDir)) {
     for (const entry of readdirSync(claudeDir).sort()) {
-      if (CLAUDE_PRIVATE.has(entry)) continue;
+      if (CLAUDE_PRIVATE.has(entry)) {
+continue;
+}
+
       const abs = join(claudeDir, entry);
+
       if (statSync(abs).isDirectory()) {
         docs.push(...listFiles(abs).filter((f) => f.endsWith('.md')));
       } else if (entry.endsWith('.md')) {
@@ -180,7 +192,9 @@ function collectDocs() {
   }
 
   for (const f of ['CLAUDE.md', 'AGENTS.md']) {
-    if (exists(f)) docs.push(join(ROOT, f));
+    if (exists(f)) {
+docs.push(join(ROOT, f));
+}
   }
 
   return docs;
@@ -268,6 +282,7 @@ function scanStackWarnings(docs, facts) {
 
   if (facts.uiLibrary !== 'primevue') {
     const hits = mentions(/PrimeVue|Volt|primeicons|tailwindcss-primeui/i);
+
     if (hits.length > 0) {
       warnings.push({
         id: 'ui-library',
@@ -288,6 +303,7 @@ function scanStackWarnings(docs, facts) {
 // ------------------------------------------------------------------
 function factsMarkdown(facts) {
   const yn = (b) => (b ? 'yes' : 'no');
+
   return [
     '## Project ground truth (auto-detected from code)',
     '',
@@ -317,9 +333,11 @@ function ruleToMdc(sourceRel, content) {
     frontmatter.description || extractFirstHeading(body) || `Synced from ${sourceRel}`;
 
   const lines = ['---', `alwaysApply: ${alwaysApply}`, `description: ${description}`];
+
   if (frontmatter.globs) {
     lines.push(`globs: ${frontmatter.globs}`);
   }
+
   lines.push('---', '', GENERATED_BANNER, '', body.trimEnd(), '');
 
   return lines.join('\n');
@@ -327,6 +345,7 @@ function ruleToMdc(sourceRel, content) {
 
 function withGeneratedBanner(content) {
   const { frontmatter, body } = parseFrontmatter(content);
+
   if (Object.keys(frontmatter).length === 0) {
     return `${GENERATED_BANNER}\n\n${content.trimEnd()}\n`;
   }
@@ -341,12 +360,16 @@ function withGeneratedBanner(content) {
 /** Mirrors every .md under sourceRel into destRel, applying `transform`. */
 function planMarkdownTree(plan, sourceRel, destRel, transform = withGeneratedBanner) {
   const sourceAbs = join(ROOT, sourceRel);
+
   if (!existsSync(sourceAbs)) {
     return;
   }
 
   for (const abs of listFiles(sourceAbs)) {
-    if (!abs.endsWith('.md')) continue;
+    if (!abs.endsWith('.md')) {
+continue;
+}
+
     const suffix = relPath(abs).slice(sourceRel.length + 1);
     plan.set(`${destRel}/${suffix}`, transform(read(relPath(abs)), relPath(abs)));
   }
@@ -370,9 +393,13 @@ function buildPlan(facts) {
 
   // Rules: .claude/rules/*.md → .cursor/rules/*.mdc
   const rulesDir = join(ROOT, '.claude', 'rules');
+
   if (existsSync(rulesDir)) {
     for (const entry of readdirSync(rulesDir).sort()) {
-      if (!entry.endsWith('.md')) continue;
+      if (!entry.endsWith('.md')) {
+continue;
+}
+
       const sourceRel = `.claude/rules/${entry}`;
       plan.set(`.cursor/rules/${entry.replace(/\.md$/, '.mdc')}`, ruleToMdc(sourceRel, read(sourceRel)));
     }
@@ -402,6 +429,7 @@ function buildPlan(facts) {
   // Top-level skill dirs that live outside skills/
   for (const dir of ['BACKEND-PHP', 'FRONTEND', 'OWASP']) {
     const skillRel = `.claude/${dir}/SKILL.md`;
+
     if (exists(skillRel)) {
       plan.set(`.cursor/skills/${dir}/SKILL.md`, withGeneratedBanner(read(skillRel)));
     }
@@ -413,17 +441,22 @@ function buildPlan(facts) {
 
   // MCP servers: .claude/settings.json + .mcp.json → .cursor/mcp.json
   const servers = {};
+
   if (exists('.mcp.json')) {
     Object.assign(servers, readJson('.mcp.json').mcpServers ?? {});
   }
+
   if (exists('.claude/settings.json')) {
     Object.assign(servers, readJson('.claude/settings.json').mcpServers ?? {});
   }
+
   if (Object.keys(servers).length > 0) {
     const mapped = {};
+
     for (const name of Object.keys(servers).sort()) {
       mapped[name] = toCursorMcp(servers[name]);
     }
+
     plan.set('.cursor/mcp.json', JSON.stringify({ mcpServers: mapped }, null, 2) + '\n');
   }
 
@@ -486,6 +519,7 @@ function diffPlan(plan) {
 
   for (const [rel, content] of plan) {
     const current = currentContent(rel);
+
     if (current === null) {
       created.push(rel);
     } else if (current !== content) {
@@ -532,6 +566,7 @@ function main() {
     log(c.green(`✔ No drift across ${docs.length} AI doc file(s).`));
   } else {
     log(c.red(`✖ ${findings.length} drift issue(s) found:`));
+
     for (const f of findings) {
       log(`  ${c.red('•')} ${c.bold(f.file + ':' + f.line)} ${c.dim('[' + f.rule + ']')}`);
       log(`    ${f.msg}`);
@@ -554,27 +589,48 @@ function main() {
       log('\n' + c.green(`✔ .cursor/ is in sync (${plan.size} file(s)).`));
     } else {
       log('\n' + c.red(`✖ .cursor/ is out of sync — run \`npm run syn\`:`));
-      for (const r of created) log(`  ${c.green('+')} ${r}`);
-      for (const r of updated) log(`  ${c.yellow('~')} ${r}`);
-      for (const r of stale) log(`  ${c.red('-')} ${r} ${c.dim('(stale)')}`);
+
+      for (const r of created) {
+log(`  ${c.green('+')} ${r}`);
+}
+
+      for (const r of updated) {
+log(`  ${c.yellow('~')} ${r}`);
+}
+
+      for (const r of stale) {
+log(`  ${c.red('-')} ${r} ${c.dim('(stale)')}`);
+}
     }
   } else {
     applyPlan(plan, stale);
+
     if (dirty === 0) {
       log('\n' + c.green(`✔ .cursor/ already up to date (${plan.size} file(s)).`));
     } else {
       log('\n' + c.green(`✔ Synced ${plan.size} file(s) to .cursor/ — ${dirty} change(s):`));
-      for (const r of created) log(`  ${c.green('+')} ${r}`);
-      for (const r of updated) log(`  ${c.yellow('~')} ${r}`);
-      for (const r of stale) log(`  ${c.red('-')} ${r} ${c.dim('(pruned)')}`);
+
+      for (const r of created) {
+log(`  ${c.green('+')} ${r}`);
+}
+
+      for (const r of updated) {
+log(`  ${c.yellow('~')} ${r}`);
+}
+
+      for (const r of stale) {
+log(`  ${c.red('-')} ${r} ${c.dim('(pruned)')}`);
+}
     }
   }
 
   log('');
+
   if (findings.length > 0) {
     log(c.red('Drift detected — update the docs in .claude/ (or the code) and re-run `npm run syn`.'));
     process.exit(1);
   }
+
   if (CHECK_ONLY && dirty > 0) {
     process.exit(1);
   }

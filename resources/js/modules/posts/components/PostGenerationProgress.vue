@@ -2,11 +2,8 @@
 import { CheckIcon, Loader2Icon, SparklesIcon } from '@lucide/vue';
 import { computed } from 'vue';
 import { Progress } from '@/components/ui/progress';
-import {
-    POST_GENERATION_PHASES,
-    type PostAiGeneration,
-    type PostGenerationPhase,
-} from '../types';
+import { POST_GENERATION_PHASES } from '../types';
+import type { PostAiGeneration, PostGenerationPhase } from '../types';
 
 /**
  * The live phase list for a background draft run.

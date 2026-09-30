@@ -30,17 +30,25 @@ function readStdin() {
 
 function toRelative(filePath) {
   const rel = relative(ROOT, resolve(ROOT, filePath)).split(sep).join('/');
+
   return rel.startsWith('..') ? null : rel;
 }
 
 function isWatched(rel) {
-  if (!rel) return false;
-  if (WATCHED_FILES.includes(rel)) return true;
+  if (!rel) {
+return false;
+}
+
+  if (WATCHED_FILES.includes(rel)) {
+return true;
+}
+
   return WATCHED_ROOTS.some((root) => rel === root || rel.startsWith(`${root}/`));
 }
 
 function main() {
   let payload = {};
+
   try {
     payload = JSON.parse(readStdin() || '{}');
   } catch {
