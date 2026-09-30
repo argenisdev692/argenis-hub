@@ -1,25 +1,19 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-bookworm-slim AS frontend
-WORKDIR /app
+# Single-stage Railway image. The Vite build MUST run here (not in a
+# node-only stage): @laravel/vite-plugin-wayfinder shells out to
+# `php artisan wayfinder:generate` on every build, so PHP + vendor/ have to
+# exist before `npm run build`. (A node:24 stage fails with "php: not found".)
+FROM ubuntu:24.04 AS app
+
+ARG PHP_VERSION=8.5
 ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST
 ARG VITE_REVERB_PORT
 ARG VITE_REVERB_SCHEME
-# scripts/link-syn-bin.mjs only links scripts/ai-config-sync.mjs into
-# node_modules/.bin and no-ops when it is absent — copy it BEFORE npm ci
-# so any lifecycle script that needs the bin finds it.
-COPY package.json package-lock.json ./
-COPY scripts/link-syn-bin.mjs scripts/link-syn-bin.mjs
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM ubuntu:24.04 AS app
-
-ARG PHP_VERSION=8.5
 ENV DEBIAN_FRONTEND=noninteractive
 
+# PHP 8.5 via ondrej PPA + Node 24 via nodesource.
 RUN mkdir -p /etc/apt/keyrings \
     && apt-get update && apt-get install -y --no-install-recommends \
         gnupg curl ca-certificates git unzip \
@@ -27,7 +21,7 @@ RUN mkdir -p /etc/apt/keyrings \
         | gpg --dearmor | tee /etc/apt/keyrings/ppa_ondrej_php.gpg > /dev/null \
     && echo "deb [signed-by=/etc/apt/keyrings/ppa_ondrej_php.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu noble main" \
         > /etc/apt/sources.list.d/ppa_ondrej_php.list \
-    && apt-get update \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends \
         php${PHP_VERSION}-cli \
         php${PHP_VERSION}-pgsql \
@@ -40,6 +34,7 @@ RUN mkdir -p /etc/apt/keyrings \
         php${PHP_VERSION}-bcmath \
         php${PHP_VERSION}-intl \
         php${PHP_VERSION}-pcntl \
+        nodejs \
         supervisor \
         ffmpeg \
     && curl -sLS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer \
@@ -50,12 +45,24 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --no-autoloader --optimize-autoloader
 
-COPY . .
-COPY --from=frontend /app/public/build public/build
+# scripts/link-syn-bin.mjs only links scripts/ai-config-sync.mjs into
+# node_modules/.bin and no-ops when it is absent — copy it BEFORE npm ci
+# so any lifecycle script that needs the bin finds it.
+COPY package.json package-lock.json ./
+COPY scripts/link-syn-bin.mjs scripts/link-syn-bin.mjs
+RUN npm ci
 
+COPY . .
+
+# --no-scripts above skips package:discover and bootstrap/cache/packages.php
+# is gitignored, so without this `php artisan wayfinder:generate` (invoked by
+# the Vite build below) fails with "command not defined".
 RUN composer dump-autoload --optimize --no-dev \
+    && php artisan package:discover --ansi \
     && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
+
+RUN npm run build
 
 EXPOSE 8080
 
