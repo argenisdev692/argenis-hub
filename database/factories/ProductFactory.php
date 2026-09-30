@@ -17,6 +17,8 @@ use Shared\Domain\Enums\BillingUnit;
  */
 final class ProductFactory extends Factory
 {
+    use GeneratesWordStrings;
+
     protected $model = ProductEloquentModel::class;
 
     /**
@@ -24,7 +26,7 @@ final class ProductFactory extends Factory
      */
     public function definition(): array
     {
-        $title = ucfirst((string) fake()->unique()->words(3, true));
+        $title = ucfirst($this->fakeWords(3));
 
         return [
             'uuid' => (string) Str::uuid7(),

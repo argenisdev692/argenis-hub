@@ -14,6 +14,8 @@ use Modules\Authorization\Infrastructure\Persistence\Eloquent\Models\Role;
  */
 final class RoleFactory extends Factory
 {
+    use GeneratesWordStrings;
+
     protected $model = Role::class;
 
     /**
@@ -26,7 +28,7 @@ final class RoleFactory extends Factory
     {
         return [
             'uuid' => (string) Str::uuid7(),
-            'name' => Str::upper(Str::snake(fake()->unique()->words(2, true))),
+            'name' => Str::upper(Str::snake($this->fakeWords(2))),
             'guard_name' => 'web',
         ];
     }

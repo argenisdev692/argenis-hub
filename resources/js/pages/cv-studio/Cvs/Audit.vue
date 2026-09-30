@@ -67,9 +67,7 @@ function submitAnswers(): void {
 
     <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
         <header class="flex flex-col gap-1">
-            <h1 class="text-2xl font-semibold tracking-tight">
-                Audit my CV
-            </h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Audit my CV</h1>
             <p class="text-sm text-muted-foreground">
                 A blunt recruiter-scan verdict plus per-check ATS readability.
                 Every number is a heuristic — never a vendor ATS score.

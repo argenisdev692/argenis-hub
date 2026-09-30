@@ -49,7 +49,8 @@ const rows = computed<DetailRow[]>(() => {
         { label: 'Client', value: record.client_name ?? '—' },
         {
             label: 'Total hours',
-            value: record.total_hours === null ? '—' : String(record.total_hours),
+            value:
+                record.total_hours === null ? '—' : String(record.total_hours),
         },
         {
             label: 'Sessions',

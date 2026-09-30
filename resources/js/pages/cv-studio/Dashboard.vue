@@ -36,14 +36,8 @@ const totalSpend = computed(() =>
 );
 
 const replyRate = computed(() => {
-    const trials = rates.value.reduce(
-        (sum, row) => sum + row.applications,
-        0,
-    );
-    const positives = rates.value.reduce(
-        (sum, row) => sum + row.positives,
-        0,
-    );
+    const trials = rates.value.reduce((sum, row) => sum + row.applications, 0);
+    const positives = rates.value.reduce((sum, row) => sum + row.positives, 0);
 
     if (trials === 0) {
         return null;

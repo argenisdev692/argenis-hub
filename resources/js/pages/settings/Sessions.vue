@@ -64,8 +64,9 @@ function formatWhen(value: string | null): string {
                             This device
                         </Badge>
                     </div>
-                    <p class="text-muted-foreground text-sm">
-                        {{ session.ip_address ?? 'Unknown IP' }} &middot; last active
+                    <p class="text-sm text-muted-foreground">
+                        {{ session.ip_address ?? 'Unknown IP' }} &middot; last
+                        active
                         {{ formatWhen(session.last_seen_at) }}
                     </p>
                 </div>
@@ -76,14 +77,19 @@ function formatWhen(value: string | null): string {
                     :options="{ preserveScroll: true }"
                     v-slot="{ processing }"
                 >
-                    <Button type="submit" variant="outline" size="sm" :disabled="processing">
+                    <Button
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        :disabled="processing"
+                    >
                         Sign out
                     </Button>
                 </Form>
             </li>
         </ul>
 
-        <p v-if="sessions.length === 0" class="text-muted-foreground text-sm">
+        <p v-if="sessions.length === 0" class="text-sm text-muted-foreground">
             No other active sessions.
         </p>
 

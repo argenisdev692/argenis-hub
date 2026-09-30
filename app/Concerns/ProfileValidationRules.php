@@ -5,13 +5,14 @@ namespace App\Concerns;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
+use Stringable;
 
 trait ProfileValidationRules
 {
     /**
      * Get the validation rules used to validate user profiles.
      *
-     * @return array<string, array<int, ValidationRule|array<mixed>|string>>
+     * @return array<string, array<int, array<mixed>|string|Stringable|ValidationRule>>
      */
     protected function profileRules(?int $userId = null): array
     {
@@ -25,7 +26,7 @@ trait ProfileValidationRules
     /**
      * Get the validation rules used to validate user first names.
      *
-     * @return array<int, ValidationRule|array<mixed>|string>
+     * @return array<int, array<mixed>|string|Stringable|ValidationRule>
      */
     protected function firstNameRules(): array
     {
@@ -35,7 +36,7 @@ trait ProfileValidationRules
     /**
      * Get the validation rules used to validate user last names.
      *
-     * @return array<int, ValidationRule|array<mixed>|string>
+     * @return array<int, array<mixed>|string|Stringable|ValidationRule>
      */
     protected function lastNameRules(): array
     {
@@ -45,7 +46,7 @@ trait ProfileValidationRules
     /**
      * Get the validation rules used to validate user emails.
      *
-     * @return array<int, ValidationRule|array<mixed>|string>
+     * @return array<int, array<mixed>|string|Stringable|ValidationRule>
      */
     protected function emailRules(?int $userId = null): array
     {

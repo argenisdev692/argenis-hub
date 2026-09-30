@@ -31,7 +31,8 @@ const emit = defineEmits<{
             </div>
 
             <p class="text-xs text-muted-foreground">
-                {{ decisor.role_title ?? '—' }} · {{ decisor.role_category ?? '—' }}
+                {{ decisor.role_title ?? '—' }} ·
+                {{ decisor.role_category ?? '—' }}
             </p>
 
             <p
@@ -39,7 +40,9 @@ const emit = defineEmits<{
                 class="text-xs text-muted-foreground"
             >
                 {{ decisor.published_email }}
-                <span v-if="decisor.email_kind">({{ decisor.email_kind }})</span>
+                <span v-if="decisor.email_kind"
+                    >({{ decisor.email_kind }})</span
+                >
             </p>
 
             <a
@@ -59,10 +62,7 @@ const emit = defineEmits<{
                 “{{ decisor.evidence_excerpt }}”
             </p>
 
-            <div
-                v-if="canManage"
-                class="flex gap-2 pt-1"
-            >
+            <div v-if="canManage" class="flex gap-2 pt-1">
                 <Button
                     v-if="!decisor.is_primary"
                     variant="outline"

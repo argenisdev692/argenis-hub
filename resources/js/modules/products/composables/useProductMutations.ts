@@ -35,7 +35,10 @@ export function useProductMutations() {
 
     const createProduct = useMutation({
         mutation: (payload: ProductWritePayload) =>
-            httpJson<Product>(toUrl(store()), { method: 'POST', body: payload }),
+            httpJson<Product>(toUrl(store()), {
+                method: 'POST',
+                body: payload,
+            }),
         onSuccess() {
             toast.success('Product created.');
             invalidateAll();

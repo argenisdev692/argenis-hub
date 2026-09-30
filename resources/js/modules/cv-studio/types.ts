@@ -57,20 +57,21 @@ export type StudioPostingFilters = {
     per_page: number;
 };
 
-
 export type StudioRun = Modules.CvJobStudio.Application.DTOs.StudioRunData;
 export type StudioReference =
     Modules.CvJobStudio.Application.DTOs.StudioReferenceData;
 export type StudioApplication =
     Modules.CvJobStudio.Application.DTOs.StudioApplicationData;
-export type StudioBudget = Modules.CvJobStudio.Application.DTOs.StudioBudgetData;
+export type StudioBudget =
+    Modules.CvJobStudio.Application.DTOs.StudioBudgetData;
 export type StudioOwnRate =
     Modules.CvJobStudio.Application.DTOs.StudioOwnRateData;
 export type StudioCvVersion =
     Modules.CvJobStudio.Application.DTOs.StudioCvVersionData;
 export type StudioRelation =
     Modules.CvJobStudio.Application.DTOs.StudioSkillRelationData;
-export type StudioSource = Modules.CvJobStudio.Application.DTOs.StudioSourceData;
+export type StudioSource =
+    Modules.CvJobStudio.Application.DTOs.StudioSourceData;
 export type StudioInsightReport =
     Modules.CvJobStudio.Application.DTOs.StudioInsightReportData;
 

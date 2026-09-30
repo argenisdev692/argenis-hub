@@ -11,8 +11,7 @@ export const STUDIO_RELATIONS_KEY = ['studio-relations'];
 export function usePendingRelations() {
     const { data, ...query } = useQuery<{ data: StudioRelation[] }>({
         key: () => [...STUDIO_RELATIONS_KEY],
-        query: () =>
-            httpJson<{ data: StudioRelation[] }>(toUrl(index())),
+        query: () => httpJson<{ data: StudioRelation[] }>(toUrl(index())),
         staleTime: 1000 * 60 * 2,
         gcTime: 1000 * 60 * 5,
     });

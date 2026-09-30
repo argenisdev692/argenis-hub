@@ -48,11 +48,7 @@ export const PRODUCT_LEVEL_VALUES = [
     'advanced',
 ] as const;
 
-export const PRODUCT_MODALITY_VALUES = [
-    'online',
-    'onsite',
-    'hybrid',
-] as const;
+export const PRODUCT_MODALITY_VALUES = ['online', 'onsite', 'hybrid'] as const;
 
 /** Narrows the reka `Select` model value (typed `unknown`) back to the enum. */
 export function isProductType(value: unknown): value is ProductType {
@@ -99,7 +95,10 @@ export const productFormSchema = z
             .regex(CURRENCY_PATTERN, 'Use the 3-letter ISO code (e.g. “EUR”).'),
         default_unit: z.enum(BILLING_UNIT_VALUES),
         status: z.enum(PRODUCT_STATUS_VALUES),
-        level: z.string().trim().max(32, 'Level must be 32 characters or fewer.'),
+        level: z
+            .string()
+            .trim()
+            .max(32, 'Level must be 32 characters or fewer.'),
         language: z
             .string()
             .trim()
@@ -122,7 +121,10 @@ export const productFormSchema = z
                 (value) => value === '' || INTEGER_PATTERN.test(value),
                 'Enter a whole number of sessions.',
             ),
-        modality: z.string().trim().max(16, 'Modality must be 16 characters or fewer.'),
+        modality: z
+            .string()
+            .trim()
+            .max(16, 'Modality must be 16 characters or fewer.'),
         notes: z
             .string()
             .trim()
@@ -177,9 +179,12 @@ export function toProductFormValues(product: Product): ProductFormValues {
         client_uuid: product.client_uuid ?? '',
         start_date: product.start_date ?? '',
         end_date: product.end_date ?? '',
-        total_hours: product.total_hours === null ? '' : String(product.total_hours),
+        total_hours:
+            product.total_hours === null ? '' : String(product.total_hours),
         total_sessions:
-            product.total_sessions === null ? '' : String(product.total_sessions),
+            product.total_sessions === null
+                ? ''
+                : String(product.total_sessions),
         modality: product.modality ?? '',
         notes: product.notes ?? '',
     };
@@ -212,9 +217,7 @@ function integer(value: string): number | null {
  * generated write payload: a missing or misnamed key is a compile error here
  * instead of a silently dropped column at runtime.
  */
-export function toWritePayload(
-    values: ProductFormValues,
-): ProductWritePayload {
+export function toWritePayload(values: ProductFormValues): ProductWritePayload {
     return {
         type: values.type,
         title: values.title.trim(),

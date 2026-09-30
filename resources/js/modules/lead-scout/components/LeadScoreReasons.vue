@@ -20,7 +20,9 @@ const ordered = computed(() =>
     [...reasons].sort((a, b) => Math.abs(b.points) - Math.abs(a.points)),
 );
 
-function pointsVariant(points: number): 'default' | 'secondary' | 'destructive' {
+function pointsVariant(
+    points: number,
+): 'default' | 'secondary' | 'destructive' {
     if (points > 0) {
         return 'default';
     }
@@ -38,8 +40,8 @@ function pointsVariant(points: number): 'default' | 'secondary' | 'destructive' 
         <CardHeader>
             <CardTitle>Why this score</CardTitle>
             <CardDescription>
-                Every reason links to the evidence behind it — facts weigh
-                full, inferences weigh less.
+                Every reason links to the evidence behind it — facts weigh full,
+                inferences weigh less.
             </CardDescription>
         </CardHeader>
 
@@ -62,7 +64,11 @@ function pointsVariant(points: number): 'default' | 'secondary' | 'destructive' 
                 >
                     <div class="flex items-center gap-2">
                         <Badge :variant="pointsVariant(reason.points)">
-                            {{ reason.points > 0 ? `+${reason.points}` : reason.points }}
+                            {{
+                                reason.points > 0
+                                    ? `+${reason.points}`
+                                    : reason.points
+                            }}
                         </Badge>
                         <span class="text-sm">
                             {{ reason.explanation }}
@@ -78,7 +84,9 @@ function pointsVariant(points: number): 'default' | 'secondary' | 'destructive' 
 
                     <a
                         v-if="safeExternalUrl(reason.evidence_url) !== null"
-                        :href="safeExternalUrl(reason.evidence_url) ?? undefined"
+                        :href="
+                            safeExternalUrl(reason.evidence_url) ?? undefined
+                        "
                         target="_blank"
                         rel="noopener noreferrer"
                         class="text-xs text-primary underline"

@@ -11,7 +11,10 @@ import {
     update as updateContact,
 } from '@/routes/lead-scout/contacts';
 import { drafts, rescore } from '@/routes/lead-scout/leads';
-import { reply, update as updateOutreachRoute } from '@/routes/lead-scout/outreaches';
+import {
+    reply,
+    update as updateOutreachRoute,
+} from '@/routes/lead-scout/outreaches';
 import { store as storeSuppression } from '@/routes/lead-scout/suppressions';
 import type {
     AiSettingsPayload,
@@ -30,11 +33,16 @@ function errorMessage(error: unknown, fallback: string): string {
     return error instanceof HttpError ? error.message : fallback;
 }
 
-function invalidateLead(queryCache: ReturnType<typeof useQueryCache>, uuid?: string) {
+function invalidateLead(
+    queryCache: ReturnType<typeof useQueryCache>,
+    uuid?: string,
+) {
     const invalidations = [queryCache.invalidateQueries({ key: LEADS_KEY })];
 
     if (uuid !== undefined) {
-        invalidations.push(queryCache.invalidateQueries({ key: LEAD_KEY(uuid) }));
+        invalidations.push(
+            queryCache.invalidateQueries({ key: LEAD_KEY(uuid) }),
+        );
     }
 
     return Promise.all(invalidations);
@@ -52,8 +60,7 @@ export function useLeadMutations() {
         onError(error: unknown) {
             toast.error(errorMessage(error, 'Failed to re-score the lead.'));
         },
-        onSettled: (_data, _error, uuid) =>
-            invalidateLead(queryCache, uuid),
+        onSettled: (_data, _error, uuid) => invalidateLead(queryCache, uuid),
     });
 
     const generateDraft = useMutation<
@@ -63,13 +70,21 @@ export function useLeadMutations() {
         },
         { uuid: string; payload: DraftPayload }
     >({
-        mutation: ({ uuid, payload }: { uuid: string; payload: DraftPayload }) =>
+        mutation: ({
+            uuid,
+            payload,
+        }: {
+            uuid: string;
+            payload: DraftPayload;
+        }) =>
             httpJson<{
                 data: { uuid: string };
                 meta: { subject: string; unconfirmed_claims: string[] };
             }>(toUrl(drafts(uuid)), { method: 'POST', body: payload }),
         onSuccess() {
-            toast.success('Draft generated. Review before sending — nothing is sent automatically.');
+            toast.success(
+                'Draft generated. Review before sending — nothing is sent automatically.',
+            );
         },
         onError(error: unknown) {
             toast.error(errorMessage(error, 'Failed to generate the draft.'));
@@ -79,11 +94,20 @@ export function useLeadMutations() {
     });
 
     const updateOutreach = useMutation({
-        mutation: ({ uuid, payload }: { uuid: string; payload: StagePayload }) =>
-            httpJson<{ data: unknown; meta: { daily_sent: number; daily_limit_warning: boolean } }>(
-                toUrl(updateOutreachRoute(uuid)),
-                { method: 'PATCH', body: payload },
-            ),
+        mutation: ({
+            uuid,
+            payload,
+        }: {
+            uuid: string;
+            payload: StagePayload;
+        }) =>
+            httpJson<{
+                data: unknown;
+                meta: { daily_sent: number; daily_limit_warning: boolean };
+            }>(toUrl(updateOutreachRoute(uuid)), {
+                method: 'PATCH',
+                body: payload,
+            }),
         onSuccess(data) {
             if (data.meta.daily_limit_warning) {
                 toast.warning(
@@ -145,7 +169,9 @@ export function useLeadMutations() {
             toast.success('Decision-maker saved.');
         },
         onError(error: unknown) {
-            toast.error(errorMessage(error, 'Failed to save the decision-maker.'));
+            toast.error(
+                errorMessage(error, 'Failed to save the decision-maker.'),
+            );
         },
         onSettled: (_data, _error, variables) =>
             invalidateLead(queryCache, variables.companyUuid),
@@ -158,13 +184,21 @@ export function useLeadMutations() {
             toast.success('Opposition recorded and contact anonymized.');
         },
         onError(error: unknown) {
-            toast.error(errorMessage(error, 'Failed to record the opposition.'));
+            toast.error(
+                errorMessage(error, 'Failed to record the opposition.'),
+            );
         },
         onSettled: () => queryCache.invalidateQueries({ key: LEADS_KEY }),
     });
 
     const updateChannel = useMutation({
-        mutation: ({ uuid, status }: { uuid: string; status: ChannelStatusUpdate }) =>
+        mutation: ({
+            uuid,
+            status,
+        }: {
+            uuid: string;
+            status: ChannelStatusUpdate;
+        }) =>
             httpJson<unknown>(toUrl(updateChannelRoute(uuid)), {
                 method: 'PATCH',
                 body: { status },

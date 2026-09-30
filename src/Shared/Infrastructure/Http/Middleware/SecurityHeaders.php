@@ -99,7 +99,7 @@ final class SecurityHeaders
      *
      * True when the request itself is secure (direct TLS, or a trusted proxy that
      * forwarded `X-Forwarded-Proto`), and also when the scheme has been pinned from
-     * APP_URL by {@see \Shared\Providers\SharedServiceProvider::forceConfiguredScheme()}
+     * APP_URL by {@see SharedServiceProvider::forceConfiguredScheme()}
      * — the only signal available when the platform proxy strips TLS before the
      * request reaches PHP.
      */

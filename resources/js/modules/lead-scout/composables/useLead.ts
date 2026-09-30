@@ -5,7 +5,11 @@ import { show } from '@/routes/lead-scout/leads';
 import type { LeadDetail } from '../types';
 
 /** The key every LeadScout mutation invalidates alongside the list. */
-export const LEAD_KEY = (uuid: string): string[] => ['lead-scout', 'lead', uuid];
+export const LEAD_KEY = (uuid: string): string[] => [
+    'lead-scout',
+    'lead',
+    uuid,
+];
 
 /**
  * One bandeja detail graph — company, score with evidence, decisors,

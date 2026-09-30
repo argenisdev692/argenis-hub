@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import {
-    ArrowLeftIcon,
-    BanIcon,
-    CopyIcon,
-    RefreshCwIcon,
-} from '@lucide/vue';
+import { ArrowLeftIcon, BanIcon, CopyIcon, RefreshCwIcon } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import PermissionGuard from '@/common/auth/PermissionGuard.vue';
@@ -72,10 +67,10 @@ const selectedOutreach = computed<LeadOutreach | null>(() => {
     const outreaches = lead.value?.outreaches ?? [];
 
     return (
-        outreaches.find((item) => item.uuid === selectedOutreachUuid.value)
-        ?? outreaches.find((item) => item.stage === 'draft')
-        ?? outreaches[0]
-        ?? null
+        outreaches.find((item) => item.uuid === selectedOutreachUuid.value) ??
+        outreaches.find((item) => item.stage === 'draft') ??
+        outreaches[0] ??
+        null
     );
 });
 
@@ -83,8 +78,8 @@ watch(
     () => lead.value?.outreaches.map((item) => item.uuid).join(','),
     () => {
         if (
-            selectedOutreachUuid.value !== null
-            && !(lead.value?.outreaches ?? []).some(
+            selectedOutreachUuid.value !== null &&
+            !(lead.value?.outreaches ?? []).some(
                 (item) => item.uuid === selectedOutreachUuid.value,
             )
         ) {
@@ -194,8 +189,8 @@ function reply(outcome: ReplyOutcome): void {
     }
 
     if (
-        outcome === 'unsubscribe'
-        && !window.confirm(
+        outcome === 'unsubscribe' &&
+        !window.confirm(
             'Record an unsubscribe? This suppresses the company on every channel, permanently.',
         )
     ) {
@@ -278,7 +273,9 @@ function suppress(): void {
                 </h1>
                 <p class="truncate text-sm text-muted-foreground">
                     {{ lead?.company.domain }}
-                    {{ lead?.company.country ? `· ${lead.company.country}` : '' }}
+                    {{
+                        lead?.company.country ? `· ${lead.company.country}` : ''
+                    }}
                 </p>
             </div>
 
@@ -297,10 +294,7 @@ function suppress(): void {
             </PermissionGuard>
         </div>
 
-        <div
-            v-if="isLoading"
-            class="text-sm text-muted-foreground"
-        >
+        <div v-if="isLoading" class="text-sm text-muted-foreground">
             Loading lead…
         </div>
 
@@ -338,22 +332,29 @@ function suppress(): void {
                                     payload: {
                                         full_name: decisor.full_name ?? '',
                                         role_title: decisor.role_title ?? '',
-                                        role_category: decisor.role_category ?? 'executive',
+                                        role_category:
+                                            decisor.role_category ??
+                                            'executive',
                                         is_primary: true,
                                     },
                                 })
                         "
-                        @object="(contactUuid) => objectContact.mutate(contactUuid)"
+                        @object="
+                            (contactUuid) => objectContact.mutate(contactUuid)
+                        "
                     />
                     <p
                         v-if="lead.decisors.length === 0"
                         class="text-sm text-muted-foreground"
                     >
-                        No decisor identified — use the form or offer channel below.
+                        No decisor identified — use the form or offer channel
+                        below.
                     </p>
 
                     <PermissionGuard permission="UPDATE_LEAD_SCOUT">
-                        <div class="grid gap-3 border-t border-border pt-3 md:grid-cols-2">
+                        <div
+                            class="grid gap-3 border-t border-border pt-3 md:grid-cols-2"
+                        >
                             <div class="flex flex-col gap-1">
                                 <Label for="contact-name">Add manually</Label>
                                 <Input
@@ -363,7 +364,9 @@ function suppress(): void {
                                 />
                             </div>
                             <div class="flex flex-col gap-1">
-                                <Label for="contact-title">Title (decisor only)</Label>
+                                <Label for="contact-title"
+                                    >Title (decisor only)</Label
+                                >
                                 <Input
                                     id="contact-title"
                                     v-model="contactForm.role_title"
@@ -371,7 +374,9 @@ function suppress(): void {
                                 />
                             </div>
                             <div class="flex flex-col gap-1">
-                                <Label for="contact-email">Published email (optional)</Label>
+                                <Label for="contact-email"
+                                    >Published email (optional)</Label
+                                >
                                 <Input
                                     id="contact-email"
                                     v-model="contactForm.published_email"
@@ -379,10 +384,7 @@ function suppress(): void {
                                 />
                             </div>
                             <div class="flex items-end">
-                                <Button
-                                    size="sm"
-                                    @click="saveContact"
-                                >
+                                <Button size="sm" @click="saveContact">
                                     Save decisor
                                 </Button>
                             </div>
@@ -408,7 +410,13 @@ function suppress(): void {
                             )?.contact_channel_id ?? null
                         "
                         :can-manage="true"
-                        @mark-broken="(channelUuid) => updateChannel.mutate({ uuid: channelUuid, status: 'broken' })"
+                        @mark-broken="
+                            (channelUuid) =>
+                                updateChannel.mutate({
+                                    uuid: channelUuid,
+                                    status: 'broken',
+                                })
+                        "
                     />
                 </CardContent>
             </Card>
@@ -434,7 +442,8 @@ function suppress(): void {
                             size="sm"
                             @click="selectedOutreachUuid = outreach.uuid"
                         >
-                            {{ outreach.stage }} · {{ outreach.variant ?? 'draft' }}
+                            {{ outreach.stage }} ·
+                            {{ outreach.variant ?? 'draft' }}
                         </Button>
                         <PermissionGuard permission="UPDATE_LEAD_SCOUT">
                             <Button
@@ -487,7 +496,9 @@ function suppress(): void {
                                     <SelectContent>
                                         <SelectItem
                                             v-for="channel in lead.channels.filter(
-                                                (item) => item.allowed && item.uuid !== null,
+                                                (item) =>
+                                                    item.allowed &&
+                                                    item.uuid !== null,
                                             )"
                                             :key="channel.uuid ?? channel.type"
                                             :value="channel.uuid ?? ''"
@@ -522,17 +533,11 @@ function suppress(): void {
                             </div>
 
                             <label class="flex items-center gap-2 text-xs">
-                                <input
-                                    v-model="sendAck"
-                                    type="checkbox"
-                                />
+                                <input v-model="sendAck" type="checkbox" />
                                 Rule pending — I confirm explicitly
                             </label>
 
-                            <Button
-                                size="sm"
-                                @click="markSent"
-                            >
+                            <Button size="sm" @click="markSent">
                                 Mark sent
                             </Button>
 
@@ -569,25 +574,20 @@ function suppress(): void {
                     </div>
 
                     <div
-                        v-if="
-                            (selectedOutreach?.opportunities.length ?? 0) > 0
-                        "
+                        v-if="(selectedOutreach?.opportunities.length ?? 0) > 0"
                         class="flex flex-col gap-1 border-t border-border pt-3"
                     >
-                        <p class="text-sm font-medium">
-                            Opportunities
-                        </p>
+                        <p class="text-sm font-medium">Opportunities</p>
                         <ul class="flex flex-col gap-1 text-sm">
                             <li
                                 v-for="opportunity in selectedOutreach?.opportunities ??
-                                    []"
+                                []"
                                 :key="opportunity.uuid"
                             >
-                                {{ opportunity.type }} · {{ opportunity.status }}
+                                {{ opportunity.type }} ·
+                                {{ opportunity.status }}
                                 <span
-                                    v-if="
-                                        opportunity.hours_per_month !== null
-                                    "
+                                    v-if="opportunity.hours_per_month !== null"
                                 >
                                     · {{ opportunity.hours_per_month }}h/mo
                                 </span>

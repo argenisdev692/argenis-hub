@@ -14,6 +14,8 @@ use Modules\Services\Infrastructure\Persistence\Eloquent\Models\ServiceEloquentM
  */
 final class ServiceFactory extends Factory
 {
+    use GeneratesWordStrings;
+
     protected $model = ServiceEloquentModel::class;
 
     /**
@@ -21,7 +23,7 @@ final class ServiceFactory extends Factory
      */
     public function definition(): array
     {
-        $name = ucfirst((string) fake()->unique()->words(2, true));
+        $name = ucfirst($this->fakeWords(2));
 
         return [
             'uuid' => (string) Str::uuid7(),

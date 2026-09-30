@@ -35,9 +35,7 @@ const { run, isPending, isLoading } = useRunStatus(uuid);
  * first load too, so the first load is excluded — that difference is the whole
  * fix for a panel that blinks every 3 seconds.
  */
-const isBackgroundRefresh = computed(
-    () => isLoading.value && !isPending.value,
-);
+const isBackgroundRefresh = computed(() => isLoading.value && !isPending.value);
 
 const STAGES = [
     { key: 'queued', label: 'Queued' },
@@ -121,9 +119,7 @@ function openReport(): void {
 
     <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:p-6">
         <header class="flex flex-col gap-1">
-            <h1 class="text-2xl font-semibold tracking-tight">
-                Discovery run
-            </h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Discovery run</h1>
             <p class="font-mono text-xs text-muted-foreground">{{ uuid }}</p>
         </header>
 
@@ -134,10 +130,18 @@ function openReport(): void {
                 <Skeleton class="h-4 w-48" />
             </div>
             <div class="flex flex-col gap-2">
-                <Skeleton v-for="stage in STAGES" :key="stage.key" class="h-14 w-full rounded-xl" />
+                <Skeleton
+                    v-for="stage in STAGES"
+                    :key="stage.key"
+                    class="h-14 w-full rounded-xl"
+                />
             </div>
             <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <Skeleton v-for="tile in 4" :key="tile" class="h-20 rounded-lg" />
+                <Skeleton
+                    v-for="tile in 4"
+                    :key="tile"
+                    class="h-20 rounded-lg"
+                />
             </div>
             <span class="sr-only">Loading run status…</span>
         </div>
@@ -153,7 +157,7 @@ function openReport(): void {
                     </p>
                     <p
                         v-if="!isFailed"
-                        class="text-sm tabular-nums text-muted-foreground"
+                        class="text-sm text-muted-foreground tabular-nums"
                     >
                         <span class="font-semibold text-foreground">{{
                             progressPercent
@@ -181,8 +185,8 @@ function openReport(): void {
                 >
                     <template v-if="isFailed">
                         The backend does not record which stage broke, so no
-                        progress is claimed here. Everything collected before the
-                        failure is kept.
+                        progress is claimed here. Everything collected before
+                        the failure is kept.
                     </template>
                     <template v-else-if="isRunning">
                         Working through the pipeline. This page refreshes every

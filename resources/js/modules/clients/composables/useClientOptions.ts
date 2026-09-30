@@ -27,7 +27,12 @@ export function useClientOptions() {
         query: () =>
             httpJson<ClientPage>(
                 index.url({
-                    query: { status: 'active', per_page: 200, sort_field: 'client_name', sort_order: 1 },
+                    query: {
+                        status: 'active',
+                        per_page: 200,
+                        sort_field: 'client_name',
+                        sort_order: 1,
+                    },
                 }),
             ),
         staleTime: 1000 * 60 * 5,

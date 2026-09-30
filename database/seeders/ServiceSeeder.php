@@ -65,10 +65,17 @@ final class ServiceSeeder extends Seeder
         foreach ($services as $service) {
             $existing = ServiceEloquentModel::query()->where('slug', $service['slug'])->first();
 
+            // A persisted service always carries its uuid, so the null check is on
+            // the MODEL (which may not exist yet), not on the attribute: `$existing
+            // ?->uuid ?? ...` reads as if uuid could be null on a loaded row.
+            $uuid = $existing instanceof ServiceEloquentModel
+                ? $existing->uuid
+                : Uuid::uuid7()->toString();
+
             ServiceEloquentModel::query()->updateOrCreate(
                 ['slug' => $service['slug']],
                 [
-                    'uuid' => $existing?->uuid ?? Uuid::uuid7()->toString(),
+                    'uuid' => $uuid,
                     'name' => $service['name'],
                     'description' => $service['description'],
                     'is_active' => true,

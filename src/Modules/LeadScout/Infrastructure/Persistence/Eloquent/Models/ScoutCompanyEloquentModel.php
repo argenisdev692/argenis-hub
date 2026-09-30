@@ -27,6 +27,7 @@ use Spatie\Activitylog\Support\LogOptions;
  *
  * @property int $id
  * @property string $uuid
+ * @property string $canonical_domain
  *
  * @mixin \Eloquent
  *

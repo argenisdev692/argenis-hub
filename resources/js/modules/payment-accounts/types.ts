@@ -44,10 +44,7 @@ export type PaymentAccountStatusFilter = 'all' | 'active' | 'deleted';
 
 /** The columns `PaymentAccountFilterData::$sortField` whitelists. */
 export type PaymentAccountSortField =
-    | 'created_at'
-    | 'label'
-    | 'method'
-    | 'currency';
+    'created_at' | 'label' | 'method' | 'currency';
 
 /**
  * The query params `GET /data/admin/payment-accounts` accepts.

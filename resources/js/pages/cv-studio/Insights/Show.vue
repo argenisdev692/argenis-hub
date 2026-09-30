@@ -19,8 +19,12 @@ defineOptions({
 const { report: reportData } = useInsightReport(uuid, true);
 const { rates } = useOwnRates();
 
-const requirements = computed(() => reportData.value?.requirements.requirements ?? []);
-const eligibility = computed(() => reportData.value?.requirements.eligibility ?? {});
+const requirements = computed(
+    () => reportData.value?.requirements.requirements ?? [],
+);
+const eligibility = computed(
+    () => reportData.value?.requirements.eligibility ?? {},
+);
 const reachTable = computed(() => reportData.value?.reach_table ?? []);
 const recommendations = computed(() => reportData.value?.recommendations ?? []);
 const correlation = computed(
@@ -36,7 +40,10 @@ const sampleNote = computed(() => reportData.value?.sample_note ?? null);
 const eligibilityEntries = computed(() =>
     Object.entries(eligibility.value)
         .map(([requirement, count]) => ({ requirement, count }))
-        .sort((a, b) => b.count - a.count || a.requirement.localeCompare(b.requirement)),
+        .sort(
+            (a, b) =>
+                b.count - a.count || a.requirement.localeCompare(b.requirement),
+        ),
 );
 </script>
 
@@ -53,7 +60,7 @@ const eligibilityEntries = computed(() =>
                 capped and below-threshold ones. Directional, never causal.
             </p>
             <p class="text-sm text-muted-foreground">
-                <span class="tabular-nums font-medium text-foreground">{{
+                <span class="font-medium text-foreground tabular-nums">{{
                     jdsAnalyzed
                 }}</span>
                 {{ jdsAnalyzed === 1 ? 'job' : 'jobs' }} analysed
@@ -99,7 +106,7 @@ const eligibilityEntries = computed(() =>
                     class="flex items-center justify-between gap-2"
                 >
                     <span>{{ row.requirement }}</span>
-                    <span class="tabular-nums text-muted-foreground">
+                    <span class="text-muted-foreground tabular-nums">
                         {{ row.count }} of {{ jdsAnalyzed }}
                     </span>
                 </li>
@@ -111,7 +118,10 @@ const eligibilityEntries = computed(() =>
             aria-label="Requirement frequency"
         >
             <h2 class="mb-2 text-sm font-semibold">Requirement frequency</h2>
-            <ul v-if="requirements.length > 0" class="flex flex-col gap-1 text-sm">
+            <ul
+                v-if="requirements.length > 0"
+                class="flex flex-col gap-1 text-sm"
+            >
                 <li
                     v-for="row in requirements"
                     :key="row.name"
@@ -119,14 +129,11 @@ const eligibilityEntries = computed(() =>
                 >
                     <span>
                         {{ row.name }}
-                        <span
-                            v-if="row.covered"
-                            class="text-xs text-success"
-                        >
+                        <span v-if="row.covered" class="text-xs text-success">
                             · covered
                         </span>
                     </span>
-                    <span class="tabular-nums text-muted-foreground">
+                    <span class="text-muted-foreground tabular-nums">
                         {{ row.count }} of {{ jdsAnalyzed }}
                         <template v-if="row.percentage !== null">
                             ({{ row.percentage }}%)
@@ -154,7 +161,7 @@ const eligibilityEntries = computed(() =>
                     class="flex items-center justify-between gap-2"
                 >
                     <span class="font-mono text-xs">{{ row.cap }}</span>
-                    <span class="tabular-nums text-muted-foreground">
+                    <span class="text-muted-foreground tabular-nums">
                         {{ row.unlocked_count }} of {{ row.capped_count }} would
                         clear the bar uncapped
                     </span>
@@ -181,7 +188,7 @@ const eligibilityEntries = computed(() =>
                     class="flex items-center justify-between gap-2"
                 >
                     <span>{{ row.requirement }}</span>
-                    <span class="tabular-nums text-muted-foreground">
+                    <span class="text-muted-foreground tabular-nums">
                         answered {{ row.answered_rate ?? '—' }} · silent
                         {{ row.silent_rate ?? '—' }}
                     </span>
@@ -204,7 +211,7 @@ const eligibilityEntries = computed(() =>
                     class="flex items-center justify-between gap-2"
                 >
                     <span>{{ row.bucket }}</span>
-                    <span class="tabular-nums text-muted-foreground">
+                    <span class="text-muted-foreground tabular-nums">
                         {{ row.positives }}/{{ row.applications }}
                         <template v-if="row.rate !== null">
                             ({{ (row.rate * 100).toFixed(1) }}% · 90% CI

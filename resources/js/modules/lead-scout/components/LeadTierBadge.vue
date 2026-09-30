@@ -9,6 +9,12 @@ const { tier } = defineProps<{
 
 <template>
     <Badge :variant="tierSeverity(tier)">
-        {{ tier === null ? 'Unscored' : tier === 'discarded' ? 'Discarded' : `Tier ${tier}` }}
+        {{
+            tier === null
+                ? 'Unscored'
+                : tier === 'discarded'
+                  ? 'Discarded'
+                  : `Tier ${tier}`
+        }}
     </Badge>
 </template>

@@ -54,7 +54,9 @@ const form = useProductForm({
 
 /** Normalises the prop so the template never branches on its shape. */
 function options(): ClientOption[] {
-    return typeof clientOptions === 'function' ? clientOptions() : clientOptions;
+    return typeof clientOptions === 'function'
+        ? clientOptions()
+        : clientOptions;
 }
 
 /** reka `Select` has no empty-string item, so "no client" gets its own sentinel. */
@@ -263,7 +265,9 @@ const NO_CLIENT = '__none__';
                             @update:model-value="
                                 (value) =>
                                     field.handleChange(
-                                        value === NO_CLIENT ? '' : String(value),
+                                        value === NO_CLIENT
+                                            ? ''
+                                            : String(value),
                                     )
                             "
                         >
@@ -297,7 +301,9 @@ const NO_CLIENT = '__none__';
                             @update:model-value="
                                 (value) =>
                                     field.handleChange(
-                                        value === NO_CLIENT ? '' : String(value),
+                                        value === NO_CLIENT
+                                            ? ''
+                                            : String(value),
                                     )
                             "
                         >

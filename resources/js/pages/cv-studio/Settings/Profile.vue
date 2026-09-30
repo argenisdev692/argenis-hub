@@ -96,7 +96,11 @@ const profileForm = useForm({
     slug: '',
     base_city: '',
     base_country: '',
-    accepted_remote_scopes: ['remote_global', 'remote_eu', 'remote_pt_es'] as string[],
+    accepted_remote_scopes: [
+        'remote_global',
+        'remote_eu',
+        'remote_pt_es',
+    ] as string[],
     stack_must: '',
     stack_reject: '',
     skill_floors: {} as Record<string, number>,
@@ -116,7 +120,9 @@ watch(
         profileForm.slug = profile.slug;
         profileForm.base_city = profile.base_city ?? '';
         profileForm.base_country = profile.base_country ?? '';
-        profileForm.accepted_remote_scopes = [...(profile.accepted_remote_scopes ?? [])];
+        profileForm.accepted_remote_scopes = [
+            ...(profile.accepted_remote_scopes ?? []),
+        ];
         profileForm.stack_must = (profile.stack_must ?? []).join(', ');
         profileForm.stack_reject = (profile.stack_reject ?? []).join(', ');
         profileForm.skill_floors = { ...(profile.skill_floors ?? {}) };
@@ -245,8 +251,8 @@ async function reject(uuid: string): Promise<void> {
                 Search profiles
             </h1>
             <p class="text-sm text-muted-foreground">
-                Gates, stack lock, geography and seniority live per profile —
-                a new profile needs no code and inherits nothing.
+                Gates, stack lock, geography and seniority live per profile — a
+                new profile needs no code and inherits nothing.
             </p>
         </header>
 
@@ -261,8 +267,9 @@ async function reject(uuid: string): Promise<void> {
                     <dt class="text-muted-foreground">Accepted scopes</dt>
                     <dd>
                         {{
-                            (selected.accepted_remote_scopes ?? []).join(', ') ||
-                            '— none (runs are blocked until set)'
+                            (selected.accepted_remote_scopes ?? []).join(
+                                ', ',
+                            ) || '— none (runs are blocked until set)'
                         }}
                     </dd>
                 </div>
@@ -350,8 +357,8 @@ async function reject(uuid: string): Promise<void> {
                 Skill relations inbox ({{ relations.length }} pending)
             </h2>
             <p class="mb-2 text-xs text-muted-foreground">
-                The model may propose a relation — only your confirmation
-                grants credit.
+                The model may propose a relation — only your confirmation grants
+                credit.
             </p>
             <ul class="flex flex-col gap-2">
                 <li
@@ -453,9 +460,7 @@ async function reject(uuid: string): Promise<void> {
                     class="flex flex-col gap-2 md:col-span-2"
                     aria-label="Skill defensibility"
                 >
-                    <p class="text-sm font-medium">
-                        Skill defensibility
-                    </p>
+                    <p class="text-sm font-medium">Skill defensibility</p>
                     <p class="text-xs text-muted-foreground">
                         Filters the shortlist only — a job whose required
                         requirements all sit below your anchors is skipped. It
@@ -464,10 +469,7 @@ async function reject(uuid: string): Promise<void> {
                         strong half.
                     </p>
 
-                    <ul
-                        v-if="floorRows.length > 0"
-                        class="flex flex-col gap-2"
-                    >
+                    <ul v-if="floorRows.length > 0" class="flex flex-col gap-2">
                         <li
                             v-for="row in floorRows"
                             :key="row.skill || '__new__'"
@@ -494,7 +496,9 @@ async function reject(uuid: string): Promise<void> {
                                     )
                                 "
                             />
-                            <span class="w-20 shrink-0 text-xs text-muted-foreground">
+                            <span
+                                class="w-20 shrink-0 text-xs text-muted-foreground"
+                            >
                                 {{
                                     FLOOR_LEVELS.find(
                                         (level) => level.value === row.level,
@@ -546,9 +550,7 @@ async function reject(uuid: string): Promise<void> {
                         class="w-fit"
                         :disabled="profileForm.processing"
                     >
-                        {{
-                            editingUuid ? 'Save changes' : 'Create profile'
-                        }}
+                        {{ editingUuid ? 'Save changes' : 'Create profile' }}
                     </Button>
                 </PermissionGuard>
             </form>

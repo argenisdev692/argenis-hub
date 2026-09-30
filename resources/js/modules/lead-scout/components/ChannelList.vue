@@ -59,7 +59,10 @@ function channelLabel(type: string): string {
                 v-if="channel.warning"
                 class="flex items-start gap-1 text-xs text-muted-foreground"
             >
-                <TriangleAlertIcon class="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                <TriangleAlertIcon
+                    class="mt-0.5 size-3 shrink-0"
+                    aria-hidden="true"
+                />
                 {{ channel.warning }}
             </p>
 
@@ -90,10 +93,7 @@ function channelLabel(type: string): string {
             </div>
         </div>
 
-        <p
-            v-if="channels.length === 0"
-            class="text-sm text-muted-foreground"
-        >
+        <p v-if="channels.length === 0" class="text-sm text-muted-foreground">
             No permitted channel — manual review required.
         </p>
     </div>

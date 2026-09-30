@@ -1,2 +1,7 @@
 resources/js/components/ui/*
 resources/views/mail/*
+
+# Emitted by `php artisan typescript:transform` (spatie/laravel-typescript-transformer).
+# Rewriting it by hand is pointless churn and it would re-fail format:check on the
+# next backend DTO/enum change, so it stays out of the Prettier contract.
+resources/js/generated/*

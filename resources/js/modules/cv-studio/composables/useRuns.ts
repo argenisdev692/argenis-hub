@@ -97,7 +97,8 @@ export function useStartRun() {
 export function useInsightReport(uuid: string, enabled: boolean) {
     const { data, ...query } = useQuery<{ report: StudioInsightReport }>({
         key: () => ['studio-runs', uuid, 'report'],
-        query: () => httpJson<{ report: StudioInsightReport }>(toUrl(report(uuid))),
+        query: () =>
+            httpJson<{ report: StudioInsightReport }>(toUrl(report(uuid))),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
         enabled,

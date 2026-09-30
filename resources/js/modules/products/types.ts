@@ -52,11 +52,7 @@ export type ProductRowStatusFilter = 'all' | 'active' | 'deleted';
 
 /** The columns `ProductFilterData::$sortField` whitelists. */
 export type ProductSortField =
-    | 'created_at'
-    | 'title'
-    | 'price'
-    | 'start_date'
-    | 'status';
+    'created_at' | 'title' | 'price' | 'start_date' | 'status';
 
 /**
  * The query params `GET /data/admin/products` accepts.

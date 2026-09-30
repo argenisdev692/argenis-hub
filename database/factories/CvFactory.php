@@ -16,6 +16,8 @@ use Modules\Cvs\Infrastructure\Persistence\Eloquent\Models\CvEloquentModel;
  */
 final class CvFactory extends Factory
 {
+    use GeneratesWordStrings;
+
     protected $model = CvEloquentModel::class;
 
     /**
@@ -23,7 +25,7 @@ final class CvFactory extends Factory
      */
     public function definition(): array
     {
-        $title = ucfirst((string) fake()->unique()->words(3, true));
+        $title = ucfirst($this->fakeWords(3));
         $type = fake()->randomElement(CvFileType::cases());
 
         return [

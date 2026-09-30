@@ -57,8 +57,9 @@ const modelOptions = computed(() =>
 
 function chooseProvider(value: string): void {
     selectedProvider.value = value;
-    const first = modelOptions.value.find((option) => option.available)
-        ?? modelOptions.value[0];
+    const first =
+        modelOptions.value.find((option) => option.available) ??
+        modelOptions.value[0];
 
     selectedModel.value = first?.model ?? '';
     emit('update:provider', selectedProvider.value);
@@ -85,7 +86,14 @@ function estimatedCost(option: AiCatalogOption): string {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem
-                            v-for="option in [...new Map(options.map((item) => [item.provider, item])).values()]"
+                            v-for="option in [
+                                ...new Map(
+                                    options.map((item) => [
+                                        item.provider,
+                                        item,
+                                    ]),
+                                ).values(),
+                            ]"
                             :key="option.provider"
                             :value="option.provider"
                         >
@@ -128,16 +136,21 @@ function estimatedCost(option: AiCatalogOption): string {
             class="flex items-start gap-2 rounded-lg border border-border p-3 text-sm"
             role="alert"
         >
-            <TriangleAlertIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <TriangleAlertIcon
+                class="mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+            />
             <span>
                 Unconfirmed capabilities (not in the profile):
-                {{ unconfirmedClaims.join(', ') }}. Confirm them before
-                marking ready.
+                {{ unconfirmedClaims.join(', ') }}. Confirm them before marking
+                ready.
             </span>
         </div>
 
         <div class="flex flex-col gap-2">
-            <Label for="draft-body">Draft — the art. 14 notice below is mandatory</Label>
+            <Label for="draft-body"
+                >Draft — the art. 14 notice below is mandatory</Label
+            >
             <Textarea
                 id="draft-body"
                 v-model="localBody"
@@ -147,24 +160,15 @@ function estimatedCost(option: AiCatalogOption): string {
         </div>
 
         <div class="flex flex-wrap gap-2">
-            <Button
-                :disabled="generating"
-                @click="emit('generate')"
-            >
+            <Button :disabled="generating" @click="emit('generate')">
                 <SparklesIcon class="size-4" aria-hidden="true" />
                 {{ generating ? 'Generating…' : 'Regenerate opener' }}
             </Button>
-            <Button
-                variant="outline"
-                @click="emit('copy')"
-            >
+            <Button variant="outline" @click="emit('copy')">
                 <CopyIcon class="size-4" aria-hidden="true" />
                 Copy subject + body
             </Button>
-            <Button
-                variant="secondary"
-                @click="emit('save')"
-            >
+            <Button variant="secondary" @click="emit('save')">
                 Save draft
             </Button>
         </div>

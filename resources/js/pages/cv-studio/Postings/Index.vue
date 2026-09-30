@@ -25,7 +25,10 @@ import {
     Paginator,
 } from '@/common/table';
 import { Button } from '@/components/ui/button';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import {
+    NativeSelect,
+    NativeSelectOption,
+} from '@/components/ui/native-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermissions } from '@/composables/usePermissions';
 import { useUrlSyncedFilters } from '@/composables/useUrlSyncedFilters';
@@ -219,7 +222,8 @@ const hasActiveFilters = computed(() => {
  */
 const showUnscoredModel = computed({
     get: () => !filters.value.scored_only,
-    set: (value: boolean) => applyFilter(() => (filters.value.scored_only = !value)),
+    set: (value: boolean) =>
+        applyFilter(() => (filters.value.scored_only = !value)),
 });
 
 function clearFilters(): void {
@@ -428,7 +432,9 @@ async function startRun(): Promise<void> {
                         </NativeSelectOption>
                     </NativeSelect>
                     <Button
-                        :disabled="!runProfileUuid || startRunMutation.isLoading.value"
+                        :disabled="
+                            !runProfileUuid || startRunMutation.isLoading.value
+                        "
                         @click="startRun"
                     >
                         <PlayIcon class="size-4" aria-hidden="true" />
@@ -517,7 +523,11 @@ async function startRun(): Promise<void> {
                             @click="showUnscoredModel = !showUnscoredModel"
                         >
                             <LayersIcon class="size-4" aria-hidden="true" />
-                            {{ showUnscoredModel ? 'Hide unscored' : 'Show unscored' }}
+                            {{
+                                showUnscoredModel
+                                    ? 'Hide unscored'
+                                    : 'Show unscored'
+                            }}
                         </Button>
 
                         <Button

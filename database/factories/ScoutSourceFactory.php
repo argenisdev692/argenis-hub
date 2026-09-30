@@ -15,6 +15,8 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutSourceEloq
  */
 final class ScoutSourceFactory extends Factory
 {
+    use GeneratesWordStrings;
+
     protected $model = ScoutSourceEloquentModel::class;
 
     /**
@@ -24,7 +26,7 @@ final class ScoutSourceFactory extends Factory
     {
         return [
             'uuid' => (string) Str::uuid7(),
-            'name' => ucfirst((string) fake()->words(2, true)),
+            'name' => ucfirst($this->fakeWords(2, unique: false)),
             'type' => SourceType::Rss,
             'country' => null,
             'access_method' => 'rss',

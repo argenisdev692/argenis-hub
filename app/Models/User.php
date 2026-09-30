@@ -330,7 +330,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     protected static function booted(): void
     {
         static::creating(function (User $user): void {
-            if ($user->uuid === null) {
+            // The attribute, not the property: a not-yet-persisted model has no
+            // uuid, while the class-level `@property string $uuid` describes a
+            // retrieved row, so a `=== null` guard on the property is dead code.
+            if (! $user->getAttribute('uuid')) {
                 $user->uuid = (string) Str::uuid7();
             }
         });

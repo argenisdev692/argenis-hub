@@ -33,8 +33,7 @@ const COLUMNS: readonly Column[] = [
     {
         key: 'saved',
         label: 'Saved',
-        matches: (application) =>
-            ['saved', 'new'].includes(application.status),
+        matches: (application) => ['saved', 'new'].includes(application.status),
     },
     {
         key: 'applied',
@@ -82,7 +81,9 @@ function outcomeLabel(application: StudioApplication): string {
           )
         : 0;
 
-    return ageDays >= 21 ? 'aged silence (counts as non-reply)' : 'awaiting reply';
+    return ageDays >= 21
+        ? 'aged silence (counts as non-reply)'
+        : 'awaiting reply';
 }
 </script>
 
@@ -93,9 +94,9 @@ function outcomeLabel(application: StudioApplication): string {
         <header class="flex flex-col gap-1">
             <h1 class="text-2xl font-semibold tracking-tight">Applications</h1>
             <p class="text-sm text-muted-foreground">
-                What you did with each posting, and what the employer did
-                back — tracked separately. Aged silence counts as non-reply
-                for analysis only; the stored value is never overwritten.
+                What you did with each posting, and what the employer did back —
+                tracked separately. Aged silence counts as non-reply for
+                analysis only; the stored value is never overwritten.
             </p>
         </header>
 
@@ -117,7 +118,9 @@ function outcomeLabel(application: StudioApplication): string {
             >
                 <h2 class="text-sm font-semibold">
                     {{ column.label }}
-                    <span class="font-normal text-muted-foreground tabular-nums">
+                    <span
+                        class="font-normal text-muted-foreground tabular-nums"
+                    >
                         ({{ columnItems(column).length }})
                     </span>
                 </h2>

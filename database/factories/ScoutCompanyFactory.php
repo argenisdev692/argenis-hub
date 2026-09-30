@@ -17,6 +17,8 @@ use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutCompanyElo
  */
 final class ScoutCompanyFactory extends Factory
 {
+    use GeneratesWordStrings;
+
     protected $model = ScoutCompanyEloquentModel::class;
 
     /**
@@ -24,7 +26,7 @@ final class ScoutCompanyFactory extends Factory
      */
     public function definition(): array
     {
-        $name = ucfirst((string) fake()->unique()->words(2, true)).' Labs';
+        $name = ucfirst($this->fakeWords(2)).' Labs';
 
         return [
             'uuid' => (string) Str::uuid7(),

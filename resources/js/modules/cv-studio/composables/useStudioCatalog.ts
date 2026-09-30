@@ -31,8 +31,7 @@ export function useOwnRates() {
 export function useSources() {
     const { data, ...query } = useQuery<{ data: StudioSource[] }>({
         key: () => ['studio-sources'],
-        query: () =>
-            httpJson<{ data: StudioSource[] }>(toUrl(sourcesIndex())),
+        query: () => httpJson<{ data: StudioSource[] }>(toUrl(sourcesIndex())),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
     });
