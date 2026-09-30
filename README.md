@@ -6,6 +6,8 @@
 
 Clients, invoicing, availability, content, campaigns, lead intelligence, CV/ATS tooling, AI course-script authoring and a video-editing pipeline, behind a single typed Inertia SPA.
 
+🌐 **Live:** [argenis-hub-production.up.railway.app](https://argenis-hub-production.up.railway.app/)
+
 <br />
 
 <!-- ── Runtime ─────────────────────────────────────────────── -->
