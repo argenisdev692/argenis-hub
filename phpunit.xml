@@ -41,6 +41,41 @@
         -->
         <env name="TAVILY_API_KEY" value=""/>
         <env name="ELEVENLABS_API_KEY" value=""/>
+        <!--
+            Object storage is pinned to inert placeholders for the same reason as
+            the API keys above: the suite must never depend on the developer's own
+            .env, and must never reach the network.
+
+            Presigning (StoragePort::temporaryUploadUrl, hit by every Video Edit
+            store request) is pure local HMAC, so placeholder credentials make the
+            real R2StorageAdapter path work offline. Without them the AWS SDK finds
+            no credentials in CI, walks its provider chain to the EC2 instance
+            metadata service at 169.254.169.254, and throws "Error retrieving
+            credentials from the instance profile metadata service" - which failed
+            every Video Edit creation test while passing on a developer machine,
+            because .env carries the real R2 keys.
+
+            The endpoint must be set too, not just the keys: R2ConfigurationTest
+            asserts the signing endpoint and the public URL are different hosts,
+            and .env.example ships both empty, so that comparison was null !== null.
+
+            AWS_EC2_METADATA_DISABLED is the hard stop: any path that still reaches
+            the default provider chain now fails fast instead of hanging on the
+            metadata probe.
+        -->
+        <env name="AWS_EC2_METADATA_DISABLED" value="true"/>
+        <env name="AWS_ACCESS_KEY_ID" value="testing"/>
+        <env name="AWS_SECRET_ACCESS_KEY" value="testing"/>
+        <env name="AWS_DEFAULT_REGION" value="us-east-1"/>
+        <env name="AWS_BUCKET" value="testing-bucket"/>
+        <env name="R2_ACCESS_KEY_ID" value="testing"/>
+        <env name="R2_SECRET_ACCESS_KEY" value="testing"/>
+        <env name="R2_DEFAULT_REGION" value="auto"/>
+        <env name="R2_BUCKET" value="testing-bucket"/>
+        <env name="R2_ENDPOINT" value="https://testing-account.r2.cloudflarestorage.com"/>
+        <env name="R2_URL" value="https://pub-testing-account.r2.dev"/>
+        <env name="R2_PUBLIC_BASE_URL" value="https://pub-testing-account.r2.dev"/>
+        <env name="R2_USE_PATH_STYLE_ENDPOINT" value="true"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <!-- Video Edits dispatches on its own Redis (Upstash) connection; keep tests off the network. -->
         <env name="VIDEO_EDIT_QUEUE_CONNECTION" value="sync"/>
