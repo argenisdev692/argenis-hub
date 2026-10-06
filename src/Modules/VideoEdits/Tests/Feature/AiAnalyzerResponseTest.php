@@ -101,6 +101,25 @@ it('accepts a misspoken word as a proposal for the owner to review', function ()
         ->and($proposals[0]->evidence)->toBe('Script says "vemos".');
 });
 
+it('accepts a misplaced take as a proposal so a desynced block can be removed', function (): void {
+    fakeAnalyzerFor([
+        'cuts' => [[
+            'reason' => 'misplaced_take',
+            'start_word_index' => 0,
+            'end_word_index' => 2,
+            'confidence' => 88,
+            'evidence' => 'Explains the template while the screen shows the table; repeated at word 40.',
+        ]],
+        'recommendations' => [],
+    ]);
+
+    $proposals = app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null)->cutProposals;
+
+    expect($proposals)->toHaveCount(1)
+        ->and($proposals[0]->reason)->toBe(CutReason::MisplacedTake)
+        ->and($proposals[0]->confidence)->toBe(0.88);
+});
+
 it('drops a cut whose word index does not exist', function (): void {
     // A hallucinated index would otherwise resolve to the wrong words entirely.
     fakeAnalyzerFor([

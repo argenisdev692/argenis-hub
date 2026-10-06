@@ -32,6 +32,14 @@ export type AiReviewableCut =
 export type ReviewVideoEditCutsPayload =
     Modules.VideoEdits.Application.DTOs.ReviewVideoEditCutsData;
 
+/**
+ * A saved block of standing editorial notes to start `ai_instructions` from.
+ * Config-backed and read-only — picking one only fills the field, which stays
+ * editable and is what actually gets stored on the edit.
+ */
+export type InstructionProfile =
+    Modules.VideoEdits.Application.DTOs.InstructionProfileData;
+
 export type VideoEditStatus = Modules.VideoEdits.Domain.Enums.VideoEditStatus;
 export type VideoEditMode = Modules.VideoEdits.Domain.Enums.VideoEditMode;
 export type ProcessingStage = Modules.VideoEdits.Domain.Enums.ProcessingStage;

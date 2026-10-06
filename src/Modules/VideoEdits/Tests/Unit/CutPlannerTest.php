@@ -154,6 +154,75 @@ it('still cuts a silence where the screen stood still', function (): void {
         ->and($plan->compressedRanges)->toBe([]);
 });
 
+function speechCut(CutReason $reason, int $startMs, int $endMs): ValidatedDecision
+{
+    return ValidatedDecision::applied(new CutDecision('speech_detector', $reason, DecisionOrigin::SystemDetection, $startMs, $endMs));
+}
+
+function aiCut(int $startMs, int $endMs): ValidatedDecision
+{
+    return ValidatedDecision::applied(new CutDecision('ai_edit', CutReason::PauseMarker, DecisionOrigin::Ai, $startMs, $endMs));
+}
+
+it('refuses a stutter cut that falls inside a tool wait', function (): void {
+    // Claude is streaming its answer from 10 250 to 21 900; the speaker stutters
+    // in the middle of it. Splicing there is the abrupt cut nobody wants.
+    $plan = politePlanner()->plan([
+        busySilence(10_000, 22_000, 0.9),
+        speechCut(CutReason::Stutter, 14_000, 14_200),
+    ], 60_000);
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([])
+        ->and($plan->decisions[1]->rejectionReason)->toBe(DecisionRejectionReason::ScreenBusy)
+        ->and($plan->decisions[1]->isApplied())->toBeFalse()
+        // The wait itself is still honoured — it is compressed, not lost.
+        ->and($plan->compressedRanges)->not->toBe([]);
+});
+
+it('refuses an AI pause-marker cut that falls inside a tool wait', function (): void {
+    $plan = politePlanner()->plan([
+        busySilence(10_000, 22_000, 0.9),
+        aiCut(15_000, 15_400),
+    ], 60_000);
+
+    expect($plan->hasCuts())->toBeFalse()
+        ->and($plan->decisions[1]->rejectionReason)->toBe(DecisionRejectionReason::ScreenBusy);
+});
+
+it('trims a cut back to the edge of a tool wait instead of dropping it', function (): void {
+    $plan = politePlanner()->plan([
+        busySilence(10_000, 22_000, 0.9),
+        speechCut(CutReason::Filler, 21_700, 22_500),
+    ], 60_000);
+
+    // The wait ends at 21 900; the part after it is a real filler and survives.
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[21_900, 22_500]])
+        ->and($plan->decisions[1]->rejectionReason)->toBeNull();
+});
+
+it('still applies a manual range inside a tool wait', function (): void {
+    $plan = politePlanner()->plan([
+        busySilence(10_000, 22_000, 0.9),
+        manualCut(14_000, 14_200),
+    ], 60_000);
+
+    // The owner looked at that range and asked for it, which outranks the default.
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[14_000, 14_200]])
+        ->and($plan->decisions[1]->rejectionReason)->toBeNull();
+});
+
+it('leaves cuts alone when the screen was still for the whole silence', function (): void {
+    $plan = politePlanner()->plan([
+        busySilence(10_000, 12_000, 0.2),
+        speechCut(CutReason::Stutter, 10_300, 10_500),
+    ], 60_000);
+
+    // Still screen → the silence is cut, and the stutter inside it merges as usual.
+    expect($plan->compressedRanges)->toBe([])
+        ->and(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_250, 11_900]])
+        ->and($plan->decisions[1]->rejectionReason)->toBeNull();
+});
+
 it('keeps some air when a pause is cut in the middle of a sentence', function (): void {
     $segments = [
         new TranscriptSegment('Vamos a abrir el panel y', 8_000, 10_000),

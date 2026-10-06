@@ -130,3 +130,30 @@ it('formats numbers independently of the process locale', function (): void {
     expect($graph)->toContain('trim=start=1.500:end=2.250')
         ->and($graph)->toContain('fps=29.970');
 });
+
+it('leaves the audio chain untouched when room tone is not configured', function (): void {
+    $graph = (new FilterGraphBuilder)->merge([
+        new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0),
+    ], graphProfile());
+
+    expect($graph)->toContain('[0:a:0]aresample=48000:async=1,aformat=sample_rates=48000:channel_layouts=stereo[a0]')
+        ->and($graph)->not->toContain('afftdn')
+        ->and($graph)->not->toContain('highpass');
+});
+
+it('drops the rumble before denoising when room tone is configured', function (): void {
+    $graph = (new FilterGraphBuilder(denoiseReductionDb: 12.0, denoiseFloorDb: -25.0, denoiseHighpassHz: 80))
+        ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
+
+    expect($graph)->toContain(
+        '[0:a:0]aresample=48000:async=1,highpass=f=80,afftdn=nr=12.00:nf=-25.00,aformat=sample_rates=48000:channel_layouts=stereo[a0]',
+    );
+});
+
+it('omits the highpass when only a frequency of zero is configured', function (): void {
+    $graph = (new FilterGraphBuilder(denoiseReductionDb: 8.0, denoiseFloorDb: -25.0, denoiseHighpassHz: 0))
+        ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
+
+    expect($graph)->toContain('async=1,afftdn=nr=8.00:nf=-25.00,aformat=')
+        ->and($graph)->not->toContain('highpass');
+});

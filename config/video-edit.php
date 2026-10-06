@@ -88,6 +88,32 @@ return [
 
     /*
     |----------------------------------------------------------------------
+    | Room tone (OBSERVACIONES round 2)
+    |----------------------------------------------------------------------
+    |
+    | Cuts cannot fix a reverberant recording. What this can do is subtract the
+    | steady part of it: `highpass` drops rumble from a desk being knocked, and
+    | `afftdn` learns the noise floor and takes the hiss out from under the
+    | voice. Expect the tail of a heavy reverb to survive — that is a room, not a
+    | noise floor, and it belongs at the desk.
+    |
+    | Off by default: the reduction is audible on clean speech, so it is a
+    | deliberate per-installation choice rather than a sensible default. Set
+    | NR_DB to 0 to leave the audio untouched.
+    |
+    */
+    'room_tone' => [
+        'enabled' => (bool) env('VIDEO_EDIT_ROOM_TONE', false),
+        // How much to pull down, in dB. FFmpeg accepts 0.01 – 97; 12 is mild.
+        'reduction_db' => (float) env('VIDEO_EDIT_ROOM_TONE_NR_DB', 12),
+        // Where the floor is assumed to sit. −25 suits a quiet room.
+        'floor_db' => (float) env('VIDEO_EDIT_ROOM_TONE_NF_DB', -25),
+        // 0 disables the highpass stage on its own.
+        'highpass_hz' => (int) env('VIDEO_EDIT_ROOM_TONE_HIGHPASS_HZ', 80),
+    ],
+
+    /*
+    |----------------------------------------------------------------------
     | Speech cleanup (V2 · US-10)
     |----------------------------------------------------------------------
     |
@@ -113,8 +139,14 @@ return [
 
         'openai' => [
             'api_key' => env('OPENAI_API_KEY'),
+            // `whisper-1` on purpose. OpenAI's newer models (`gpt-transcribe`,
+            // `gpt-4o-transcribe`) answer with plain text and no word timings,
+            // which is the one thing this module cannot work without — see the
+            // docblock on OpenAiWhisperTranscriber. OpenAI has announced
+            // `whisper-1` for removal on 2027-02-26; that migration goes to a
+            // different provider, not to a different OpenAI model.
             'model' => env('OPENAI_WHISPER_MODEL', 'whisper-1'),
-            'timeout_seconds' => (int) env('OPENAI_WHISPER_TIMEOUT', 600),
+            'timeout_seconds' => (int) env('OPENAI_WHISPER_TIMEOUT', 1_200),
             // Whisper tidies its transcript and drops hesitations unless the
             // prompt shows it verbatim speech; a filler that is never
             // transcribed can never be cut. Keyed by request language, with
@@ -165,7 +197,7 @@ return [
         // Flash, not Pro: the job is reading a transcript and returning
         // structured decisions, which is squarely the Flash tier's workhorse
         // case, at a fraction of the cost over a 20-minute recording.
-        'model' => env('VIDEO_EDIT_AI_MODEL', 'gemini-3.7-flash'),
+        'model' => env('VIDEO_EDIT_AI_MODEL', 'gemini-3.8-flash'),
         'timeout_seconds' => (int) env('VIDEO_EDIT_AI_TIMEOUT', 300),
 
         // Every AI cut waits for the owner's review (OWASP LLM06). Proposals at or
@@ -179,10 +211,64 @@ return [
         // One runaway appendix must not blow the context window or the bill.
         'max_script_characters' => 120_000,
 
+        // Mirrors the `max:20000` on `ai_edit.instructions`, so a profile can
+        // never prefill a field the validator would then reject.
+        'max_instructions_characters' => 20_000,
+
         'script' => [
             'allowed_extensions' => ['md', 'pdf'],
             'allowed_mime_types' => ['text/markdown', 'text/plain', 'application/pdf'],
             'max_file_bytes' => 10 * 1024 * 1024,
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | Instruction profiles
+        |----------------------------------------------------------------------
+        |
+        | `ai_edit.instructions` is free text the owner types per video, and
+        | typing the same standing notes into every single one is how they end up
+        | not applied at all. A profile is a saved, named block of those notes:
+        | picking one in the form fills the field, the text stays editable, and
+        | whatever is finally sent is stored on the edit as before — so a
+        | profile is a starting point, never an override.
+        |
+        | These live in config rather than in a table on purpose: they are
+        | editorial policy, they want code review and history like any other
+        | change, and they are identical for every edit. `supervisor_lms` is the
+        | distillation of the standing notes in GUIDE/MODULE-VIDEOS/
+        | OBSERVACIONES.txt — edit that report freely, but edit the rules here.
+        |
+        | Text reaches the model as data, never as system rules: the agent in
+        | Infrastructure/Ai/AnalyzeVideoEditAgent refuses to obey anything in here
+        | that reads like an instruction to override its own rules.
+        |
+        */
+        'instruction_profiles' => [
+            'supervisor_lms' => [
+                'name' => 'Supervisor LMS',
+                'instructions' => <<<'PROFILE'
+                    Criterio de edicion para formacion LMS:
+
+                    - Ritmo dinamico. Prefiere un tono fluido y frases encadenadas: senala
+                      los puntos donde el ponente se detiene entre frases que debian
+                      seguir, porque eso solo se arregla en una regrabacion, no en el
+                      corte.
+                    - Cortes limpios. Ningun corte debe interrumpir una palabra ni dejar
+                      una conjucion o silaba suelta en el aire. Si detectas un empalme
+                      tosco, senalalo.
+                    - No leer los prompts en voz alta. Si el ponente lee literalmente un
+                      prompt del guion, recordale que deberia pegarse en pantalla y
+                      resumirse en una frase.
+                    - Ejercicios practicos. Plantea ejemplos que apliquen de verdad al
+                      mundo laboral del alumno, no ejercicios academicos.
+                    - Enseña el paso completo. Donde haya cambio de escena o se abra un
+                      menu, no insertes cortes: la accion se ve entera.
+                    - Nunca cortes mientras una herramienta esta trabajando. Si Claude,
+                      ChatGPT, Gemini o cualquier agente esta generando en pantalla,
+                      ese tramo se deja intacto.
+                    PROFILE,
+            ],
         ],
     ],
 
@@ -208,6 +294,27 @@ return [
     'cuts' => [
         'min_kept_fragment_ms' => 250,                         // D6
         'min_output_ms' => 1000,                               // D6
+
+        /*
+        | Cut edges (OBSERVACIONES round 2).
+        |
+        | Removing the words around a mistake leaves the seam visible: the
+        | conjunction the speaker had already committed to ("...de Veralux Group
+        | y…") and any word the transcriber heard cut off mid-syllable ("o co-").
+        | A cut grows this far to take those with it, and only ever past a word
+        | that cannot end a sentence — so no clause is ever swallowed.
+        |
+        | 0 disables it entirely.
+        */
+        'edge_absorb_ms' => (int) env('VIDEO_EDIT_EDGE_ABSORB_MS', 400),
+        'dangling_edge_words' => [
+            // Spanish. Every one of these is a word that can never end a
+            // sentence, which is the whole safety rule — adding a content word
+            // here would let a cut eat the end of the neighbouring clause.
+            'y', 'e', 'o', 'u', 'ni', 'que', 'a', 'al', 'de', 'del',
+            'la', 'el', 'lo', 'los', 'las', 'un', 'una', 'unos', 'unas',
+            'en', 'con', 'por', 'para',
+        ],
     ],
 
     'output' => [

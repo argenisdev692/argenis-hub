@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Modules\VideoEdits\Domain\Exceptions\TranscriptionFailedException;
 use Modules\VideoEdits\Domain\Ports\TranscriptionPort;
@@ -114,6 +115,40 @@ it('refuses to call the provider without an API key', function (): void {
         ->toThrow(TranscriptionFailedException::class);
 
     Http::assertNothingSent();
+});
+
+it('retries a rate-limited upload, which clears on its own', function (): void {
+    Http::fake([
+        'api.openai.com/*' => Http::sequence()
+            ->push(['error' => ['message' => 'Rate limit reached']], 429)
+            ->push([
+                'language' => 'spanish',
+                'words' => [['word' => 'Hola', 'start' => 0.0, 'end' => 0.4]],
+                'segments' => [['text' => 'Hola', 'start' => 0.0, 'end' => 0.4]],
+            ], 200),
+    ]);
+
+    app(TranscriptionPort::class)->transcribe($this->audioPath, 'es');
+
+    // 429 is the provider's problem, so the in-process retry is worth its wait.
+    Http::assertSentCount(2);
+});
+
+it('never retries a timed-out upload, which can only run out of time again', function (): void {
+    $attempts = 0;
+
+    Http::fake(function () use (&$attempts): never {
+        $attempts++;
+
+        throw new ConnectionException('cURL error 28: Operation timed out');
+    });
+
+    expect(fn () => app(TranscriptionPort::class)->transcribe($this->audioPath, 'es'))
+        ->toThrow(ConnectionException::class);
+
+    // Three attempts would burn 3x the budget to reach the same verdict, and the
+    // job's own #[Backoff] is the right place for a genuine second go.
+    expect($attempts)->toBe(1);
 });
 
 it('round-trips a transcript through storage without losing word timings', function (): void {

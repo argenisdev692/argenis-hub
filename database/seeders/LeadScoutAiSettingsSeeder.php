@@ -8,9 +8,9 @@ use Illuminate\Database\Seeder;
 use Modules\LeadScout\Infrastructure\Persistence\Eloquent\Models\ScoutAiSettingEloquentModel;
 
 /**
- * AI defaults from `.env` (spec US-10, D3, T054): extraction on Gemini 3.7
- * Flash (Sonnet 5 fallback), drafts on Claude Sonnet 5 (Gemini fallback).
- * The web UI edits these rows afterwards — the seeder never overwrites.
+ * AI defaults from `.env` (spec US-10, D3, T054). Create-once: the web UI edits
+ * these rows afterwards and the seeder never overwrites them, so changing the
+ * config default only affects a database that has not been seeded yet.
  */
 class LeadScoutAiSettingsSeeder extends Seeder
 {
@@ -21,7 +21,7 @@ class LeadScoutAiSettingsSeeder extends Seeder
                 ['purpose' => $purpose],
                 [
                     'provider' => $defaults['provider'] ?? 'gemini',
-                    'model' => $defaults['model'] ?? 'gemini-3.7-flash',
+                    'model' => $defaults['model'] ?? 'gemini-3.8-flash',
                     'fallback_provider' => $defaults['fallback_provider'] ?? null,
                     'fallback_model' => $defaults['fallback_model'] ?? null,
                 ],

@@ -41,6 +41,11 @@ Route::middleware(['auth', 'verified'])
         Route::middleware(['permission:BULK_DELETE_VIDEO_EDITS', 'throttle:10,1'])
             ->post('/bulk-delete', [VideoEditController::class, 'bulkDelete'])->name('bulk-delete');
 
+        // Standing-notes templates for the AI edit form. Declared before
+        // `/{uuid}` so the static segment is never read as an identifier.
+        Route::middleware(['permission:VIEW_ANY_VIDEO_EDITS', 'throttle:60,1'])
+            ->get('/instruction-profiles', [VideoEditController::class, 'instructionProfiles'])->name('instruction-profiles');
+
         // Declared before `/{uuid}` so `export` is never read as an identifier.
         Route::middleware(['permission:EXPORT_VIDEO_EDITS', 'throttle:10,1'])
             ->get('/export', VideoEditExportController::class)->name('export');

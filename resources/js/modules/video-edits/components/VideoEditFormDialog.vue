@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue';
+import { computed, ref, useId } from 'vue';
 import type { FilterSelectValue } from '@/common/form';
 import {
     AppField,
@@ -9,10 +9,16 @@ import {
     TextField,
 } from '@/common/form';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Field,
+    FieldDescription,
+    FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
+import { useInstructionProfiles } from '../composables/useInstructionProfiles';
 import { useVideoEditForm } from '../composables/useVideoEditForm';
 import {
     SPEECH_CATEGORY_OPTIONS,
@@ -45,6 +51,38 @@ const isSubmitting = form.useStore((state) => state.isSubmitting);
 
 const isMerge = computed(() => mode.value === 'merge');
 const isAiEdit = computed(() => mode.value === 'ai_edit');
+
+const { data: profileResponse } = useInstructionProfiles();
+
+/**
+ * The selector is a shortcut, not a constraint: choosing a profile only fills
+ * the instructions field, which stays editable and is what actually travels.
+ * That is the whole point — the standing notes are written once and adjusted
+ * per video, instead of retyped into every single form.
+ *
+ * `appliedProfile` is local UI state, not form state: it only keeps the
+ * dropdown showing what was last applied instead of snapping back to "none"
+ * and making a successful pick look like it did nothing.
+ */
+const appliedProfile = ref('');
+
+const profileOptions = computed(() => [
+    { value: '', label: 'None — write your own' },
+    ...(profileResponse.value?.data ?? []).map((profile) => ({
+        value: profile.key,
+        label: profile.name,
+    })),
+]);
+
+function applyProfile(value: FilterSelectValue | FilterSelectValue[] | null): void {
+    const key = Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+    const profile = (profileResponse.value?.data ?? []).find(
+        (candidate) => candidate.key === key,
+    );
+
+    appliedProfile.value = String(key ?? '');
+    form.setFieldValue('ai_instructions', profile ? profile.instructions : '');
+}
 
 const uploadPercent = computed(() =>
     uploadProgress.value && uploadProgress.value.total > 0
@@ -267,6 +305,25 @@ function toNullableInteger(value: string | number): number | null {
             </template>
 
             <template v-if="isAiEdit">
+                <Field>
+                    <FieldLabel :for="`${uid}-profile`">
+                        Standing notes
+                    </FieldLabel>
+                    <FilterSelect
+                        :id="`${uid}-profile`"
+                        :options="profileOptions"
+                        :model-value="appliedProfile"
+                        :disabled="isSubmitting"
+                        placeholder="Choose a profile"
+                        :aria-describedby="`${uid}-profile-help`"
+                        @update:model-value="applyProfile"
+                    />
+                    <FieldDescription :id="`${uid}-profile-help`">
+                        Fills the box below with saved notes. Edit them freely
+                        for this video.
+                    </FieldDescription>
+                </Field>
+
                 <form.Field name="ai_instructions" #default="{ field }">
                     <TextField
                         :field="field"

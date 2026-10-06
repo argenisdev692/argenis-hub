@@ -35,6 +35,7 @@ use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditProcessingDispatcherPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
+use Modules\VideoEdits\Domain\Services\CutEdgeTrimmer;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
 use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
@@ -45,6 +46,7 @@ use Modules\VideoEdits\Infrastructure\Console\Commands\PurgeExpiredVideoEditSour
 use Modules\VideoEdits\Infrastructure\Console\Commands\SweepStaleVideoEditsCommand;
 use Modules\VideoEdits\Infrastructure\Media\FfmpegCommandBuilder;
 use Modules\VideoEdits\Infrastructure\Media\FfmpegVideoEditor;
+use Modules\VideoEdits\Infrastructure\Media\FilterGraphBuilder;
 use Modules\VideoEdits\Infrastructure\Media\LocalVideoEditWorkspace;
 use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentAiCutReviewStore;
 use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentAiReportStore;
@@ -77,6 +79,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
         $this->app->bind(ScriptTextExtractorPort::class, ScriptTextExtractor::class);
 
         $this->registerFfmpegCommandBuilder();
+        $this->registerFilterGraphBuilder();
         $this->registerSpeechDetector();
 
         $this->app->bind(CutPlanner::class, static fn (): CutPlanner => new CutPlanner(
@@ -96,6 +99,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
             ),
             breathMinGapMs: (bool) config('video-edit.breaths.enabled') ? (int) config('video-edit.breaths.min_gap_ms') : 0,
             midSentencePauseMs: (int) config('video-edit.silence.mid_sentence_pause_ms'),
+            edgeTrimmer: self::edgeTrimmer(),
         ));
 
         $this->registerDecisionProducers();
@@ -135,6 +139,43 @@ final class VideoEditsServiceProvider extends ServiceProvider
             audioBitrateKbps: (int) config('video-edit.output.audio_bitrate_kbps'),
             threads: is_numeric($threads = config('laravel-ffmpeg.ffmpeg.threads', false)) ? (int) $threads : false,
         ));
+    }
+
+    /**
+     * The seam trimmers are optional: with no absorb budget configured the
+     * planner skips edge widening entirely, which is the behaviour every cut had
+     * before this rule existed.
+     */
+    private static function edgeTrimmer(): ?CutEdgeTrimmer
+    {
+        $maxAbsorbMs = (int) config('video-edit.cuts.edge_absorb_ms', 0);
+
+        if ($maxAbsorbMs <= 0) {
+            return null;
+        }
+
+        return new CutEdgeTrimmer(
+            maxAbsorbMs: $maxAbsorbMs,
+            danglingWords: (array) config('video-edit.cuts.dangling_edge_words', []),
+        );
+    }
+
+    /**
+     * The filtergraph is the one place the final audio chain is assembled, so the
+     * room-tone stages live there. Disabled, every value reaches the constructor
+     * as null and the graph comes out exactly as it did before.
+     */
+    private function registerFilterGraphBuilder(): void
+    {
+        $this->app->bind(FilterGraphBuilder::class, static function (): FilterGraphBuilder {
+            $enabled = (bool) config('video-edit.room_tone.enabled', false);
+
+            return new FilterGraphBuilder(
+                denoiseReductionDb: $enabled ? (float) config('video-edit.room_tone.reduction_db') : null,
+                denoiseFloorDb: $enabled ? (float) config('video-edit.room_tone.floor_db') : null,
+                denoiseHighpassHz: $enabled ? (int) config('video-edit.room_tone.highpass_hz') : null,
+            );
+        });
     }
 
     /**

@@ -281,6 +281,20 @@ return [
             'output_per_mtok_usd' => 10.0,
             'price_valid_until' => null,
         ],
+        // GA 2026-09-02, and the model both `.env` files name. It has to be here
+        // or the selector cannot offer it and the budget guard prices it at
+        // `ai_pricing_default` — 2.7x over, which refuses work the run could
+        // afford. Introductory rate is held through 2026-12-31; the published
+        // step-up on 2027-01-01 is a reason to re-check this entry, not to guess.
+        'gemini-3.8-flash' => [
+            'provider' => 'gemini',
+            'label' => 'Gemini 3.8 Flash',
+            'input_per_mtok_usd' => 0.75,
+            'output_per_mtok_usd' => 3.75,
+            'price_valid_until' => '2026-12-31',
+        ],
+        // Previous generation, kept so an already-seeded row naming it still
+        // resolves to real pricing instead of the conservative default.
         'gemini-3.7-flash' => [
             'provider' => 'gemini',
             'label' => 'Gemini 3.7 Flash',
@@ -327,13 +341,13 @@ return [
             'provider' => env('LEAD_SCOUT_AI_EXTRACTION_PROVIDER', 'anthropic'),
             'model' => env('LEAD_SCOUT_AI_EXTRACTION_MODEL', 'claude-sonnet-5'),
             'fallback_provider' => env('LEAD_SCOUT_AI_EXTRACTION_FALLBACK_PROVIDER', 'gemini'),
-            'fallback_model' => env('LEAD_SCOUT_AI_EXTRACTION_FALLBACK_MODEL', 'gemini-3.7-flash'),
+            'fallback_model' => env('LEAD_SCOUT_AI_EXTRACTION_FALLBACK_MODEL', 'gemini-3.8-flash'),
         ],
         'drafting' => [
             'provider' => env('LEAD_SCOUT_AI_DRAFTING_PROVIDER', 'anthropic'),
             'model' => env('LEAD_SCOUT_AI_DRAFTING_MODEL', 'claude-sonnet-5'),
             'fallback_provider' => env('LEAD_SCOUT_AI_DRAFTING_FALLBACK_PROVIDER', 'gemini'),
-            'fallback_model' => env('LEAD_SCOUT_AI_DRAFTING_FALLBACK_MODEL', 'gemini-3.7-flash'),
+            'fallback_model' => env('LEAD_SCOUT_AI_DRAFTING_FALLBACK_MODEL', 'gemini-3.8-flash'),
         ],
     ],
 

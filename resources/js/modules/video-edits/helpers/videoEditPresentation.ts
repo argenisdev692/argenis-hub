@@ -157,6 +157,7 @@ const REASONS: Record<CutReason, string> = {
     pause_marker: 'Pause marker',
     retake: 'Retake',
     misspoken: 'Misspoken',
+    misplaced_take: 'Misplaced take',
 };
 
 /** Applied cuts carry reasons as plain strings; unknown ones pass through. */

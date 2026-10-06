@@ -22,7 +22,8 @@ use Modules\VideoEdits\Domain\ValueObjects\WaitCompressionPolicy;
  *
  * Steps, in order: keep a speech margin inside every silence (D5), wider in
  * the middle of a sentence → keep silence cuts off every transcribed word →
- * set aside silences where the screen was busy (tool waits) → merge
+ * set aside silences where the screen was busy (tool waits) → trim every other
+ * cut back off those waits, so nothing splices into a tool mid-work → merge
  * overlapping / touching cuts, uniting reasons and origins (D8) → absorb kept
  * fragments too short to be worth keeping (D6) → speed up the tool waits that
  * survived the cuts → turn down the breaths between words → refuse plans that
@@ -63,6 +64,7 @@ final readonly class CutPlanner
         private ?WaitCompressionPolicy $waitCompression = null,
         private int $breathMinGapMs = 0,
         private int $midSentencePauseMs = 0,
+        private ?CutEdgeTrimmer $edgeTrimmer = null,
     ) {}
 
     /**
@@ -125,6 +127,9 @@ final readonly class CutPlanner
     {
         $candidates = [];
         $waits = [];
+        // The trimmer walks the transcript backwards from each cut, so it needs
+        // one ordering shared by every decision rather than its own per call.
+        usort($words, static fn (TranscriptWord $a, TranscriptWord $b): int => [$a->startMs, $a->endMs] <=> [$b->startMs, $b->endMs]);
         $speechZones = $this->speechZones($words);
         $waitCompression = $this->waitCompression ?? WaitCompressionPolicy::disabled();
 
@@ -165,6 +170,15 @@ final readonly class CutPlanner
 
                     continue;
                 }
+            } elseif ($this->edgeTrimmer !== null && $words !== [] && $decision->reason !== CutReason::Manual) {
+                // Widening happens before the tool-wait guard below so the guard
+                // sees the final range and can still refuse a cut that now reaches
+                // into a wait. Manual ranges are the owner's own call and are left
+                // exactly as they were typed.
+                $ranges = array_map(
+                    fn (array $range): array => $this->edgeTrimmer->absorbDanglingEdges($range[0], $range[1], $words),
+                    $ranges,
+                );
             }
 
             foreach ($ranges as [$start, $end]) {
@@ -180,7 +194,76 @@ final readonly class CutPlanner
 
         usort($candidates, static fn (array $a, array $b): int => [$a['start'], $a['end']] <=> [$b['start'], $b['end']]);
 
+        // The waits are only known once every decision has been read, so the
+        // guard runs as its own pass over the candidates it just produced.
+        [$candidates, $decisions] = $this->keepCutsOutOfWaits($candidates, $waits, $decisions);
+
         return [$candidates, $waits, $decisions];
+    }
+
+    /**
+     * Keeps non-silence cuts out of the tool waits.
+     *
+     * A silence with a busy screen is already upgraded to a sped-up stretch, so
+     * nothing is lost there — but the other producers can still land a cut on
+     * top of one: a stutter detected while an AI streams its answer, or a
+     * "PAUSA" flagged mid-generation. That is the abrupt splice a reviewer
+     * complains about, because the picture jumps in the middle of the tool
+     * working and the result appears with nothing before it. Every such cut is
+     * trimmed back to the wait's edges; one swallowed whole is rejected outright
+     * rather than quietly shrunk to nothing.
+     *
+     * Manual ranges are exempt: marking a range by hand is the owner saying they
+     * looked at it and meant it, which outranks any default.
+     *
+     * @param  list<array{start: int, end: int, reasons: list<CutReason>, origins: list<DecisionOrigin>, decisions: list<int>}>  $candidates
+     * @param  list<array{0: int, 1: int}>  $waits
+     * @param  list<ValidatedDecision>  $decisions
+     * @return array{0: list<array{start: int, end: int, reasons: list<CutReason>, origins: list<DecisionOrigin>, decisions: list<int>}>, 1: list<ValidatedDecision>}
+     */
+    private function keepCutsOutOfWaits(array $candidates, array $waits, array $decisions): array
+    {
+        if ($candidates === [] || $waits === []) {
+            return [$candidates, $decisions];
+        }
+
+        usort($waits, static fn (array $a, array $b): int => $a <=> $b);
+
+        $kept = [];
+        $rejected = [];
+
+        foreach ($candidates as $candidate) {
+            if (in_array(CutReason::Manual, $candidate['reasons'], true)) {
+                $kept[] = $candidate;
+
+                continue;
+            }
+
+            $remaining = self::subtract($candidate['start'], $candidate['end'], $waits);
+
+            if ($remaining === []) {
+                foreach ($candidate['decisions'] as $index) {
+                    $rejected[$index] = true;
+                }
+
+                continue;
+            }
+
+            foreach ($remaining as [$start, $end]) {
+                $kept[] = ['start' => $start, 'end' => $end] + $candidate;
+            }
+        }
+
+        foreach (array_keys($rejected) as $index) {
+            $decisions[$index] = ValidatedDecision::rejected(
+                $decisions[$index]->decision,
+                DecisionRejectionReason::ScreenBusy,
+            );
+        }
+
+        usort($kept, static fn (array $a, array $b): int => [$a['start'], $a['end']] <=> [$b['start'], $b['end']]);
+
+        return [$kept, $decisions];
     }
 
     /**

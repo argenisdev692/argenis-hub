@@ -168,7 +168,7 @@ return [
             'url' => env('GEMINI_URL', 'https://generativelanguage.googleapis.com/v1beta/'),
             'models' => [
                 'text' => [
-                    'default' => env('GEMINI_TEXT_MODEL', 'gemini-3.7-flash'),
+                    'default' => env('GEMINI_TEXT_MODEL', 'gemini-3.8-flash'),
                 ],
                 'image' => [
                     'default' => env('GEMINI_IMAGE_MODEL', 'gemini-3.1-flash-image-preview'),

@@ -31,6 +31,52 @@ final readonly class FilterGraphBuilder
     public const int JOIN_FADE_MS = 15;
 
     /**
+     * Room-tone cleanup, off unless every value is configured.
+     *
+     * `afftdn` is a spectral denoiser: it learns the noise floor of the material
+     * and subtracts it, which is what a bad room leaves behind — a steady hiss
+     * and the decaying tail of every word bleeding into the next one. It is NOT
+     * true de-reverb: a long reverb tail is a much larger structure than the
+     * noise floor, so expect this to take the edge off rather than remove it.
+     * A recording with heavy reverberation needs fixing at the desk.
+     *
+     * Leaving any of the three null keeps the audio chain byte-identical to what
+     * it was before this rule existed, which is why the module ships with the
+     * whole feature dark.
+     */
+    public function __construct(
+        private ?float $denoiseReductionDb = null,
+        private ?float $denoiseFloorDb = null,
+        private ?int $denoiseHighpassHz = null,
+    ) {}
+
+    /**
+     * The room-tone filters, or nothing at all when they are not configured.
+     *
+     * The highpass comes first on purpose: rumble below the speech band is what
+     * a desk knocked against a wall contributes, and dropping it before the
+     * denoiser stops the denoiser from spending its budget on it.
+     */
+    private function audioCleanup(): string
+    {
+        if ($this->denoiseReductionDb === null || $this->denoiseFloorDb === null) {
+            return '';
+        }
+
+        $filters = '';
+
+        if ($this->denoiseHighpassHz !== null && $this->denoiseHighpassHz > 0) {
+            $filters .= sprintf(',highpass=f=%s', $this->denoiseHighpassHz);
+        }
+
+        return $filters.sprintf(
+            ',afftdn=nr=%s:nf=%s',
+            self::decimal($this->denoiseReductionDb),
+            self::decimal($this->denoiseFloorDb),
+        );
+    }
+
+    /**
      * Normalize every input to the profile (scale + pad, never stretch) and join
      * them in order. Inputs without audio get generated silence of their length.
      *
@@ -218,8 +264,9 @@ final readonly class FilterGraphBuilder
     private function audioNormalization(OutputProfile $profile): string
     {
         return sprintf(
-            'aresample=%d:async=1,aformat=sample_rates=%d:channel_layouts=%s',
+            'aresample=%d:async=1%s,aformat=sample_rates=%d:channel_layouts=%s',
             $profile->audioSampleRate,
+            $this->audioCleanup(),
             $profile->audioSampleRate,
             self::channelLayout($profile),
         );
@@ -243,5 +290,10 @@ final readonly class FilterGraphBuilder
     private static function seconds(int $milliseconds): string
     {
         return sprintf('%.3F', $milliseconds / 1000);
+    }
+
+    private static function decimal(float $value): string
+    {
+        return sprintf('%.2F', $value);
     }
 }

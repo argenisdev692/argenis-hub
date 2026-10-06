@@ -21,6 +21,7 @@ use Modules\VideoEdits\Application\DTOs\VideoEditDetailData;
 use Modules\VideoEdits\Application\DTOs\VideoEditFilterData;
 use Modules\VideoEdits\Application\Queries\GetVideoEditDownloadUrlHandler;
 use Modules\VideoEdits\Application\Queries\GetVideoEditHandler;
+use Modules\VideoEdits\Application\Queries\ListInstructionProfilesHandler;
 use Modules\VideoEdits\Application\Queries\ListVideoEditsHandler;
 
 /**
@@ -41,7 +42,17 @@ final readonly class VideoEditController
         private ReviewVideoEditCutsHandler $reviewVideoEditCuts,
         private DeleteVideoEditHandler $deleteVideoEdit,
         private BulkDeleteVideoEditsHandler $bulkDeleteVideoEdits,
+        private ListInstructionProfilesHandler $instructionProfiles,
     ) {}
+
+    /**
+     * The standing-notes templates the form offers. Config-backed and read-only,
+     * so it shares the list permission rather than the create one.
+     */
+    public function instructionProfiles(): JsonResponse
+    {
+        return response()->json(['data' => $this->instructionProfiles->handle()]);
+    }
 
     public function index(Request $request, VideoEditFilterData $filters): JsonResponse
     {

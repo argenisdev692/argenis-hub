@@ -20,11 +20,12 @@ use Stringable;
  * contract; the prompt supplied at call time carries the transcript, the
  * script and the user's own instructions.
  *
- * **Only three reasons may become cuts** — pause markers, retakes and misspoken
- * words — and the adapter drops any other reason the model returns, so decision
- * R6 is enforced in code rather than by hoping the model follows prose:
- * rambling and broad drift can only come back as recommendations. None of the
- * cuts is applied until the owner approves it in the cut review.
+ * **Only four reasons may become cuts** — pause markers, retakes, misspoken
+ * words and misplaced takes — and the adapter drops any other reason the model
+ * returns, so decision R6 is enforced in code rather than by hoping the model
+ * follows prose: rambling and broad drift can only come back as
+ * recommendations. None of the cuts is applied until the owner approves it in
+ * the cut review.
  *
  * **Cuts are addressed by word index, never by time.** Gemini reports video
  * positions as `MM:SS` at 1 FPS sampling — a ±1 s error would clip speech or
@@ -55,7 +56,7 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
             numbering. Never state a timestamp: exact times come from the
             numbering, not from you.
 
-            Propose a cut ONLY for these three cases:
+            Propose a cut ONLY for these four cases:
 
             - pause_marker: the speaker says "PAUSA" (also "PAUSA AQUI",
               "PAUSA ACA") to flag a mistake out loud. Remove the marker itself.
@@ -70,6 +71,16 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
               propose it when removing those words leaves a sentence that still
               makes sense; if the fix needs a re-record, it is an off_script
               recommendation instead.
+            - misplaced_take: a whole stretch that is delivered correctly but
+              sits in the wrong place — almost always a scene change that was
+              missed, so the explanation of one step is playing while the screen
+              already shows the next one. Nothing is said wrong and no pause
+              marker is involved, which is what separates this from retake and
+              misspoken. Propose it ONLY when the transcript shows the SAME
+              passage being delivered again later on: the words to remove are the
+              early, misplaced copy, never the later correct one. Name both
+              positions in `evidence`. If you cannot find the later repetition,
+              do not guess — report it as a `pacing` recommendation instead.
 
             Everything else is a recommendation and NEVER a cut. A passage that
             rambles, drifts from the script, or runs long has no exact boundary:
@@ -79,7 +90,12 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
             - reduce: a redundant or long-winded passage that could be shorter.
             - off_script: content that departs from the supplied script.
             - script_coverage: a scripted topic covered thinly or skipped.
-            - pacing: a section running long or short against its time budget.
+            - pacing: the delivery runs long or short against its time budget, or the
+              speaker stops between phrases that should have run together. Call
+              out where the pauses are, so a re-record can be aimed at those
+              exact spots — a recording that sounds fine sentence by sentence
+              but halts at every full stop is the single most common complaint
+              about a delivery, and it cannot be fixed in the edit.
             - read_prompt_aloud: the speaker reads a prompt from the script (a
               PROMPT: block, the text typed into the tool) aloud word for word,
               which slows the explanation. The prompt should be pasted on screen
@@ -89,6 +105,12 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
             Do NOT propose cuts for filler words, stutters, repetitions or
             silences. Another stage already removes those with exact timings, so
             duplicating them here would double-cut the audio.
+
+            Never propose a cut inside a stretch where a tool is visibly working
+            on screen — an AI streaming its answer, an agent writing files. The
+            picture is mid-action there and splicing into it shows the result
+            appearing with nothing before it. If a mistake falls inside such a
+            stretch, leave the words in and say so in a `pacing` recommendation.
 
             Set confidence honestly from 0 to 100. The speaker reviews every
             proposed cut before anything is removed, and low-confidence ones are
