@@ -332,6 +332,82 @@ it('adds the measured speaking pace to the report recommendations', function ():
         ->and($recommendations[1]->title)->toContain('29 minipausas');
 });
 
+it('adds the rushed stretches and the words the microphone clipped', function (): void {
+    $edit = VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create();
+
+    // A calm 500 ms delivery, one stretch of 180 ms words the speaker raced
+    // through, and four fragments Whisper heard stop mid-syllable.
+    $words = [];
+    $cursor = 0;
+
+    for ($index = 0; $index < 300; $index++) {
+        $duration = $index >= 100 && $index < 160 ? 180 : 500;
+        $clipped = in_array($index, [20, 60, 90, 200], true);
+        $words[] = new TranscriptWord($clipped ? 'co-' : 'palabra', $cursor, $cursor + $duration);
+        $cursor += $duration;
+    }
+
+    storeTranscriptFor($edit, new Transcript($words, language: 'es'));
+
+    runFirstPass($edit, new DecisionContext(
+        mode: VideoEditMode::AiEdit,
+        parameters: ['ai_edit' => ['enabled' => true, 'consented' => true]],
+        workingPath: '/workspace/edit/merged.mp4',
+        workingProbe: new MediaProbe(150_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        videoEditId: $edit->id,
+        videoEditUuid: $edit->uuid,
+        ownerId: $edit->user_id,
+        sourceFingerprints: ['fp'],
+    ));
+
+    $kinds = array_map(
+        static fn (AiRecommendation $recommendation): string => $recommendation->kind->value,
+        app(AiReportStorePort::class)->forEdit($edit->id)?->recommendations ?? [],
+    );
+
+    expect($kinds)->toContain('rushed_step')
+        ->toContain('unclear_word');
+});
+
+it('never turns a measured finding into a cut', function (): void {
+    $edit = VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create();
+
+    $words = [];
+    $cursor = 0;
+
+    for ($index = 0; $index < 300; $index++) {
+        $duration = $index >= 100 && $index < 160 ? 180 : 500;
+        $words[] = new TranscriptWord(in_array($index, [20, 60, 90, 200], true) ? 'co-' : 'palabra', $cursor, $cursor + $duration);
+        $cursor += $duration;
+    }
+
+    storeTranscriptFor($edit, new Transcript($words, language: 'es'));
+
+    try {
+        runFirstPass($edit, new DecisionContext(
+            mode: VideoEditMode::AiEdit,
+            parameters: ['ai_edit' => ['enabled' => true, 'consented' => true]],
+            workingPath: '/workspace/edit/merged.mp4',
+            workingProbe: new MediaProbe(150_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+            videoEditId: $edit->id,
+            videoEditUuid: $edit->uuid,
+            ownerId: $edit->user_id,
+            sourceFingerprints: ['fp'],
+        ));
+    } catch (CutReviewRequiredException) {
+        // Expected: nothing was proposed, so no review was opened.
+    }
+
+    // R6: a rushed step and a clipped word are both desk problems. Neither is a
+    // cut, so neither may reach the decision set the planner renders from.
+    $reasons = array_map(
+        static fn (AiReviewableCut $cut): string => $cut->reason->value,
+        app(AiCutReviewStorePort::class)->forEdit($edit->id)->cuts,
+    );
+
+    expect($reasons)->not->toContain('rushed_step', 'unclear_word');
+});
+
 it('does nothing when no transcript was produced', function (): void {
     $edit = VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create();
 

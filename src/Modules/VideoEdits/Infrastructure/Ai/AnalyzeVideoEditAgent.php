@@ -101,6 +101,23 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
               which slows the explanation. The prompt should be pasted on screen
               and summarised in one sentence. Name the prompt and quote the
               first words of the reading.
+            - rushed_step: the speaker walks through the steps of an example
+              without stopping on any of them — several clicks or several files
+              handled in one breath, each one announced rather than explained.
+              This is the single most common reason a viewer says they got lost:
+              the step they missed is the one that was never narrated. Give the
+              word-index range of the stretch, and say which steps ran together.
+            - unclear_word: a word the speaker mangled, swallowed or spoke over
+              something else, so it cannot be understood by listening. Name the
+              word and where it happens. If the sentence is still intelligible
+              without it, say so — this is about the word, not the take.
+
+            Pace is reported two ways and you are responsible for only one of
+            them. The pipeline measures `rushed_step` itself from word timings
+            and will merge its finding with yours, so do NOT report a passage
+            merely for being fast or dense — that is the measurement's job and
+            your guess only adds noise. Report `rushed_step` only when you can
+            name WHICH steps ran together, which timings cannot tell you.
 
             Do NOT propose cuts for filler words, stutters, repetitions or
             silences. Another stage already removes those with exact timings, so

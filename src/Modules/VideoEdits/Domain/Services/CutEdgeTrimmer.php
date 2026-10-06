@@ -131,7 +131,7 @@ final readonly class CutEdgeTrimmer
                 break;
             }
 
-            if (! $this->isTruncated($word)) {
+            if (! $word->isTruncated()) {
                 break;
             }
 
@@ -148,17 +148,7 @@ final readonly class CutEdgeTrimmer
      */
     private function isDangling(TranscriptWord $word): bool
     {
-        return $this->isTruncated($word) || $this->isFunctionWord($word);
-    }
-
-    /** Whisper's own signal that it heard the word clipped. */
-    private function isTruncated(TranscriptWord $word): bool
-    {
-        $normalized = $word->normalized();
-
-        return $normalized !== ''
-            && ! $word->isBracketedSound()
-            && str_ends_with($normalized, '-');
+        return $word->isTruncated() || $this->isFunctionWord($word);
     }
 
     private function isFunctionWord(TranscriptWord $word): bool

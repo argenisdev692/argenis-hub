@@ -35,10 +35,12 @@ use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditProcessingDispatcherPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
+use Modules\VideoEdits\Domain\Services\ClippedWordDetector;
 use Modules\VideoEdits\Domain\Services\CutEdgeTrimmer;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
 use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
+use Modules\VideoEdits\Domain\ValueObjects\VoiceChain;
 use Modules\VideoEdits\Domain\ValueObjects\WaitCompressionPolicy;
 use Modules\VideoEdits\Infrastructure\Ai\LaravelAiVideoEditAnalyzer;
 use Modules\VideoEdits\Infrastructure\Ai\ScriptTextExtractor;
@@ -162,20 +164,85 @@ final class VideoEditsServiceProvider extends ServiceProvider
 
     /**
      * The filtergraph is the one place the final audio chain is assembled, so the
-     * room-tone stages live there. Disabled, every value reaches the constructor
-     * as null and the graph comes out exactly as it did before.
+     * room-tone and loudness stages live there. Disabled, every value reaches the
+     * constructor as null and the graph comes out exactly as it did before.
+     *
+     * Loudness is independent of the denoiser on purpose — a caller who wants
+     * -16 LUFS on a clean desk still gets it with room tone dark — but when both
+     * are on, {@see FilterGraphBuilder} orders denoise before normalise, which is
+     * the only order that helps rather than hurts.
      */
     private function registerFilterGraphBuilder(): void
     {
         $this->app->bind(FilterGraphBuilder::class, static function (): FilterGraphBuilder {
             $enabled = (bool) config('video-edit.room_tone.enabled', false);
+            $loudness = (bool) config('video-edit.loudness.enabled', false);
 
             return new FilterGraphBuilder(
                 denoiseReductionDb: $enabled ? (float) config('video-edit.room_tone.reduction_db') : null,
                 denoiseFloorDb: $enabled ? (float) config('video-edit.room_tone.floor_db') : null,
                 denoiseHighpassHz: $enabled ? (int) config('video-edit.room_tone.highpass_hz') : null,
+                joinFadeMs: max(0, (int) config('video-edit.cuts.join_fade_ms', FilterGraphBuilder::DEFAULT_JOIN_FADE_MS)),
+                joinAirMs: max(0, (int) config('video-edit.cuts.join_air_ms', FilterGraphBuilder::DEFAULT_JOIN_AIR_MS)),
+                targetLufs: $loudness ? (float) config('video-edit.loudness.target_lufs') : null,
+                truePeakDbTp: $loudness ? (float) config('video-edit.loudness.true_peak_dbtp') : null,
+                loudnessRange: $loudness ? (float) config('video-edit.loudness.loudness_range') : null,
+                voiceChain: self::voiceChain(),
             );
         });
+    }
+
+    /**
+     * The OBS-equivalent chain, which is entirely off for a recording that came
+     * through OBS — see the `voice_chain` block for why repeating those stages
+     * would make the audio worse, not better.
+     *
+     * `arnndn` is the one stage that needs the filesystem, because FFmpeg fails
+     * the whole render on an unreadable model. That check lives here rather than
+     * in {@see VoiceChain}, which stays pure: a missing model is a configuration
+     * mistake, so the stage is skipped and the render continues with the rest of
+     * the chain instead of failing a render over one absent file.
+     */
+    private static function voiceChain(): ?VoiceChain
+    {
+        $rnnoise = (bool) config('video-edit.voice_chain.rnnoise.enabled', false);
+        $compressor = (bool) config('video-edit.voice_chain.compressor.enabled', false);
+        $expander = (bool) config('video-edit.voice_chain.expander.enabled', false);
+        $limiter = (bool) config('video-edit.voice_chain.limiter.enabled', false);
+
+        if (! $rnnoise && ! $compressor && ! $expander && ! $limiter) {
+            return null;
+        }
+
+        $model = (string) config('video-edit.voice_chain.rnnoise.model', '');
+        $modelPath = $rnnoise && $model !== '' && is_file($model) ? $model : null;
+
+        $chain = new VoiceChain(
+            compressor: $compressor ? [
+                'threshold_db' => (float) config('video-edit.voice_chain.compressor.threshold_db'),
+                'ratio' => (float) config('video-edit.voice_chain.compressor.ratio'),
+                'attack_ms' => (float) config('video-edit.voice_chain.compressor.attack_ms'),
+                'release_ms' => (float) config('video-edit.voice_chain.compressor.release_ms'),
+                'makeup_db' => (float) config('video-edit.voice_chain.compressor.makeup_db'),
+                'knee' => (float) config('video-edit.voice_chain.compressor.knee'),
+            ] : null,
+            expander: $expander ? [
+                'threshold_db' => (float) config('video-edit.voice_chain.expander.threshold_db'),
+                'ratio' => (float) config('video-edit.voice_chain.expander.ratio'),
+                'attack_ms' => (float) config('video-edit.voice_chain.expander.attack_ms'),
+                'release_ms' => (float) config('video-edit.voice_chain.expander.release_ms'),
+                'range_db' => (float) config('video-edit.voice_chain.expander.range_db'),
+            ] : null,
+            limiter: $limiter ? [
+                'ceiling_db' => (float) config('video-edit.voice_chain.limiter.ceiling_db'),
+                'attack_ms' => (float) config('video-edit.voice_chain.limiter.attack_ms'),
+                'release_ms' => (float) config('video-edit.voice_chain.limiter.release_ms'),
+            ] : null,
+            rnnoiseModel: $modelPath,
+            rnnoiseMix: $modelPath === null ? null : (float) config('video-edit.voice_chain.rnnoise.mix', 1.0),
+        );
+
+        return $chain->isEmpty() ? null : $chain;
     }
 
     /**
@@ -199,6 +266,15 @@ final class VideoEditsServiceProvider extends ServiceProvider
             slowWordsPerMinute: (int) config('video-edit.pace.slow_words_per_minute'),
             minSpeakingMs: (int) config('video-edit.pace.min_speaking_ms'),
             defaultLanguage: (string) config('video-edit.speech.default_language'),
+            rushRatio: (float) config('video-edit.pace.rush_ratio'),
+            rushFloorWordsPerMinute: (int) config('video-edit.pace.rush_floor_words_per_minute'),
+            rushMinTotalMs: (int) config('video-edit.pace.rush_min_total_ms'),
+            rushMinWords: (int) config('video-edit.pace.rush_min_words'),
+        ));
+
+        $this->app->bind(ClippedWordDetector::class, static fn (): ClippedWordDetector => new ClippedWordDetector(
+            minClippedWords: (int) config('video-edit.clarity.min_clipped_words', 3),
+            maxReportedWords: (int) config('video-edit.clarity.max_reported_words', 20),
         ));
     }
 

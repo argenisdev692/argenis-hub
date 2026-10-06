@@ -18,6 +18,7 @@ use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\Ports\CutDecisionProducer;
 use Modules\VideoEdits\Domain\Ports\ScriptProviderPort;
 use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
+use Modules\VideoEdits\Domain\Services\ClippedWordDetector;
 use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
 use Modules\VideoEdits\Domain\ValueObjects\AiCutProposal;
@@ -56,6 +57,12 @@ use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
  * drift from the script — are stored as report recommendations and never
  * become cuts, approved or not. The speaking pace is measured here from the
  * word timings, not asked of the model, and joins them as a `pacing` one.
+ *
+ * Two more measured findings join it, both from the round-2 supervisor review:
+ * `rushed_step`, the stretches walked through faster than the speaker's own
+ * average where a viewer loses the step, and `unclear_word`, the fragments
+ * Whisper heard stop mid-syllable, which is the microphone's gain threshold
+ * showing up in the transcript.
  */
 final readonly class AiDecisionProducer implements CutDecisionProducer
 {
@@ -68,6 +75,7 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
         private AiReportStorePort $reports,
         private AiCutReviewStorePort $reviews,
         private SpeechPaceAnalyzer $pace,
+        private ClippedWordDetector $clarity,
         private Config $config,
     ) {}
 
@@ -134,6 +142,25 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
 
         if ($pace !== null) {
             $analysis = $analysis->withRecommendation($pace);
+        }
+
+        // The two round-2 findings the model cannot measure for itself: where the
+        // speaker overtook his own pace, and where the microphone never got the
+        // word. Both come from Whisper's timings, so the numbers are exact — and
+        // both point at a re-record, which is why they are advice and not cuts.
+        $rush = $this->pace->rushRecommendation($transcript);
+
+        if ($rush !== null) {
+            $analysis = $analysis->withRecommendation($rush);
+        }
+
+        // The proposals are passed in because a clipped fragment inside one of
+        // them is already absorbed by CutEdgeTrimmer: reporting it would name a
+        // fault the pipeline has already fixed.
+        $unclear = $this->clarity->recommendation($transcript, $analysis->cutProposals);
+
+        if ($unclear !== null) {
+            $analysis = $analysis->withRecommendation($unclear);
         }
 
         $this->reports->store($context->videoEditId, $analysis);

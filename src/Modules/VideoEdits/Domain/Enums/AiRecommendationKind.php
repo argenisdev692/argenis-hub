@@ -11,6 +11,11 @@ namespace Modules\VideoEdits\Domain\Enums;
  * `Reduce` is the clearest case: "this explanation could be 30 seconds" has no
  * exact cut boundary, because saying it more briefly requires re-recording, not
  * deleting. These reach the user as a report and a PDF; they never become cuts.
+ *
+ * The last two exist because the round-2 supervisor review named two faults the
+ * original five kinds could not describe, and both need the recording fixed at
+ * the desk rather than in the timeline. `RushedStep` and `UnclearWord` are
+ * measured from Whisper's own word timings, so their numbers are exact.
  */
 enum AiRecommendationKind: string
 {
@@ -30,6 +35,24 @@ enum AiRecommendationKind: string
      * in one sentence. Fixing it needs a re-record, so it is advice, not a cut.
      */
     case ReadPromptAloud = 'read_prompt_aloud';
+
+    /**
+     * A stretch of the example walked through markedly faster than the speaker's
+     * own average for the recording, where a viewer loses the step. "Ciertos pasos
+     * de los ejemplos se muestran muy rápido y el alumno puede perderse".
+     *
+     * Carries a time range: knowing it happened is useless without knowing where.
+     * A re-record can be aimed at those seconds.
+     */
+    case RushedStep = 'rushed_step';
+
+    /**
+     * Words Whisper heard stop mid-syllable, which is the transcriber's evidence
+     * that the microphone threshold cut them off. Normalising the output rescues
+     * the words that survived; this names the ones that did not, because raising
+     * the preamp gain is a desk change and no timeline can do it.
+     */
+    case UnclearWord = 'unclear_word';
 
     /**
      * @return list<string>

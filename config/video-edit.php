@@ -114,6 +114,115 @@ return [
 
     /*
     |----------------------------------------------------------------------
+    | Loudness (OBSERVACIONES round 2 · "umbral de captación muy bajo")
+    |----------------------------------------------------------------------
+    |
+    | "A veces las palabras no se aprecian bien y suenan cortadas." Denoising
+    | makes that worse, not better: `afftdn` subtracts energy from the whole
+    | signal, so the words that were already quiet come out quieter still. What
+    | actually rescues them is bringing the programme back up to a known level.
+    |
+    | `loudnorm` is the EBU R128 / ITU BS.1770 normaliser, and these are the
+    | podcast values every student platform targets: −16 LUFS integrated, −1.5
+    | dBTP true peak (leaving headroom so the platform's own encoder does not
+    | clip), LRA 11 to keep the natural dynamic range of speech rather than
+    | flattening it into a broadcast compressor.
+    |
+    | It runs AFTER the denoiser, which is the only correct order: normalising
+    | first would just hand `afftdn` a louder noise floor to learn.
+    |
+    | Single-pass mode, not two-pass. Two-pass needs a measurement pass over the
+    | whole file and a linear filter baked from the result, which a worker that
+    | renders one edit at a time through a filtergraph cannot express; dynamic
+    | mode is the right trade for a talking-head tutorial.
+    */
+    /*
+    |----------------------------------------------------------------------
+    | Capture chain — what OBS already did to the file (guia_audio_obs.md)
+    |----------------------------------------------------------------------
+    |
+    | The source arrives already processed. OBS runs the Fifine USB mic through
+    | its own filter chain — RNNoise, a 3:1 compressor, a 4:1 expander and a
+    | limiter — and Windows' own enhancements are switched off precisely so
+    | nothing is applied twice on the way in.
+    |
+    | That fact has to be known here, because the obvious default is wrong: a
+    | spectral denoiser on top of RNNoise does not clean anything, it subtracts
+    | energy from speech that is already clean and lands on the metallic
+    | "underwater" artefact people blame on the recorder. Same for a second
+    | compressor on top of the first: the levels are already level.
+    |
+    | So the chain below is OFF by default, and `room_tone` is deliberately
+    | gentle. Set `VIDEO_EDIT_VOICE_COMPRESSOR` / `_EXPANDER` / `_LIMITER` /
+    | `_RNNOISE` to true only for a recording that did NOT come through OBS.
+    |
+    | `loudness` is the exception and stays on: OBS has no loudness
+    | normalisation filter, and the guide switches Windows' enhancements off, so
+    | nothing in the capture path targets a delivery level. -16 LUFS is a
+    | destination, not a duplicate of a stage already applied.
+    */
+    'voice_chain' => [
+        // OBS's Noise Suppression is RNNoise. Needs a model file; see below.
+        'rnnoise' => [
+            'enabled' => (bool) env('VIDEO_EDIT_VOICE_RNNOISE', false),
+            // arnndn needs a real .rnnn model on disk. RNNoise's is sh.rnnn.
+            // Absent or unreadable, the stage is skipped rather than failing the
+            // render: a missing model is a config problem, not a bad recording.
+            'model' => env('VIDEO_EDIT_VOICE_RNNOISE_MODEL', ''),
+            // How much of the denoised signal to keep. 1 is fully denoised; OBS
+            // itself sits around 1.
+            'mix' => (float) env('VIDEO_EDIT_VOICE_RNNOISE_MIX', 1.0),
+        ],
+
+        // Mirrors OBS's Compressor: 3:1 above -18 dB, 6 ms attack, 100 ms
+        // release, +3 dB make-up. FFmpeg takes linear ratios, so the dB figures
+        // from the guide are converted here rather than pasted.
+        'compressor' => [
+            'enabled' => (bool) env('VIDEO_EDIT_VOICE_COMPRESSOR', false),
+            'threshold_db' => (float) env('VIDEO_EDIT_VOICE_COMP_THRESHOLD', -18.0),
+            'ratio' => (float) env('VIDEO_EDIT_VOICE_COMP_RATIO', 3.0),
+            'attack_ms' => (float) env('VIDEO_EDIT_VOICE_COMP_ATTACK', 6.0),
+            'release_ms' => (float) env('VIDEO_EDIT_VOICE_COMP_RELEASE', 100.0),
+            'makeup_db' => (float) env('VIDEO_EDIT_VOICE_COMP_MAKEUP', 3.0),
+            // 2.82843 is FFmpeg's default and OBS has no equivalent knob.
+            'knee' => (float) env('VIDEO_EDIT_VOICE_COMP_KNEE', 2.82843),
+        ],
+
+        // Mirrors OBS's Expander: 4:1 below -40 dB, RMS detection. FFmpeg's
+        // `agate` is a downward gate rather than a true expander, so the expander
+        // is approximated by a high ratio plus a deep `range`.
+        'expander' => [
+            'enabled' => (bool) env('VIDEO_EDIT_VOICE_EXPANDER', false),
+            'threshold_db' => (float) env('VIDEO_EDIT_VOICE_EXP_THRESHOLD', -40.0),
+            'ratio' => (float) env('VIDEO_EDIT_VOICE_EXP_RATIO', 4.0),
+            'attack_ms' => (float) env('VIDEO_EDIT_VOICE_EXP_ATTACK', 10.0),
+            'release_ms' => (float) env('VIDEO_EDIT_VOICE_EXP_RELEASE', 100.0),
+            // Deepest attenuation applied below the threshold. -40 dB matches
+            // where the guide puts the expander, so keyboard and fan noise
+            // between phrases go as quiet as OBS takes them.
+            'range_db' => (float) env('VIDEO_EDIT_VOICE_EXP_RANGE', -40.0),
+        ],
+
+        // Mirrors OBS's Limiter at -3 dB. FFmpeg's alimiter auto-levels by
+        // default (`level=true`), which would silently fight `loudnorm`
+        // downstream, so it is switched off explicitly and only the ceiling kept.
+        'limiter' => [
+            'enabled' => (bool) env('VIDEO_EDIT_VOICE_LIMITER', false),
+            'ceiling_db' => (float) env('VIDEO_EDIT_VOICE_LIMIT_CEILING', -3.0),
+            'attack_ms' => (float) env('VIDEO_EDIT_VOICE_LIMIT_ATTACK', 5.0),
+            'release_ms' => (float) env('VIDEO_EDIT_VOICE_LIMIT_RELEASE', 60.0),
+        ],
+    ],
+
+    'loudness' => [
+        'enabled' => (bool) env('VIDEO_EDIT_LOUDNORM', true),
+        'target_lufs' => (float) env('VIDEO_EDIT_LOUDNORM_I', -16.0),
+        'true_peak_dbtp' => (float) env('VIDEO_EDIT_LOUDNORM_TP', -1.5),
+        'loudness_range' => (float) env('VIDEO_EDIT_LOUDNORM_LRA', 11.0),
+    ],
+
+    /*
+    |----------------------------------------------------------------------
     | Speech cleanup (V2 · US-10)
     |----------------------------------------------------------------------
     |
@@ -267,6 +376,13 @@ return [
                     - Nunca cortes mientras una herramienta esta trabajando. Si Claude,
                       ChatGPT, Gemini o cualquier agente esta generando en pantalla,
                       ese tramo se deja intacto.
+                    - No atropelles los pasos del ejemplo. Si el ponente recorre los
+                      pasos de golpe, senalalo con su timecode exacto: el alumno se
+                      pierde en el paso que no se explica, no en el que se explica
+                      dos veces.
+                    - Microfono. Si detectas palabras cortadas o apenas inteligibles,
+                      conviene subir la ganancia del micro o acercarlo; en el corte no
+                      se arregla.
                     PROFILE,
             ],
         ],
@@ -289,11 +405,100 @@ return [
         'slow_words_per_minute' => 130,
         // Below this, words per minute is noise rather than a measurement.
         'min_speaking_ms' => 60_000,
+
+        /*
+        |----------------------------------------------------------------------
+        | Rushed stretches (OBSERVACIONES round 2)
+        |----------------------------------------------------------------------
+        |
+        | "Ciertos pasos de los ejemplos se muestran muy rápido y el alumno puede
+        | perderse fácilmente." The global pace number cannot see this — a
+        | recording can average 145 words/min and still sprint through the part
+        | that matters. So the test is RELATIVE: a run of consecutive words
+        | spoken markedly faster than the speaker's own average for this
+        | recording, for long enough to lose a viewer.
+        |
+        | Measured PER WORD — the gap in front of a word plus the word itself —
+        | rather than over a sliding window. A window is a stab at estimating a
+        | rate from a sample, and it bleeds: the window straddling the boundary
+        | of a fast stretch is already fast enough to qualify, so the reported
+        | range starts a second or two before the rush actually begins, and
+        | advice with the wrong timecode is worse than no advice.
+        |
+        | Per-word rate has no such slack. It includes the gaps, so a rushed
+        | stretch has to beat its own pauses to register — which is the
+        | deliberate part: an ordinary paragraph never trips it. It also
+        | survives silence removal, since the pauses it is measured against are
+        | exactly what the edit removes, making the delivered video faster still.
+        |
+        | Both floors have to be cleared. The ratio is relative, so a slow
+        | speaker is never told they sped up; the absolute floor is the
+        | converse, so a uniformly slow recording with one fast burst still gets
+        | the burst reported without the ratio being the only judge.
+        */
+        'rush_ratio' => 1.35,
+        'rush_floor_words_per_minute' => 190,
+        // A run shorter than this is one hurried sentence, not a streak.
+        'rush_min_total_ms' => 4_000,
+        'rush_min_words' => 8,
+    ],
+
+    /*
+    |----------------------------------------------------------------------
+    | Unclear words (OBSERVACIONES round 2)
+    |----------------------------------------------------------------------
+    |
+    | "El micrófono parece tener un umbral de captación muy bajo, por lo que a
+    | veces las palabras no se aprecian bien y suenan cortadas."
+    |
+    | Half of that is the desk, and no edit can fix it. The other half is
+    | measurable here: when the input never reached the preamp, Whisper hears the
+    | word stop mid-syllable and writes the fragment with a trailing hyphen
+    | ("co-"). That is the transcriber's own evidence that the word was clipped,
+    | and it is the only signal in the pipeline that distinguishes "the speaker
+    | said this badly" from "the microphone never got this".
+    |
+    | `loudness` above is what rescues the words that survived. This is what says
+    | how many did not, and where.
+    */
+    'clarity' => [
+        // Reporting four clipped words in a recording is useful; reporting one
+        // is noise, and one is what a single false start produces.
+        'min_clipped_words' => 3,
+        'max_reported_words' => 20,
     ],
 
     'cuts' => [
         'min_kept_fragment_ms' => 250,                         // D6
         'min_output_ms' => 1000,                               // D6
+
+        /*
+        |----------------------------------------------------------------------
+        | Join seams (OBSERVACIONES round 2 · 05:22)
+        |----------------------------------------------------------------------
+        |
+        | "Salto de audio/respiración muy brusco ... falta suavizar el crossfade
+        | o dejar un aire natural." The reviewer's own wording offers the two
+        | ways out, and only one of them is safe here.
+        |
+        | A real crossfade (`acrossfade`) OVERLAPS the two clips, which shortens
+        | the output by the overlap and drifts the lip sync away from the
+        | picture — the video side is `trim`+`concat`, never `xfade`, so nothing
+        | absorbs the difference. On speech it also smears two syllables into one
+        | phaser artifact. So this takes the reviewer's second option: a fade
+        | long enough to read as a breath, followed by a short hold of room tone.
+        | The picture holds its last frame for exactly as long as the audio holds
+        | the air, so the two never drift.
+        |
+        | `fade_ms` was 15 ms, which only removed the click; the seam itself was
+        | still audible as a splice. 40 ms is long enough to be heard as a breath
+        | and short enough to cost no intelligibility.
+        |
+        | Set `air_ms` to 0 to get the old 15 ms behaviour back (well: the new
+        | fade length still applies).
+        */
+        'join_fade_ms' => (int) env('VIDEO_EDIT_JOIN_FADE_MS', 40),
+        'join_air_ms' => (int) env('VIDEO_EDIT_JOIN_AIR_MS', 80),
 
         /*
         | Cut edges (OBSERVACIONES round 2).

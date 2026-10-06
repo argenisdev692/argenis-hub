@@ -9,6 +9,7 @@ use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
 use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
+use Modules\VideoEdits\Domain\ValueObjects\VoiceChain;
 
 /**
  * Builds FFmpeg filtergraphs from validated numbers only (OWASP §3 · AD-4, AD-5).
@@ -27,8 +28,28 @@ final readonly class FilterGraphBuilder
      * Length of the audio fade on each side of a join. A hard cut between two
      * waveforms that are not at zero clicks; 15 ms is too short to hear as a
      * fade but long enough to remove the click.
+     *
+     * The default is deliberately larger than that anti-click floor. The
+     * round-2 review called the seam at 05:22 a "salto de audio/respiración muy
+     * brusco", which is not a click problem but a transition problem — the splice
+     * is audible as a splice. {@see self::DEFAULT_JOIN_AIR_MS} is what the
+     * reviewer asked for instead of a crossfade, and the two only work together:
+     * the fade ramps into the air so the level never steps, and the air is long
+     * enough to read as the breath the speaker took there.
      */
-    public const int JOIN_FADE_MS = 15;
+    public const int DEFAULT_JOIN_FADE_MS = 40;
+
+    /**
+     * Room tone held after the fade-out and before the next fade-in.
+     *
+     * This is the reviewer's second option, and it is the only one a
+     * `trim`+`concat` graph can honour. A real crossfade overlaps the two
+     * clips, so the output is that much shorter than the picture and the lip sync
+     * drifts for the rest of the video; on speech the overlap also smears two
+     * syllables into one phaser artifact. Holding the last frame for exactly as
+     * long as the audio holds the air keeps picture and sound locked.
+     */
+    public const int DEFAULT_JOIN_AIR_MS = 80;
 
     /**
      * Room-tone cleanup, off unless every value is configured.
@@ -48,16 +69,53 @@ final readonly class FilterGraphBuilder
         private ?float $denoiseReductionDb = null,
         private ?float $denoiseFloorDb = null,
         private ?int $denoiseHighpassHz = null,
+        private int $joinFadeMs = self::DEFAULT_JOIN_FADE_MS,
+        private int $joinAirMs = self::DEFAULT_JOIN_AIR_MS,
+        private ?float $targetLufs = null,
+        private ?float $truePeakDbTp = null,
+        private ?float $loudnessRange = null,
+        private ?VoiceChain $voiceChain = null,
     ) {}
 
     /**
-     * The room-tone filters, or nothing at all when they are not configured.
+     * The capture chain, then loudness normalisation, or nothing at all when
+     * they are not configured.
      *
      * The highpass comes first on purpose: rumble below the speech band is what
      * a desk knocked against a wall contributes, and dropping it before the
      * denoiser stops the denoiser from spending its budget on it.
+     *
+     * The dynamics follow OBS's own order — suppress, compress, expand, limit —
+     * because that order is what the guide's measurements were taken with, and
+     * swapping any two of them changes the result.
+     *
+     * `loudnorm` goes last on purpose too. Denoising subtracts energy from the
+     * whole signal, so the words that were already quiet come out quieter; a low
+     * microphone threshold is therefore made worse by the stage that precedes
+     * this one, and only normalisation brings them back. Normalising first would
+     * instead hand `afftdn` a raised noise floor to learn, which is worse.
      */
     private function audioCleanup(): string
+    {
+        $filters = $this->roomTone();
+
+        if ($this->voiceChain !== null) {
+            $filters .= $this->voiceChain->filters();
+        }
+
+        if ($this->targetLufs === null || $this->truePeakDbTp === null) {
+            return $filters;
+        }
+
+        return $filters.sprintf(
+            ',loudnorm=I=%s:TP=%s%s',
+            self::decimal($this->targetLufs),
+            self::decimal($this->truePeakDbTp),
+            $this->loudnessRange === null ? '' : ':LRA='.self::decimal($this->loudnessRange),
+        );
+    }
+
+    private function roomTone(): string
     {
         if ($this->denoiseReductionDb === null || $this->denoiseFloorDb === null) {
             return '';
@@ -111,7 +169,11 @@ final readonly class FilterGraphBuilder
     /**
      * Keep only the given ranges of a single input, frame- and sample-accurately
      * (trim/atrim + reset timestamps + concat), then normalize to the profile.
-     * Every audio join gets a {@see self::JOIN_FADE_MS} fade so cuts do not click.
+     *
+     * Every audio join gets a {@see self::$joinFadeMs} fade and a
+     * {@see self::$joinAirMs} hold of room tone, so cuts breathe instead of
+     * splicing. The picture holds its last frame for the same air, which is what
+     * keeps the two in step — an audio-only gap would drift the lip sync.
      *
      * `$effects` splits the kept ranges further: a compressed range becomes its
      * own segment played faster (`setpts` for the picture, `atempo` for the
@@ -126,26 +188,32 @@ final readonly class FilterGraphBuilder
         $segments = self::segments($keepRanges, $effects?->compressedRanges ?? []);
         $parts = [];
         $pairs = '';
+        $lastIndex = count($segments) - 1;
 
         foreach ($segments as $index => [$range, $speed]) {
             $isSpedUp = $speed > 1.0;
             $outputMs = $isSpedUp ? (int) ceil($range->durationMs() / $speed) : $range->durationMs();
+            // The recording's own open and close are not seams; only the ones
+            // between two kept fragments need the breath treatment.
+            $airMs = $index < $lastIndex ? max(0, $this->joinAirMs) : 0;
 
             $parts[] = sprintf(
-                '[0:v:0]trim=start=%s:end=%s,%s[v%d]',
+                '[0:v:0]trim=start=%s:end=%s,%s%s[v%d]',
                 self::seconds($range->startMs),
                 self::seconds($range->endMs),
                 $isSpedUp ? sprintf('setpts=(PTS-STARTPTS)/%s', self::factor($speed)) : 'setpts=PTS-STARTPTS',
+                self::heldFrame($airMs),
                 $index,
             );
             $parts[] = $inputProbe->hasAudio
                 ? sprintf(
-                    '[0:a:0]atrim=start=%s:end=%s,asetpts=PTS-STARTPTS%s%s%s[a%d]',
+                    '[0:a:0]atrim=start=%s:end=%s,asetpts=PTS-STARTPTS%s%s%s%s[a%d]',
                     self::seconds($range->startMs),
                     self::seconds($range->endMs),
                     $isSpedUp || $effects === null ? '' : self::attenuations($range, $effects),
                     $isSpedUp ? sprintf(',atempo=%s', self::factor($speed)) : '',
-                    self::joinFades($outputMs, fadeIn: $index > 0, fadeOut: $index < count($segments) - 1),
+                    self::joinFades($outputMs, fadeIn: $index > 0, fadeOut: $index < $lastIndex),
+                    self::heldAir($airMs),
                     $index,
                 )
                 : sprintf('%s[a%d]', $this->silence($profile, $outputMs), $index);
@@ -157,6 +225,31 @@ final readonly class FilterGraphBuilder
         $parts[] = sprintf('[ca]%s%s', $this->audioNormalization($profile), self::AUDIO_OUTPUT);
 
         return implode(';', $parts);
+    }
+
+    /**
+     * Holds the segment's last frame for the air, so the seam shows a still
+     * picture under the held breath instead of jumping to the next cut's frame
+     * one breath early.
+     */
+    private static function heldFrame(int $airMs): string
+    {
+        return $airMs <= 0
+            ? ''
+            : sprintf(',tpad=stop_mode=clone:stop_duration=%s', self::seconds($airMs));
+    }
+
+    /**
+     * The silence that carries that air. `apad` comes AFTER the fade-out so the
+     * fade ramps into the gap rather than into the next word — which is the
+     * whole point, since a fade that ends on speech is exactly the abruptness
+     * this replaces.
+     */
+    private static function heldAir(int $airMs): string
+    {
+        return $airMs <= 0
+            ? ''
+            : sprintf(',apad=pad_dur=%s', self::seconds($airMs));
     }
 
     /**
@@ -234,9 +327,9 @@ final readonly class FilterGraphBuilder
      * Fades only the edges that meet another range: the very start and end of
      * the recording are not joins and keep their original attack and decay.
      */
-    private static function joinFades(int $durationMs, bool $fadeIn, bool $fadeOut): string
+    private function joinFades(int $durationMs, bool $fadeIn, bool $fadeOut): string
     {
-        $fadeMs = min(self::JOIN_FADE_MS, intdiv($durationMs, 2));
+        $fadeMs = min($this->joinFadeMs, intdiv($durationMs, 2));
 
         if ($fadeMs <= 0) {
             return '';

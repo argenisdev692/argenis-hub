@@ -2524,7 +2524,7 @@ rejected_decision_count: number,
 }
 namespace Domain {
 namespace Enums {
-export type AiRecommendationKind = 'reduce' | 'off_script' | 'script_coverage' | 'pacing' | 'read_prompt_aloud';
+export type AiRecommendationKind = 'reduce' | 'off_script' | 'script_coverage' | 'pacing' | 'read_prompt_aloud' | 'rushed_step' | 'unclear_word';
 export type CutReason = 'silence' | 'manual' | 'filler' | 'filler_word' | 'stutter' | 'repetition' | 'vocal_sound' | 'pause_marker' | 'retake' | 'misspoken' | 'misplaced_take';
 export type DecisionOrigin = 'system_detection' | 'user' | 'transcription' | 'ai';
 export type DecisionOutcome = 'applied' | 'rejected';

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\VideoEdits\Domain\ValueObjects;
 
 use InvalidArgumentException;
+use Modules\VideoEdits\Domain\Services\ClippedWordDetector;
 
 /**
  * One spoken word with its own timing — the unit V2 detection actually cuts on.
@@ -52,6 +53,29 @@ final readonly class TranscriptWord
         ]);
 
         return trim(preg_replace('/[^\p{L}\p{N}\-]+/u', '', $folded) ?? '');
+    }
+
+    /**
+     * Whisper's own evidence that it heard the word stop mid-syllable: the
+     * fragment is written with a trailing hyphen ("co-", "infor-").
+     *
+     * Two things make this worth a method rather than a string check at each call
+     * site. A bracketed sound is never truncated however it is punctuated, and
+     * `normalized()` deliberately keeps hyphens, so the trailing one survives
+     * accent folding and punctuation stripping and can be tested for.
+     *
+     * This is the only signal in the pipeline that separates "the speaker said
+     * this badly" from "the microphone never got this" — see
+     * {@see ClippedWordDetector}.
+     */
+    #[\NoDiscard]
+    public function isTruncated(): bool
+    {
+        $normalized = $this->normalized();
+
+        return $normalized !== ''
+            && ! $this->isBracketedSound()
+            && str_ends_with($normalized, '-');
     }
 
     /**
