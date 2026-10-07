@@ -146,7 +146,7 @@ function toNullableInteger(value: string | number): number | null {
                             v-for="option in VIDEO_EDIT_MODES"
                             :key="option"
                             :for="`${uid}-mode-${option}`"
-                            class="flex cursor-pointer flex-col gap-1 rounded-lg border border-border p-3 transition-colors has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-accent"
+                            class="flex cursor-pointer flex-col gap-1 rounded-lg border border-border p-3 transition-colors has-data-[state=checked]:border-primary has-data-[state=checked]:bg-accent"
                         >
                             <span
                                 class="flex items-center gap-2 text-sm font-medium"
@@ -196,7 +196,7 @@ function toNullableInteger(value: string | number): number | null {
                         :field="field"
                         label="Remove silences"
                         orientation="horizontal"
-                        description="Cuts pauses longer than the threshold below."
+                        description="Cuts pauses longer than the threshold below. Pauses shorter than it are kept, so a delivery that halts between sentences keeps halting — the AI report says where those seconds are."
                         #default="{ control }"
                     >
                         <Switch
@@ -218,7 +218,7 @@ function toNullableInteger(value: string | number): number | null {
                     <AppField
                         :field="field"
                         label="Silence threshold (seconds)"
-                        :description="`Between ${SILENCE_THRESHOLD.min} and ${SILENCE_THRESHOLD.max} seconds.`"
+                        :description="`Anything from ${SILENCE_THRESHOLD.min} to ${SILENCE_THRESHOLD.max}s. Lower it to tighten the delivery; raise it to keep more natural air between phrases.`"
                         #default="{ control }"
                     >
                         <Input

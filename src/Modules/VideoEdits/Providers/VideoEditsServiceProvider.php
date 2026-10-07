@@ -256,6 +256,8 @@ final class VideoEditsServiceProvider extends ServiceProvider
             fillerWords: (array) config('video-edit.speech.dictionaries.filler_words', []),
             fillerPhrases: (array) config('video-edit.speech.dictionaries.filler_phrases', []),
             repetitionAllowList: (array) config('video-edit.speech.dictionaries.repetition_allow_list', []),
+            pausePhrases: (array) config('video-edit.speech.dictionaries.pause_phrases', []),
+            elongationPatterns: (array) config('video-edit.speech.dictionaries.elongation_patterns', []),
             maxStutterFragmentMs: (int) config('video-edit.speech.max_stutter_fragment_ms'),
             minConfidence: (float) config('video-edit.speech.min_confidence'),
         ));

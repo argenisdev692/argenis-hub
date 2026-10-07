@@ -54,6 +54,78 @@ it('counts the mini-pauses the silence threshold leaves in', function (): void {
         ->and($recommendation->detail)->toContain('Baja el umbral de silencio a 0.4 s');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Mini-pause timecodes (P4)
+|--------------------------------------------------------------------------
+|
+| The row used to read "12 mini-pauses" and nothing else. That is a statistic,
+| not an instruction: the reference review asked for "the points where the
+| speaker stops", and there was no way to answer it from the report. The same
+| reasoning already applied to rushed stretches a few methods down.
+|
+*/
+
+it('points at each mini-pause instead of only counting them', function (): void {
+    $gaps = [10 => 600, 30 => 600, 50 => 600];
+    $transcript = pacedTranscript(60, $gaps);
+
+    $recommendation = paceAnalyzer()->recommendation($transcript, 1_000);
+
+    // The listed timecode is the END of the word before each gap, so it lands on
+    // audible speech rather than in dead air. Derived from the transcript rather
+    // than written out, so the assertion survives a change to the fixture.
+    $expected = array_map(
+        static fn (int $index): string => paceTimecode($transcript->words[$index - 1]->endMs),
+        array_keys($gaps),
+    );
+
+    expect($recommendation?->detail)->toContain('en estos puntos');
+
+    foreach ($expected as $timecode) {
+        expect($recommendation->detail)->toContain($timecode);
+    }
+});
+
+it('keeps the pacing finding scannable by capping how many it lists', function (): void {
+    $gaps = array_fill(1, 59, 600);
+    $recommendation = paceAnalyzer()->recommendation(pacedTranscript(60, $gaps), 1_000);
+
+    // All 59 are counted, because the total is what sizes the problem; only a
+    // readable handful are listed, and the overflow is stated rather than hidden.
+    expect($recommendation?->title)->toContain('59 minipausas')
+        ->and($recommendation?->detail)->toContain('(y 51 más)');
+});
+
+it('carries the span of the whole mini-pause run on the recommendation', function (): void {
+    $transcript = pacedTranscript(60, [10 => 600, 20 => 600, 50 => 600]);
+
+    $recommendation = paceAnalyzer()->recommendation($transcript, 1_000);
+
+    // The PDF template prints this range, so a reader can scrub to it.
+    expect($recommendation?->startMs)->toBe($transcript->words[9]->endMs)
+        ->and($recommendation->endMs)->toBe($transcript->words[50]->startMs);
+});
+
+it('leaves the span empty when the delivery is slow but has no long pause', function (): void {
+    // 30 words spread over ~20 s ≈ 90 words/min; the 350 ms gaps are all below
+    // the mini-pause length, so there is nothing to point at — only the rate.
+    $recommendation = paceAnalyzer()->recommendation(
+        pacedTranscript(30, array_fill(1, 29, 350)),
+        1_000,
+    );
+
+    expect($recommendation?->detail)->toContain('por debajo de 130 palabras/min')
+        ->and($recommendation->startMs)->toBeNull()
+        ->and($recommendation->endMs)->toBeNull();
+});
+
+it('still writes the recommendation in English for an English recording', function (): void {
+    $transcript = pacedTranscript(60, [10 => 600, 20 => 600, 30 => 600], language: 'en');
+
+    expect(paceAnalyzer()->recommendation($transcript, 1_000)?->title)->toStartWith('Pace: ')->toEndWith('words/min, 3 mini-pauses');
+});
+
 it('counts every pause when silence removal is off', function (): void {
     $transcript = pacedTranscript(60, [10 => 600, 20 => 1_500, 30 => 2_000]);
 
@@ -78,6 +150,17 @@ it('writes the recommendation in English for an English recording', function ():
 it('does not measure a recording too short for a meaningful pace', function (): void {
     expect(paceAnalyzer()->recommendation(pacedTranscript(5, [1 => 900, 2 => 900, 3 => 900]), null))->toBeNull();
 });
+
+/**
+ * The same `M:SS` the analyzer formats, so the tests assert on real values
+ * derived from the fixture rather than on literals that drift when it changes.
+ */
+function paceTimecode(int $milliseconds): string
+{
+    $seconds = intdiv($milliseconds, 1_000);
+
+    return sprintf('%d:%02d', intdiv($seconds, 60), $seconds % 60);
+}
 
 /**
  * A recording that is deliberately uneven: a calm baseline and one stretch where

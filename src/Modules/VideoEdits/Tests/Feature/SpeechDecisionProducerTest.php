@@ -9,6 +9,7 @@ use Modules\VideoEdits\Application\Pipeline\Producers\SpeechDecisionProducer;
 use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
+use Modules\VideoEdits\Domain\Enums\SpeechCategory;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Ports\TranscriptionPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
@@ -259,4 +260,92 @@ it('deletes the transcript with its edit', function (): void {
     $edit->delete();
 
     expect(VideoEditTranscriptEloquentModel::query()->count())->toBe(0);
+});
+
+/*
+|--------------------------------------------------------------------------
+| The shipped dictionaries (P1 / P3)
+|--------------------------------------------------------------------------
+|
+| The unit tests carry their own copy of the dictionaries, which is right for
+| proving the RULES. These prove the CONFIG is wired up and behaves, resolved
+| through the container exactly as a real edit resolves it — so a regex typo in
+| config/video-edit.php cannot pass CI while silently disabling the feature, and
+| the test copy cannot drift into proving something the shipped file does not do.
+|
+*/
+
+it('removes a spoken pause marker from a real recording using the shipped dictionary', function (): void {
+    $this->transcriber = new RecordingTranscriber(new Transcript(
+        words: [
+            new TranscriptWord('Contestamos', 0, 900),
+            new TranscriptWord('pausa', 900, 1_400),
+            new TranscriptWord('acá', 1_400, 1_800),
+            new TranscriptWord('y', 1_800, 1_900),
+            new TranscriptWord('empieza', 1_900, 2_600),
+        ],
+        language: 'es',
+    ));
+    app()->instance(TranscriptionPort::class, $this->transcriber);
+
+    $decisions = app(SpeechDecisionProducer::class)->produce(speechContext(
+        VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create(),
+        ['enabled' => true, 'categories' => ['pause_marker']],
+        'pause-marker',
+    ));
+
+    expect($decisions)->toHaveCount(1)
+        ->and($decisions[0]->reason)->toBe(CutReason::PauseMarker)
+        ->and($decisions[0]->origin)->toBe(DecisionOrigin::Transcription)
+        ->and($decisions[0]->startMs)->toBe(900)
+        ->and($decisions[0]->endMs)->toBe(1_800);
+});
+
+it('removes a held vowel from a real recording using the shipped patterns', function (): void {
+    $this->transcriber = new RecordingTranscriber(new Transcript(
+        words: [
+            new TranscriptWord('y', 0, 200),
+            new TranscriptWord('deee', 200, 900),
+            new TranscriptWord('para', 900, 1_300),
+            new TranscriptWord('queee', 1_300, 2_100),
+            // Ordinary words the patterns must leave alone.
+            new TranscriptWord('coffee', 2_100, 2_700),
+            new TranscriptWord('ana', 2_700, 3_100),
+        ],
+        language: 'es',
+    ));
+    app()->instance(TranscriptionPort::class, $this->transcriber);
+
+    $decisions = app(SpeechDecisionProducer::class)->produce(speechContext(
+        VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create(),
+        ['enabled' => true, 'categories' => ['filler']],
+        'elongation',
+    ));
+
+    expect(array_map(
+        static fn (CutDecision $decision): array => [$decision->reason->value, $decision->startMs],
+        $decisions,
+    ))->toBe([['filler', 200], ['filler', 1_300]]);
+});
+
+it('asks Whisper for the spoken markers it has to transcribe', function (): void {
+    // Whisper normalises an unprompted interjection away, and a marker that is
+    // never transcribed cannot be found by the dictionary or by the model. The
+    // style prompt is the only lever, so its presence is asserted rather than
+    // assumed.
+    $spanish = (string) config('video-edit.speech.openai.prompts.es');
+
+    expect($spanish)
+        ->toContain('Pausa')
+        ->toContain('Pausa aquí')
+        ->toContain('Pausa acá')
+        ->and((string) config('video-edit.speech.openai.prompts.en'))->toContain('Pause');
+});
+
+it('offers the marker as a category with nothing left out of the default set', function (): void {
+    // An AI edit sends no categories at all, and "all of them" is the documented
+    // meaning of that — so a marker has to be inside the default set or it is
+    // only ever removed for a user who found the switch.
+    expect(SpeechCategory::values())->toContain('pause_marker')
+        ->and(count(SpeechCategory::all()))->toBe(count(SpeechCategory::values()));
 });

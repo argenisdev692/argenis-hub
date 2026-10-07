@@ -79,19 +79,34 @@
         <thead>
             <tr>
                 <th>Kind</th>
+                <th>When</th>
                 <th>Finding</th>
                 <th>Detail</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($recommendations as $recommendation)
+                @php
+                    // Several kinds carry a time range, and the range is the point:
+                    // "knowing it happened is useless without knowing where", which
+                    // is what makes a re-record aimable. It was carried on the DTO
+                    // and dropped here, so every finding read as a statistic
+                    // instead of a place to scrub to.
+                    $from = $recommendation['start_ms'] ?? null;
+                    $to = $recommendation['end_ms'] ?? null;
+                    $timecode = $from === null
+                        ? '—'
+                        : ($to === null ? sprintf('%d:%02d', intdiv($from / 1000, 60), ($from / 1000) % 60)
+                            : sprintf('%d:%02d–%d:%02d', intdiv($from / 1000, 60), ($from / 1000) % 60, intdiv($to / 1000, 60), ($to / 1000) % 60));
+                @endphp
                 <tr>
                     <td>{{ ucfirst(str_replace('_', ' ', $recommendation['kind'])) }}</td>
+                    <td>{{ $timecode }}</td>
                     <td>{{ $recommendation['title'] }}</td>
                     <td style="text-align: left;">{{ $recommendation['detail'] }}</td>
                 </tr>
             @empty
-                <tr><td colspan="3"><div class="empty-state">No recommendations.</div></td></tr>
+                <tr><td colspan="4"><div class="empty-state">No recommendations.</div></td></tr>
             @endforelse
         </tbody>
     </table>

@@ -44,6 +44,9 @@ final readonly class SpeechPaceAnalyzer
     /** Timecodes a human can act on before the row stops being a checklist. */
     private const int MAX_REPORTED_RUSHES = 5;
 
+    /** Same ceiling for the mini-pause list; the detail field has to stay readable. */
+    private const int MAX_REPORTED_MINI_PAUSES = 8;
+
     /**
      * @param  int|null  $silenceThresholdMs  null when silence removal is off, so every pause survives
      */
@@ -72,28 +75,57 @@ final readonly class SpeechPaceAnalyzer
             return null;
         }
 
+        $shown = array_slice($miniPauses, 0, self::MAX_REPORTED_MINI_PAUSES);
+        $totalGapMs = array_sum(array_column($miniPauses, 'gapMs'));
+        $timecodes = implode(', ', array_map(
+            static fn (array $pause): string => self::timecode($pause['startMs']),
+            $shown,
+        ));
+        $overflow = count($miniPauses) > count($shown)
+            ? sprintf(' (y %d más)', count($miniPauses) - count($shown))
+            : '';
+        $adjustHint = $wordsPerMinute < $this->slowWordsPerMinute
+            ? sprintf(
+                'El ritmo está por debajo de %d palabras/min: conviene regrabar con un tono más fluido.',
+                $this->slowWordsPerMinute,
+            )
+            : sprintf('Baja el umbral de silencio a %s s para eliminarlas.', self::seconds($this->miniPauseMs));
+
+        // A recording can be slow with nothing above the mini-pause length at
+        // all, and then there is no stretch to point at — only the rate. Reading
+        // the ends off an empty list would be the bug this guards.
+        $span = $miniPauses === []
+            ? null
+            : ['startMs' => $shown[0]['startMs'], 'endMs' => array_last($miniPauses)['endMs']];
+
         return $this->isSpanish($transcript)
             ? new AiRecommendation(
                 kind: AiRecommendationKind::Pacing,
                 title: sprintf('Ritmo: %d palabras/min, %d minipausas', $wordsPerMinute, count($miniPauses)),
+                startMs: $span['startMs'] ?? null,
+                endMs: $span['endMs'] ?? null,
                 detail: sprintf(
-                    'Quedan %d pausas de %s s o más entre frases que la eliminación de silencios no quita (suman %s s). %s',
+                    'Quedan %d pausas de %s s o más entre frases que la eliminación de silencios no quita (suman %s s), en estos puntos: %s%s. %s',
                     count($miniPauses),
                     self::seconds($this->miniPauseMs),
-                    self::seconds(array_sum($miniPauses)),
-                    $wordsPerMinute < $this->slowWordsPerMinute
-                        ? sprintf('El ritmo está por debajo de %d palabras/min: conviene regrabar con un tono más fluido.', $this->slowWordsPerMinute)
-                        : sprintf('Baja el umbral de silencio a %s s para eliminarlas.', self::seconds($this->miniPauseMs)),
+                    self::seconds($totalGapMs),
+                    $timecodes,
+                    $overflow,
+                    $adjustHint,
                 ),
             )
             : new AiRecommendation(
                 kind: AiRecommendationKind::Pacing,
                 title: sprintf('Pace: %d words/min, %d mini-pauses', $wordsPerMinute, count($miniPauses)),
+                startMs: $span['startMs'] ?? null,
+                endMs: $span['endMs'] ?? null,
                 detail: sprintf(
-                    '%d pauses of %s s or more remain between sentences that silence removal does not cut (%s s in total). %s',
+                    '%d pauses of %s s or more remain between sentences that silence removal does not cut (%s s in total), at these points: %s%s. %s',
                     count($miniPauses),
                     self::seconds($this->miniPauseMs),
-                    self::seconds(array_sum($miniPauses)),
+                    self::seconds($totalGapMs),
+                    $timecodes,
+                    $overflow,
                     $wordsPerMinute < $this->slowWordsPerMinute
                         ? sprintf('The pace is below %d words/min: consider re-recording with a more fluid delivery.', $this->slowWordsPerMinute)
                         : sprintf('Lower the silence threshold to %s s to remove them.', self::seconds($this->miniPauseMs)),
@@ -102,19 +134,36 @@ final readonly class SpeechPaceAnalyzer
     }
 
     /**
+     * The mini-pauses that survive silence removal, each with where it is.
+     *
+     * The bounds are returned, not just the length, because a single aggregate
+     * number is a statistic and not an instruction. The reference review asked
+     * for "the points where the speaker stops"; a report row reading
+     * "12 mini-pauses" cannot be aimed at anything, whereas twelve timecodes are
+     * a re-record list — the same reason {@see self::rushedStretches()} reports
+     * ranges.
+     *
+     * `startMs` is the end of the word before the gap, which is where a scrub
+     * lands on audible speech rather than in dead air.
+     *
      * @param  list<TranscriptWord>  $words
-     * @return list<int> the length of each mini-pause, in milliseconds
+     * @return list<array{startMs: int, endMs: int, gapMs: int}>
      */
     private function survivingMiniPauses(array $words, ?int $silenceThresholdMs): array
     {
         $pauses = [];
 
         foreach (array_slice($words, 1) as $index => $word) {
-            $gapMs = $word->startMs - $words[$index]->endMs;
+            $previous = $words[$index];
+            $gapMs = $word->startMs - $previous->endMs;
             $removedBySilence = $silenceThresholdMs !== null && $gapMs >= $silenceThresholdMs;
 
             if ($gapMs >= $this->miniPauseMs && ! $removedBySilence) {
-                $pauses[] = $gapMs;
+                $pauses[] = [
+                    'startMs' => $previous->endMs,
+                    'endMs' => $word->startMs,
+                    'gapMs' => $gapMs,
+                ];
             }
         }
 

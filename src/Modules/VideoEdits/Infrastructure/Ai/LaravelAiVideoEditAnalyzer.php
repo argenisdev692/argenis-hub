@@ -191,7 +191,7 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
         return new CacheablePrompt(
             layers: [
                 PromptLayer::long(self::scriptLayer($script)),
-                PromptLayer::short("NUMBERED TRANSCRIPT:\n".self::numberedTranscript($transcript)),
+                PromptLayer::short("NUMBERED TRANSCRIPT:\n".$this->numberedTranscript($transcript)),
             ],
             tail: implode("\n\n---\n\n", $tail),
             cacheKey: self::cacheKey($script),
@@ -221,15 +221,48 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
     }
 
     /**
-     * `[412] pero` — compact enough for a long recording, and unambiguous about
-     * which index addresses which word.
+     * `[412] pero [413]<<gap 0.9s>> y` — compact enough for a long recording, and
+     * unambiguous about which index addresses which word.
+     *
+     * **Why the gaps are written in.** Whisper measures every inter-word gap
+     * exactly, and this is the only place that measurement reaches the model. It
+     * is not decoration: a silent stretch is an absence, so in a flat word list a
+     * 1.8 s hesitation and a 0.05 s one are the same characters. Three of the
+     * findings this agent is asked for are decided by timing alone — whether the
+     * delivery halts between phrases, whether a sentence was abandoned and
+     * restarted, and where a flagged mistake began — so without this the model is
+     * reasoning about a temporal question with no temporal input.
+     *
+     * It also names the spot the reference review kept finding and the flat list
+     * could not show: a stutter is not "Mientras g-" followed by "genera" in the
+     * text, it is those two words with a second of air between them.
+     *
+     * **Why it is sparse.** Only gaps at or above the threshold are written, so an
+     * ordinary sentence is still one compact line and a whole recording costs a
+     * few extra tokens. `<<` and `>>` are not speech, so an annotation can never
+     * be read as something the speaker said.
      */
-    private static function numberedTranscript(Transcript $transcript): string
+    private function numberedTranscript(Transcript $transcript): string
     {
+        $thresholdMs = max(0, (int) $this->config->get('video-edit.ai.gap_annotation_ms', 400));
+
         $parts = [];
+        $previousEndMs = null;
 
         foreach ($transcript->words as $index => $word) {
-            $parts[] = "[{$index}] ".$word->text;
+            // The space is the separator, not decoration: with no annotation the
+            // word still has to sit clear of its index, and with one the marker
+            // ends in that same space.
+            $annotation = ' ';
+
+            // The very first word has no predecessor, and leading room tone is
+            // not a hesitation.
+            if ($previousEndMs !== null && $word->startMs - $previousEndMs >= $thresholdMs) {
+                $annotation = sprintf('<<gap %.1fs>> ', ($word->startMs - $previousEndMs) / 1000);
+            }
+
+            $previousEndMs = $word->endMs;
+            $parts[] = "[{$index}]{$annotation}".$word->text;
         }
 
         return implode(' ', $parts);

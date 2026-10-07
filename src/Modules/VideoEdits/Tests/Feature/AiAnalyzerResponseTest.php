@@ -12,6 +12,7 @@ use Modules\VideoEdits\Domain\Ports\AiEditAnalysisPort;
 use Modules\VideoEdits\Domain\ValueObjects\ScriptDocument;
 use Modules\VideoEdits\Domain\ValueObjects\Transcript;
 use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
+use Modules\VideoEdits\Infrastructure\Ai\AnalyzeVideoEditAgent;
 use Shared\Infrastructure\AI\AIClientInterface;
 
 /**
@@ -217,4 +218,81 @@ it('treats a response with no cuts and no recommendations as empty, not broken',
 
     expect($analysis->isEmpty())->toBeTrue()
         ->and($analysis->conclusion)->toBe('Nothing to change.');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Timing annotations (P2)
+|--------------------------------------------------------------------------
+|
+| Whisper measures every inter-word gap exactly, and before this the measurement
+| stopped at the PHP boundary: the model was handed a flat word list, where a
+| 1.8 s hesitation and a 0.05 s gap are the same characters. Three findings the
+| agent is asked for — a mini-pause, an abandoned sentence, where a flagged
+| mistake began — are decided by timing alone, so they were being guessed at.
+|
+*/
+
+it('writes a measured gap beside the word that follows it', function (): void {
+    config()->set('video-edit.ai.gap_annotation_ms', 400);
+
+    $client = fakeAnalyzerFor(['cuts' => [], 'recommendations' => []]);
+
+    app(AiEditAnalysisPort::class)->analyze(new Transcript([
+        new TranscriptWord('Contestamos', 0, 900),
+        // 1.4 s of silence before the restart.
+        new TranscriptWord('y', 2_300, 2_400),
+        new TranscriptWord('empieza', 2_400, 3_000),
+    ]), null, null, null);
+
+    expect($client->lastPrompt)->toContain('[1]<<gap 1.4s>> y');
+});
+
+it('leaves an ordinary sentence unmarked so the prompt stays compact', function (): void {
+    config()->set('video-edit.ai.gap_annotation_ms', 400);
+
+    $client = fakeAnalyzerFor(['cuts' => [], 'recommendations' => []]);
+
+    app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null);
+
+    // Gaps of 0 ms and 600 ms are both below the threshold. Absence of an
+    // annotation means "not long enough to hear", which is what keeps the cost
+    // to a handful of tokens per recording.
+    expect($client->lastPrompt)->toContain('[0] Hoy [1] PAUSA [2] vamos')
+        ->and($client->lastPrompt)->not->toContain('<<gap');
+});
+
+it('marks the gap before a word but never before the first one', function (): void {
+    config()->set('video-edit.ai.gap_annotation_ms', 400);
+
+    $client = fakeAnalyzerFor(['cuts' => [], 'recommendations' => []]);
+
+    // Ten seconds of room tone before anyone speaks is not a hesitation.
+    app(AiEditAnalysisPort::class)->analyze(new Transcript([
+        new TranscriptWord('Hola', 10_000, 10_300),
+        new TranscriptWord('migente', 10_900, 11_400),
+    ]), null, null, null);
+
+    expect($client->lastPrompt)->toContain('[0] Hola [1]<<gap 0.6s>> migente');
+});
+
+it('tells the model what the annotation means and that it is not speech', function (): void {
+    $client = fakeAnalyzerFor(['cuts' => [], 'recommendations' => []]);
+
+    app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null);
+
+    expect((string) (new AnalyzeVideoEditAgent)->instructions())
+        ->toContain('<<gap 0.9s>>')
+        ->toContain('not words the speaker said')
+        ->and($client->lastPrompt)->toContain('NUMBERED TRANSCRIPT:');
+});
+
+it('keeps the marker out of the model now that the dictionary owns it', function (): void {
+    $instructions = (string) (new AnalyzeVideoEditAgent)->instructions();
+
+    // The model is the backstop for spellings the dictionary missed, not the
+    // first line of defence — proposing a plain "PAUSA" would double-cut it.
+    expect($instructions)
+        ->toContain('already removes it')
+        ->toContain('elongations ("eeee")');
 });

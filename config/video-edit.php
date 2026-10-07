@@ -260,10 +260,20 @@ return [
             // prompt shows it verbatim speech; a filler that is never
             // transcribed can never be cut. Keyed by request language, with
             // `default` for anything else. Under Whisper's 224-token prompt cap.
+            //
+            // "pausa" is here for the same reason as "eh". A speaker who flags a
+            // mistake out loud is the convention this module's `pause_marker`
+            // reason exists to serve, and Whisper treats an unprompted
+            // interjection as noise to be normalised away — so without the cue
+            // here the markers can be dropped or rewritten in the transcript,
+            // and once they are gone neither the deterministic detector nor the
+            // AI analyzer has anything left to find. Style conditioning is the
+            // only lever available: it is what makes Whisper imitate the prompt's
+            // register rather than tidy it.
             'prompts' => [
-                'es' => 'Eh, mmm... bueno, este, o sea, vamos a ver. Ehh, ah, pues, digamos que, mmm, sí.',
-                'en' => 'Um, uh... so, like, you know, I mean, uh, let\'s see. Hmm, well, basically.',
-                'default' => 'Um, uh, eh, mmm... hmm, ah.',
+                'es' => 'Eh, mmm... bueno, este, o sea, vamos a ver. Ehh, ah, pues, digamos que, mmm, sí. Pausa. Pausa aquí. Pausa acá. Otra vez.',
+                'en' => 'Um, uh... so, like, you know, I mean, uh, let\'s see. Hmm, well, basically. Pause. Pause there. Take that again.',
+                'default' => 'Um, uh, eh, mmm... hmm, ah. Pause. Pause there.',
             ],
         ],
 
@@ -283,6 +293,69 @@ return [
             // Multi-word padding: "sea" alone is ordinary Spanish, "o sea" is not.
             'filler_phrases' => [
                 'o sea', 'es decir', 'you know', 'i mean', 'kind of', 'sort of',
+            ],
+            /*
+            |----------------------------------------------------------------------
+            | Spoken pause markers
+            |----------------------------------------------------------------------
+            |
+            | A speaker who says "PAUSA" out loud is flagging a mistake, and that
+            | marker is the one editorial error in a recording that is bounded
+            | exactly — unlike rambling, which has no boundary and stays advice.
+            |
+            | It used to be reachable only through the AI analyzer, which is the
+            | wrong layer: it is a literal token match, and asking a Flash-tier
+            | model to spot a word inside a 2,000-word indexed list is asking it
+            | to do a regex. A `CutReason` existed with no `SpeechCategory` behind
+            | it, so nothing deterministic could ever produce one.
+            |
+            | Matched as whole normalised words only, and kept to markers that are
+            | interjections in EVERY position. "para", "otra", "repetir" and
+            | "repite" were all candidates and all four are out: "para" opens real
+            | sentences, "otra" is an ordinary adjective, and "repetir el comando"
+            | is content the viewer needs. A retake flagged without the literal
+            | word "pausa" is the AI's `retake` judgement to make — which is exactly
+            | the division of labour this whole change restores.
+            */
+            'pause_phrases' => [
+                'pausa', 'pausa aca', 'pausa aqui', 'pausa ahi', 'otra vez',
+            ],
+            /*
+            |----------------------------------------------------------------------
+            | Vocal elongation ("eeee", "y deee", "para queee")
+            |----------------------------------------------------------------------
+            |
+            | A literal dictionary cannot cover these: Whisper spells the same
+            | hesitation differently every time — "eee", "eeee", "eeeee" — so any
+            | hand-written entry ("esteee" sat in `filler_sounds` until this
+            | landed) is right for one recording and wrong for the next.
+            |
+            | These are patterns, matched against the normalised word, so the count
+            | of repeats does not have to be known in advance. Every one is
+            | deliberately narrow enough to exclude a real word:
+            |
+            |  - a bare run of one letter, 3+ times, which no Spanish or English
+            |    word is;
+            |  - a suffix where one vowel repeats 3+ times, which excludes "see",
+            |    "bee", "coffee" and "three" at two repeats while catching
+            |    "deee" and "queee" at three.
+            |
+            | The 3-repeat floor is the whole safety rule. Lowering it to 2 would
+            | start deleting English diphthong-final words on a recording that
+            | switches language, and the module's stated preference is a missed
+            | filler over a wrongly removed real word.
+            |
+            | Both patterns run against `TranscriptWord::normalized()`, which has
+            | already lower-cased and accent-folded the token, so the vowel class is
+            | written bare. The first uses a backreference on purpose: a plain
+            | character class would also match "ana" (a, n, a), which is a real
+            | Spanish word.
+            */
+            'elongation_patterns' => [
+                // A bare hesitation run: eee, aaa, mmm. 3+ of the SAME letter.
+                '/^([aeiou]|m|n|r|j|s|l|h)\1{2,}$/',
+                // A real word whose last vowel is held: deee, queee, veeee.
+                '/([aeiou])\1{2,}$/',
             ],
             // Doubling these is emphasis, not a stumble.
             'repetition_allow_list' => [
@@ -316,6 +389,27 @@ return [
 
         // Transcript words shown either side of a proposed cut in the review.
         'review_context_words' => 8,
+
+        /*
+        |----------------------------------------------------------------------
+        | Timing annotations in the transcript handed to the model
+        |----------------------------------------------------------------------
+        |
+        | The model reads a numbered word list with no milliseconds in it, so a
+        | 0.9 s hesitation and a 0.05 s one render as the same characters. That
+        | is invisible to it, and it is the whole basis of three findings it is
+        | asked for: a mini-pause, a speaker who abandoned a sentence and started
+        | again, and where a flagged mistake began. Whisper already measured
+        | every gap exactly, so it is annotated rather than estimated.
+        |
+        | Sparse on purpose. Only gaps at or above this threshold are written, so
+        | a normal sentence stays a compact one-line word list and the cost is a
+        | handful of extra tokens per recording. Reuses the `pace` threshold
+        | rather than inventing a second one: below it, silence removal is about
+        | to take the gap out anyway, which makes it the right cut-off for
+        | "would a person hear this pause?".
+        */
+        'gap_annotation_ms' => (int) env('VIDEO_EDIT_AI_GAP_ANNOTATION_MS', 400),
 
         // One runaway appendix must not blow the context window or the bill.
         'max_script_characters' => 120_000,

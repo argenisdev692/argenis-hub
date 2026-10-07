@@ -10,7 +10,7 @@ namespace Modules\VideoEdits\Domain\Enums;
  * A category is not the same thing as a {@see CutReason}: the category is what
  * the user chooses in the request, the reason is what gets persisted on the
  * decision. They map 1:1 today, and keeping them separate is what lets V3 add
- * reasons (`pause_marker`, `retake`) that are not user-selectable categories.
+ * reasons that are NOT user-selectable categories.
  *
  * Resolves R1 from clarify.md — "vocal sound" is the non-verbal audio Whisper
  * brackets in its transcript (laughter, coughs, applause), which is distinct
@@ -33,6 +33,24 @@ enum SpeechCategory: string
     /** Non-verbal audio Whisper brackets: "[laughs]", "(coughs)", "♪". */
     case VocalSound = 'vocal_sound';
 
+    /**
+     * A mistake the speaker flagged out loud: "pausa", "pausa acá", "otra vez".
+     *
+     * Added after the V3 AI edit shipped, which exposed the flaw of leaving it
+     * AI-only. `CutReason::PauseMarker` existed from the start with NO category
+     * behind it, so the only way one could ever be produced was a model spotting
+     * a literal token inside a two-thousand-word indexed list — asking a
+     * Flash-tier model to do a regex. It showed: a recording with eight spoken
+     * markers produced at most a handful of proposals, all below the preselect
+     * threshold and therefore unticked.
+     *
+     * This is the one editorial error in a recording that is bounded exactly, so
+     * it belongs with the dictionaries, not the model. Finding where the FAILED
+     * TAKE before the marker began is still judgement and stays with the AI —
+     * that split is the point. See `SpeechDisfluencyDetector::detectPauseMarkers()`.
+     */
+    case PauseMarker = 'pause_marker';
+
     public function toCutReason(): CutReason
     {
         return match ($this) {
@@ -41,6 +59,7 @@ enum SpeechCategory: string
             self::Stutter => CutReason::Stutter,
             self::Repetition => CutReason::Repetition,
             self::VocalSound => CutReason::VocalSound,
+            self::PauseMarker => CutReason::PauseMarker,
         };
     }
 

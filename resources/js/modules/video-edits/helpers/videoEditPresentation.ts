@@ -117,11 +117,12 @@ export const VIDEO_EDIT_MODES: readonly VideoEditMode[] = [
 ];
 
 const SPEECH_CATEGORIES: Record<SpeechCategory, string> = {
-    filler: 'Hesitations (eh, mmm)',
+    filler: 'Hesitations (eh, mmm, eee)',
     filler_word: 'Filler words (like, you know)',
     stutter: 'False starts',
     repetition: 'Repeated words',
     vocal_sound: 'Vocal sounds (laughs, coughs)',
+    pause_marker: 'Spoken "PAUSA" markers',
 };
 
 export const SPEECH_CATEGORY_OPTIONS = (

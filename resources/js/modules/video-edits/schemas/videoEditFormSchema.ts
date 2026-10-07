@@ -100,6 +100,7 @@ export const videoEditFormSchema = z
                 'stutter',
                 'repetition',
                 'vocal_sound',
+                'pause_marker',
             ]),
         ),
         manual_ranges: z

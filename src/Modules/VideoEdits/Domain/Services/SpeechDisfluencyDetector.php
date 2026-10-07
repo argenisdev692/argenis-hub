@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Domain\Services;
 
+use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\SpeechCategory;
 use Modules\VideoEdits\Domain\ValueObjects\SpeechDetection;
 use Modules\VideoEdits\Domain\ValueObjects\Transcript;
@@ -23,6 +24,16 @@ use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
  * Detection is deliberately conservative. A missed filler costs the user one
  * manual edit; a wrongly removed real word costs them a re-record, so every
  * rule here prefers to skip a doubtful case.
+ *
+ * **What belongs here and what does not.** Everything in this class is a fact
+ * about the audio that can be read off Whisper's own output — a token that is
+ * in the dictionary, a word that repeats, a fragment the transcriber heard stop
+ * mid-syllable. Judgement about what the speaker *meant* is not here, and
+ * neither is a question only a model can answer: where a flagged mistake began,
+ * or whether a passage is redundant. That division is what the AI decision
+ * producer in the Application layer exists for, and it is why
+ * {@see SpeechCategory::PauseMarker} now exists at all — a spoken "PAUSA" is a
+ * literal token match and never needed a model.
  */
 final readonly class SpeechDisfluencyDetector
 {
@@ -31,6 +42,8 @@ final readonly class SpeechDisfluencyDetector
      * @param  list<string>  $fillerWords  real words used as padding ("este", "like")
      * @param  list<string>  $fillerPhrases  multi-word padding ("o sea", "you know")
      * @param  list<string>  $repetitionAllowList  words that legitimately double ("no no", "muy muy")
+     * @param  list<string>  $pausePhrases  spoken mistake markers ("pausa", "otra vez")
+     * @param  list<string>  $elongationPatterns  PCRE for held vowels ("eee", "deee", "queee")
      */
     public function __construct(
         private array $fillerSounds,
@@ -39,6 +52,8 @@ final readonly class SpeechDisfluencyDetector
         private array $repetitionAllowList,
         private int $maxStutterFragmentMs,
         private float $minConfidence,
+        private array $pausePhrases = [],
+        private array $elongationPatterns = [],
     ) {}
 
     /**
@@ -60,9 +75,15 @@ final readonly class SpeechDisfluencyDetector
         $detections = [
             ...($this->wants(SpeechCategory::VocalSound, $enabled) ? $this->detectVocalSounds($transcript) : []),
             ...($this->wants(SpeechCategory::Filler, $enabled) ? $this->detectDictionary($transcript, $this->fillerSounds, SpeechCategory::Filler) : []),
+            // Under Filler, not its own category: an elongated vowel IS a
+            // non-lexical hesitation, and it is spelled differently every time,
+            // so a category of its own would promise a switch that changes
+            // nothing the user can see.
+            ...($this->wants(SpeechCategory::Filler, $enabled) ? $this->detectElongations($transcript) : []),
             ...($this->wants(SpeechCategory::FillerWord, $enabled) ? $this->detectFillerWords($transcript) : []),
             ...($this->wants(SpeechCategory::Repetition, $enabled) ? $this->detectRepetitions($transcript) : []),
             ...($this->wants(SpeechCategory::Stutter, $enabled) ? $this->detectStutters($transcript) : []),
+            ...($this->wants(SpeechCategory::PauseMarker, $enabled) ? $this->detectPauseMarkers($transcript) : []),
         ];
 
         usort($detections, static fn (SpeechDetection $a, SpeechDetection $b): int => $a->startMs <=> $b->startMs);
@@ -157,6 +178,156 @@ final readonly class SpeechDisfluencyDetector
         }
 
         return $detections;
+    }
+
+    /**
+     * A held vowel: "eeee", "y deee", "para queee".
+     *
+     * This could not be a dictionary. Whisper spells the same hesitation
+     * differently every time — "eee", "eeee", "eeeee" — so the literal list it
+     * would have to match against is unbounded, and the one hand-written entry
+     * that did exist ("esteee") was right for exactly one recording.
+     *
+     * The patterns are config, and each one is narrow enough to exclude a real
+     * word, because that is the failure this module refuses: a 3-repeat floor
+     * keeps "see"/"coffee" safe while catching "deee", and the bare-run pattern
+     * requires one letter repeated rather than a character class, or it would
+     * match "ana".
+     *
+     * Categorised as Filler, so it lands on {@see CutReason::Filler} and shares
+     * the switch a user already has for "eh".
+     *
+     * @return list<SpeechDetection>
+     */
+    private function detectElongations(Transcript $transcript): array
+    {
+        if ($this->elongationPatterns === []) {
+            return [];
+        }
+
+        $detections = [];
+
+        foreach ($transcript->words as $word) {
+            if ($this->isLowConfidence($word) || $word->isBracketedSound()) {
+                continue;
+            }
+
+            $normalized = $word->normalized();
+
+            if ($normalized === '') {
+                continue;
+            }
+
+            // The literal dictionary owns the spellings it enumerates. Without
+            // this, a word listed as a filler sounds ("mmm") is also a bare run
+            // of one letter repeated three times, so the two rules both claim it
+            // and it is reported — and later cut — twice.
+            if (in_array($normalized, $this->fillerSounds, true)) {
+                continue;
+            }
+
+            foreach ($this->elongationPatterns as $pattern) {
+                if (preg_match($pattern, $normalized) === 1) {
+                    $detections[] = $this->detection($word, SpeechCategory::Filler, $normalized);
+
+                    continue 2;
+                }
+            }
+        }
+
+        return $detections;
+    }
+
+    /**
+     * A mistake the speaker flagged out loud: "pausa", "pausa acá", "otra vez".
+     *
+     * **Only the marker is cut here.** The failed take the speaker was
+     * correcting has no exact boundary — where it began is a judgement about
+     * intent, which is what {@see CutReason::Retake} and the AI analyzer are
+     * for. Removing the marker deterministically and letting the model propose
+     * the wider span is the split that keeps this rule safe: this half is a
+     * literal match that cannot be wrong, that half is reviewed by a person.
+     *
+     * Widening past the marker here would be actively harmful. At 02:56 in the
+     * reference recording the speaker says "Contestamos… pausa acá…" and then
+     * restarts; cutting back on a guess swallows the opening word of the
+     * *correct* sentence along with the wrong one.
+     *
+     * The dictionary is deliberately short — see
+     * `video-edit.speech.dictionaries.pause_phrases`. "para", "otra" and
+     * "repetir" are all real Spanish and were all rejected for that reason.
+     *
+     * @return list<SpeechDetection>
+     */
+    private function detectPauseMarkers(Transcript $transcript): array
+    {
+        if ($this->pausePhrases === []) {
+            return [];
+        }
+
+        // Same window machinery as the filler phrases: "pausa acá" has to go as a
+        // unit, and a single-word "pausa" beside it must not also be cut.
+        $detections = [];
+        $words = $transcript->words;
+        $wordCount = count($words);
+
+        foreach ($this->pausePhrases as $phrase) {
+            $tokens = array_values(array_filter(explode(' ', $phrase)));
+            $length = count($tokens);
+
+            if ($length < 1 || $length > $wordCount) {
+                continue;
+            }
+
+            for ($index = 0; $index + $length <= $wordCount; $index++) {
+                $window = array_slice($words, $index, $length);
+
+                if (! $this->windowMatches($window, $tokens)) {
+                    continue;
+                }
+
+                $detections[] = new SpeechDetection(
+                    category: SpeechCategory::PauseMarker,
+                    startMs: $window[0]->startMs,
+                    endMs: $window[$length - 1]->endMs,
+                    confidence: $this->averageConfidence($window),
+                    evidence: ['text' => $phrase, 'detector' => 'pause_marker'],
+                );
+
+                // Overlap inside one phrase is settled here, so "pausa" is not
+                // also claimed a second time by the "pausa aca" that contains it.
+                $index += $length - 1;
+            }
+        }
+
+        return $this->longestSpansOnly($detections);
+    }
+
+    /**
+     * Keeps a detection only when no other one contains it, so the LONGEST
+     * dictionary entry at a position wins.
+     *
+     * Without this, "pausa acá" is reported twice — once by its own two-word
+     * entry and once by the one-word "pausa" starting on the same word — and the
+     * planner merges two decisions into a single cut that then claims two
+     * reasons for one span. Two genuinely separate markers ("pausa pausa") do not
+     * contain one another, so both survive.
+     *
+     * @param  list<SpeechDetection>  $detections
+     * @return list<SpeechDetection>
+     */
+    private function longestSpansOnly(array $detections): array
+    {
+        return array_values(array_filter(
+            $detections,
+            static fn (SpeechDetection $detection): bool => ! array_any(
+                $detections,
+                static fn (SpeechDetection $other): bool => $other !== $detection
+                    && $other->startMs <= $detection->startMs
+                    && $other->endMs >= $detection->endMs
+                    && ($other->startMs < $detection->startMs || $other->endMs > $detection->endMs),
+            ),
+        ));
     }
 
     /**
