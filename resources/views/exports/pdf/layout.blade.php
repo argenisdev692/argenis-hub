@@ -28,11 +28,14 @@
             font-family: DejaVu Sans, sans-serif;
         }
 
-        html, body {
-            margin: 0;
-            padding: 0;
-        }
-
+        /*
+         * `html` is deliberately NOT reset here. dompdf derives the page
+         * content area from the root element's margin and throws the `@page`
+         * margin away entirely when that is 0 — measured, not inferred: with
+         * `html, body { margin: 0 }` every export rendered edge to edge at the
+         * full 595.28pt A4 width and the fixed header/footer bands were pushed
+         * off the paper. Zeroing `body` alone keeps the `@page` margins intact.
+         */
         body {
             font-size: 10.5px;
             line-height: 1.45;

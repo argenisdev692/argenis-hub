@@ -523,6 +523,11 @@ return [
     ],
 
     'output' => [
+        // The client spec (1080p, >=30 fps) is only a CEILING here. The profile
+        // never upscales: `OutputProfile::fromFirstSource` scales by
+        // min(1, max/source), so a 720p capture stays 720p and a 25 fps capture
+        // stays 25 fps. Both would ship and fail the spec silently — nothing in
+        // the pipeline asserts the delivered file against it.
         'max_width' => 1920,                                   // D3
         'max_height' => 1080,                                  // D3
         'max_frame_rate' => 60,                                // D3
@@ -534,8 +539,29 @@ return [
         'intermediate_preset' => 'veryfast',                   // AD-4
         'audio_codec' => 'aac',
         'audio_bitrate_kbps' => 192,
-        'audio_sample_rate' => 48000,                          // D3
-        'audio_channels' => 2,                                 // D3
+
+        /*
+        |----------------------------------------------------------------------
+        | Delivery format (client spec: 1080p, >=30 fps, H.264 .mp4, 48 kHz)
+        |----------------------------------------------------------------------
+        |
+        | The rate and the channel count were the last two output settings that
+        | could not be changed without editing this file, because every other
+        | one is env-driven. That mattered: the capture guide (guia_audio_obs.md
+        | 2.1) records OBS in MONO, so a hardcoded 2 upmixed every export and the
+        | file no longer matched what was recorded. Setting the count to 1 keeps
+        | the render in the source's own layout (`FilterGraphBuilder::channelLayout`
+        | and the `-ac` on the encode both read this value), so the audio reaches
+        | the encoder bit-for-bit unmodified.
+        |
+        | The rate stays pinned at 48 kHz on purpose: it is half of the 96 kHz
+        | family and is what the client asks for. Do not "save" it by dropping to
+        | the 16 kHz Whisper uses — that is `transcription.*` above, a different
+        | stage, and it is mono 32 kbps because the model only ever needs to
+        | recognise words, not to sound good.
+        */
+        'audio_sample_rate' => (int) env('VIDEO_EDIT_AUDIO_SAMPLE_RATE', 48000),   // D3
+        'audio_channels' => (int) env('VIDEO_EDIT_AUDIO_CHANNELS', 2),             // D3
     ],
 
     'queue' => [

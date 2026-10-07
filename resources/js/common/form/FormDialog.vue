@@ -59,6 +59,11 @@ const {
     destructive = false,
     /** Ask before discarding edits. Turn off for read-only or trivial dialogs. */
     guardDirty = true,
+    /**
+     * Extra classes for the panel itself. Height is NOT the caller's job: the
+     * panel is capped to the viewport, the header/footer are pinned and the
+     * body scrolls, so pass width or padding overrides only.
+     */
     contentClass,
 } = defineProps<{
     form: DialogForm;
@@ -130,20 +135,31 @@ async function onSubmit(event: Event): Promise<void> {
 
 <template>
     <Dialog v-if="isDesktop" :open="open" @update:open="requestClose">
-        <DialogContent :class="cn('sm:max-w-lg', contentClass)">
-            <DialogHeader>
+        <DialogContent
+            :class="
+                cn(
+                    'flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-lg',
+                    contentClass,
+                )
+            "
+        >
+            <DialogHeader class="shrink-0">
                 <DialogTitle>{{ title }}</DialogTitle>
                 <DialogDescription v-if="description">
                     {{ description }}
                 </DialogDescription>
             </DialogHeader>
 
-            <form class="contents" novalidate @submit="onSubmit">
-                <div class="max-h-[60vh] overflow-y-auto px-1 py-1">
+            <form
+                class="flex min-h-0 flex-1 flex-col"
+                novalidate
+                @submit="onSubmit"
+            >
+                <div class="min-h-0 flex-1 overflow-y-auto px-1 py-1">
                     <slot />
                 </div>
 
-                <DialogFooter>
+                <DialogFooter class="shrink-0">
                     <slot name="footer">
                         <Button
                             type="button"
@@ -172,19 +188,23 @@ async function onSubmit(event: Event): Promise<void> {
 
     <Drawer v-else :open="open" @update:open="requestClose">
         <DrawerContent :class="contentClass">
-            <DrawerHeader class="text-left">
+            <DrawerHeader class="shrink-0 text-left">
                 <DrawerTitle>{{ title }}</DrawerTitle>
                 <DrawerDescription v-if="description">
                     {{ description }}
                 </DrawerDescription>
             </DrawerHeader>
 
-            <form novalidate @submit="onSubmit">
-                <div class="max-h-[60vh] overflow-y-auto px-4">
+            <form
+                class="flex min-h-0 flex-1 flex-col"
+                novalidate
+                @submit="onSubmit"
+            >
+                <div class="min-h-0 flex-1 overflow-y-auto px-4">
                     <slot />
                 </div>
 
-                <DrawerFooter>
+                <DrawerFooter class="shrink-0">
                     <slot name="footer">
                         <Button
                             type="submit"

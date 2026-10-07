@@ -35,13 +35,35 @@ final readonly class LocalVideoEditWorkspace implements VideoEditWorkspacePort
         }
 
         $directory = $this->directory($videoEditUuid);
-        $this->files->deleteDirectory($directory);
-
-        if (! $this->files->makeDirectory($directory, 0755, true) && ! $this->files->isDirectory($directory)) {
-            throw new RuntimeException('Could not create the video edit workspace.');
-        }
+        $this->clear($directory);
 
         return $directory;
+    }
+
+    /**
+     * Hands the run a clean directory without ever losing the edit over it.
+     *
+     * A retry re-enters `prepare()` on a workspace the previous attempt may
+     * not have released: `wipe()` is best-effort and cannot delete a file the
+     * OS still holds open (ffmpeg on Windows, an indexer, a virus scanner), so
+     * the directory can be standing there when `mkdir()` runs. Laravel's
+     * `makeDirectory()` calls a bare `mkdir()`, and the resulting
+     * `mkdir(): File exists` warning is promoted to an `ErrorException` before
+     * any return-value guard can see it — which is how a recoverable lock
+     * turned a 40-minute AI render into a failed job. `force: true` routes
+     * through the suppressed `@mkdir`, so an existing directory is simply
+     * reused: every producer writes to its own explicit filename, so a stale
+     * leftover is overwritten rather than mistaken for output.
+     */
+    private function clear(string $directory): void
+    {
+        $this->files->deleteDirectory($directory);
+
+        $this->files->makeDirectory($directory, 0755, true, force: true);
+
+        if (! $this->files->isDirectory($directory)) {
+            throw new RuntimeException('Could not create the video edit workspace.');
+        }
     }
 
     public function path(string $videoEditUuid, string $fileName): string

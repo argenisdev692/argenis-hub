@@ -122,6 +122,23 @@ it('rejects invalid requests before creating anything', function (array $overrid
     'auto edit with nothing to cut' => [['silence_removal' => ['enabled' => false], 'manual_ranges' => []], 'mode'],
 ]);
 
+it('accepts an MKV source and gives it an upload target', function (): void {
+    $user = videoEditor();
+
+    $response = $this->actingAs($user)->postJson('/data/admin/video-edits', autoEditPayload([
+        'sources' => [
+            ['position' => 1, 'file_name' => 'voz-en-off.mkv', 'mime_type' => 'video/x-matroska', 'size_bytes' => 512_000_000],
+        ],
+    ]));
+
+    $response->assertCreated()
+        ->assertJsonPath('edit.sources.0.original_name', 'voz-en-off.mkv')
+        ->assertJsonCount(1, 'uploads');
+
+    expect(VideoEditEloquentModel::query()->with('sources')->sole()->sources->sole()->storage_path)
+        ->toEndWith('.mkv');
+});
+
 it('links a re-edit to one of the caller\'s own edits', function (): void {
     $user = videoEditor();
     $original = VideoEditEloquentModel::factory()->for($user)->completed()->create();

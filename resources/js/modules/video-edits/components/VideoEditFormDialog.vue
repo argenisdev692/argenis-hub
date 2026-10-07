@@ -125,7 +125,7 @@ function toNullableInteger(value: string | number): number | null {
         title="New video edit"
         description="Clips upload straight to private storage, then the edit runs in the background."
         submit-label="Start edit"
-        content-class="sm:max-w-2xl max-h-[90dvh] overflow-y-auto"
+        content-class="sm:max-w-2xl"
     >
         <div class="grid gap-5">
             <form.Field name="mode" #default="{ field }">
