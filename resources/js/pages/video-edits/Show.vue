@@ -125,6 +125,17 @@ const pendingReview = computed(() =>
     edit.value?.can_review && edit.value.review ? edit.value.review : null,
 );
 
+/**
+ * Who to credit in the dialog. An AI edit asks the model for retakes and
+ * misplaced takes; an auto edit derives the failed take before a spoken "PAUSA"
+ * from the transcript alone and never sends anything anywhere. Telling the owner
+ * "the AI found this" when no AI was involved would be the one thing that makes
+ * the whole review untrustworthy.
+ */
+const reviewSource = computed<'ai' | 'transcript'>(() =>
+    edit.value?.mode === 'ai_edit' ? 'ai' : 'transcript',
+);
+
 const reviewOpen = ref(false);
 let hasAutoOpenedReview = false;
 
@@ -510,6 +521,7 @@ async function onRetry(): Promise<void> {
         :uuid="uuid"
         :review="pendingReview"
         :expires-at="edit?.review_expires_at ?? null"
+        :source="reviewSource"
     />
 
     <ConfirmModal

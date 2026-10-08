@@ -2534,6 +2534,10 @@ export type SpeechCategory = 'filler' | 'filler_word' | 'stutter' | 'repetition'
 export type VideoEditMode = 'merge' | 'auto_edit' | 'ai_edit';
 export type VideoEditStatus = 'draft' | 'queued' | 'processing' | 'awaiting_review' | 'completed' | 'failed';
 }
+namespace ValueObjects {
+export type FailedTakeAnchorKind = 'pause_marker' | 'restart';
+export type FailedTakeBoundary = 'sentence' | 'gap' | 'lookback_limit' | 'recording_start';
+}
 }
 }
 }

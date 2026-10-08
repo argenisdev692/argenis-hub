@@ -11,8 +11,10 @@ use Illuminate\Foundation\Exceptions\Handler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 use Modules\VideoEdits\Application\Pipeline\DecisionProducerRegistry;
 use Modules\VideoEdits\Application\Pipeline\Producers\AiDecisionProducer;
+use Modules\VideoEdits\Application\Pipeline\Producers\FailedTakeReviewProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\ManualRangeDecisionProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\SilenceDecisionProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\SpeechDecisionProducer;
@@ -38,6 +40,8 @@ use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
 use Modules\VideoEdits\Domain\Services\ClippedWordDetector;
 use Modules\VideoEdits\Domain\Services\CutEdgeTrimmer;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
+use Modules\VideoEdits\Domain\Services\FailedTakeDetector;
+use Modules\VideoEdits\Domain\Services\RestartDetector;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
 use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
 use Modules\VideoEdits\Domain\ValueObjects\VoiceChain;
@@ -56,6 +60,7 @@ use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentScriptPro
 use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentTranscriptStore;
 use Modules\VideoEdits\Infrastructure\Persistence\Repositories\EloquentVideoEditRepository;
 use Modules\VideoEdits\Infrastructure\Queue\QueuedVideoEditProcessingDispatcher;
+use Modules\VideoEdits\Infrastructure\Transcription\GeminiTranscriber;
 use Modules\VideoEdits\Infrastructure\Transcription\OpenAiWhisperTranscriber;
 
 /**
@@ -72,7 +77,11 @@ final class VideoEditsServiceProvider extends ServiceProvider
         $this->app->bind(VideoEditProcessingDispatcherPort::class, QueuedVideoEditProcessingDispatcher::class);
         $this->app->bind(VideoEditWorkspacePort::class, LocalVideoEditWorkspace::class);
         $this->app->bind(VideoEditorPort::class, FfmpegVideoEditor::class);
-        $this->app->bind(TranscriptionPort::class, OpenAiWhisperTranscriber::class);
+        // The transcription provider is a config switch rather than a code change:
+        // whisper-1 is deprecated for 2027-02-26 and is the last OpenAI model that
+        // returns word timings at all, so the port resolves to whichever adapter the
+        // installation has chosen. See `video-edit.provider`.
+        $this->app->bind(TranscriptionPort::class, static fn (): TranscriptionPort => self::transcriber());
         $this->app->bind(TranscriptStorePort::class, EloquentTranscriptStore::class);
         $this->app->bind(AiEditAnalysisPort::class, LaravelAiVideoEditAnalyzer::class);
         $this->app->bind(AiReportStorePort::class, EloquentAiReportStore::class);
@@ -160,6 +169,23 @@ final class VideoEditsServiceProvider extends ServiceProvider
             maxAbsorbMs: $maxAbsorbMs,
             danglingWords: (array) config('video-edit.cuts.dangling_edge_words', []),
         );
+    }
+
+    /**
+     * Resolved through the container rather than bound to a class, because the
+     * switch lives in config and an unknown value must fail loudly: silently
+     * falling back to Whisper would hide a typo until February 2027, when the
+     * fallback stops existing.
+     */
+    private static function transcriber(): TranscriptionPort
+    {
+        $provider = (string) config('video-edit.provider', 'openai');
+
+        return match ($provider) {
+            'openai' => app(OpenAiWhisperTranscriber::class),
+            'gemini' => app(GeminiTranscriber::class),
+            default => throw new InvalidArgumentException("Unknown video-edit transcription provider [{$provider}]. Use openai or gemini."),
+        };
     }
 
     /**
@@ -262,6 +288,21 @@ final class VideoEditsServiceProvider extends ServiceProvider
             minConfidence: (float) config('video-edit.speech.min_confidence'),
         ));
 
+        $this->app->bind(FailedTakeDetector::class, static fn (): FailedTakeDetector => new FailedTakeDetector(
+            boundaryGapMs: (int) config('video-edit.failed_take.boundary_gap_ms', 400),
+            maxLookbackMs: (int) config('video-edit.failed_take.max_lookback_ms', 8_000),
+            minTakeMs: (int) config('video-edit.failed_take.min_take_ms', 400),
+        ));
+
+        $this->app->bind(RestartDetector::class, static fn (): RestartDetector => new RestartDetector(
+            minPhraseWords: (int) config('video-edit.restart.min_phrase_words', 5),
+            maxPhraseWords: (int) config('video-edit.restart.max_phrase_words', 8),
+            minGapMs: (int) config('video-edit.restart.min_gap_ms', 700),
+            maxRepeatDistanceMs: (int) config('video-edit.restart.max_repeat_distance_ms', 60_000),
+            clusterMs: (int) config('video-edit.restart.cluster_ms', 2_000),
+            maxInterludeWords: (int) config('video-edit.restart.max_interlude_words', 20),
+        ));
+
         $this->app->bind(SpeechPaceAnalyzer::class, static fn (): SpeechPaceAnalyzer => new SpeechPaceAnalyzer(
             miniPauseMs: (int) config('video-edit.pace.mini_pause_ms'),
             minMiniPauses: (int) config('video-edit.pace.min_mini_pauses'),
@@ -284,6 +325,11 @@ final class VideoEditsServiceProvider extends ServiceProvider
      * V1 producers plus the V2 speech detector. Adding one to this tag is the
      * whole integration (EX-2) — validation, planning, rendering, persistence
      * and deletion were not touched to make V2 work.
+     *
+     * The order is load-bearing for one pair: `FailedTakeReviewProducer` reads
+     * the transcript `SpeechDecisionProducer` stores in the same pass, so it has
+     * to be tagged after it. Laravel preserves tag order, but swapping the two
+     * would silently disable the failed-take review rather than fail loudly.
      */
     private function registerDecisionProducers(): void
     {
@@ -291,6 +337,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
             SilenceDecisionProducer::class,
             ManualRangeDecisionProducer::class,
             SpeechDecisionProducer::class,
+            FailedTakeReviewProducer::class,
             AiDecisionProducer::class,
         ], DecisionProducerRegistry::TAG);
 

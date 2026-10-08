@@ -128,6 +128,37 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
         }
     }
 
+    public function sliceAudio(string $inputPath, string $outputPath, int $startMs, int $durationMs, int $maxBytes): void
+    {
+        if ($durationMs <= 0) {
+            throw InvalidMediaException::unsupportedSource(0);
+        }
+
+        $process = $this->run(
+            $this->commands->sliceAudio(
+                $inputPath,
+                $outputPath,
+                $startMs,
+                $durationMs,
+                (int) $this->config->get('video-edit.speech.audio_sample_rate', 16_000),
+                (int) $this->config->get('video-edit.speech.audio_bitrate_kbps', 32),
+            ),
+            $this->timeoutSeconds(),
+        );
+
+        if (! $process->isSuccessful()) {
+            $this->logFailure('sliceAudio', $process);
+
+            throw new RuntimeException('Audio slicing failed.');
+        }
+
+        $size = @filesize($outputPath);
+
+        if ($size === false || $size > $maxBytes) {
+            throw InvalidMediaException::audioTooLargeToTranscribe((int) $size, $maxBytes);
+        }
+    }
+
     public function detectSilences(string $path, MediaProbe $probe, SilenceThreshold $threshold, int $noiseFloorDb): array
     {
         if (! $probe->hasAudio) {

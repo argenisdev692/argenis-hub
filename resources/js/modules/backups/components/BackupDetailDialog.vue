@@ -105,7 +105,7 @@ function downloadArchive(): void {
 
                 <p
                     v-if="backup.error"
-                    class="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm break-words text-destructive"
+                    class="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm wrap-break-word text-destructive"
                 >
                     {{ backup.error }}
                 </p>
@@ -116,7 +116,7 @@ function downloadArchive(): void {
                             {{ row.label }}
                         </dt>
                         <dd
-                            class="text-sm break-words"
+                            class="text-sm wrap-break-word"
                             :class="row.mono && 'font-mono text-xs break-all'"
                         >
                             {{ row.value }}

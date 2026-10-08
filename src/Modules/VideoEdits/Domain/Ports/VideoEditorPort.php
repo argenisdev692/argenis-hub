@@ -51,6 +51,18 @@ interface VideoEditorPort
     /**
      * @return list<TimeRange>
      */
+    /**
+     * Cuts a time range out of an audio file into a new one.
+     *
+     * Only the transcription stage needs this, and only for providers that cap
+     * how much audio they will accept per request — Gemini refuses anything over
+     * thirty minutes once word timestamps are asked for, while this module accepts
+     * ninety. Re-encoding a slice rather than copying bytes keeps the same
+     * 16 kHz mono shape the extraction produced, so a chunk is indistinguishable
+     * from the part of the original it came from.
+     */
+    public function sliceAudio(string $inputPath, string $outputPath, int $startMs, int $durationMs, int $maxBytes): void;
+
     public function detectSilences(string $path, MediaProbe $probe, SilenceThreshold $threshold, int $noiseFloorDb): array;
 
     /**

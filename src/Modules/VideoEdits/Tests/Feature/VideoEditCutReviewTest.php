@@ -172,6 +172,126 @@ it('renders without AI cuts when the owner keeps everything', function (): void 
         ->and($fresh->final_duration_ms)->toBe(60_000);
 });
 
+/**
+ * An auto edit exactly as the create endpoint stores it, with the pause-marker
+ * category on. This is the mode that had no way to remove a failed take at all:
+ * the AI producer only ever runs for an AI edit, so before this existed the
+ * marker was cut and the abandoned words stayed in.
+ */
+function queuedAutoEdit(FakeStorage $storage, FakeVideoEditor $editor, User $owner, int $sourceBytes = 100): VideoEditEloquentModel
+{
+    $edit = VideoEditEloquentModel::factory()->for($owner)->queued()->create([
+        'mode' => VideoEditMode::AutoEdit,
+        'parameters' => [
+            'silence_removal' => ['enabled' => false, 'threshold_seconds' => null],
+            'speech_cleanup' => ['enabled' => true, 'categories' => ['pause_marker'], 'language' => null],
+            'manual_ranges' => [],
+        ],
+    ]);
+
+    $source = VideoEditSourceEloquentModel::factory()->for($edit, 'videoEdit')->create([
+        'declared_size_bytes' => $sourceBytes,
+        'size_bytes' => $sourceBytes,
+        'sha256' => null,
+    ]);
+    $storage->seed((string) $source->storage_path, $sourceBytes);
+    $editor->probes = ['source-1.mp4' => new MediaProbe(60_000, 'mov,mp4', true, true, 1920, 1080, 30.0)];
+
+    return $edit;
+}
+
+it('parks an auto edit for review on the failed take alone', function (): void {
+    $edit = queuedAutoEdit($this->storage, $this->editor, VideoEditTestUsers::editor());
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $fresh = $edit->fresh(['sources', 'appliedCuts']);
+    $cuts = collect($fresh->ai_review['cuts']);
+    $retake = $cuts->sole();
+
+    expect($fresh->status)->toBe(VideoEditStatus::AwaitingReview)
+        ->and($fresh->review_expires_at?->isFuture())->toBeTrue()
+        // Only the take is on the review. The marker is a literal match that
+        // cannot be wrong, so it is already a cut and needs no approval — it is
+        // the context the owner reads the take against.
+        ->and($cuts)->toHaveCount(1)
+        // "Hoy vamos Outluk" — the attempt before the marker. Nothing was sent
+        // anywhere to work that out.
+        ->and($retake['reason'])->toBe('retake')
+        ->and($retake['text'])->toBe('Hoy vamos Outluk')
+        ->and($retake['start_ms'])->toBe(0)
+        ->and($retake['end_ms'])->toBe(5_000)
+        ->and($retake['context_after'])->toContain('PAUSA')
+        // No punctuation and no pause bounded it, so the start is a guess and
+        // must not start ticked.
+        ->and($retake['preselected'])->toBeFalse()
+        ->and($this->editor->called('render'))->toBeFalse()
+        ->and($fresh->result_path)->toBeNull()
+        ->and($fresh->appliedCuts)->toHaveCount(0);
+});
+
+it('renders the failed take only once the owner approves it', function (): void {
+    $owner = VideoEditTestUsers::editor();
+    $edit = queuedAutoEdit($this->storage, $this->editor, $owner);
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $retake = collect($edit->fresh()->ai_review['cuts'])->firstWhere('reason', 'retake');
+
+    $this->actingAs($owner)
+        ->postJson("/data/admin/video-edits/{$edit->uuid}/review", ['approved_cut_ids' => [$retake['id']]])
+        ->assertAccepted();
+
+    $fresh = $edit->fresh(['appliedCuts', 'cutDecisions']);
+
+    expect($fresh->status)->toBe(VideoEditStatus::Completed)
+        ->and($fresh->cutDecisions->where('reason', 'retake'))->toHaveCount(1)
+        // The marker is still cut on its own evidence; approving the take adds
+        // to it rather than replacing it.
+        ->and($fresh->cutDecisions->where('reason', 'pause_marker'))->toHaveCount(1)
+        ->and($this->transcriber->calls)->toBe(1);
+});
+
+it('leaves an auto edit with no marker alone', function (): void {
+    app()->instance(TranscriptionPort::class, new class(new Transcript([new TranscriptWord('Hoy', 0, 1_000), new TranscriptWord('vamos', 1_000, 3_000), new TranscriptWord('a', 3_000, 4_000), new TranscriptWord('Outlook.', 4_000, 6_000)], language: 'es')) implements TranscriptionPort
+    {
+        public int $calls = 0;
+
+        public function __construct(private readonly Transcript $transcript) {}
+
+        public function transcribe(string $audioPath, ?string $language = null): Transcript
+        {
+            $this->calls++;
+
+            return $this->transcript;
+        }
+    });
+
+    $edit = queuedAutoEdit($this->storage, $this->editor, VideoEditTestUsers::editor());
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    expect($edit->fresh()->status)->toBe(VideoEditStatus::Completed)
+        // No marker, so no failed take, so nothing to review and no stop.
+        ->and($edit->fresh()->review_expires_at)->toBeNull();
+});
+
+it('shows the pending failed take on the edit', function (): void {
+    $owner = VideoEditTestUsers::editor();
+    $edit = queuedAutoEdit($this->storage, $this->editor, $owner);
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $this->actingAs($owner)
+        ->getJson("/data/admin/video-edits/{$edit->uuid}")
+        ->assertOk()
+        ->assertJsonPath('can_review', true)
+        ->assertJsonPath('review.is_resolved', false)
+        ->assertJsonCount(1, 'review.cuts')
+        ->assertJsonPath('review.cuts.0.text', 'Hoy vamos Outluk')
+        ->assertJsonPath('review.cuts.0.reason', 'retake');
+});
+
 it('never reuses another recording\'s transcript on a first run', function (): void {
     $owner = VideoEditTestUsers::editor();
 

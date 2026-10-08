@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Loader2Icon, SparklesIcon } from '@lucide/vue';
+import { AudioLinesIcon, BotIcon, Loader2Icon } from '@lucide/vue';
 import { computed, ref, useId, watch } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,19 +22,35 @@ import {
 import type { AiCutReview } from '../types';
 
 /**
- * The owner's say over every cut the AI proposed (OWASP LLM06). Nothing is
+ * The owner's say over every cut proposed for removal (OWASP LLM06). Nothing is
  * removed until this is answered: "Remove selected" renders with the ticked
  * cuts, "Keep everything" renders with none. Closing the dialog answers
  * nothing — the edit keeps waiting until the review expires.
  *
- * Every string shown here is either transcript text or model-written
- * explanation, so it is rendered as text only (OWASP LLM05).
+ * Two modes reach this dialog and the copy has to tell them apart. An AI edit
+ * asks the model for retakes, misspoken words and misplaced takes; an auto edit
+ * proposes the failed take before a spoken "PAUSA" straight from the transcript,
+ * having sent nothing anywhere. Claiming "the AI" found a take it never saw would
+ * make the review the one part of the pipeline nobody can trust, so `source`
+ * decides who gets the credit and whose explanation is being read.
+ *
+ * Every string shown here is either transcript text or a written explanation, so
+ * it is rendered as text only (OWASP LLM05).
  */
-const { uuid, review, expiresAt } = defineProps<{
+const { uuid, review, expiresAt, source } = defineProps<{
     uuid: string;
     review: AiCutReview;
     expiresAt: string | null;
+    source: 'ai' | 'transcript';
 }>();
+
+const summary = computed(() =>
+    source === 'ai'
+        ? `The AI found ${review.cuts.length} ${review.cuts.length === 1 ? 'passage' : 'passages'} to remove: spoken "PAUSA" markers, the takes before them and words that don't match your script. Nothing is cut until you choose.`
+        : `The transcript shows ${review.cuts.length} ${review.cuts.length === 1 ? 'passage' : 'passages'} you flagged with a spoken "PAUSA". Nothing leaves this machine and nothing is cut until you choose.`,
+);
+
+const explanationLabel = computed(() => (source === 'ai' ? 'AI:' : 'Why:'));
 
 const open = defineModel<boolean>('open', { default: false });
 
@@ -128,15 +144,16 @@ async function answer(
         <DialogContent class="flex max-h-[90dvh] flex-col gap-4 sm:max-w-2xl">
             <DialogHeader>
                 <DialogTitle class="flex items-center gap-2">
-                    <SparklesIcon class="size-4" aria-hidden="true" />
+                    <BotIcon
+                        v-if="source === 'ai'"
+                        class="size-4"
+                        aria-hidden="true"
+                    />
+                    <AudioLinesIcon v-else class="size-4" aria-hidden="true" />
                     Remove these parts of the video?
                 </DialogTitle>
                 <DialogDescription>
-                    The AI found {{ review.cuts.length }}
-                    {{ review.cuts.length === 1 ? 'passage' : 'passages' }}
-                    to remove: spoken "PAUSA" markers, the takes before them and
-                    words that don't match your script. Nothing is cut until you
-                    choose.
+                    {{ summary }}
                 </DialogDescription>
             </DialogHeader>
 
@@ -199,7 +216,7 @@ async function answer(
                                 </span>
                             </div>
 
-                            <p class="text-sm break-words">
+                            <p class="text-sm wrap-break-word">
                                 <span
                                     v-if="cut.context_before"
                                     class="text-muted-foreground"
@@ -225,7 +242,9 @@ async function answer(
                                 v-if="cut.explanation"
                                 class="text-xs text-muted-foreground"
                             >
-                                <span class="font-medium">AI:</span>
+                                <span class="font-medium">{{
+                                    explanationLabel
+                                }}</span>
                                 {{ cut.explanation }}
                             </p>
                         </div>

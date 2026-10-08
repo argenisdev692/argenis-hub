@@ -424,7 +424,7 @@ const reportUrl = computed(() => report.url(campaign.uuid));
                                 <dt class="text-sm text-muted-foreground">
                                     {{ row.label }}
                                 </dt>
-                                <dd class="text-sm break-words">
+                                <dd class="text-sm wrap-break-word">
                                     {{ row.value }}
                                 </dd>
                             </template>

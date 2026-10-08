@@ -165,7 +165,7 @@ const hasContent = computed(
                         :key="i"
                         class="rounded-lg border border-border bg-muted/40 px-3 py-2"
                     >
-                        <p class="text-sm font-medium break-words">
+                        <p class="text-sm font-medium wrap-break-word">
                             {{ source.source }}
                         </p>
                         <p class="text-sm text-muted-foreground">

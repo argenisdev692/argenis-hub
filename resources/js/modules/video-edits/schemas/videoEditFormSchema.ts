@@ -9,7 +9,12 @@ import type { CreateVideoEditPayload } from '../types';
  * safety (OWASP §8).
  */
 
-export const MAX_SOURCES = 10;
+/**
+ * Mirrors `video-edit.limits.max_sources` in `config/video-edit.php` — the two
+ * are independent sources of truth and both must be raised together, or one of
+ * them fails the user with a limit the other never shows.
+ */
+export const MAX_SOURCES = 20;
 export const MAX_SOURCE_MB = 2 * 1024;
 export const MAX_SCRIPT_MB = 10;
 export const MAX_MANUAL_RANGES = 500;

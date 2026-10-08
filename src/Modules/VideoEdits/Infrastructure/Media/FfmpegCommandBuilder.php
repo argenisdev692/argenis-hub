@@ -86,6 +86,36 @@ final readonly class FfmpegCommandBuilder
     }
 
     /**
+     * One chunk of a longer recording.
+     *
+     * `-ss` before `-i` seeks on the container, which is what makes this cheap:
+     * the demuxer still has to walk to the point, but nothing before it is decoded.
+     * `-t` caps the length so a chunk cannot run past the boundary it was asked
+     * for, and re-encoding with the same sample rate, channel count and bitrate as
+     * {@see self::extractAudio()} keeps a chunk indistinguishable from the slice of
+     * the original it came from.
+     *
+     * @return list<string>
+     */
+    #[\NoDiscard]
+    public function sliceAudio(string $inputPath, string $outputPath, int $startMs, int $durationMs, int $sampleRate, int $bitrateKbps): array
+    {
+        return [
+            $this->ffmpegBinary,
+            ...self::COMMON_FLAGS,
+            '-ss', self::timestamp($startMs),
+            '-i', $inputPath,
+            '-t', self::timestamp($durationMs),
+            '-vn',
+            '-map', '0:a:0',
+            '-ac', '1',
+            '-ar', (string) $sampleRate,
+            '-b:a', sprintf('%dk', $bitrateKbps),
+            $outputPath,
+        ];
+    }
+
+    /**
      * `silencedetect` writes its findings to stderr and needs no output file,
      * hence the null muxer. Only the first audio stream is analysed — the
      * output profile has already decided there is exactly one.
@@ -233,5 +263,26 @@ final readonly class FfmpegCommandBuilder
     private static function number(float $value): string
     {
         return sprintf('%.3F', $value);
+    }
+
+    /**
+     * Milliseconds → `HH:MM:SS.mmm`, the form both `-ss` and `-t` accept.
+     *
+     * Written out rather than passed as seconds so a chunk boundary lands on an
+     * exact millisecond: the detector downstream reads word timings to the
+     * millisecond, and a chunk whose start drifted would shift every timestamp in
+     * it by the same drift.
+     */
+    private static function timestamp(int $milliseconds): string
+    {
+        $totalMs = max(0, $milliseconds);
+
+        return sprintf(
+            '%02d:%02d:%02d.%03d',
+            intdiv($totalMs, 3_600_000),
+            intdiv($totalMs % 3_600_000, 60_000),
+            intdiv($totalMs % 60_000, 1_000),
+            $totalMs % 1_000,
+        );
     }
 }

@@ -56,7 +56,10 @@ const rows = computed<Row[]>(() =>
                         {{ row.key }}
                     </dt>
                     <dd class="text-sm">
-                        <span v-if="row.scalar !== null" class="break-words">
+                        <span
+                            v-if="row.scalar !== null"
+                            class="wrap-break-word"
+                        >
                             {{ row.scalar }}
                         </span>
                         <pre

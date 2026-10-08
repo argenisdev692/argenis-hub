@@ -39,7 +39,7 @@ const { details, columns = 2 } = defineProps<{
                 {{ detail.label }}
             </dt>
 
-            <dd class="mt-1 text-sm break-words">
+            <dd class="mt-1 text-sm wrap-break-word">
                 <a
                     v-if="detail.value && detail.href"
                     :href="detail.href"

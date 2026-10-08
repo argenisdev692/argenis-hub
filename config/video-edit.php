@@ -16,7 +16,7 @@ return [
 
     'limits' => [
         // Minimum clips per mode lives in VideoEditMode::minimumSources().
-        'max_sources' => 10,                                   // D2
+        'max_sources' => 20,                                   // D2 — raised from 10
         'max_file_bytes' => 2 * 1024 * 1024 * 1024,            // D2 — 2 GB
         'size_tolerance_ratio' => 0.01,                        // declared vs stored size
         'max_total_duration_seconds' => 90 * 60,               // D2
@@ -232,6 +232,45 @@ return [
     | the English padding words show up constantly in tech tutorials).
     |
     */
+    /*
+    |----------------------------------------------------------------------
+    | Transcription provider
+    |----------------------------------------------------------------------
+    |
+    | `openai` (whisper-1) or `gemini` (gemini-3.5-transcribe). Whisper stays the
+    | default: it still serves, and switching a recording's transcriber changes
+    | every timestamp in it, which invalidates the stored transcript cache for
+    | those sources.
+    |
+    | **The migration is not optional.** OpenAI has deprecated whisper-1,
+    | gpt-4o-transcribe and gpt-4o-transcribe-diarize for 2027-02-26, and their
+    | guide states that `timestamp_granularities[]` "is only supported for
+    | whisper-1" — every other transcription model they offer returns plain text.
+    | This module cannot run on plain text: cuts are addressed by word index and
+    | resolved to milliseconds.
+    |
+    | Gemini is the successor that returns word-level offsets AND keeps the
+    | fillers. Its `verbatim` mode is documented as preserving "raw filler words,
+    | repetitions, pauses, and false starts", which is exactly what Whisper
+    | normalises away — and the reason this module's own recordings kept a spoken
+    | "pausa" in the delivered audio is that Whisper dropped the word from the
+    | transcript in some takes. `smart` mode does the opposite of what is needed
+    | (it strips disfluencies) and cannot be combined with timestamps anyway.
+    |
+    | The key is GEMINI_API_KEY, already used by the AI analyzer — no new secret.
+    */
+    'provider' => env('VIDEO_EDIT_TRANSCRIPTION_PROVIDER', 'openai'),
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('VIDEO_EDIT_GEMINI_TRANSCRIBE_MODEL', 'gemini-3.5-transcribe'),
+        'timeout_seconds' => (int) env('VIDEO_EDIT_GEMINI_TRANSCRIBE_TIMEOUT', 1_200),
+        // Gemini caps audio at 30 minutes once word timestamps are enabled, while
+        // this module accepts 90. Longer recordings are sliced into chunks and the
+        // word offsets rebased onto the full timeline. Keep this under 30.
+        'chunk_seconds' => (int) env('VIDEO_EDIT_GEMINI_TRANSCRIBE_CHUNK_SECONDS', 1_500),
+    ],
+
     'speech' => [
         'default_language' => env('VIDEO_EDIT_SPEECH_LANGUAGE', 'es'),
 
@@ -362,6 +401,101 @@ return [
                 'no', 'si', 'muy', 'ya', 'very', 'no-no',
             ],
         ],
+    ],
+
+    /*
+    |----------------------------------------------------------------------
+    | Failed takes before a spoken pause marker
+    |----------------------------------------------------------------------
+    |
+    | OBSERVACIONES round 2, item 2: cutting "pausa acá" and nothing else
+    | leaves the flubbed sentence in place, so the join reads as
+    | [wrong phrase] → [jump] → [right phrase] — the "oración que deja hueco"
+    | the speaker kept hearing in the delivered file.
+    |
+    | {see \Modules\VideoEdits\Domain\Services\FailedTakeDetector} works out
+    | where the failed attempt ended by walking BACK from the marker and
+    | stopping at real evidence rather than at a guess: a word Whisper wrote
+    | with sentence punctuation, a pause long enough to hear, or the look-back
+    | ceiling. Every one of those stops makes the proposal SHORTER, which is the
+    | safe direction to be wrong in.
+    |
+    | Nothing here is applied automatically. The proposals are stored on the
+    | existing cut review and the edit parks in `awaiting_review`, because
+    | deleting a take the owner still wanted is not recoverable from the
+    | rendered file.
+    */
+    'failed_take' => [
+        'enabled' => (bool) env('VIDEO_EDIT_FAILED_TAKE', true),
+        // A silence this long before the marker means the speaker had finished
+        // a thought — the take cannot reach back across it.
+        'boundary_gap_ms' => (int) env('VIDEO_EDIT_FAILED_TAKE_GAP_MS', 400),
+        // Hard ceiling on the look-back. A failed take is 2-5 seconds of
+        // speech; anything longer than this is the previous idea, not this one.
+        'max_lookback_ms' => (int) env('VIDEO_EDIT_FAILED_TAKE_LOOKBACK_MS', 8_000),
+        // Below this there is no take worth proposing — a stray "y" is not a
+        // sentence the speaker restarted.
+        'min_take_ms' => (int) env('VIDEO_EDIT_FAILED_TAKE_MIN_MS', 400),
+        // Transcript words shown either side of a proposal in the review.
+        'context_words' => (int) env('VIDEO_EDIT_FAILED_TAKE_CONTEXT_WORDS', 8),
+        // Only a take closed by sentence punctuation starts ticked. The others
+        // are still shown, so nothing is discarded unseen.
+        'preselect_above_confidence' => (float) env('VIDEO_EDIT_FAILED_TAKE_PRESELECT', 0.85),
+    ],
+
+    /*
+    |----------------------------------------------------------------------
+    | Restarts (a repeated clause) — the marker-proof signal
+    |----------------------------------------------------------------------
+    |
+    | The `failed_take` block above works from a spoken "pausa". That signal is
+    | not dependable, and this application's own recordings are the proof: in some
+    | takes Whisper transcribed the marker as a word, in others it dropped it
+    | entirely and the moment came back as a bare "acá". A dictionary can only
+    | match what was transcribed, so on those recordings every deterministic rule
+    | was blind and "pausa acá" stayed in the delivered audio.
+    |
+    | Sending a different prompt cannot fix it: OpenAI documents `prompt` as a
+    | spelling dictionary, not a style control, so it cannot stop the
+    | normalisation that drops the word.
+    |
+    | What does survive is the RESTART. A speaker who abandons an attempt says the
+    | next thing again from the beginning, and that repetition is in the transcript
+    | either way. It is also the weaker signal — speakers repeat for emphasis — so
+    | `MIN_GAP_MS` is what separates the two, and everything it produces still
+    | goes through the owner's review.
+    |
+    | A phrase said three or more times is treated as a refrain and skipped: a
+    | missed restart costs one unticked box, a deleted refrain costs real speech.
+    */
+    'restart' => [
+        'enabled' => (bool) env('VIDEO_EDIT_RESTART', true),
+        // How many words must match for the repeat to be a clause and not a
+        // coincidence. Four is where this application's own restarts first appear.
+        'min_phrase_words' => (int) env('VIDEO_EDIT_RESTART_MIN_WORDS', 5),
+        'max_phrase_words' => (int) env('VIDEO_EDIT_RESTART_MAX_WORDS', 8),
+        // THE discriminator. An emphasis repeat follows immediately; a restart is
+        // preceded by a hesitation a listener can hear. Everything at or above
+        // this counts as a restart, so raising it trades recall for precision.
+        'min_gap_ms' => (int) env('VIDEO_EDIT_RESTART_MIN_GAP_MS', 700),
+        // Two copies further apart than this are a refrain or a callback, not an
+        // abandoned attempt.
+        'max_repeat_distance_ms' => (int) env('VIDEO_EDIT_RESTART_MAX_DISTANCE_MS', 60_000),
+        // One restart is reported by every phrase length that fits inside it, at
+        // several different offsets. Candidates whose second copy starts within
+        // this window are the same restart and collapse into one proposal.
+        'cluster_ms' => (int) env('VIDEO_EDIT_RESTART_CLUSTER_MS', 2_000),
+        // How close a spoken marker has to sit to a restart to be read as the same
+        // event rather than two of them. A speaker flags the mistake and restarts
+        // within a beat of each other, and inside this window the two signals
+        // corroborate each other instead of proposing overlapping cuts.
+        'marker_proximity_ms' => (int) env('VIDEO_EDIT_RESTART_MARKER_PROXIMITY_MS', 2_000),
+        // How many words may sit between the two copies of a repeated clause.
+        // Measured, not guessed: a real restart in this module's own transcript has
+        // fourteen, because the speaker kept talking after the repeated clause
+        // before giving up and restarting. Far below that would exclude genuine
+        // restarts; far above it would admit callbacks.
+        'max_interlude_words' => (int) env('VIDEO_EDIT_RESTART_MAX_INTERLUDE_WORDS', 20),
     ],
 
     /*

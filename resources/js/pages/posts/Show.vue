@@ -185,7 +185,7 @@ const hasScores = computed(
                                 >
                                     {{ entry.label }}
                                 </dt>
-                                <dd class="text-sm break-words">
+                                <dd class="text-sm wrap-break-word">
                                     {{ entry.value }}
                                 </dd>
                             </div>

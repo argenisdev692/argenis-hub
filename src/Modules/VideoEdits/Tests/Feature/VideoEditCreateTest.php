@@ -99,10 +99,6 @@ it('rejects invalid requests before creating anything', function (array $overrid
     'merge needs two clips' => [['mode' => 'merge', 'silence_removal' => null, 'manual_ranges' => [], 'sources' => [
         ['position' => 1, 'file_name' => 'a.mp4', 'mime_type' => 'video/mp4', 'size_bytes' => 10],
     ]], 'sources'],
-    'too many clips' => [['sources' => array_map(
-        static fn (int $position): array => ['position' => $position, 'file_name' => "t{$position}.mp4", 'mime_type' => 'video/mp4', 'size_bytes' => 10],
-        range(1, 11),
-    )], 'sources'],
     'unsupported extension' => [['sources' => [['position' => 1, 'file_name' => 'clip.avi', 'mime_type' => 'video/mp4', 'size_bytes' => 10]]], 'sources.0.file_name'],
     'unsupported mime type' => [['sources' => [['position' => 1, 'file_name' => 'clip.mp4', 'mime_type' => 'image/png', 'size_bytes' => 10]]], 'sources.0.mime_type'],
     'file over 2 GB' => [['sources' => [['position' => 1, 'file_name' => 'clip.mp4', 'mime_type' => 'video/mp4', 'size_bytes' => 2_147_483_649]]], 'sources.0.size_bytes'],
@@ -121,6 +117,38 @@ it('rejects invalid requests before creating anything', function (array $overrid
     'merge with ranges' => [['mode' => 'merge', 'silence_removal' => null], 'manual_ranges'],
     'auto edit with nothing to cut' => [['silence_removal' => ['enabled' => false], 'manual_ranges' => []], 'mode'],
 ]);
+
+/**
+ * The clip ceiling is read from config rather than written down, on both
+ * sides of the boundary, so raising `video-edit.limits.max_sources` can never
+ * leave this file asserting a limit the application no longer enforces.
+ * (A `with()` dataset cannot: Pest builds those before the app exists.)
+ */
+it('rejects one clip over the configured maximum and accepts exactly the maximum', function (): void {
+    $maxSources = (int) config('video-edit.limits.max_sources');
+
+    $clips = static fn (int $count): array => array_map(
+        static fn (int $position): array => ['position' => $position, 'file_name' => "t{$position}.mp4", 'mime_type' => 'video/mp4', 'size_bytes' => 10],
+        range(1, $count),
+    );
+
+    $this->actingAs(videoEditor())
+        ->postJson('/data/admin/video-edits', autoEditPayload(['sources' => $clips($maxSources + 1)]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('sources');
+
+    expect(VideoEditEloquentModel::query()->count())->toBe(0);
+
+    $response = $this->actingAs(videoEditor())->postJson('/data/admin/video-edits', autoEditPayload(['sources' => $clips($maxSources)]));
+
+    $response->assertCreated()
+        // Sources are ordered by their 1-based `position`, so the last one sits
+        // at index $maxSources - 1.
+        ->assertJsonPath('edit.sources.0.position', 1)
+        ->assertJsonPath('edit.sources.'.($maxSources - 1).'.position', $maxSources);
+
+    expect($response->json('uploads'))->toHaveCount($maxSources);
+});
 
 it('accepts an MKV source and gives it an upload target', function (): void {
     $user = videoEditor();

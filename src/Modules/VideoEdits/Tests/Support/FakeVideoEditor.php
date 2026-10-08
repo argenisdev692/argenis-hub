@@ -68,6 +68,12 @@ final class FakeVideoEditor implements VideoEditorPort
         $this->write($outputPath, 'audio');
     }
 
+    public function sliceAudio(string $inputPath, string $outputPath, int $startMs, int $durationMs, int $maxBytes): void
+    {
+        $this->record('sliceAudio', compact('inputPath', 'outputPath', 'startMs', 'durationMs', 'maxBytes'));
+        $this->write($outputPath, 'audio');
+    }
+
     public function detectSilences(string $path, MediaProbe $probe, SilenceThreshold $threshold, int $noiseFloorDb): array
     {
         $this->record('detectSilences', compact('path', 'threshold', 'noiseFloorDb'));

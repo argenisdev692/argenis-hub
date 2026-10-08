@@ -86,7 +86,7 @@ const summary = computed<SummaryRow[]>(() => [
                         <dt class="text-sm text-muted-foreground">
                             {{ row.label }}
                         </dt>
-                        <dd class="text-sm break-words">{{ row.value }}</dd>
+                        <dd class="text-sm wrap-break-word">{{ row.value }}</dd>
                     </template>
                 </dl>
             </CardContent>

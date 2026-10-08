@@ -94,7 +94,7 @@ const links = computed<LinkRow[]>(() => {
                         <dt class="text-sm text-muted-foreground">
                             {{ row.label }}
                         </dt>
-                        <dd class="text-sm break-words">{{ row.value }}</dd>
+                        <dd class="text-sm wrap-break-word">{{ row.value }}</dd>
                     </template>
                 </dl>
 
@@ -124,7 +124,7 @@ const links = computed<LinkRow[]>(() => {
                 <div v-if="client.notes" class="flex flex-col gap-1">
                     <p class="text-sm text-muted-foreground">Notes</p>
                     <p
-                        class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm break-words whitespace-pre-wrap"
+                        class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap"
                     >
                         {{ client.notes }}
                     </p>

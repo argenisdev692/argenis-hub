@@ -80,14 +80,14 @@ const rows = computed<DetailRow[]>(() => {
                         <dt class="text-sm text-muted-foreground">
                             {{ row.label }}
                         </dt>
-                        <dd class="text-sm break-words">{{ row.value }}</dd>
+                        <dd class="text-sm wrap-break-word">{{ row.value }}</dd>
                     </template>
                 </dl>
 
                 <div class="flex flex-col gap-1">
                     <p class="text-sm text-muted-foreground">Message</p>
                     <p
-                        class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm break-words whitespace-pre-wrap"
+                        class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap"
                     >
                         {{ support.message }}
                     </p>
