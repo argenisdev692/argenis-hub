@@ -12,8 +12,12 @@ return [
         'binaries' => env('FFPROBE_BINARIES', 'ffprobe'),
     ],
 
-    // Matches the ProcessVideoEditJob timeout (spec 001 D13).
-    'timeout' => (int) env('FFMPEG_TIMEOUT', 3600),
+    // Hard ceiling for ONE ffmpeg process (spec 001 D13). A 40-minute merge
+    // re-encodes every kept frame in one filtergraph pass, so this has to cover
+    // the slowest render, not the typical one — 3600 s was reached at 59 % on a
+    // 40-minute source. Stays below the ProcessVideoEditJob timeout (14400 s),
+    // which is the outer envelope for the whole pipeline.
+    'timeout' => (int) env('FFMPEG_TIMEOUT', 10_800),
 
     'log_channel' => env('LOG_CHANNEL', 'stack'),   // set to false to completely disable logging
 

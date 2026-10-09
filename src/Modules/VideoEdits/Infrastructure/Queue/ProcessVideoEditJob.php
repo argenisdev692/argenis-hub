@@ -24,12 +24,14 @@ use Throwable;
  * Connection and queue name are set by the dispatcher from config, so tests use
  * `sync` while workers consume Upstash. `tags()` keeps it Horizon-ready.
  *
- * Tries 3 = the first attempt + 2 automatic retries (D13); the 3600 s timeout
- * stays below the connection's 3900 s `retry_after`. Permanent failures skip
- * the retries.
+ * Tries 3 = the first attempt + 2 automatic retries (D13); the 14400 s timeout
+ * stays below the connection's 15300 s `retry_after`. It is an outer envelope
+ * for the whole pipeline (transcription + AI analysis + every ffmpeg pass), so
+ * it has to leave room for the slowest single render — `laravel-ffmpeg.timeout`
+ * (10800 s) — plus the stages that run before and after it.
  */
 #[Tries(3)]
-#[Timeout(3600)]
+#[Timeout(14400)]
 #[Backoff([60, 300])]
 final class ProcessVideoEditJob implements ShouldQueue
 {
