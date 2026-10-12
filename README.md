@@ -104,6 +104,7 @@ flowchart TB
 
     AI["🤖 AI Providers<br/>OpenAI · Anthropic · Gemini<br/>Groq · Mistral · ElevenLabs · +8"]:::ext
     PG[("🐘 PostgreSQL 17<br/>Supabase · 151 tables")]:::ext
+    RD[("⚡ Upstash Redis<br/>TLS-only · 3 connections")]:::ext
     R2["☁️ Cloudflare R2 / S3<br/>media · exports · video"]:::ext
     Mail["✉️ Resend<br/>transactional mail"]:::ext
     Maps["🗺️ Google Maps<br/>lead geocoding"]:::ext
@@ -115,6 +116,7 @@ flowchart TB
 
     Hub -->|"prompt / embed / rerank"| AI
     Hub -->|"SQL"| PG
+    Hub -->|"queue · cache · sessions"| RD
     Hub -->|"signed URLs"| R2
     Hub -->|"SMTP API"| Mail
     Hub -->|"Places / Geocoding"| Maps
@@ -136,18 +138,19 @@ flowchart LR
         SPA["<b>Inertia SPA</b><br/>Vue 3.5 · TS strict<br/>523 SFCs · 49 Reka UI primitives<br/>Pinia (client) · Pinia Colada (server)"]:::ui
     end
 
-    subgraph Server["⚙️ Laravel Herd / Laravel Cloud"]
+    subgraph Server["⚙️ Laravel 13 — Herd locally · Railway in production"]
         HTTP["<b>HTTP Kernel</b><br/>410 routes<br/>Fortify · Sanctum · Spatie Permission<br/>CSP · secure-headers · honeypot"]:::app
         MOD["<b>22 Module Providers</b><br/>bootstrap/providers.php<br/>ordered by dependency"]:::app
         SH["<b>Shared Kernel</b><br/>AIClient · StoragePort · AuditPort<br/>ExportPort · SpeechSynthesizerPort"]:::app
-        Q["<b>Queue Workers</b><br/>21 jobs · database driver<br/>AI runs · video · exports · backups"]:::work
+        Q["<b>Queue Workers</b><br/>21 jobs · redis driver<br/>AI runs · video · exports · backups"]:::work
         SCH["<b>Scheduler</b><br/>backups · sitemap · campaigns"]:::work
     end
 
     subgraph Data["💾 Persistence"]
-        DB[("PostgreSQL 17.6")]:::data
-        OBJ[("Cloudflare R2")]:::data
-        CACHE[("Cache + Sessions<br/>database store")]:::data
+        DB[("PostgreSQL 17.6<br/><i>records</i>")]:::data
+        OBJ[("Cloudflare R2<br/><i>media objects</i>")]:::data
+        CACHE[("Upstash Redis<br/><i>cache · sessions</i>")]:::data
+        QUEUE[("Upstash Redis<br/><i>queues · failed_jobs in PG</i>")]:::data
     end
 
     SPA -->|"XHR · typed props"| HTTP
@@ -156,11 +159,41 @@ flowchart LR
     MOD --> Q
     SCH --> Q
     MOD --> DB
+    Q --> QUEUE
     Q --> DB
     SH --> OBJ
     HTTP --> CACHE
     SPA -.->|"Wayfinder<br/>generated route fns"| HTTP
 ```
+
+### Why Redis is not optional
+
+Upstash bills **per command**, and an idle queue worker still polls. That single fact shapes three
+decisions, each documented inline where it lives:
+
+| Constraint | Consequence in this codebase |
+|---|---|
+| **Serverless, TLS-only** | `REDIS_HOST="tls://<endpoint>.upstash.io"` — the scheme is in the host. Adding a `scheme` option as well makes `PhpRedisConnector` throw, because it disagrees about how to dial the socket |
+| **Only database `0` exists** | Laravel ships `REDIS_CACHE_DB=1`, which Upstash rejects. So `REDIS_DB`, `REDIS_CACHE_DB` and `REDIS_QUEUE_DB` are all pinned to `0` and logical separation rests entirely on key prefixes — **the prefixes are load-bearing, not cosmetic** |
+| **Per-command billing** | The `video-edits` queue sets `block_for => 5` deliberately; the default Redis queue leaves it `null`, because `block_for = 0` blocks `SIGTERM` and workers cannot drain on deploy |
+
+**Key prefixes**, derived from `APP_NAME` so they are correct without configuration — but they are a
+safety net, not a contract, so set `REDIS_PREFIX` / `REDIS_QUEUE_PREFIX` explicitly if two
+environments ever share an instance:
+
+| Connection | Used by | Prefix |
+|---|---|---|
+| `default` | Sessions (`SESSION_CONNECTION=default`) | `argenishub-database-` |
+| `cache` | `CACHE_STORE=redis` | `argenishub-cache-` |
+| `queue` | `QUEUE_CONNECTION=redis` | `argenishub-<env>-queue-` |
+
+> `config/database.php` states the intent that *each environment points `REDIS_QUEUE_*` at its own
+> Upstash database*. When `REDIS_QUEUE_HOST` / `REDIS_QUEUE_PASSWORD` are unset the queue falls back
+> to `REDIS_HOST` / `REDIS_PASSWORD` and dev and prod share a keyspace, separated only by the `APP_ENV`
+> segment above. Set them explicitly per environment if that separation matters to you.
+
+Failed jobs are the exception to "everything is Redis": `QUEUE_FAILED_DRIVER=database-uuids` writes to
+PostgreSQL, which is the right call — they are records you need to inspect, not ephemeral state.
 
 ---
 
@@ -479,7 +512,13 @@ so the snake_case wire contract survives the round trip.
 | Composer | 2.x | |
 | Node.js | 22+ | |
 | PostgreSQL | 17.x | Supabase-hosted in this deployment |
+| **Redis** | TLS endpoint | **Required** — `.env.example` ships `QUEUE_CONNECTION`/`CACHE_STORE`/`SESSION_DRIVER` = `redis`. Needs the `phpredis` **PHP extension** (already in Herd) and a reachable server; Upstash works as-is |
 | FFmpeg | on `PATH` | Required by the VideoEdits module |
+
+> **Redis is not optional here.** `.env.example` defaults all three of cache, sessions and queue to
+> the `redis` driver, so `composer setup` completes happily and then fails at the first request if no
+> Redis is reachable. Either point `REDIS_HOST` at a local Redis or at your Upstash endpoint, or
+> override the three drivers to `database` for local work.
 
 ### Install
 
@@ -510,11 +549,28 @@ APP_URL=https://argenis-hub.test        # Herd serves the folder name as .test
 
 DB_CONNECTION=pgsql                     # host / port / credentials from your PG or Supabase project
 
+# Cache, sessions and queue all run on Redis. Upstash is TLS-only: put the scheme
+# in the host and do NOT add a separate scheme option (PhpRedisConnector throws).
+REDIS_CLIENT=phpredis
+REDIS_HOST=tls://<endpoint>.upstash.io
+REDIS_PASSWORD=
+REDIS_PORT=6379
+REDIS_DB=0                             # Upstash has ONLY database 0
+REDIS_CACHE_DB=0                       #   ↑ default of 1 is rejected by Upstash
+REDIS_QUEUE_DB=0                       #   ↑ logical separation comes from key prefixes
+# Per-environment isolation — set these instead of relying on the APP_NAME-derived defaults:
+# REDIS_QUEUE_HOST=                      # falls back to REDIS_HOST when unset
+# REDIS_QUEUE_PASSWORD=
+# REDIS_PREFIX=argenishub-database-
+# REDIS_QUEUE_PREFIX=argenishub-local-queue-
+
 AI_PROVIDER=openai                      # default provider
 AI_FAILOVER_ORDER=openai,anthropic      # ordered failover chain
-OPENAI_API_KEY=                         # also used by VideoEdits for Whisper transcription
+OPENAI_API_KEY=                         # image + embeddings
 ANTHROPIC_API_KEY=
-OPENAI_WHISPER_MODEL=whisper-1          # optional — VideoEdits speech cleanup
+GEMINI_API_KEY=                         # also used by VideoEdits for transcription
+VIDEO_EDIT_TRANSCRIPTION_PROVIDER=gemini # gemini (verbatim + word timings) or openai (whisper-1)
+VIDEO_EDIT_GEMINI_TRANSCRIBE_MODEL=gemini-3.5-transcribe
 VIDEO_EDIT_SPEECH_LANGUAGE=es           # optional — recordings are Spanish-first
 VIDEO_EDIT_SCREEN_ACTIVITY=true         # optional — speed up AI-tool waits instead of cutting them
 VIDEO_EDIT_BREATHS=true                 # optional — turn breaths down between words
@@ -530,8 +586,11 @@ GOOGLE_MAPS_API_KEY=                    # LeadScout geocoding
 composer dev
 ```
 
-One command, four processes — `server`, `queue:listen`, `schedule:work`, `vite` — colour-coded in a
-single terminal. The app is then served by Herd at your `APP_URL`.
+One command, **five** processes — `server`, `queue`, `video-queue`, `scheduler`, `vite` — colour-coded
+in a single terminal. The two queue workers are not redundant: `queue` drains
+`lead-scout,lead-scout-llm,studio,default`, while `video-queue` drains `video-edits` on its own Redis
+connection with `--memory=1024`, because an FFmpeg render is not something you want sharing a worker
+with a LeadScout enrichment run. The app is served by Herd at your `APP_URL`.
 
 ---
 
@@ -539,7 +598,8 @@ single terminal. The app is then served by Herd at your `APP_URL`.
 
 <table>
 <tr><th align="left">Intent</th><th align="left">Command</th></tr>
-<tr><td>Full dev stack</td><td><code>composer dev</code></td></tr>
+<tr><td>Full dev stack</td><td><code>composer dev</code> <i>(5 processes: server · 2 queue workers · scheduler · vite)</i></td></tr>
+<tr><td>Inspect / retry the queue</td><td><code>php artisan queue:monitor default,video-edits</code> · <code>queue:failed</code> · <code>queue:retry &lt;id&gt;</code></td></tr>
 <tr><td>Run one module's tests</td><td><code>php artisan test --compact src/Modules/{Module}</code></td></tr>
 <tr><td>Filter a single test</td><td><code>php artisan test --compact --filter=createsCourse</code></td></tr>
 <tr><td>Format changed PHP</td><td><code>vendor/bin/pint --dirty --format agent</code></td></tr>
