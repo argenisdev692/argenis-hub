@@ -1,13 +1,24 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/vue-starter-kit",
+    "name": "argenisdev692/argenis-hub",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "A modular, hexagonal business operations platform: 22 bounded modules behind one deployable Laravel monolith.",
     "keywords": [
         "laravel",
-        "framework"
+        "modular-monolith",
+        "hexagonal-architecture",
+        "cqrs",
+        "inertia",
+        "vue"
     ],
     "license": "MIT",
+    "homepage": "https://github.com/argenisdev692/argenis-hub",
+    "authors": [
+        {
+            "name": "Jose Gonzalez",
+            "email": "josegonzalezcr2794@gmail.com"
+        }
+    ],
     "require": {
         "php": "^8.5",
         "bacon/bacon-qr-code": "^3.1",

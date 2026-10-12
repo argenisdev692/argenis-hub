@@ -6,6 +6,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\VideoEdits\Application\Pipeline\DecisionProducerRegistry;
 use Modules\VideoEdits\Application\Pipeline\Producers\SpeechDecisionProducer;
+use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
 use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
@@ -167,6 +168,58 @@ it('reuses the stored transcript for identical sources instead of paying twice',
     $producer->produce(speechContext($second, ['enabled' => true], 'same-fingerprint'));
 
     expect($this->transcriber->calls)->toBe(1);
+});
+
+/*
+|----------------------------------------------------------------------
+| Reuse is scoped to the transcriber that produced the timings
+|----------------------------------------------------------------------
+|
+| Word timings are model-specific: whisper-1 and gemini-3.5-transcribe place
+| the same word milliseconds apart, and every cut in this module is addressed
+| by word index and resolved against those timings. So a transcript from
+| another model is not a cheaper copy of this one — it is a wrong one.
+|
+| This is not hypothetical for this module. whisper-1 normalises fillers away,
+| so switching to gemini's `verbatim` mode is what makes a spoken "pausa"
+| reachable at all; a store that keyed reuse on the source fingerprint alone
+| handed the whisper transcript straight back and every marker stayed invisible
+| in the delivered video, with the edit reported as successful.
+*/
+it('transcribes again after switching provider, rather than reusing the old model timings', function (): void {
+    config()->set('video-edit.provider', 'openai');
+
+    $user = VideoEditTestUsers::editor();
+    $producer = app(SpeechDecisionProducer::class);
+    $producer->produce(speechContext(
+        VideoEditEloquentModel::factory()->for($user)->create(), ['enabled' => true], 'shared-fingerprint',
+    ));
+
+    expect($this->transcriber->calls)->toBe(1);
+
+    config()->set('video-edit.provider', 'gemini');
+
+    // A fresh producer: the identity is a singleton, so the running job keeps
+    // the provider it started with. A new edit is a new job.
+    app()->forgetInstance(TranscriptionIdentity::class);
+    app(SpeechDecisionProducer::class)->produce(speechContext(
+        VideoEditEloquentModel::factory()->for($user)->create(), ['enabled' => true], 'shared-fingerprint',
+    ));
+
+    expect($this->transcriber->calls)->toBe(2);
+});
+
+it('labels a stored transcript with the provider that actually produced it', function (): void {
+    config()->set('video-edit.provider', 'gemini');
+    app()->forgetInstance(TranscriptionIdentity::class);
+
+    $edit = VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create();
+    app(SpeechDecisionProducer::class)->produce(speechContext($edit, ['enabled' => true]));
+
+    $stored = VideoEditTranscriptEloquentModel::query()->where('video_edit_id', $edit->id)->first();
+
+    expect($stored->provider)->toBe('gemini')
+        ->and($stored->model)->toBe(config('video-edit.speech.gemini.model'));
 });
 
 it('transcribes again when the sources differ', function (): void {

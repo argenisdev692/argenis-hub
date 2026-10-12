@@ -18,6 +18,7 @@ use Modules\VideoEdits\Application\Pipeline\Producers\FailedTakeReviewProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\ManualRangeDecisionProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\SilenceDecisionProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\SpeechDecisionProducer;
+use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
 use Modules\VideoEdits\Domain\Exceptions\AiConsentRequiredException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutReviewException;
@@ -82,6 +83,12 @@ final class VideoEditsServiceProvider extends ServiceProvider
         // returns word timings at all, so the port resolves to whichever adapter the
         // installation has chosen. See `video-edit.provider`.
         $this->app->bind(TranscriptionPort::class, static fn (): TranscriptionPort => self::transcriber());
+        // The same switch, read as the two strings the transcript store keys
+        // reuse on. Singleton rather than bind, because every producer and the
+        // pipeline must agree on one identity per run — a transcript stored under
+        // one provider and looked up under another is exactly the reuse bug this
+        // exists to close.
+        $this->app->singleton(TranscriptionIdentity::class);
         $this->app->bind(TranscriptStorePort::class, EloquentTranscriptStore::class);
         $this->app->bind(AiEditAnalysisPort::class, LaravelAiVideoEditAnalyzer::class);
         $this->app->bind(AiReportStorePort::class, EloquentAiReportStore::class);

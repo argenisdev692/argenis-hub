@@ -28,14 +28,19 @@ Clients, invoicing, availability, content, campaigns, lead intelligence, CV/ATS 
 [![Pint](https://img.shields.io/badge/Pint-strict-06B6D4?style=for-the-badge)](https://laravel.com/docs/pint)
 [![Strict TS](https://img.shields.io/badge/TypeScript-zero%20any-0F766E?style=for-the-badge)](#-conventions--quality-gates)
 
+<!-- ── Delivery ────────────────────────────────────────────── -->
+[![CI](https://github.com/argenisdev692/argenis-hub/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/argenisdev692/argenis-hub/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-MIT-DC2626?style=for-the-badge)](./LICENSE)
+
 <!-- ── Project stats ───────────────────────────────────────── -->
 ![Modules](https://img.shields.io/badge/modules-22-0EA5E9?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-265%20files-22C55E?style=flat-square)
-![Routes](https://img.shields.io/badge/routes-402-64748B?style=flat-square)
-![Migrations](https://img.shields.io/badge/migrations-97-64748B?style=flat-square)
+![PHP](https://img.shields.io/badge/PHP%20files-1911-64748B?style=flat-square)
+![Tests](https://img.shields.io/badge/test%20files-291-22C55E?style=flat-square)
+![Routes](https://img.shields.io/badge/routes-410-64748B?style=flat-square)
+![Migrations](https://img.shields.io/badge/migrations-101-64748B?style=flat-square)
 ![Vue SFCs](https://img.shields.io/badge/vue%20SFCs-523-42B883?style=flat-square)
+![Ports](https://img.shields.io/badge/ports-122-F59E0B?style=flat-square)
 ![Architecture](https://img.shields.io/badge/architecture-hexagonal%20%2B%20CQRS-8B5CF6?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-DC2626?style=flat-square)
 
 </div>
 
@@ -49,8 +54,10 @@ Clients, invoicing, availability, content, campaigns, lead intelligence, CV/ATS 
 | [Module Anatomy](#-module-anatomy--hexagonal-slice) | [Request Lifecycle](#-request-lifecycle) | [AI Pipeline](#-ai-generation-pipeline) |
 | [Module Matrix](#-module-matrix) | [Design Patterns](#-design-patterns-in-use) | [Type Contract](#-the-type-contract) |
 | [Getting Started](#-getting-started) | [Daily Commands](#-daily-commands) | [Quality Gates](#-conventions--quality-gates) |
-| [Security](#-security-posture) | [Testing](#-testing-strategy) | [Module Checklist](#-module-completion-checklist) |
-| [Smart Video Editing](#-smart-video-editing--videoedits) | | |
+| [CI/CD](#-cicd--continuous-integration) | [Security](#-security-posture) | [Data Lifecycle](#-data-lifecycle--privacy) |
+| [AI Governance](#-ai-governance--human-in-the-loop) | [Accessibility](#-accessibility) | [Testing](#-testing-strategy) |
+| [Architecture Decisions](#-architecture-decision-records) | [Module Checklist](#-module-completion-checklist) | [Smart Video Editing](#-smart-video-editing--videoedits) |
+| [License](#-license) | | |
 
 ---
 
@@ -75,7 +82,7 @@ declared in `src/Shared/Domain/Ports/`.
 | **Hexagonal (Ports & Adapters)** | `Domain/Ports/` declares interfaces · `Infrastructure/` supplies adapters · the domain never imports Laravel |
 | **CQRS-lite** | `Application/Commands/*Handler` mutate · `Application/Queries/*Handler` read · no command bus overhead |
 | **DTO-first contracts** | Spatie `Data` objects are the *only* response shape — Inertia props and JSON share one class |
-| **Generated types** | `php artisan typescript:transform` emits the frontend's types from those same `Data` classes |
+| **Generated types** | `php artisan typescript:transform` emits 2 577 lines of frontend types from those same `Data` classes |
 | **Resilience by default** | Circuit breaker + multi-provider failover in front of every AI call |
 | **Auditability** | `LogsActivity` on every aggregate, explicit `logOnly([...])`, never secrets |
 
@@ -126,14 +133,14 @@ flowchart LR
     classDef data fill:#4169E1,stroke:#2C48A0,color:#fff,rx:6,ry:6
 
     subgraph Browser["🖥️ Browser"]
-        SPA["<b>Inertia SPA</b><br/>Vue 3.5 · TS strict<br/>523 SFCs · shadcn-vue + Reka UI<br/>Pinia (client) · Pinia Colada (server)"]:::ui
+        SPA["<b>Inertia SPA</b><br/>Vue 3.5 · TS strict<br/>523 SFCs · 49 Reka UI primitives<br/>Pinia (client) · Pinia Colada (server)"]:::ui
     end
 
     subgraph Server["⚙️ Laravel Herd / Laravel Cloud"]
-        HTTP["<b>HTTP Kernel</b><br/>402 routes<br/>Fortify · Sanctum · Spatie Permission<br/>CSP · secure-headers · honeypot"]:::app
+        HTTP["<b>HTTP Kernel</b><br/>410 routes<br/>Fortify · Sanctum · Spatie Permission<br/>CSP · secure-headers · honeypot"]:::app
         MOD["<b>22 Module Providers</b><br/>bootstrap/providers.php<br/>ordered by dependency"]:::app
         SH["<b>Shared Kernel</b><br/>AIClient · StoragePort · AuditPort<br/>ExportPort · SpeechSynthesizerPort"]:::app
-        Q["<b>Queue Workers</b><br/>42 jobs · database driver<br/>AI runs · video · exports · backups"]:::work
+        Q["<b>Queue Workers</b><br/>21 jobs · database driver<br/>AI runs · video · exports · backups"]:::work
         SCH["<b>Scheduler</b><br/>backups · sitemap · campaigns"]:::work
     end
 
@@ -365,15 +372,16 @@ All values live in `config/video-edit.php`; the switches are also environment va
 | `silence.mid_sentence_pause_ms` | `300` | Air kept inside a sentence |
 | `breaths.attenuation_db` | `-15` | How far breaths are turned down |
 
-Verified by 377 module tests and by rendering a real clip through FFmpeg 9: a 5 s wait at 3× came out
+Verified by **520 module tests** and by rendering a real clip through FFmpeg: a 5 s wait at 3× came out
 at exactly 1.67 s, and a ducked breath measured −15.0 dB against the surrounding audio.
 
 ---
 
 ## 📦 Module Matrix
 
-23 service providers boot in **dependency order** (see `bootstrap/providers.php` — the ordering comments
-there are load-bearing, not decorative).
+22 service providers boot in **dependency order** (see `bootstrap/providers.php` — the ordering comments
+there are load-bearing, not decorative). The `Tests` column counts test **files**; a single file holds
+many cases (VideoEdits alone runs 520).
 
 | Module | Responsibility | PHP files | Tests |
 |---|---|--:|--:|
@@ -387,22 +395,29 @@ there are load-bearing, not decorative).
 | 🖼️ **Portfolios** | Public work showcase | 27 | — |
 | ✍️ **Blog** | Categories and taxonomy | 32 | 6 |
 | 📝 **Post** | Authoring, TipTap content, publishing | 90 | 13 |
-| 📱 **SocialMedia** | Channel accounts and distribution | 79 | 13 |
-| 📣 **Campaigns** | Outbound campaign orchestration | 72 | 6 |
+| 📱 **SocialMedia** | Channel accounts and distribution | 80 | 14 |
+| 📣 **Campaigns** | Outbound campaign orchestration | 73 | 7 |
 | 📄 **Cvs** | CV storage and rendering | 33 | 6 |
-| 🎯 **CvJobStudio** | ATS scoring, job matching, AI rewrite | 299 | 20 |
+| 🎯 **CvJobStudio** | ATS scoring, job matching, AI rewrite | 311 | 26 |
 | 🧾 **Products** | Billable catalogue — boots before Invoices | 21 | 1 |
 | 🏦 **PaymentAccounts** | Issuer accounts snapshotted onto invoices | 19 | 1 |
 | 💰 **Invoices** | Issuing, line items, PDF export | 59 | 12 |
-| 🔍 **LeadScout** | Lead discovery, geocoding, AI enrichment | 351 | 39 |
-| 📜 **ActivityLog** | Cross-module audit trail surface | 14 | 1 |
+| 🔍 **LeadScout** | Lead discovery, geocoding, AI enrichment | 357 | 43 |
+| 📜 **ActivityLog** | Cross-module audit trail surface, nightly archival | 14 | 1 |
 | 💾 **Backups** | Scheduled backups via spatie/laravel-backup | 26 | 5 |
-| 🎬 **VideoEdits** | FFmpeg pipeline, AI-tool wait detection, Whisper-aware cuts, breath ducking *(spec 001)* | 192 | 44 |
+| 🎬 **VideoEdits** | FFmpeg pipeline, AI-tool wait detection, speech-aware cuts, breath ducking *(spec 001)* | 216 | 53 |
 | 🎓 **CourseScripts** | AI course bibles, scripts, versioned deliverables *(spec 002)* | 210 | 25 |
 | ⚙️ **Shared** | Ports, AI stack, resilience, export, storage, audit | — | — |
 
+**Totals:** 1 911 PHP files · 122 ports · 306 handlers · 195 Spatie `Data` classes · 82 value objects ·
+99 enums · 410 routes · 101 migrations · 523 Vue SFCs · 291 test files.
+
 Specs for the four largest builds live in `specs/`:
 `001-enterprise-auth` · `001-video-edit` · `002-course-scripts` · `003-lead-scout` · `004-cv-ats-job-studio`.
+
+> Counts above are verified against the tree on every README change. If a badge and a
+> paragraph disagree, the paragraph is wrong — regenerate rather than edit by hand.
+
 
 ---
 
@@ -411,17 +426,17 @@ Specs for the four largest builds live in `specs/`:
 | Pattern | Where | Why it earns its place |
 |---|---|---|
 | **Ports & Adapters** | `Domain/Ports/` (122) ↔ `Infrastructure/` | Domain stays framework-free and unit-testable without a database |
-| **CQRS (lite)** | `Application/Commands` vs `Queries` (304 handlers) | Reads and writes evolve independently; no bus, no ceremony |
-| **DTO / Data Transfer** | 194 Spatie `Data` classes | One class is validation + Inertia prop + JSON response + TS type |
+| **CQRS (lite)** | `Application/Commands` vs `Queries` (306 handlers) | Reads and writes evolve independently; no bus, no ceremony |
+| **DTO / Data Transfer** | 195 Spatie `Data` classes | One class is validation + Inertia prop + JSON response + TS type |
 | **Repository** | `Persistence/Repositories/` | Applied **only** where a second implementation or a DB-free test exists |
-| **Value Object** | 74 VOs | Invariants enforced at construction — an invalid state can't be represented |
+| **Value Object** | 82 VOs | Invariants enforced at construction — an invalid state can't be represented |
 | **Domain Events + Listeners** | e.g. `CompanyCountryChanged` → Availability | Cross-module reaction without a cross-module import |
 | **Circuit Breaker** | `Shared/Infrastructure/Resilience/CircuitBreaker` | A dead AI provider fails fast instead of exhausting workers |
 | **Failover Chain** | `ProviderFailover` | `openai → anthropic` (configurable) on provider error |
 | **Decorator** | `PromptCache` wrapping `AIClientInterface` | Caching added without touching a single handler |
-| **Policy / Guard** | 6 Policies + `permission:*` middleware | Authorization at the route edge *and* the model edge |
+| **Policy / Guard** | 7 Policies + `permission:*` middleware | Authorization at the route edge *and* the model edge |
 | **Strategy** | `Http/Export` transformers (PDF / Word / Excel) | One export port, many renderers |
-| **Job / Async Worker** | 42 queued jobs | Long AI and FFmpeg work never blocks a request |
+| **Job / Async Worker** | 21 queued jobs | Long AI and FFmpeg work never blocks a request |
 
 ---
 
@@ -534,6 +549,8 @@ single terminal. The app is then served by Herd at your `APP_URL`.
 <tr><td>Lint JS/Vue</td><td><code>npm run lint</code> · <code>npm run format</code></td></tr>
 <tr><td>Regenerate frontend types</td><td><code>php artisan typescript:transform</code></td></tr>
 <tr><td>Export OpenAPI spec</td><td><code>php artisan scramble:export</code> → <code>api.json</code></td></tr>
+<tr><td>Export a bounded-context spec</td><td><code>php artisan scramble:export --api=video-edits</code> → <code>api-video-edits.json</code></td></tr>
+<tr><td>Browse the API</td><td><code>/docs/api</code> <i>(Scramble UI, per context)</i></td></tr>
 <tr><td>Inspect routes</td><td><code>php artisan route:list --except-vendor</code></td></tr>
 <tr><td>Inspect schema</td><td><code>php artisan db:show</code> · <code>php artisan db:table {table}</code></td></tr>
 <tr><td>Everything CI runs</td><td><code>composer ci:check</code></td></tr>
@@ -588,9 +605,133 @@ Laravel 13 + Vue 3 + Inertia v3. The full checklist lives in `.claude/OWASP/SKIL
 
 ---
 
+## 🔁 CI/CD — Continuous Integration
+
+Every push to `main` and every pull request runs the same gate a reviewer would run by hand.
+`.github/workflows/tests.yml` — one job, `ubuntu-latest`, PHP **8.5** + Node **22**.
+
+```
+composer setup          # install → .env → key:generate → migrate → build
+composer ci:check       # the gate
+```
+
+`composer ci:check` is ordered cheapest-first, so a formatting slip fails in seconds rather than
+after the suite has run:
+
+| Step | Command | Catches |
+|---|---|---|
+| 1 | `npm run lint:check` (ESLint 9 flat config) | Unused vars, missing deps, Vue rule violations |
+| 2 | `npm run format:check` (Prettier) | Formatting drift |
+| 3 | `npm run types:check` (`vue-tsc --noEmit`) | Type errors across all 523 SFCs |
+| 4 | `vendor/bin/pint --parallel --test` | PHP style |
+| 5 | `composer types:check` (Larastan **level 7**) | Static analysis |
+| 6 | `php artisan test` (Pest 5, full suite) | Behaviour |
+
+**Supply-chain hygiene** — the part most READMEs omit:
+
+- `permissions: contents: read` — the job cannot write to the repo.
+- `persist-credentials: false` — the checkout token is not left in `.git/config`.
+- Every action is **pinned to a full commit SHA**, not a floating tag, so a compromised upstream
+  release cannot land in this pipeline.
+- `AWS_EC2_METADATA_DISABLED`, empty API keys and inert storage credentials are forced in
+  `phpunit.xml`, so the suite can never issue a real, billed HTTP call or reach instance metadata.
+
+**Dependabot** (`.github/dependabot.yml`) watches `composer` and `npm` for security updates.
+
+---
+
+## 🗄️ Data Lifecycle & Privacy
+
+This system handles **client speech, invoices and video recordings**. Retention is a feature, not an
+afterthought — every artefact has an owner, a lifetime and a deletion path.
+
+| Artefact | Lifetime | Deletion path |
+|---|---|---|
+| Uploaded media (source files) | `retention.failed_sources_hours` — **24 h** after a failed edit | `video-edits:purge-sources` |
+| Abandoned drafts | `retention.draft_hours` — **24 h** | Sweep deletes them outright |
+| Unanswered cut reviews | `retention.review_hours` — **24 h**, then resolved as **"keep everything"** | Sweep resolves and renders |
+| Extracted speech + workspace files | Until the edit's processing ends | FR-18 wipe, with the workspace |
+| Transcripts | Bound to their edit by FK **cascade** | Deleting the edit deletes the speech |
+| Presigned upload URLs | `upload_ttl_minutes` — **60 min** | Expire by signature |
+| Presigned download URLs | `download_ttl_minutes` — **15 min** | Expire by signature |
+| Activity log | Nightly archival (`activity-log:archive`) | Retention policy |
+| Backups | 7 daily / 16 daily / 8 weekly / 4 monthly / 2 yearly | `keep_*` policies |
+| LeadScout source markdown | `markdown_retention_days` — **30 d** | Scheduled prune |
+
+Three properties worth calling out, because they are the ones usually got wrong:
+
+1. **A transcript is personal data, so it is never cached globally.** `video_edit_transcripts` is
+   keyed `UNIQUE` per edit and cascade-deleted with it. Reuse only ever reads a *previous edit of the
+   same user* with matching source fingerprints — matching across accounts would hand one user's
+   speech into another's video.
+2. **Expired review resolves to "keep everything", not "delete".** When an owner never answers, the
+   safe default is the original footage, not a silent destructive edit.
+3. **Reuse is keyed by provider and model as well as by content.** Word timings are model-specific, so
+   a transcript is only reusable by the transcriber that produced it — otherwise a cached copy would
+   silently move every cut in the timeline.
+
+---
+
+## 🧑‍⚖️ AI Governance — Human in the Loop
+
+Fifteen providers are wired behind one port. What keeps that from being reckless is a consent gate, a
+review gate, and a cost meter — all three enforced in the Application layer, not by convention.
+
+| Control | Mechanism |
+|---|---|
+| **Explicit consent** | `ai_consent_at` on the edit; no consent ⇒ `AiConsentRequiredException`, the model is never called |
+| **AI never cuts unilaterally** | Every AI proposal parks the edit in `awaiting_review`; the render cannot run around an open review (`CutReviewRequiredException`) |
+| **Confidence-aware pre-selection** | Proposals ≥ `VIDEO_EDIT_AI_MIN_CONFIDENCE` (0.8) arrive pre-ticked; weaker ones arrive **unticked and visible**, never discarded |
+| **Bounded retries** | `Failed → Queued` is bounded; an exhausted provider chain ends the run, it does not spin |
+| **Fail fast** | `CircuitBreaker` opens on a dead provider instead of burning worker time |
+| **Ordered failover** | `ProviderFailover` walks a configured chain (`openai → anthropic`) |
+| **Cost control** | `MeteredAiCall` enforces per-purpose LLM budgets; `PromptCache` decorator reuses long-lived prompt layers |
+| **No raw responses persisted** | Only parsed recommendations are stored — provider payloads, which can echo user content, are discarded after parsing |
+| **Refuse rather than guess** | Unknown transcription provider throws; a misspelled config is never silently defaulted |
+
+This is the **LLM Top 10 (2025)** baseline applied concretely: excessive agency is prevented by the
+review gate, sensitive-information disclosure by never logging payloads, and unbounded consumption by
+the circuit breaker plus the meter.
+
+---
+
+## ♿ Accessibility
+
+Accessibility is enforced in the component layer rather than audited after the fact:
+
+- **49 Reka UI primitives** in `components/ui` — headless, ARIA-correct building blocks (dialog, combobox,
+  menu, tabs, toast, drawer, stepper…), styled once through design tokens.
+- **Mobile-first** on every component; layout is fluid before it is fixed.
+- **Design tokens only** — no hardcoded colours anywhere; `resources/css/globals.css` is the single
+  source, and dark mode is one class on `<html>`.
+- **Semantic tokens** carry meaning, so a palette change is not a contrast audit.
+- Keyboard paths come from the primitives rather than being re-implemented per page.
+
+> **Honest status:** these are the practices that make WCAG AA conformance *achievable*, and no
+> third-party accessibility audit has been performed yet. Treat AA as a target under verification, not
+> as a certified claim.
+
+---
+
+## 🧭 Architecture Decision Records
+
+The load-bearing decisions, and what each one cost. Full context lives in `.claude/` and `specs/`.
+
+| # | Decision | Alternative rejected | Why |
+|---|---|---|---|
+| 1 | **Modular monolith**, one deployment | Microservices | One operator. Boundaries are *compile-time* (namespace + provider), so extraction is mechanical, not a rewrite |
+| 2 | **Ports & Adapters with `Domain/Ports/`** | Direct Eloquent in handlers | The domain ring imports no framework, so invariants are unit-testable without a database |
+| 3 | **Spatie `Data` as the only response shape** | `JsonResource` | One class *is* the validator, the Inertia prop, the JSON response and the TS type |
+| 4 | **Frontend types generated, never written** | Hand-maintained interfaces | A mirrored interface is exactly how `any` and silent drift get in |
+| 5 | **Repositories only where earned** | Repository everywhere | Applied where a second implementation or a DB-free test exists — a one-implementation port is boilerplate, not DIP |
+| 6 | **Gemini `verbatim` for transcription** | whisper-1 (the old default) | Whisper normalises fillers away; only Gemini returns word offsets *and* keeps the hesitations the cutters need |
+| 7 | **Consent + review gates on AI output** | Auto-apply AI cuts | Deleting a take the owner wanted is not recoverable from a rendered file |
+
+---
+
 ## 🧪 Testing Strategy
 
-**Pest 5**, 265 test files, colocated with the code they cover.
+**Pest 5**, 291 test files, colocated with the code they cover.
 
 ```
 src/Modules/{Module}/Tests/
@@ -599,7 +740,7 @@ src/Modules/{Module}/Tests/
 ├── Fixtures/    # canned payloads and provider responses
 └── Support/     # module-local helpers and fakes
 
-tests/           # 62 cross-cutting application tests
+tests/           # 65 cross-cutting application tests
 ```
 
 ```bash
@@ -648,17 +789,29 @@ argenis-hub/
 ├── resources/
 │   ├── js/
 │   │   ├── pages/            # Inertia page components
-│   │   ├── modules/          # 24 feature folders (composables, schemas, types)
-│   │   ├── components/       # shadcn-vue (new-york-v4) + app shell
+│   │   ├── modules/          # 25 feature folders (composables, schemas, types)
+│   │   ├── components/ui/   # 49 Reka UI primitives (shadcn-vue new-york-v4)
 │   │   ├── generated/        # generated.d.ts — DO NOT EDIT
 │   │   ├── routes/ actions/  # Wayfinder output — DO NOT EDIT
 │   │   └── common/ lib/      # forms, http client, utilities
 │   └── css/globals.css       # design tokens — the only place colours are defined
 ├── routes/                   # web · api · settings · console (modules mount their own)
-├── database/migrations/      # 97 migrations
+├── database/migrations/      # 101 migrations
 ├── specs/                    # spec-driven-development artefacts per major build
-├── config/                   # 31 config files incl. ai · scramble · csp · secure-headers
-└── api.json                  # exported OpenAPI spec
+├── config/                   # 35 config files incl. ai · scramble · csp · secure-headers
+├── .github/workflows/        # CI: tests.yml
+├── api*.json                 # exported OpenAPI specs (default + per bounded context)
+└── LICENSE                   # MIT
+```
+
+---
+
+## 📄 License
+
+**MIT** — see [`LICENSE`](./LICENSE).
+
+```
+composer.json  →  "license": "MIT"
 ```
 
 ---
@@ -667,6 +820,6 @@ argenis-hub/
 
 **ArgenisHub** — hexagonal by construction, typed end to end, audited by default.
 
-<sub>Architecture rules live in <code>.claude/rules/rules.md</code> · skills in <code>.claude/</code> · specs in <code>specs/</code></sub>
+<sub>MIT licensed · Architecture rules in <code>.claude/rules/rules.md</code> · skills in <code>.claude/</code> · specs in <code>specs/</code></sub>
 
 </div>

@@ -261,16 +261,6 @@ return [
     */
     'provider' => env('VIDEO_EDIT_TRANSCRIPTION_PROVIDER', 'openai'),
 
-    'gemini' => [
-        'api_key' => env('GEMINI_API_KEY'),
-        'model' => env('VIDEO_EDIT_GEMINI_TRANSCRIBE_MODEL', 'gemini-3.5-transcribe'),
-        'timeout_seconds' => (int) env('VIDEO_EDIT_GEMINI_TRANSCRIBE_TIMEOUT', 1_200),
-        // Gemini caps audio at 30 minutes once word timestamps are enabled, while
-        // this module accepts 90. Longer recordings are sliced into chunks and the
-        // word offsets rebased onto the full timeline. Keep this under 30.
-        'chunk_seconds' => (int) env('VIDEO_EDIT_GEMINI_TRANSCRIBE_CHUNK_SECONDS', 1_500),
-    ],
-
     'speech' => [
         'default_language' => env('VIDEO_EDIT_SPEECH_LANGUAGE', 'es'),
 
@@ -284,6 +274,31 @@ return [
         'min_confidence' => 0.5,
         // Longer than this and a prefix match is a real word, not a false start.
         'max_stutter_fragment_ms' => 400,
+
+        /*
+        |----------------------------------------------------------------------
+        | Gemini transcription
+        |----------------------------------------------------------------------
+        |
+        | Sits beside `openai` rather than at the top level on purpose: both are
+        | the same concern — credentials, model and timeout for one transcriber —
+        | and every reader already addressed them as `video-edit.speech.<provider>`.
+        | The block used to live at `video-edit.gemini.*` while GeminiTranscriber
+        | and its test both read `video-edit.speech.gemini.*`, so the key came
+        | back null, the adapter threw "no Gemini API key is configured" on every
+        | call, and the test passed anyway because it set the same wrong key. The
+        | only way that provider ever ran was if something else supplied it.
+        */
+        'gemini' => [
+            'api_key' => env('GEMINI_API_KEY'),
+            'model' => env('VIDEO_EDIT_GEMINI_TRANSCRIBE_MODEL', 'gemini-3.5-transcribe'),
+            'timeout_seconds' => (int) env('VIDEO_EDIT_GEMINI_TRANSCRIBE_TIMEOUT', 1_200),
+            // Gemini caps audio at 30 minutes once word timestamps are enabled,
+            // while this module accepts 90. Longer recordings are sliced into
+            // chunks and the word offsets rebased onto the full timeline. Keep
+            // this under 30.
+            'chunk_seconds' => (int) env('VIDEO_EDIT_GEMINI_TRANSCRIBE_CHUNK_SECONDS', 1_500),
+        ],
 
         'openai' => [
             'api_key' => env('OPENAI_API_KEY'),

@@ -14,13 +14,23 @@ use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditTrans
  * The reuse lookup joins through `video_edits` so it can filter on the owner:
  * matching only on the content fingerprint would hand one user's transcribed
  * speech to another who happened to upload the same file.
+ *
+ * Provider and model are part of that lookup, not just columns. Word timings are
+ * model-specific, so a whisper-1 transcript reused by a gemini run would move
+ * every cut — and this table is where the reuse decision is actually made.
  */
 final readonly class EloquentTranscriptStore implements TranscriptStorePort
 {
-    public function findReusable(int $userId, string $sourceFingerprint): ?Transcript
-    {
+    public function findReusable(
+        int $userId,
+        string $sourceFingerprint,
+        string $provider,
+        string $model,
+    ): ?Transcript {
         $stored = VideoEditTranscriptEloquentModel::query()
             ->where('source_fingerprint', $sourceFingerprint)
+            ->where('provider', $provider)
+            ->where('model', $model)
             ->whereHas('videoEdit', static fn ($query) => $query->where('user_id', $userId))
             ->latest('created_at')
             ->first();

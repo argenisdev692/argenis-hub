@@ -79,6 +79,19 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <!-- Video Edits dispatches on its own Redis (Upstash) connection; keep tests off the network. -->
         <env name="VIDEO_EDIT_QUEUE_CONNECTION" value="sync"/>
+        <!--
+            The transcription provider is pinned for the same reason as every other
+            value above: the suite must not depend on the developer's .env, and this
+            one is a behavioural switch, not a credential.
+
+            Several tests assert whisper-1's behaviour directly — SpeechTranscriptionTest
+            fakes the OpenAI upload endpoint and checks word timings, GeminiTranscriberTest
+            asserts the port "resolves to Whisper by default". Reading the provider from
+            .env meant flipping the installation to gemini turned 8 of them red on a
+            developer machine and green in CI, which is the definition of an untested
+            default. Tests that need the other provider set it with config()->set().
+        -->
+        <env name="VIDEO_EDIT_TRANSCRIPTION_PROVIDER" value="openai"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

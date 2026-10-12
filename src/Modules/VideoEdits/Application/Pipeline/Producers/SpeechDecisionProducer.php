@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\VideoEdits\Application\Pipeline\Producers;
 
 use Illuminate\Contracts\Config\Repository as Config;
+use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\SpeechCategory;
@@ -43,6 +44,7 @@ final readonly class SpeechDecisionProducer implements CutDecisionProducer
         private TranscriptStorePort $transcripts,
         private VideoEditWorkspacePort $workspace,
         private SpeechDisfluencyDetector $detector,
+        private TranscriptionIdentity $identity,
         private Config $config,
     ) {}
 
@@ -111,7 +113,12 @@ final readonly class SpeechDecisionProducer implements CutDecisionProducer
         $contentKey = $context->contentKey();
         $reusable = $context->ownerId === null || $context->sourceFingerprints === []
             ? null
-            : $this->transcripts->findReusable($context->ownerId, $contentKey);
+            : $this->transcripts->findReusable(
+                $context->ownerId,
+                $contentKey,
+                $this->identity->provider(),
+                $this->identity->model(),
+            );
 
         if ($reusable !== null) {
             return $reusable;
@@ -124,12 +131,17 @@ final readonly class SpeechDecisionProducer implements CutDecisionProducer
         $transcript = $this->transcribeFresh($context, $audioPath);
 
         if ($context->videoEditId !== null && $context->sourceFingerprints !== []) {
+            // The provider that ACTUALLY transcribed this audio, not the one the
+            // module used to default to. Filing a gemini transcript under
+            // `openai`/`whisper-1` would put whisper timings on the reuse key,
+            // which is how a whisper-1 transcript came to be handed back to a
+            // gemini run.
             $this->transcripts->store(
                 $context->videoEditId,
                 $contentKey,
                 $transcript,
-                'openai',
-                (string) $this->config->get('video-edit.speech.openai.model'),
+                $this->identity->provider(),
+                $this->identity->model(),
             );
         }
 

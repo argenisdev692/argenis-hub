@@ -121,7 +121,7 @@ it('keeps silence cuts off the words of a transcript stored for the same sources
     $this->editor->silences = [new TimeRange(10_000, 12_000)];
     app()->instance(TranscriptStorePort::class, new class implements TranscriptStorePort
     {
-        public function findReusable(int $userId, string $sourceFingerprint): ?Transcript
+        public function findReusable(int $userId, string $sourceFingerprint, string $provider, string $model): ?Transcript
         {
             return new Transcript([new TranscriptWord('compartir', 9_500, 10_400)]);
         }

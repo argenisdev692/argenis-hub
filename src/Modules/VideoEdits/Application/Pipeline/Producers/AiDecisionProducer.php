@@ -7,6 +7,7 @@ namespace Modules\VideoEdits\Application\Pipeline\Producers;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Support\Str;
+use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
@@ -76,6 +77,7 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
         private AiCutReviewStorePort $reviews,
         private SpeechPaceAnalyzer $pace,
         private ClippedWordDetector $clarity,
+        private TranscriptionIdentity $identity,
         private Config $config,
     ) {}
 
@@ -256,7 +258,12 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
             return null;
         }
 
-        return $this->transcripts->findReusable($context->ownerId, $context->contentKey());
+        return $this->transcripts->findReusable(
+            $context->ownerId,
+            $context->contentKey(),
+            $this->identity->provider(),
+            $this->identity->model(),
+        );
     }
 
     private function script(DecisionContext $context): ?ScriptDocument

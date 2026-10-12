@@ -6,6 +6,7 @@ namespace Modules\VideoEdits\Application\Pipeline\Producers;
 
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Support\Str;
+use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
 use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\SpeechCategory;
@@ -81,6 +82,7 @@ final readonly class FailedTakeReviewProducer implements CutDecisionProducer
         private FailedTakeDetector $failedTakes,
         private RestartDetector $restarts,
         private AiCutReviewStorePort $reviews,
+        private TranscriptionIdentity $identity,
         private Config $config,
     ) {}
 
@@ -140,7 +142,12 @@ final readonly class FailedTakeReviewProducer implements CutDecisionProducer
             throw new CutReviewRequiredException(count($review->cuts));
         }
 
-        $transcript = $this->transcripts->findReusable($context->ownerId, $context->contentKey());
+        $transcript = $this->transcripts->findReusable(
+            $context->ownerId,
+            $context->contentKey(),
+            $this->identity->provider(),
+            $this->identity->model(),
+        );
 
         if ($transcript === null || $transcript->isEmpty()) {
             return [];

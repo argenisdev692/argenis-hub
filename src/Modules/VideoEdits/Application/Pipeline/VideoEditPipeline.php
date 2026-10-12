@@ -6,6 +6,7 @@ namespace Modules\VideoEdits\Application\Pipeline;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as Config;
+use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
@@ -60,6 +61,7 @@ final readonly class VideoEditPipeline
         private CutPlanner $planner,
         private ScriptTextExtractorPort $scriptExtractor,
         private TranscriptStorePort $transcripts,
+        private TranscriptionIdentity $identity,
         private Config $config,
     ) {}
 
@@ -350,7 +352,12 @@ final readonly class VideoEditPipeline
             return null;
         }
 
-        return $this->transcripts->findReusable($context->ownerId, $context->contentKey());
+        return $this->transcripts->findReusable(
+            $context->ownerId,
+            $context->contentKey(),
+            $this->identity->provider(),
+            $this->identity->model(),
+        );
     }
 
     private function assertWithinDurationLimit(int $sourcesDurationMs): void
