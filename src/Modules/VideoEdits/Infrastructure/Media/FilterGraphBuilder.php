@@ -52,6 +52,54 @@ final readonly class FilterGraphBuilder
     public const int DEFAULT_JOIN_AIR_MS = 80;
 
     /**
+     * FFmpeg `adeclick` defaults, restated here so config can read them and a
+     * test can assert the chain without depending on the build's own defaults.
+     */
+    public const int DEFAULT_DECLICK_WINDOW_MS = 20;
+
+    public const int DEFAULT_DECLICK_OVERLAP_PERCENT = 75;
+
+    public const int DEFAULT_DECLICK_THRESHOLD = 2;
+
+    public const string DEFAULT_DECLICK_METHOD = 'save';
+
+    /**
+     * Why this exists instead of a longer fade.
+     *
+     * An `afade` is a gain ramp: it multiplies whatever is in its window, and it
+     * does not care whether that is room tone or a syllable. Applied where a seam
+     * lands on speech it ramps the word's attack down from zero, and the word is
+     * audibly quieter than its neighbours — the fault reported as "some words lose
+     * volume when I tidy them". No curve fixes it: `tri`, `qsin` and `exp` all
+     * change the SHAPE of the dip, never whether it happens.
+     *
+     * `adeclick` is the filter built for this job and it is a different kind of
+     * operation. It classifies individual samples as impulsive, reconstructs
+     * those from their neighbours by autoregressive interpolation, and with
+     * `method=save` (overlap-save) leaves every sample it did not classify
+     * bit-identical. So the click is repaired and the word is not touched —
+     * which is the outcome a fade was only ever approximating.
+     *
+     * It runs ONCE, on the concatenated result, never per segment: a click is a
+     * property of a seam, and a per-segment pass would also be looking at speech
+     * that was never discontinuous.
+     */
+    private function declick(): string
+    {
+        if (! $this->declickEnabled) {
+            return '';
+        }
+
+        return sprintf(
+            'adeclick=w=%s:o=%d:t=%d:m=%s',
+            self::seconds($this->declickWindowMs),
+            max(50, min(95, $this->declickOverlapPercent)),
+            max(1, min(100, $this->declickThreshold)),
+            $this->declickMethod === 'add' ? 'add' : 'save',
+        );
+    }
+
+    /**
      * Room-tone cleanup, off unless every value is configured.
      *
      * `afftdn` is a spectral denoiser: it learns the noise floor of the material
@@ -75,6 +123,11 @@ final readonly class FilterGraphBuilder
         private ?float $truePeakDbTp = null,
         private ?float $loudnessRange = null,
         private ?VoiceChain $voiceChain = null,
+        private bool $declickEnabled = false,
+        private int $declickWindowMs = self::DEFAULT_DECLICK_WINDOW_MS,
+        private int $declickOverlapPercent = self::DEFAULT_DECLICK_OVERLAP_PERCENT,
+        private int $declickThreshold = self::DEFAULT_DECLICK_THRESHOLD,
+        private string $declickMethod = self::DEFAULT_DECLICK_METHOD,
     ) {}
 
     /**
@@ -189,13 +242,29 @@ final readonly class FilterGraphBuilder
         $parts = [];
         $pairs = '';
         $lastIndex = count($segments) - 1;
+        $clearances = $effects?->seamClearances ?? [];
 
-        foreach ($segments as $index => [$range, $speed]) {
+        // A compressed wait splits one kept range into several segments, so the
+        // clearances — which are measured per keep range — have to be re-anchored
+        // to segments before they can be used.
+        $firstOfKeep = [];
+        $lastOfKeep = [];
+
+        foreach ($segments as $index => [, , $keepIndex]) {
+            $firstOfKeep[$keepIndex] ??= $index;
+            $lastOfKeep[$keepIndex] = $index;
+        }
+
+        foreach ($segments as $index => [$range, $speed, $keepIndex]) {
             $isSpedUp = $speed > 1.0;
             $outputMs = $isSpedUp ? (int) ceil($range->durationMs() / $speed) : $range->durationMs();
             // The recording's own open and close are not seams; only the ones
             // between two kept fragments need the breath treatment.
             $airMs = $index < $lastIndex ? max(0, $this->joinAirMs) : 0;
+            // A sped-up segment plays its source time faster, so air measured on
+            // the source timeline has to be scaled onto the output it lands in.
+            $leadScale = $isSpedUp ? 1.0 / $speed : 1.0;
+            $clearance = $clearances[$keepIndex] ?? null;
 
             $parts[] = sprintf(
                 '[0:v:0]trim=start=%s:end=%s,%s%s[v%d]',
@@ -212,7 +281,20 @@ final readonly class FilterGraphBuilder
                     self::seconds($range->endMs),
                     $isSpedUp || $effects === null ? '' : self::attenuations($range, $effects),
                     $isSpedUp ? sprintf(',atempo=%s', self::factor($speed)) : '',
-                    self::joinFades($outputMs, fadeIn: $index > 0, fadeOut: $index < $lastIndex),
+                    self::joinFades(
+                        $outputMs,
+                        fadeIn: $index > 0,
+                        fadeOut: $index < $lastIndex,
+                        // Only the fragment's own outer edges are seams against
+                        // speech; the joins inside a sped-up wait are between two
+                        // stretches of tool silence.
+                        leadInMs: $clearance !== null && $index === $firstOfKeep[$keepIndex]
+                            ? (int) round($clearance[0] * $leadScale)
+                            : null,
+                        leadOutMs: $clearance !== null && $index === $lastOfKeep[$keepIndex]
+                            ? (int) round($clearance[1] * $leadScale)
+                            : null,
+                    ),
                     self::heldAir($airMs),
                     $index,
                 )
@@ -222,7 +304,14 @@ final readonly class FilterGraphBuilder
 
         $parts[] = sprintf('%sconcat=n=%d:v=1:a=1[cv][ca]', $pairs, count($segments));
         $parts[] = sprintf('[cv]%s%s', $this->videoNormalization($profile), self::VIDEO_OUTPUT);
-        $parts[] = sprintf('[ca]%s%s', $this->audioNormalization($profile), self::AUDIO_OUTPUT);
+        // De-clicking runs on the joined result, before denoise and loudness: a
+        // click is a property of a seam, and repairing it before the noise floor
+        // is learned keeps the denoiser from treating the repair as signal.
+        $parts[] = sprintf(
+            '[ca]%s%s',
+            implode(',', array_filter([$this->declick(), $this->audioNormalization($profile)])),
+            self::AUDIO_OUTPUT,
+        );
 
         return implode(';', $parts);
     }
@@ -255,15 +344,19 @@ final readonly class FilterGraphBuilder
     /**
      * Each kept range, split where a compressed range starts and ends.
      *
+     * The third element is the index of the keep range the segment came from,
+     * which is what re-anchors the plan's per-fragment seam clearances onto the
+     * segments the filter graph actually builds.
+     *
      * @param  list<TimeRange>  $keepRanges
      * @param  list<CompressedRange>  $compressedRanges
-     * @return list<array{0: TimeRange, 1: float}>
+     * @return list<array{0: TimeRange, 1: float, 2: int}>
      */
     private static function segments(array $keepRanges, array $compressedRanges): array
     {
         $segments = [];
 
-        foreach ($keepRanges as $keep) {
+        foreach ($keepRanges as $keepIndex => $keep) {
             $cursor = $keep->startMs;
 
             foreach ($compressedRanges as $compressed) {
@@ -275,15 +368,15 @@ final readonly class FilterGraphBuilder
                 }
 
                 if ($start > $cursor) {
-                    $segments[] = [new TimeRange($cursor, $start), 1.0];
+                    $segments[] = [new TimeRange($cursor, $start), 1.0, $keepIndex];
                 }
 
-                $segments[] = [new TimeRange($start, $end), $compressed->speed];
+                $segments[] = [new TimeRange($start, $end), $compressed->speed, $keepIndex];
                 $cursor = $end;
             }
 
             if ($keep->endMs > $cursor) {
-                $segments[] = [new TimeRange($cursor, $keep->endMs), 1.0];
+                $segments[] = [new TimeRange($cursor, $keep->endMs), 1.0, $keepIndex];
             }
         }
 
@@ -326,17 +419,22 @@ final readonly class FilterGraphBuilder
     /**
      * Fades only the edges that meet another range: the very start and end of
      * the recording are not joins and keep their original attack and decay.
+     *
+     * `leadInMs` / `leadOutMs` are the silence actually measured at that edge.
+     * A null means nothing is known about it — no transcript, so no measurement —
+     * and the configured fade is used rather than none, because an unfaded seam
+     * clicks. A known zero is different and is honoured: that is a seam landing
+     * straight on a word, and fading it would turn the word down, so the fade is
+     * dropped and `adeclick` repairs the discontinuity instead.
      */
-    private function joinFades(int $durationMs, bool $fadeIn, bool $fadeOut): string
+    private function joinFades(int $durationMs, bool $fadeIn, bool $fadeOut, ?int $leadInMs = null, ?int $leadOutMs = null): string
     {
-        $fadeMs = min($this->joinFadeMs, intdiv($durationMs, 2));
+        $ceiling = max(0, intdiv($durationMs, 2));
+        $fadeInMs = $fadeIn ? min($this->joinFadeMs, $ceiling, max(0, $leadInMs ?? $this->joinFadeMs)) : 0;
+        $fadeOutMs = $fadeOut ? min($this->joinFadeMs, $ceiling, max(0, $leadOutMs ?? $this->joinFadeMs)) : 0;
 
-        if ($fadeMs <= 0) {
-            return '';
-        }
-
-        return ($fadeIn ? sprintf(',afade=t=in:st=0:d=%s', self::seconds($fadeMs)) : '')
-            .($fadeOut ? sprintf(',afade=t=out:st=%s:d=%s', self::seconds($durationMs - $fadeMs), self::seconds($fadeMs)) : '');
+        return ($fadeInMs > 0 ? sprintf(',afade=t=in:st=0:d=%s', self::seconds($fadeInMs)) : '')
+            .($fadeOutMs > 0 ? sprintf(',afade=t=out:st=%s:d=%s', self::seconds($durationMs - $fadeOutMs), self::seconds($fadeOutMs)) : '');
     }
 
     private static function factor(float $speed): string

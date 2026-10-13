@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Tests\Support;
 
+use Closure;
 use DateTimeInterface;
 use RuntimeException;
 use Shared\Domain\Exceptions\StorageObjectNotFoundException;
@@ -57,7 +58,7 @@ final class FakeStorage implements StoragePort
         return 'https://public.storage.test/'.$this->key($path);
     }
 
-    public function copyToLocal(string $path, string $localPath): void
+    public function copyToLocal(string $path, string $localPath, ?Closure $onProgress = null): void
     {
         $key = $this->key($path);
 
@@ -70,6 +71,10 @@ final class FakeStorage implements StoragePort
         }
 
         file_put_contents($localPath, $this->objects[$key]);
+
+        // Reported in one go: an in-memory object is instantaneous, so a fake
+        // that dribbled chunks would only make a test's progress assertions lie.
+        $onProgress?->__invoke(strlen($this->objects[$key]), strlen($this->objects[$key]));
     }
 
     public function putFromPath(string $path, string $localPath, string $visibility = 'private'): string

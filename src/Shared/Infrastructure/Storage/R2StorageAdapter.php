@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Shared\Infrastructure\Storage;
 
 use Carbon\CarbonImmutable;
+use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use League\Flysystem\UnableToRetrieveMetadata;
@@ -24,6 +25,13 @@ use Shared\Domain\Ports\StoragePort;
  */
 final readonly class R2StorageAdapter implements StoragePort
 {
+    /**
+     * 256 KiB. Large enough that the per-chunk overhead disappears against a
+     * network copy, small enough that a progress bar moves several times a
+     * second rather than jumping once at the end.
+     */
+    private const int COPY_CHUNK_BYTES = 262_144;
+
     private Filesystem $disk;
 
     public function __construct(?string $disk = null)
@@ -110,7 +118,7 @@ final readonly class R2StorageAdapter implements StoragePort
         return $this->disk->url($this->normalizeObjectKey($path));
     }
 
-    public function copyToLocal(string $path, string $localPath): void
+    public function copyToLocal(string $path, string $localPath, ?Closure $onProgress = null): void
     {
         $key = $this->normalizeObjectKey($path);
         $stream = $this->disk->readStream($key);
@@ -130,7 +138,8 @@ final readonly class R2StorageAdapter implements StoragePort
             }
 
             try {
-                $copied = stream_copy_to_stream($stream, $out);
+                $copied = $this->copyWithProgress($stream, $out, $onProgress);
+
                 if ($copied === false) {
                     throw new \RuntimeException("Failed to copy storage object [{$key}] to local disk.");
                 }
@@ -142,6 +151,58 @@ final readonly class R2StorageAdapter implements StoragePort
                 fclose($stream);
             }
         }
+    }
+
+    /**
+     * Chunked so a multi-gigabyte source can report as it lands.
+     *
+     * `stream_copy_to_stream` does the same work in one blocking call, which is
+     * exactly why nothing could be reported while it ran: the caller had no
+     * moment at which to ask. Reading in slices costs nothing measurable at this
+     * chunk size and hands the caller a number it can show.
+     *
+     * The total comes from the stream's own metadata when the adapter can see it.
+     * When it cannot, `-1` is reported rather than a guess — a caller showing a
+     * percentage against a fabricated denominator is worse than one showing
+     * bytes.
+     */
+    private function copyWithProgress(mixed $stream, mixed $out, ?Closure $onProgress): int|false
+    {
+        if ($onProgress === null) {
+            return stream_copy_to_stream($stream, $out);
+        }
+
+        $total = $this->streamSize($stream);
+        $copied = 0;
+
+        while (! feof($stream)) {
+            $chunk = fread($stream, self::COPY_CHUNK_BYTES);
+
+            if ($chunk === false) {
+                return false;
+            }
+
+            if ($chunk !== '') {
+                $written = fwrite($out, $chunk);
+
+                if ($written === false) {
+                    return false;
+                }
+
+                $copied += $written;
+            }
+
+            $onProgress($copied, $total);
+        }
+
+        return $copied;
+    }
+
+    private function streamSize(mixed $stream): int
+    {
+        $stats = fstat($stream);
+
+        return is_array($stats) && ($stats['size'] ?? null) !== null ? (int) $stats['size'] : -1;
     }
 
     public function putFromPath(string $path, string $localPath, string $visibility = 'private'): string

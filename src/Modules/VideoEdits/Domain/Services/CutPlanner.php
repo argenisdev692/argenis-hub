@@ -23,12 +23,15 @@ use Modules\VideoEdits\Domain\ValueObjects\WaitCompressionPolicy;
  * Steps, in order: keep a speech margin inside every silence (D5), wider in
  * the middle of a sentence → keep silence cuts off every transcribed word →
  * set aside silences where the screen was busy (tool waits) → trim every other
- * cut back off those waits, so nothing splices into a tool mid-work → merge
- * overlapping / touching cuts, uniting reasons and origins (D8) → absorb kept
- * fragments too short to be worth keeping (D6) → speed up the tool waits that
- * survived the cuts → turn down the breaths between words → refuse plans that
- * leave less than the minimum output (D6) → derive the complementary keep
- * ranges. Adapted from GUIDE/VideoExport CutPlanner, now in milliseconds.
+ * cut back off those waits, so nothing splices into a tool mid-work → grow every
+ * other cut just far enough to take the dangling words at its edges and then
+ * take the air around them, so no seam lands mid-word and none leaves a hole →
+ * merge overlapping / touching cuts, uniting reasons and origins (D8) → absorb
+ * kept fragments too short to be worth keeping (D6) → speed up the tool waits
+ * that survived the cuts → turn down the breaths between words → refuse plans
+ * that leave less than the minimum output (D6) → derive the complementary keep
+ * ranges and measure the silence at each of their edges. Adapted from
+ * GUIDE/VideoExport CutPlanner, now in milliseconds.
  */
 final readonly class CutPlanner
 {
@@ -65,6 +68,7 @@ final readonly class CutPlanner
         private int $breathMinGapMs = 0,
         private int $midSentencePauseMs = 0,
         private ?CutEdgeTrimmer $edgeTrimmer = null,
+        private ?CutSeamTrimmer $seamTrimmer = null,
     ) {}
 
     /**
@@ -106,15 +110,80 @@ final readonly class CutPlanner
             }
         }
 
+        $keepRanges = $this->keepRanges($cuts, $durationMs);
+
         return new CutPlan(
             appliedCuts: $appliedCuts,
-            keepRanges: $this->keepRanges($cuts, $durationMs),
+            keepRanges: $keepRanges,
             decisions: $decisions,
             originalDurationMs: $durationMs,
             finalDurationMs: $finalDurationMs,
             compressedRanges: $compressedRanges,
             attenuatedRanges: $attenuatedRanges,
+            seamClearances: $this->seamClearances($keepRanges, $words),
         );
+    }
+
+    /**
+     * The silence sitting at the head and the tail of every kept fragment.
+     *
+     * This is measured on the ORIGINAL timeline, which is the point: the
+     * renderer fades each segment edge in output time, and what it needs to know
+     * is whether that edge lands on air or on speech. A segment whose head
+     * starts straight into a word gets a shorter fade (and `adeclick` takes the
+     * click instead of the level), while one opening on the 250 ms of breath
+     * {@see CutSeamTrimmer} guarantees can take the full fade.
+     *
+     * A fragment holding no word at all is air end to end, so it reports its
+     * whole duration and the fade is never starved for want of room.
+     *
+     * @param  list<TimeRange>  $keepRanges
+     * @param  list<TranscriptWord>  $words
+     * @return list<array{0: int, 1: int}> aligned with $keepRanges by index
+     */
+    private function seamClearances(array $keepRanges, array $words): array
+    {
+        $sorted = $words;
+        usort($sorted, static fn (TranscriptWord $a, TranscriptWord $b): int => [$a->startMs, $a->endMs] <=> [$b->startMs, $b->endMs]);
+        $cursor = 0;
+        $count = count($sorted);
+        $clearances = [];
+
+        foreach ($keepRanges as $range) {
+            $first = null;
+            $last = null;
+
+            // One forward pass over both lists: the ranges are ordered and
+            // disjoint, so the cursor never has to walk back.
+            while ($cursor < $count) {
+                $word = $sorted[$cursor];
+
+                if ($word->endMs <= $range->startMs) {
+                    $cursor++;
+
+                    continue;
+                }
+
+                if ($word->startMs >= $range->endMs) {
+                    break;
+                }
+
+                $first ??= $word;
+                $last = $word;
+                $cursor++;
+            }
+
+            $clearances[] = [
+                $first instanceof TranscriptWord
+                    ? max(0, $first->startMs - $range->startMs)
+                    : $range->durationMs(),
+                $last instanceof TranscriptWord
+                    ? max(0, $range->endMs - $last->endMs)
+                    : $range->durationMs(),
+            ];
+        }
+
+        return $clearances;
     }
 
     /**
@@ -170,15 +239,32 @@ final readonly class CutPlanner
 
                     continue;
                 }
-            } elseif ($this->edgeTrimmer !== null && $words !== [] && $decision->reason !== CutReason::Manual) {
+            } elseif ($decision->reason !== CutReason::Manual) {
                 // Widening happens before the tool-wait guard below so the guard
                 // sees the final range and can still refuse a cut that now reaches
                 // into a wait. Manual ranges are the owner's own call and are left
                 // exactly as they were typed.
-                $ranges = array_map(
-                    fn (array $range): array => $this->edgeTrimmer->absorbDanglingEdges($range[0], $range[1], $words),
-                    $ranges,
-                );
+                //
+                // Word absorption runs first: a cut that has just swallowed the
+                // conjunction before it now starts at that word's onset, so the
+                // seam margin has to measure the air from there rather than from
+                // where the model first pointed.
+                if ($words !== [] && $this->edgeTrimmer !== null) {
+                    $ranges = array_map(
+                        fn (array $range): array => $this->edgeTrimmer->absorbDanglingEdges($range[0], $range[1], $words),
+                        $ranges,
+                    );
+                }
+
+                // And only then the air: the silence the words left behind is
+                // what the listener hears as a hole once the two kept fragments
+                // are welded together.
+                if ($words !== [] && $this->seamTrimmer !== null) {
+                    $ranges = array_map(
+                        fn (array $range): array => $this->seamTrimmer->absorbFlankingSilence($range[0], $range[1], $words),
+                        $ranges,
+                    );
+                }
             }
 
             foreach ($ranges as [$start, $end]) {

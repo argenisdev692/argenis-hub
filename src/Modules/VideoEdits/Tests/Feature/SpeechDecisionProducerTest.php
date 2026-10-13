@@ -14,9 +14,11 @@ use Modules\VideoEdits\Domain\Enums\SpeechCategory;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Ports\TranscriptionPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
+use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
 use Modules\VideoEdits\Domain\ValueObjects\CutDecision;
 use Modules\VideoEdits\Domain\ValueObjects\DecisionContext;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
+use Modules\VideoEdits\Domain\ValueObjects\SpeechDetection;
 use Modules\VideoEdits\Domain\ValueObjects\Transcript;
 use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
@@ -401,4 +403,69 @@ it('offers the marker as a category with nothing left out of the default set', f
     // only ever removed for a user who found the switch.
     expect(SpeechCategory::values())->toContain('pause_marker')
         ->and(count(SpeechCategory::all()))->toBe(count(SpeechCategory::values()));
+});
+
+it('removes the fillers that were surviving every AI edit', function (): void {
+    // "Okay, okey… muy bien, vamos a ver." These were spoken in every take and
+    // survived every edit, while the pause markers in the same recordings were
+    // removed — which is exactly the asymmetry: the marker has a dictionary
+    // entry and these did not.
+    //
+    // The model could not have caught them either. The agent is explicitly
+    // forbidden from proposing filler cuts, because its word indices are guesses
+    // and the timings here are exact — so the dictionary is the only layer that
+    // can remove a filler, and an absent entry means nothing ever will.
+    $detectedAs = static fn (array $detections): array => array_map(
+        static fn (SpeechDetection $detection): array => [$detection->category->value, $detection->startMs, $detection->endMs],
+        $detections,
+    );
+
+    expect($detectedAs(app(SpeechDisfluencyDetector::class)->detect(
+        new Transcript([
+            new TranscriptWord('Okay', 1_000, 1_400),
+            new TranscriptWord('okey', 1_600, 1_900),
+            new TranscriptWord('muy', 2_200, 2_400),
+            new TranscriptWord('bien', 2_450, 2_800),
+            new TranscriptWord('vamos', 3_100, 3_600),
+        ]),
+        [SpeechCategory::FillerWord],
+    )))->toBe([
+        ['filler_word', 1_000, 1_400],
+        ['filler_word', 1_600, 1_900],
+        // "muy bien" goes as a unit: neither half is padding on its own, so
+        // listing only "bien" would delete a real word.
+        ['filler_word', 2_200, 2_800],
+    ]);
+});
+
+it('keeps a filler word inside a sentence that still reads', function (): void {
+    // The trade every entry in this dictionary makes, asserted so it stays a
+    // deliberate one rather than an accident: "okay" is a word someone can be
+    // SAYING, and this dictionary cannot tell the two apart.
+    $detections = app(SpeechDisfluencyDetector::class)->detect(
+        new Transcript([
+            new TranscriptWord('Escribir', 1_000, 1_300),
+            new TranscriptWord('Okay', 1_350, 1_600),
+            new TranscriptWord('en', 1_650, 1_750),
+            new TranscriptWord('el', 1_800, 1_850),
+            new TranscriptWord('campo', 1_900, 2_400),
+        ]),
+        [SpeechCategory::FillerWord],
+    );
+
+    expect($detections)->toHaveCount(1)
+        ->and($detections[0]->startMs)->toBe(1_350)
+        ->and($detections[0]->endMs)->toBe(1_600);
+});
+
+it('asks Whisper to keep the fillers in the transcript at all', function (): void {
+    // The other half of the fix. Whisper tidies its transcript and drops
+    // interjections unless the prompt shows it verbatim speech, so on a recording
+    // where the word was normalised away the dictionary alone cannot help — there
+    // is nothing in the transcript left to match.
+    $prompt = (string) config('video-edit.speech.openai.prompts.es');
+
+    expect($prompt)->toContain('Okay')
+        ->and($prompt)->toContain('Okey')
+        ->and($prompt)->toContain('Muy bien');
 });

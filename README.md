@@ -385,11 +385,55 @@ by recognising an app, so it works with any tool.
 | **Asymmetric padding** | 250 ms kept after speech, 100 ms before it — Spanish words fade out on an unstressed syllable | — |
 | **Sentence-aware pauses** | A pause cut mid-sentence keeps 300 ms of air; a pause after `.` `?` `!` is cut tight | ✅ |
 | **Breath ducking** | Gaps between words (breath, lip noise) are turned down **−15 dB** with 60 ms ramps — never cut, so the voice keeps its rhythm | ✅ |
-| **Verbatim Whisper prompt** | A per-language style prompt with hesitations in it, so Whisper transcribes the "eh" / "mmm" it would otherwise tidy away — and speech cleanup can remove them | ✅ |
-| **Click-free joins** | 15 ms audio fade at every join | — |
+| **Verbatim Whisper prompt** | A per-language style prompt with hesitations in it, so Whisper transcribes the "eh" / "mmm" / "okay" it would otherwise tidy away — and speech cleanup can remove them | ✅ |
+| **Seam air** | Every non-silence cut grows into the silence at its own edges and hands a fixed **250 ms** breath back, so removing a mid-sentence phrase no longer leaves a hole | ✅ |
+| **Speech-aware fades** | The join fade is shortened to the silence measured at that edge, and dropped entirely where the seam lands on a word | ✅ |
+| **De-clicked joins** | `adeclick` repairs the discontinuity on the joined result without touching the samples around it | — |
+| **Click-free joins** | 40 ms audio fade + 80 ms of room tone at every join | — |
 
 "Needs a transcript" means the edit runs with speech cleanup or AI edit enabled; a silence-only
 edit still reuses a transcript already stored for the same clips.
+
+### Seams: why a removed phrase used to leave a hole
+
+Three faults, all of them audible in the delivered file, and none of them a tuning problem.
+
+**The hole — `vamos… a … ingresar este prompt`.** A cut proposed from word timings spans exactly
+the removed *words*, so the silence that surrounded them survived on both sides and the two kept
+fragments were welded **silence to silence**. Only silence cuts were ever inset by a padding; a
+filler, a stutter or any of the four AI reasons got none of it. `CutSeamTrimmer` now closes it the
+way auto-editor's `--margin` does — consume the flanking silence, then restore a fixed breath. The
+target is **consistency, not zero**: a uniform breath reads as an intentional cut, whereas whatever
+silence happened to be lying there reads as a glitch. The 250 ms is the *total* air at a seam, split
+across both sides in proportion to the silence each side had, so a lopsided seam does not stay
+lopsided. Growth is bounded twice — 600 ms in total, and structurally it can never reach a
+neighbouring word, because each side's share is a fraction of the silence that side actually had.
+
+**The quieter words.** An `afade` is a *gain ramp*: it multiplies whatever is in its window and does
+not care whether that is room tone or a syllable. Where a seam landed on speech it ramped the word's
+attack down from zero, and the word came out quieter than its neighbours. No curve fixes this —
+`tri`, `qsin` and `exp` change the shape of the dip, never whether it happens. So the fade is now
+sized to the silence actually measured at that edge (`CutPlan::seamClearances`), dropped where there
+is none, and `adeclick` repairs the discontinuity instead: it reconstructs only the samples it
+classifies as impulsive and leaves every other sample bit-identical.
+
+**The fillers that survived.** `okay`, `okey` and `muy bien` were spoken in every take and removed
+from none of them. The cause was not the model — `AnalyzeVideoEditAgent` is *deliberately* forbidden
+from proposing filler cuts, because its word indices are guesses while the transcript's timings are
+exact. The dictionaries simply had no entry, so no layer could remove them. Whisper's prompt mattered
+too: it tidies interjections away unless the prompt shows it verbatim speech, so a filler missing from
+the prompt may never reach the transcript at all.
+
+| Config | Default | Purpose |
+|---|---|---|
+| `VIDEO_EDIT_SEAM_BREATH_MS` | `250` | Total air guaranteed at every seam. `0` is not honoured — it would weld the flanks together |
+| `VIDEO_EDIT_SEAM_ABSORB_MS` | `600` | Most silence one seam may consume. `0` disables the rule |
+| `VIDEO_EDIT_DECLICK` | `true` | `adeclick` on the joined result |
+| `VIDEO_EDIT_DECLICK_THRESHOLD` | `2` | Raise (1–100) if speech sounds thinned; lower if clicks survive |
+
+> Tuning note: `afade` curves are amplitude-domain, and the ear's loudness response is roughly
+> logarithmic, so `esin`/`exp`/`log` sound *worse* on a speech onset than linear `tri`. The fade is
+> the wrong lever — the seam's position is the right one.
 
 ### Configuration
 
@@ -399,13 +443,15 @@ All values live in `config/video-edit.php`; the switches are also environment va
 |---|---|---|
 | `VIDEO_EDIT_SCREEN_ACTIVITY` | `true` | Tool-wait detection on / off |
 | `VIDEO_EDIT_BREATHS` | `true` | Breath ducking on / off |
+| `VIDEO_EDIT_DECLICK` | `true` | Seam de-clicking on / off |
 | `screen_activity.min_activity_ratio` | `0.5` | Share of the silence the screen must move |
 | `screen_activity.speed` · `max_compressed_output_ms` | `3.0` · `4000` | Speed-up and on-screen cap |
 | `silence.noise_floor_db` | `-40` | Must sit above the room noise — measure with `volumedetect`, use `mean − 12` |
 | `silence.mid_sentence_pause_ms` | `300` | Air kept inside a sentence |
 | `breaths.attenuation_db` | `-15` | How far breaths are turned down |
+| `cuts.edge_absorb_ms` | `400` | How far a cut grows to take a dangling word (`y`, `o co-`) |
 
-Verified by **520 module tests** and by rendering a real clip through FFmpeg: a 5 s wait at 3× came out
+Verified by **548 module tests** and by rendering a real clip through FFmpeg: a 5 s wait at 3× came out
 at exactly 1.67 s, and a ducked breath measured −15.0 dB against the surrounding audio.
 
 ---

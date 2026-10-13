@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Modules\VideoEdits\Application\Commands\MarkVideoEditFailedHandler;
 use Modules\VideoEdits\Domain\Enums\DecisionOutcome;
+use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
 use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
@@ -155,6 +156,47 @@ it('speeds up a wait on an AI tool instead of cutting it', function (): void {
         ->and($fresh->final_duration_ms)->toBe(60_000 - $effects->savedMs())
         ->and($fresh->cutDecisions[0]->rejection_reason)->toBe('screen_activity')
         ->and($fresh->warnings)->toContain('1 tool wait(s) with a busy screen were sped up instead of cut.');
+});
+
+it('reports download progress while the bytes are landing', function (): void {
+    // The reported bug: the bar sat at 0% for the whole copy and only moved once
+    // the file had arrived, because progress was reported per SOURCE — and one
+    // source is the normal case, so that is one report, after everything.
+    //
+    // The two schemes are told apart by BYTES, so the sources are deliberately
+    // unequal: 180 of 200 bytes is 90 % of the download, while "first of two
+    // sources" is only 50 %. The run then ends on the first source's probe, which
+    // is a handled failure — so the intermediate value is what survives on the
+    // row, and a completed download (which reaches the stage ceiling either way)
+    // could never have shown the difference.
+    config()->set('video-edit.progress.min_percent_step', 1);
+    config()->set('video-edit.progress.min_interval_seconds', 0);
+
+    $edit = VideoEditEloquentModel::factory()->queued()->create(['parameters' => cutParameters()]);
+
+    foreach ([180, 20] as $offset => $size) {
+        $source = VideoEditSourceEloquentModel::factory()->for($edit, 'videoEdit')->create([
+            'position' => $offset + 1,
+            'declared_size_bytes' => $size,
+            'size_bytes' => $size,
+        ]);
+        $this->storage->seed((string) $source->storage_path, $size);
+    }
+
+    // The copy of source 1 succeeds; the probe that follows it does not.
+    $this->editor->probes = ['source-1.mp4' => probeLasting(30_000, container: 'avi')];
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $fresh = $edit->fresh();
+
+    // Download is worth 5 % of the bar and starts at 0, so 90 % of it is 4 %.
+    // Per-source counting would have written 50 % → 2 %, and reporting only after
+    // the copy would have left it at 0 — indistinguishable from a worker that
+    // had not started at all, which is what a user sees as "stuck".
+    expect($fresh->status)->toBe(VideoEditStatus::Failed)
+        ->and($fresh->current_stage)->toBe(ProcessingStage::Download)
+        ->and($fresh->progress_percent)->toBe(4);
 });
 
 it('merges clips into the final file without a render pass', function (): void {

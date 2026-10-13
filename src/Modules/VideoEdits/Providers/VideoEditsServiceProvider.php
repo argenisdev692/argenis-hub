@@ -41,6 +41,7 @@ use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
 use Modules\VideoEdits\Domain\Services\ClippedWordDetector;
 use Modules\VideoEdits\Domain\Services\CutEdgeTrimmer;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
+use Modules\VideoEdits\Domain\Services\CutSeamTrimmer;
 use Modules\VideoEdits\Domain\Services\FailedTakeDetector;
 use Modules\VideoEdits\Domain\Services\RestartDetector;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
@@ -118,6 +119,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
             breathMinGapMs: (bool) config('video-edit.breaths.enabled') ? (int) config('video-edit.breaths.min_gap_ms') : 0,
             midSentencePauseMs: (int) config('video-edit.silence.mid_sentence_pause_ms'),
             edgeTrimmer: self::edgeTrimmer(),
+            seamTrimmer: self::seamTrimmer(),
         ));
 
         $this->registerDecisionProducers();
@@ -210,6 +212,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
         $this->app->bind(FilterGraphBuilder::class, static function (): FilterGraphBuilder {
             $enabled = (bool) config('video-edit.room_tone.enabled', false);
             $loudness = (bool) config('video-edit.loudness.enabled', false);
+            $declick = (array) config('video-edit.cuts.declick', []);
 
             return new FilterGraphBuilder(
                 denoiseReductionDb: $enabled ? (float) config('video-edit.room_tone.reduction_db') : null,
@@ -221,8 +224,37 @@ final class VideoEditsServiceProvider extends ServiceProvider
                 truePeakDbTp: $loudness ? (float) config('video-edit.loudness.true_peak_dbtp') : null,
                 loudnessRange: $loudness ? (float) config('video-edit.loudness.loudness_range') : null,
                 voiceChain: self::voiceChain(),
+                declickEnabled: (bool) ($declick['enabled'] ?? false),
+                declickWindowMs: max(1, (int) ($declick['window_ms'] ?? FilterGraphBuilder::DEFAULT_DECLICK_WINDOW_MS)),
+                declickOverlapPercent: max(50, min(95, (int) ($declick['overlap_percent'] ?? FilterGraphBuilder::DEFAULT_DECLICK_OVERLAP_PERCENT))),
+                declickThreshold: max(1, min(100, (int) ($declick['threshold'] ?? FilterGraphBuilder::DEFAULT_DECLICK_THRESHOLD))),
+                declickMethod: (string) ($declick['method'] ?? FilterGraphBuilder::DEFAULT_DECLICK_METHOD),
             );
         });
+    }
+
+    /**
+     * Optional for the same reason as {@see self::edgeTrimmer}: a zero budget
+     * leaves the seams exactly as they were, which is the behaviour every cut had
+     * before this rule existed.
+     *
+     * Unlike the edge trimmer, a breath of zero is NOT a safe "off" — it would
+     * mean welding the two flanks of silence together, which is the hole this
+     * exists to remove. So only a non-positive ABSORB budget disables it; the
+     * breath is floored at a value that still reads as a pause.
+     */
+    private static function seamTrimmer(): ?CutSeamTrimmer
+    {
+        $absorbMs = (int) config('video-edit.cuts.seam_absorb_ms', 0);
+
+        if ($absorbMs <= 0) {
+            return null;
+        }
+
+        return new CutSeamTrimmer(
+            absorbMs: $absorbMs,
+            breathMs: max(1, (int) config('video-edit.cuts.seam_breath_ms', 250)),
+        );
     }
 
     /**

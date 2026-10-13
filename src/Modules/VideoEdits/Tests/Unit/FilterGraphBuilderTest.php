@@ -277,3 +277,111 @@ it('puts the voice chain between the denoiser and the loudness target', function
         // the raised signal, and its ceiling then bounds what loudnorm produced.
         ->and(strpos($graph, 'loudnorm'))->toBeGreaterThan(strpos($graph, 'alimiter'));
 });
+
+function seamGraph(RenderEffects $effects, bool $declick = false): string
+{
+    return (new FilterGraphBuilder(declickEnabled: $declick))->keepRanges(
+        [new TimeRange(0, 5_000), new TimeRange(6_000, 20_000)],
+        new MediaProbe(20_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+        $effects,
+    );
+}
+
+it('shortens the join fade to the silence actually measured at the seam', function (): void {
+    // The seam trimmer guarantees 250 ms of breath, so a 40 ms fade fits inside
+    // it and the full length is used — the seam reads as a breath, not a splice.
+    $graph = seamGraph(new RenderEffects(seamClearances: [[5_000, 1_000], [1_000, 14_000]]));
+
+    expect(explode(';', $graph)[1])->toContain('afade=t=out:st=4.960:d=0.040')
+        ->and(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.040');
+});
+
+it('drops the join fade when the seam lands straight on a word', function (): void {
+    // Zero clearance: the next fragment opens on the attack of a word. Fading it
+    // is exactly what made that word quieter than its neighbours, so the fade is
+    // dropped and `adeclick` repairs the discontinuity instead.
+    $graph = seamGraph(new RenderEffects(seamClearances: [[5_000, 0], [0, 14_000]]), declick: true);
+
+    expect(explode(';', $graph)[3])->not->toContain('afade=t=in')
+        ->and($graph)->toContain('adeclick=');
+});
+
+it('halves the fade when only a little air is available', function (): void {
+    // 15 ms of breath: enough for a click-remover, not for the full 40 ms fade.
+    $graph = seamGraph(new RenderEffects(seamClearances: [[5_000, 15], [15, 14_000]]));
+
+    expect(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.015')
+        ->and(explode(';', $graph)[1])->toContain('afade=t=out:st=4.985:d=0.015');
+});
+
+it('falls back to the configured fade when nothing is known about the seam', function (): void {
+    // No transcript, so no measurement. An unfaded seam clicks, so the fade is
+    // kept rather than dropped on a missing value.
+    $graph = seamGraph(new RenderEffects);
+
+    expect(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.040')
+        ->and(explode(';', $graph)[1])->toContain('afade=t=out:st=4.960:d=0.040');
+});
+
+it('de-clicks once on the joined result, before the rest of the chain', function (): void {
+    $graph = seamGraph(new RenderEffects, declick: true);
+
+    // Exactly one, on the concat output — a click is a property of a seam, so a
+    // per-segment pass would also be looking at speech that was never broken.
+    expect(substr_count($graph, 'adeclick='))->toBe(1)
+        ->and($graph)->toContain('[ca]adeclick=w=0.020:o=75:t=2:m=save,aresample=');
+});
+
+it('de-clicks ahead of denoising so the repair is not read as signal', function (): void {
+    $graph = (new FilterGraphBuilder(declickEnabled: true, denoiseReductionDb: 12.0, denoiseFloorDb: -25.0))
+        ->keepRanges(
+            [new TimeRange(0, 5_000), new TimeRange(6_000, 20_000)],
+            new MediaProbe(20_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+            graphProfile(),
+        );
+
+    expect(strpos($graph, 'adeclick='))->toBeLessThan(strpos($graph, 'afftdn'));
+});
+
+it('leaves de-clicking out unless it is configured', function (): void {
+    expect(seamGraph(new RenderEffects))->not->toContain('adeclick=');
+});
+
+it('scales a fragment clearance onto the output of a sped-up fragment', function (): void {
+    // The whole first fragment is a tool wait played at 3×, so its 60 ms of
+    // source air arrives as 20 ms of output. A fade sized from the source
+    // measurement would be twice as long as the air it has to sit in.
+    $graph = (new FilterGraphBuilder)->keepRanges(
+        [new TimeRange(0, 3_000), new TimeRange(4_000, 34_000)],
+        new MediaProbe(34_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+        new RenderEffects(
+            compressedRanges: [new CompressedRange(new TimeRange(0, 3_000), 3.0)],
+            seamClearances: [[100, 60], [1_000, 30_000]],
+        ),
+    );
+
+    // 3 000 ms of wait becomes 1 000 ms of output, and the fade-out is the 20 ms
+    // the 60 ms of source air actually became — not the configured 40 ms.
+    expect(explode(';', $graph)[1])->toContain('atempo=3.000,afade=t=out:st=0.980:d=0.020')
+        ->and(explode(';', $graph)[1])->not->toContain('afade=t=out:st=0.960');
+});
+
+it('keeps the configured fade on the joins inside a sped-up wait', function (): void {
+    // A wait split by another cut has joins between two stretches of tool
+    // silence, and those are not seams against speech — no clearance applies.
+    $graph = (new FilterGraphBuilder)->keepRanges(
+        [new TimeRange(0, 30_000)],
+        new MediaProbe(30_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+        new RenderEffects(
+            compressedRanges: [new CompressedRange(new TimeRange(10_000, 13_000), 3.0)],
+            seamClearances: [[300, 17_000]],
+        ),
+    );
+
+    // Only the fragment's own outer edges take a clearance.
+    expect(explode(';', $graph)[1])->toContain('afade=t=out:st=9.960:d=0.040')
+        ->and(explode(';', $graph)[5])->toContain('afade=t=in:st=0:d=0.040');
+});

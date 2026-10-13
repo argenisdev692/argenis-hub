@@ -7,6 +7,7 @@ namespace Modules\VideoEdits\Application\Commands;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Modules\VideoEdits\Application\DTOs\ReviewVideoEditCutsData;
+use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutReviewException;
 use Modules\VideoEdits\Domain\Exceptions\VideoEditNotFoundException;
@@ -125,6 +126,16 @@ final readonly class ReviewVideoEditCutsHandler
         return $review?->isResolved() === false ? $review : null;
     }
 
+    /**
+     * Puts the edit back on the queue for the pass that actually renders.
+     *
+     * Progress genuinely restarts at 0, because the second pass re-downloads and
+     * re-merges every source — the workspace is wiped while the review waits, so
+     * nothing from pass one is on disk to reuse. What was wrong was the STAGE:
+     * leaving it null showed "Waiting for a worker · 0%" for the whole queue
+     * wait, which reads as a hang rather than as a job that has just been
+     * accepted. Naming the stage the pass starts with is honest and immediate.
+     */
     private function requeue(string $uuid, AiCutReview $resolved): bool
     {
         return $this->edits->transitionStatus($uuid, [VideoEditStatus::AwaitingReview], VideoEditStatus::Queued, [
@@ -132,7 +143,7 @@ final readonly class ReviewVideoEditCutsHandler
             'review_expires_at' => null,
             'queued_at' => CarbonImmutable::now(),
             'progress_percent' => 0,
-            'current_stage' => null,
+            'current_stage' => ProcessingStage::Download,
         ]);
     }
 }

@@ -6,7 +6,9 @@ use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\DecisionRejectionReason;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
+use Modules\VideoEdits\Domain\Services\CutEdgeTrimmer;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
+use Modules\VideoEdits\Domain\Services\CutSeamTrimmer;
 use Modules\VideoEdits\Domain\ValueObjects\CutDecision;
 use Modules\VideoEdits\Domain\ValueObjects\TimeRange;
 use Modules\VideoEdits\Domain\ValueObjects\TranscriptSegment;
@@ -349,4 +351,124 @@ it('reports the output problem as user-safe details', function (): void {
     }
 
     throw new RuntimeException('Expected InvalidCutRangesException.');
+});
+
+function seamPlanner(?CutSeamTrimmer $seamTrimmer = null, ?CutEdgeTrimmer $edgeTrimmer = null): CutPlanner
+{
+    return new CutPlanner(
+        silencePaddingAfterSpeechMs: 250,
+        silencePaddingBeforeSpeechMs: 100,
+        wordGuardAfterMs: 150,
+        wordGuardBeforeMs: 60,
+        minKeptFragmentMs: 250,
+        minOutputMs: 1_000,
+        seamTrimmer: $seamTrimmer ?? new CutSeamTrimmer(600, 250),
+        edgeTrimmer: $edgeTrimmer,
+    );
+}
+
+it('eats the air around a removed phrase so the seam is not a hole', function (): void {
+    // "vamos a [ESTA FRASE MAL] ingresar" with 480 ms before the removed words
+    // and 900 ms after. Left alone the two kept fragments are welded
+    // silence-to-silence and the listener hears a 1.38 s gap mid-sentence.
+    $words = [
+        new TranscriptWord('vamos', 0, 400),
+        new TranscriptWord('a', 450, 520),
+        new TranscriptWord('esta', 1_000, 1_200),
+        new TranscriptWord('frase', 1_250, 1_450),
+        new TranscriptWord('mal', 1_500, 1_700),
+        new TranscriptWord('ingresar', 2_600, 3_200),
+    ];
+
+    $plan = seamPlanner()->plan([aiCut(1_000, 1_700)], 60_000, $words);
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[791, 2_091]])
+        ->and(bounds($plan->keepRanges))->toBe([[0, 791], [2_091, 60_000]]);
+});
+
+it('leaves an AI cut alone when the seam already sits inside the breath', function (): void {
+    $words = [
+        new TranscriptWord('antes', 0, 10_000),
+        new TranscriptWord('despues', 10_040, 20_000),
+    ];
+
+    $plan = seamPlanner()->plan([aiCut(10_000, 10_040)], 60_000, $words);
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_000, 10_040]]);
+});
+
+it('never lets the seam margin take a word the edge trimmer already spared', function (): void {
+    // "…Grupo y… [pause] …Cuatro" — the edge trimmer takes the dangling "y",
+    // and the seam margin must then measure its air from there rather than
+    // reaching back past it into "Grupo".
+    $words = [
+        new TranscriptWord('Grupo', 1_000, 1_300),
+        new TranscriptWord('y', 1_600, 1_700),
+        new TranscriptWord('Cuatro', 4_000, 4_400),
+    ];
+
+    $plan = seamPlanner(
+        edgeTrimmer: new CutEdgeTrimmer(400, ['y', 'e', 'o', 'u', 'de', 'la', 'el', 'lo', 'que', 'para']),
+    )->plan([aiCut(2_000, 4_000)], 60_000, $words);
+
+    $cut = $plan->appliedCuts[0]->range;
+
+    // Word absorption moves the start to 1 600 ("y"). Only 300 ms of air is left
+    // there and 250 ms of it is the promised breath, so the seam takes 50 ms and
+    // stops exactly at "Grupo"'s end — it never reaches the word itself.
+    expect($cut->startMs)->toBe(1_550)
+        ->and($cut->endMs)->toBe(4_000);
+});
+
+it('reports the silence at every kept fragment edge for the renderer', function (): void {
+    // The join fade is a gain ramp, so it must know whether each fragment edge
+    // lands on air or straight on a word.
+    $words = [
+        new TranscriptWord('uno', 1_000, 1_400),
+        new TranscriptWord('dos', 2_000, 2_400),
+    ];
+
+    $plan = planner()->plan([aiCut(1_400, 2_000)], 60_000, $words);
+
+    expect($plan->seamClearances)->toBe([[1_000, 0], [0, 57_600]])
+        ->and($plan->seamClearances)->toHaveCount(count($plan->keepRanges));
+});
+
+it('reports a word-on-seam as zero clearance rather than as silence', function (): void {
+    // No gap at all between the fragments: the fade must be dropped, not applied
+    // to the attack of "dos".
+    $words = [
+        new TranscriptWord('uno', 1_000, 1_400),
+        new TranscriptWord('dos', 1_400, 1_800),
+    ];
+
+    $plan = planner()->plan([aiCut(1_400, 1_400 + 1)], 60_000, $words);
+
+    expect($plan->seamClearances[1][0])->toBe(0);
+});
+
+it('leaves silence cuts to their own padding', function (): void {
+    // A silence cut is already inset by the speech margin, so the seam margin
+    // must not shrink it further — the two rules are not cumulative.
+    $words = [
+        new TranscriptWord('compartir', 9_600, 10_300),
+        new TranscriptWord('ahora', 12_050, 12_400),
+    ];
+
+    $withSeam = seamPlanner()->plan([silence(10_000, 12_000)], 60_000, $words);
+    $withoutSeam = planner()->plan([silence(10_000, 12_000)], 60_000, $words);
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $withSeam->appliedCuts)))
+        ->toBe(bounds(array_map(static fn ($cut) => $cut->range, $withoutSeam->appliedCuts)));
+});
+
+it('leaves a manual range exactly as the owner typed it', function (): void {
+    $words = [
+        new TranscriptWord('antes', 1_000, 1_300),
+        new TranscriptWord('despues', 5_000, 5_400),
+    ];
+
+    $plan = seamPlanner()->plan([manualCut(2_000, 4_000)], 60_000, $words);
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[2_000, 4_000]]);
 });

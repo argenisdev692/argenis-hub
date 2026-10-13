@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Queue;
 use Modules\VideoEdits\Domain\Enums\CutReason;
+use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
 use Modules\VideoEdits\Domain\Ports\AiEditAnalysisPort;
@@ -349,6 +350,29 @@ it('queues the render pass with the approved cuts and audits counts only', funct
     Queue::assertPushedOn('video-edits', ProcessVideoEditJob::class, fn (ProcessVideoEditJob $job): bool => $job->videoEditUuid === $edit->uuid);
     expect(Activity::query()->where('description', 'video_edit.cuts_reviewed')->sole()->properties->all())
         ->toBe(['edit_uuid' => $edit->uuid, 'proposed' => 2, 'approved' => 1]);
+});
+
+it('names the stage the render pass starts at, instead of leaving it blank', function (): void {
+    // The second pass re-downloads and re-merges from scratch, so progress really
+    // does restart at 0. What it must not do is ALSO drop the stage: a null one
+    // renders as "Waiting for a worker", which is how an accepted job ends up
+    // looking like nothing is happening for the whole queue wait.
+    Queue::fake();
+    $owner = VideoEditTestUsers::editor();
+    $edit = VideoEditEloquentModel::factory()->for($owner)->awaitingReview()->create([
+        'progress_percent' => 45,
+        'current_stage' => ProcessingStage::AiAnalysis,
+    ]);
+
+    $this->actingAs($owner)
+        ->postJson("/data/admin/video-edits/{$edit->uuid}/review", ['approved_cut_ids' => []])
+        ->assertAccepted();
+
+    $fresh = $edit->fresh();
+
+    expect($fresh->status)->toBe(VideoEditStatus::Queued)
+        ->and($fresh->progress_percent)->toBe(0)
+        ->and($fresh->current_stage)->toBe(ProcessingStage::Download);
 });
 
 it('rejects a cut that this edit never proposed', function (): void {

@@ -325,9 +325,9 @@ return [
             // only lever available: it is what makes Whisper imitate the prompt's
             // register rather than tidy it.
             'prompts' => [
-                'es' => 'Eh, mmm... bueno, este, o sea, vamos a ver. Ehh, ah, pues, digamos que, mmm, sí. Pausa. Pausa aquí. Pausa acá. Otra vez.',
-                'en' => 'Um, uh... so, like, you know, I mean, uh, let\'s see. Hmm, well, basically. Pause. Pause there. Take that again.',
-                'default' => 'Um, uh, eh, mmm... hmm, ah. Pause. Pause there.',
+                'es' => 'Eh, mmm... bueno, este, o sea, vamos a ver. Ehh, ah, pues, digamos que, mmm, sí. Okay. Okey. Muy bien. Pausa. Pausa aquí. Pausa acá. Otra vez.',
+                'en' => 'Um, uh... so, like, you know, I mean, uh, let\'s see. Hmm, well, basically. Okay. Very good. Pause. Pause there. Take that again.',
+                'default' => 'Um, uh, eh, mmm... hmm, ah. Okay. Pause. Pause there.',
             ],
         ],
 
@@ -340,13 +340,33 @@ return [
             // Real words used as padding. Deliberately short: every entry here
             // is a word that will be deleted from the user's speech, so it must
             // be one that is padding essentially every time it appears.
+            //
+            // "okay" and "okey" were the gap that made AI edit look broken: the
+            // speaker heard them removed from every sentence and none of them
+            // went anywhere. They could not be caught by the model either — the
+            // agent is explicitly forbidden from proposing filler cuts, because
+            // the word timings here are exact and its are not. So the only layer
+            // that can remove them is this one, and they were simply absent.
+            //
+            // The residual risk is real and worth stating: "okay" is a word
+            // someone can be SAYING ("escribí okay en el campo"), and this
+            // dictionary cannot tell the two apart. It removes every occurrence.
+            // That is the same trade every entry here makes, and it is why the
+            // list stays short.
             'filler_words' => [
                 'bueno', 'entonces', 'digamos', 'basicamente', 'literalmente',
                 'like', 'basically', 'literally', 'actually', 'so',
+                'okay', 'okey',
             ],
             // Multi-word padding: "sea" alone is ordinary Spanish, "o sea" is not.
+            //
+            // "muy bien" belongs here rather than as two single words for the same
+            // reason "o sea" does: "bien" and "muy" are both ordinary words, and
+            // only the pair is padding. Listed as a phrase so it is cut as a unit
+            // and neither half is left dangling.
             'filler_phrases' => [
                 'o sea', 'es decir', 'you know', 'i mean', 'kind of', 'sort of',
+                'muy bien', 'muy claro',
             ],
             /*
             |----------------------------------------------------------------------
@@ -742,6 +762,79 @@ return [
         */
         'join_fade_ms' => (int) env('VIDEO_EDIT_JOIN_FADE_MS', 40),
         'join_air_ms' => (int) env('VIDEO_EDIT_JOIN_AIR_MS', 80),
+
+        /*
+        |----------------------------------------------------------------------
+        | Seam air (OBSERVACIONES round 2 · "oración que deja hueco")
+        |----------------------------------------------------------------------
+        |
+        | "Luego de remover frases malas sigue dejando hueco silencio entre
+        | palabras y suenan robotizadas: 'vamos... a .... ingresar este prompt'."
+        |
+        | The cause is structural, not a tuning problem. A cut proposed from word
+        | timings spans exactly the removed WORDS, so the silence that surrounded
+        | them survives on both sides and the two kept fragments are welded
+        | silence-to-silence. Only silence cuts were ever inset by a padding; a
+        | filler, a stutter or any of the four AI reasons got none of it.
+        |
+        | So every other cut grows into the silence at its own edges and then
+        | hands a fixed breath back, the way auto-editor's `--margin` does. The
+        | target is CONSISTENCY, not zero: a uniform breath reads as an
+        | intentional cut, whereas whatever silence happened to be lying there
+        | is what reads as a glitch. `seam_breath_ms` is that constant, and it is
+        | the TOTAL air at a seam split across both sides in proportion to the
+        | silence each side had — so a seam with one long pause and one short one
+        | does not come out lopsided.
+        |
+        | `seam_absorb_ms` bounds the total one seam may consume. The other bound
+        | is structural: a share is always a fraction of the silence that side
+        | actually had, so the expansion can never reach a neighbouring word. This
+        | rule tidies air; taking words is CutEdgeTrimmer's job, and the two never
+        | overlap.
+        |
+        | 250 ms of breath is the conservative end of the range auto-editor ships
+        | (0.2 s). It is deliberately unhurried: a missed tidy costs nothing, and
+        | this module would rather leave a small breath than glue two halves of
+        | one intonation together.
+        */
+        'seam_breath_ms' => (int) env('VIDEO_EDIT_SEAM_BREATH_MS', 250),
+        'seam_absorb_ms' => (int) env('VIDEO_EDIT_SEAM_ABSORB_MS', 600),
+
+        /*
+        |----------------------------------------------------------------------
+        | De-clicking the seams
+        |----------------------------------------------------------------------
+        |
+        | "Algunas palabras no sé por qué al acomodarlas se les baja el volumen."
+        |
+        | An `afade` is a gain ramp, so one applied where the seam lands on speech
+        | ramps that word's attack down from zero and the word comes out quieter
+        | than its neighbours. No curve fixes it — `tri`, `qsin` and `exp` change
+        | the shape of the dip, never whether it happens. So the join fade is now
+        | shortened to the silence measured at that edge, and where there is none
+        | at all the fade is dropped.
+        |
+        | What replaces it is `adeclick`, which is built for the job and is a
+        | different kind of operation: it classifies individual samples as
+        | impulsive, reconstructs those from their neighbours, and with
+        | `method=save` leaves every sample it did not classify bit-identical. The
+        | click is repaired and the word is not touched — the outcome a fade was
+        | only ever approximating. It runs once on the joined result, never per
+        | segment.
+        |
+        | Raise `threshold` if speech starts sounding thinned; lower it if clicks
+        | survive. Requires an FFmpeg build with `adeclick` (checked against
+        | FFmpeg 9.0.2).
+        */
+        'declick' => [
+            'enabled' => (bool) env('VIDEO_EDIT_DECLICK', true),
+            'window_ms' => (int) env('VIDEO_EDIT_DECLICK_WINDOW_MS', 20),
+            'overlap_percent' => (int) env('VIDEO_EDIT_DECLICK_OVERLAP', 75),
+            'threshold' => (int) env('VIDEO_EDIT_DECLICK_THRESHOLD', 2),
+            // 'save' (overlap-save) leaves unclassified samples untouched; 'add'
+            // is faster but also touches what it did not classify.
+            'method' => env('VIDEO_EDIT_DECLICK_METHOD', 'save'),
+        ],
 
         /*
         | Cut edges (OBSERVACIONES round 2).

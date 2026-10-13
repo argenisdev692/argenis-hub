@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Modules\VideoEdits\Application\DTOs\ManualRangeData;
 use Modules\VideoEdits\Application\DTOs\RetryVideoEditData;
+use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
 use Modules\VideoEdits\Domain\Exceptions\ManualRangesNotCorrectableException;
@@ -58,7 +59,11 @@ final readonly class RetryVideoEditHandler
             'failed_at' => null,
             'sources_expire_at' => null,
             'progress_percent' => 0,
-            'current_stage' => null,
+            // Not null: a null stage renders as "Waiting for a worker", so a
+            // retry the queue has already accepted would sit at 0% looking hung
+            // until a worker actually picks it up. This names the stage the retry
+            // starts at, exactly as the requeue after a cut review does.
+            'current_stage' => ProcessingStage::Download,
             'attempts' => 0,
             'queued_at' => $now,
         ];

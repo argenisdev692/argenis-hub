@@ -22,7 +22,21 @@ export function usePollWhile(
 
     watch(
         () => shouldPoll() && visibility.value === 'visible',
-        (active) => (active ? poll.resume() : poll.pause()),
+        (active) => {
+            if (!active) {
+                poll.pause();
+
+                return;
+            }
+
+            // Fetch on the way in, not one interval later. `useIntervalFn` waits
+            // its full interval before the first call, so without this the page
+            // shows whatever it had for a whole tick after polling starts — which
+            // is exactly the moment a user is watching: right after they approve
+            // an AI cut review and the edit goes back on the queue.
+            void refresh();
+            poll.resume();
+        },
         { immediate: true },
     );
 }

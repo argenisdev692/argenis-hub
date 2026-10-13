@@ -220,6 +220,19 @@ async function onRetry(): Promise<void> {
                     </Button>
                 </PermissionGuard>
 
+                <!--
+                    The icon at the top of the page is the same destination, but an
+                    icon alone reads as decoration on a page whose whole point is
+                    the action row — so the way back is spelled out here, next to
+                    the buttons the owner actually came to press.
+                -->
+                <Button as-child variant="outline">
+                    <Link :href="index()">
+                        <ArrowLeftIcon class="size-4" aria-hidden="true" />
+                        All video edits
+                    </Link>
+                </Button>
+
                 <PermissionGuard permission="RETRY_VIDEO_EDITS">
                     <Button
                         v-if="edit.can_retry"

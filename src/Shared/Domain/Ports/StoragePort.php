@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Shared\Domain\Ports;
 
+use Closure;
 use Shared\Domain\Exceptions\StorageObjectNotFoundException;
 
 /**
@@ -47,8 +48,18 @@ interface StoragePort
     /**
      * Stream a private object to a local filesystem path (server-side only).
      * Prefer this over unsigned public URLs when reading private R2 objects.
+     *
+     * `$onProgress` is called with `(int $bytesCopied, int $totalBytes)` as the
+     * copy advances, and `$totalBytes` is `-1` when the adapter cannot know it
+     * in advance. It exists because a video edit pulls multi-gigabyte sources
+     * and the alternative — reporting nothing until the copy finishes — is what
+     * left a progress bar sitting at 0% for the whole download. Callers must
+     * treat it as a hint: it may fire often, and it is not guaranteed to fire at
+     * all for a small object.
+     *
+     * @param  (Closure(int, int): void)|null  $onProgress
      */
-    public function copyToLocal(string $path, string $localPath): void;
+    public function copyToLocal(string $path, string $localPath, ?Closure $onProgress = null): void;
 
     /**
      * Stream a local file into cloud storage without loading it into PHP memory.

@@ -200,11 +200,12 @@ final readonly class VideoEditPipeline
      */
     private function download(VideoEditEloquentModel $edit, array $sources, ProgressReporter $progress): array
     {
-        $multiplier = (int) $this->config->get('video-edit.workspace.free_space_multiplier');
-        $requiredBytes = array_sum(array_map(
+        $sizes = array_map(
             static fn (VideoEditSourceEloquentModel $source): int => $source->size_bytes ?? $source->declared_size_bytes,
             $sources,
-        )) * $multiplier;
+        );
+        $multiplier = (int) $this->config->get('video-edit.workspace.free_space_multiplier');
+        $requiredBytes = array_sum($sizes) * $multiplier;
 
         $this->workspace->prepare($edit->uuid, $requiredBytes);
         $allowedContainers = (array) $this->config->get('video-edit.limits.allowed_containers');
@@ -212,9 +213,32 @@ final readonly class VideoEditPipeline
         $probes = [];
         $fingerprints = [];
 
+        // Byte offsets, so a 3 GB source does not occupy the same slice of the
+        // bar as a 50 MB one. Falls back to counting sources when no size is
+        // known, which is the old behaviour and still better than nothing.
+        $totalBytes = array_sum($sizes);
+        $offsetBefore = 0;
+
         foreach ($sources as $index => $source) {
             $localPath = $this->workspace->path($edit->uuid, "source-{$source->position}.{$source->extension}");
-            $this->storage->copyToLocal((string) $source->storage_path, $localPath);
+            $baseBytes = $offsetBefore;
+            $offsetBefore += $sizes[$index];
+
+            $this->storage->copyToLocal(
+                (string) $source->storage_path,
+                $localPath,
+                // Bytes, not sources: one source is the normal case, and reporting
+                // once per source left the bar at 0% for the whole copy of a
+                // multi-gigabyte recording — which is most of the wall clock of
+                // the pass that then looks hung. Throttled by ProgressReporter,
+                // so a callback per 256 KiB chunk costs nothing on the database.
+                fn (int $copied, int $total) => $progress->advanceStage(
+                    ProcessingStage::Download,
+                    $totalBytes > 0
+                        ? intdiv(($baseBytes + $copied) * 100, $totalBytes)
+                        : intdiv($index * 100, count($sources)),
+                ),
+            );
 
             $probe = $this->editor->probe($localPath);
 
@@ -228,7 +252,15 @@ final readonly class VideoEditPipeline
             $paths[] = $localPath;
             $probes[] = $probe;
             $fingerprints[] = $fingerprint->sha256;
-            $progress->advanceStage(ProcessingStage::Download, intdiv(($index + 1) * 100, count($sources)));
+            // Probing and hashing the file that just landed are real work too,
+            // and without this the stage only completes when the LAST source is
+            // hashed — leaving the bar short of its own stage for the tail.
+            $progress->advanceStage(
+                ProcessingStage::Download,
+                $totalBytes > 0
+                    ? intdiv(($baseBytes + $sizes[$index]) * 100, $totalBytes)
+                    : intdiv(($index + 1) * 100, count($sources)),
+            );
         }
 
         return [$paths, $probes, $fingerprints];
