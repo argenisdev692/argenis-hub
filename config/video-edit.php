@@ -68,7 +68,7 @@ return [
         'freeze_noise_db' => -50,
         'freeze_min_seconds' => 0.5,
         // Share of the silence the screen must spend moving to count as a wait.
-        'min_activity_ratio' => 0.5,
+        'min_activity_ratio' => 0.9,
         'keep_head_ms' => 1500,
         'keep_tail_ms' => 1000,
         'speed' => 3.0,
