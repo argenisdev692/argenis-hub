@@ -29,9 +29,7 @@ yarn-error.log
 /.zed
 
 /backup
-/BRAND
-/GUIDE
-/specs
+
 .opencode/node_modules
 
 

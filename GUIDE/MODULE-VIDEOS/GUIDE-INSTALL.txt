@@ -1,0 +1,74 @@
+The Composer package (pbmedia/laravel-ffmpeg, which config/laravel-ffmpeg.php belongs to) is only a PHP wrapper. It
+  builds the commands and runs ffmpeg.exe / ffprobe.exe, but it doesn't include those programs. You have to install them
+  on Windows separately.
+
+  Option A: winget (easiest)
+
+  In PowerShell:
+
+  winget install Gyan.FFmpeg
+
+  Then close that terminal and open a new one (the PATH only updates in new terminals) and check:
+
+  ffprobe -version
+  where.exe ffprobe
+
+  where.exe prints the full path. Copy it for the next step.
+
+  Option B: manual download (if you don't have winget)
+
+  1. Go to https://www.gyan.dev/ffmpeg/builds/ and download ffmpeg-release-essentials.zip.
+  2. Unzip it to a short path, for example C:\ffmpeg, so that you have C:\ffmpeg\bin\ffmpeg.exe and
+     C:\ffmpeg\bin\ffprobe.exe.
+  3. Optional: add C:\ffmpeg\bin to your PATH (Start → "Edit the system environment variables" → Environment Variables →
+     Path → New).
+
+  Then, in either case, tell Laravel where it is
+
+  In .env, use the path from where.exe, or C:\ffmpeg\bin\... if you installed manually:
+
+  FFMPEG_BINARIES="C:\ffmpeg\bin\ffmpeg.exe"
+  FFPROBE_BINARIES="C:\ffmpeg\bin\ffprobe.exe"
+
+  Then restart everything from a new terminal:
+
+  php artisan optimize:clear
+  php artisan queue:restart
+  php artisan queue:work video-edits --queue=video-edits --timeout=3600 --tries=1
+
+  Upload the video again (the previous edit already failed), and it should get past the check step.
+
+------------------------------------
+
+FFmpeg installed correctly. I ran the ffprobe.exe it installed and got ffprobe version 9.0.2. The "not recognized"
+  error is expected: winget updated PATH, but that PowerShell window still has the old one. Close it and open a new one.
+  ffprobe -version will then work there.
+
+  For Laravel, use full paths in .env so it doesn't depend on PATH. These are the actual locations on your machine:
+
+  FFMPEG_BINARIES="C:\Users\Lenovo\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8
+  bbwe\ffmpeg-9.0.2-full_build\bin\ffmpeg.exe"
+  FFPROBE_BINARIES="C:\Users\Lenovo\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d
+  8bbwe\ffmpeg-9.0.2-full_build\bin\ffprobe.exe"
+
+  One catch: the folder name includes the version (ffmpeg-9.0.2-full_build), so a future winget upgrade will change the
+  path and you'll need to update these two lines.
+
+  Then, from a new terminal in the project:
+
+  php artisan optimize:clear
+  php artisan queue:restart
+  php artisan queue:work video-edits --queue=video-edits --timeout=3600 --tries=1
+
+Forward slashes with no quotes also work on Windows:
+
+  FFMPEG_BINARIES=C:/Users/Lenovo/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8b
+  bwe/ffmpeg-9.0.2-full_build/bin/ffmpeg.exe
+  FFPROBE_BINARIES=C:/Users/Lenovo/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8
+  bbwe/ffmpeg-9.0.2-full_build/bin/ffprobe.exe
+
+  Then:
+
+  php artisan optimize:clear
+  php artisan serve
+  php artisan queue:work video-edits --queue=video-edits --timeout=3600 --tries=1

@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noise Grain Overlay — Demo Completo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   RESET
+═══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ═══════════════════════════════════════════════════════
+   CSS VARIABLES
+═══════════════════════════════════════════════════════ */
+:root {
+  --purple-deep:   #0d0030;
+  --purple-mid:    #7c3aed;
+  --purple-light:  #a855f7;
+  --purple-glow:   #c084fc;
+  --navy-deep:     #020617;
+  --blue-mid:      #1d4ed8;
+  --blue-light:    #6366f1;
+  --white:         #ffffff;
+  --white-60:      rgba(255,255,255,0.6);
+  --white-40:      rgba(255,255,255,0.4);
+  --white-15:      rgba(255,255,255,0.15);
+  --white-08:      rgba(255,255,255,0.08);
+  --white-05:      rgba(255,255,255,0.05);
+  --card-border:   rgba(255,255,255,0.13);
+  --font-display:  'Syne', sans-serif;
+  --font-mono:     'DM Mono', monospace;
+  --transition:    all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════════════════
+   BODY — Layer 1: Base + Mesh
+═══════════════════════════════════════════════════════ */
+body {
+  font-family: var(--font-display);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: var(--purple-deep);
+  background-image:
+    radial-gradient(ellipse at 15% 20%, rgba(139,92,246,0.40)  0px, transparent 55%),
+    radial-gradient(ellipse at 80% 10%, rgba(168,85,247,0.28)  0px, transparent 50%),
+    radial-gradient(ellipse at 5%  65%, rgba(88,28,135,0.55)   0px, transparent 60%),
+    radial-gradient(ellipse at 70% 70%, rgba(124,58,237,0.22)  0px, transparent 55%),
+    radial-gradient(ellipse at 40% 40%, rgba(109,40,217,0.18)  0px, transparent 45%),
+    radial-gradient(ellipse at 90% 80%, rgba(147,51,234,0.25)  0px, transparent 40%),
+    radial-gradient(ellipse at 20% 85%, rgba(76,5,149,0.40)    0px, transparent 55%);
+  background-size: 400% 400%;
+  animation: mesh-drift 14s ease infinite;
+  will-change: background-position;
+  transform: translateZ(0);
+}
+
+@keyframes mesh-drift {
+  0%   { background-position: 0%   50%; }
+  33%  { background-position: 100% 30%; }
+  66%  { background-position: 50%  80%; }
+  100% { background-position: 0%   50%; }
+}
+
+/* ── Layer 2: Glow orbs animados ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 25% 35%,  rgba(139,92,246,0.35) 0px, transparent 38%),
+    radial-gradient(circle at 75% 25%,  rgba(168,85,247,0.25) 0px, transparent 32%),
+    radial-gradient(circle at 15% 75%,  rgba(109,40,217,0.30) 0px, transparent 35%),
+    radial-gradient(circle at 80% 70%,  rgba(124,58,237,0.20) 0px, transparent 30%);
+  filter: blur(40px);
+  animation: orbs-float 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes orbs-float {
+  0%   { transform: translate(0px,   0px)   scale(1);    }
+  25%  { transform: translate(20px, -15px)  scale(1.05); }
+  50%  { transform: translate(-10px, 25px)  scale(0.97); }
+  75%  { transform: translate(15px,  10px)  scale(1.03); }
+  100% { transform: translate(-5px, -20px)  scale(1.01); }
+}
+
+/* ── Layer 3: Noise grain cinematográfico ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CURSOR GLOW (bonus: orb sigue el mouse)
+═══════════════════════════════════════════════════════ */
+.cursor-orb {
+  position: fixed;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167,139,250,0.18) 0%, transparent 70%);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  transition: left 0.12s ease-out, top 0.12s ease-out;
+  filter: blur(2px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PAGE LAYOUT
+═══════════════════════════════════════════════════════ */
+.page {
+  position: relative;
+  z-index: 4;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ── Left panel: info/branding ── */
+.panel-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-light));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.brand-icon svg { width: 20px; height: 20px; }
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.02em;
+}
+
+.hero-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--purple-glow);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  display: block;
+  width: 28px; height: 1px;
+  background: var(--purple-glow);
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 4vw, 3.8rem);
+  font-weight: 800;
+  color: var(--white);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  margin-bottom: 1.5rem;
+}
+
+.hero-title span {
+  background: linear-gradient(135deg, var(--purple-light) 0%, var(--purple-glow) 50%, #e879f9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: 15px;
+  color: var(--white-60);
+  line-height: 1.7;
+  max-width: 360px;
+}
+
+.stats-row {
+  display: flex;
+  gap: 2.5rem;
+}
+
+.stat-item {}
+
+.stat-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--white-40);
+  letter-spacing: 0.06em;
+}
+
+/* ── Right panel: login form ── */
+.panel-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  box-shadow:
+    0 0 0 1px rgba(139,92,246,0.1),
+    0 32px 64px -16px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  animation: card-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.card-logo {
+  width: 52px; height: 52px;
+  margin: 0 auto 1.25rem;
+  background: linear-gradient(135deg, var(--purple-mid), var(--purple-light));
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+  animation: logo-float 3.5s ease-in-out infinite;
+}
+
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0);    box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
+  50%       { transform: translateY(-6px); box-shadow: 0 16px 36px rgba(124,58,237,0.5); }
+}
+
+.card-logo svg { width: 24px; height: 24px; }
+
+.card-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+
+.card-subtitle {
+  font-size: 13px;
+  color: var(--white-40);
+  letter-spacing: 0.01em;
+}
+
+/* ── Form ── */
+.form { display: flex; flex-direction: column; gap: 1rem; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--white-40);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.field-wrap { position: relative; }
+
+.field-input {
+  width: 100%;
+  padding: 13px 44px 13px 16px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--white);
+  background: var(--white-05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  outline: none;
+  transition: var(--transition);
+  caret-color: var(--purple-glow);
+}
+
+.field-input::placeholder { color: rgba(255,255,255,0.22); }
+
+.field-input:focus {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(139,92,246,0.55);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.12), 0 0 20px rgba(139,92,246,0.15);
+}
+
+.field-icon {
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255,255,255,0.3);
+  pointer-events: none;
+}
+
+.field-icon svg { width: 16px; height: 16px; display: block; }
+
+.toggle-pw {
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+  display: flex;
+}
+
+.toggle-pw:hover { color: rgba(255,255,255,0.7); }
+.toggle-pw svg { width: 16px; height: 16px; }
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -4px;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--white-40);
+}
+
+.remember input[type="checkbox"] {
+  width: 15px; height: 15px;
+  accent-color: var(--purple-mid);
+  cursor: pointer;
+}
+
+.forgot-link {
+  font-size: 12px;
+  color: var(--purple-glow);
+  text-decoration: none;
+  transition: opacity 0.2s;
+  font-family: var(--font-mono);
+}
+
+.forgot-link:hover { opacity: 0.7; }
+
+/* ── Submit button ── */
+.btn-submit {
+  width: 100%;
+  padding: 14px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--purple-mid) 0%, var(--purple-light) 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+  box-shadow: 0 4px 20px rgba(124,58,237,0.35);
+}
+
+.btn-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: btn-shine 3.5s ease infinite;
+}
+
+@keyframes btn-shine {
+  0%   { transform: translateX(-100%) skewX(-15deg); }
+  60%  { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%)  skewX(-15deg); }
+}
+
+.btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(124,58,237,0.5);
+}
+
+.btn-submit:active { transform: translateY(0); }
+
+/* ── Divider ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+}
+
+.divider-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── Social buttons ── */
+.social-btns { display: flex; gap: 10px; }
+
+.btn-social {
+  flex: 1;
+  padding: 11px;
+  background: var(--white-05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: var(--white-60);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-social:hover {
+  background: var(--white-08);
+  border-color: rgba(255,255,255,0.2);
+  color: var(--white);
+}
+
+.btn-social svg { width: 16px; height: 16px; }
+
+/* ── Footer ── */
+.card-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
+}
+
+.card-footer a {
+  color: var(--purple-glow);
+  text-decoration: none;
+}
+
+.card-footer a:hover { text-decoration: underline; }
+
+/* ═══════════════════════════════════════════════════════
+   TECHNIQUE PANEL (debug overlay)
+═══════════════════════════════════════════════════════ */
+.tech-panel {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  gap: 8px;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50px;
+  padding: 8px 12px;
+}
+
+.tech-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 12px;
+  border-radius: 30px;
+  transition: var(--transition);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.tech-btn.active,
+.tech-btn:hover {
+  background: rgba(139,92,246,0.3);
+  color: var(--white);
+}
+
+/* ═══════════════════════════════════════════════════════
+   THEME VARIANTS
+═══════════════════════════════════════════════════════ */
+body.theme-navy {
+  background-color: var(--navy-deep);
+  background-image:
+    radial-gradient(ellipse at 20% 25%, rgba(29,78,216,0.38)   0px, transparent 52%),
+    radial-gradient(ellipse at 75% 15%, rgba(99,102,241,0.28)  0px, transparent 48%),
+    radial-gradient(ellipse at 8%  60%, rgba(30,58,138,0.55)   0px, transparent 58%),
+    radial-gradient(ellipse at 68% 65%, rgba(67,56,202,0.22)   0px, transparent 52%),
+    radial-gradient(ellipse at 38% 45%, rgba(139,92,246,0.15)  0px, transparent 42%),
+    radial-gradient(ellipse at 88% 78%, rgba(37,99,235,0.22)   0px, transparent 38%),
+    radial-gradient(ellipse at 18% 82%, rgba(30,58,138,0.38)   0px, transparent 52%);
+  animation: navy-drift 16s ease infinite;
+}
+
+@keyframes navy-drift {
+  0%   { background-position: 0%   0%;   }
+  50%  { background-position: 100% 100%; }
+  100% { background-position: 0%   0%;   }
+}
+
+body.theme-navy::before {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(59,130,246,0.28)  0px, transparent 35%),
+    radial-gradient(circle at 78% 20%, rgba(99,102,241,0.22)  0px, transparent 30%),
+    radial-gradient(circle at 12% 72%, rgba(37,99,235,0.25)   0px, transparent 33%),
+    radial-gradient(circle at 82% 72%, rgba(67,56,202,0.18)   0px, transparent 28%);
+}
+
+/* ── THEME: Angular Minimal ──
+   Base casi-negra · blooms contenidos en esquinas · rejilla técnica tenue.
+   Inspirado en el mesh oscuro "signal-first" del post de Angular 22.        */
+body.theme-angular {
+  /* re-tinta los acentos del card hacia violeta→magenta sin tocar el HTML */
+  --purple-mid:    #8b5cf6;
+  --purple-light:  #c026d3;
+  --purple-glow:   #e879f9;
+
+  background-color: #08040f;
+  background-image:
+    /* bloom violeta arriba-izquierda (detrás del branding) */
+    radial-gradient(ellipse 70% 55% at 12% 8%,   rgba(124,58,237,0.30) 0px, transparent 60%),
+    /* bloom magenta abajo-centro (el glow rosado bajo las cards) */
+    radial-gradient(ellipse 80% 50% at 60% 105%, rgba(217,70,239,0.26) 0px, transparent 58%),
+    /* acento magenta esquina inferior-derecha */
+    radial-gradient(ellipse 55% 50% at 100% 95%, rgba(192,38,211,0.22) 0px, transparent 55%),
+    /* relleno violeta muy tenue para que no quede plano */
+    radial-gradient(ellipse 90% 70% at 50% 50%,  rgba(76,29,149,0.14)  0px, transparent 70%);
+  background-size: 150% 150%;
+  animation: angular-drift 22s ease infinite;
+}
+
+@keyframes angular-drift {
+  0%   { background-position: 0%   40%; }
+  50%  { background-position: 100% 60%; }
+  100% { background-position: 0%   40%; }
+}
+
+/* ::before pasa de "glow orbs borrosos" a "rejilla técnica + bloom suave".
+   Quitamos el blur y el float para que la grid se vea nítida y fija.        */
+body.theme-angular::before {
+  background:
+    /* bloom suave reforzando esquinas (no borroso fuerte) */
+    radial-gradient(circle at 88% 92%, rgba(217,70,239,0.16) 0px, transparent 30%),
+    radial-gradient(circle at 8%  10%, rgba(139,92,246,0.14) 0px, transparent 30%),
+    /* rejilla fina */
+    linear-gradient(rgba(180,140,255,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,140,255,0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 46px 46px, 46px 46px;
+  filter: none;
+  animation: none;
+  /* la grid se desvanece hacia los bordes → look minimal con viñeta */
+  -webkit-mask-image: radial-gradient(ellipse 110% 90% at 50% 55%, #000 25%, transparent 92%);
+          mask-image: radial-gradient(ellipse 110% 90% at 50% 55%, #000 25%, transparent 92%);
+}
+
+/* grain off */
+body.grain-off::after { opacity: 0; }
+/* grain visible debug */
+body.grain-debug::after { opacity: 0.18; mix-blend-mode: normal; }
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .page { grid-template-columns: 1fr; }
+  .panel-left { display: none; }
+  .panel-right { padding: 2rem 1.25rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor orb -->
+<div class="cursor-orb" id="cursorOrb"></div>
+
+<!-- Page layout -->
+<div class="page">
+
+  <!-- Left panel -->
+  <div class="panel-left">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <span class="brand-name">Nexus</span>
+    </div>
+
+    <div class="hero-text">
+      <div class="hero-eyebrow">Noise Grain Overlay</div>
+      <h1 class="hero-title">
+        El stack que usa<br>
+        <span>Stripe, Linear</span><br>
+        y Vercel
+      </h1>
+      <p class="hero-sub">
+        Multi-layer mesh radial-gradient + glow orbs animados + noise grain cinematográfico con SVG feTurbulence inlinado.
+      </p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-num">3</div>
+        <div class="stat-label">CSS layers</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">0</div>
+        <div class="stat-label">HTTP requests</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">4.5%</div>
+        <div class="stat-label">Grain opacity</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel: login -->
+  <div class="panel-right">
+    <div class="login-card">
+      <div class="card-header">
+        <div class="card-logo">
+          <svg fill="none" stroke="white" stroke-width="2.2" viewBox="0 0 24 24">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <div class="card-title">Bienvenido de vuelta</div>
+        <div class="card-subtitle">Inicia sesión en tu cuenta</div>
+      </div>
+
+      <div class="form">
+        <div class="field">
+          <label class="field-label">Correo</label>
+          <div class="field-wrap">
+            <input class="field-input" type="email" placeholder="tu@empresa.com" autocomplete="email">
+            <span class="field-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Contraseña</label>
+          <div class="field-wrap">
+            <input class="field-input" type="password" placeholder="••••••••" id="pwInput" autocomplete="current-password">
+            <button class="toggle-pw" id="togglePw" type="button" aria-label="Mostrar contraseña">
+              <svg id="eyeIcon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-options">
+          <label class="remember">
+            <input type="checkbox"> Recordarme
+          </label>
+          <a href="#" class="forgot-link">¿Olvidaste tu clave?</a>
+        </div>
+
+        <button class="btn-submit" type="button">Iniciar sesión</button>
+
+        <div class="divider">
+          <span class="divider-text">o continúa con</span>
+        </div>
+
+        <div class="social-btns">
+          <button class="btn-social" type="button">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Google
+          </button>
+          <button class="btn-social" type="button">
+            <svg viewBox="0 0 24 24" fill="white" width="16" height="16">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            GitHub
+          </button>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        ¿No tienes cuenta? <a href="#">Regístrate gratis</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Technique switcher -->
+<div class="tech-panel">
+  <button class="tech-btn active" id="btnPurple" onclick="setTheme('purple')">🌌 Purple Midnight</button>
+  <button class="tech-btn"        id="btnNavy"   onclick="setTheme('navy')">🔮 Deep Navy</button>
+  <button class="tech-btn"        id="btnAngular" onclick="setTheme('angular')">⬡ Angular Minimal</button>
+  <button class="tech-btn"        id="btnGrainOff" onclick="toggleGrain()">◎ Grain OFF</button>
+  <button class="tech-btn"        id="btnGrainDbg" onclick="toggleGrainDebug()">⊕ Debug grain</button>
+</div>
+
+<script>
+  // ── Cursor orb ──
+  const orb = document.getElementById('cursorOrb');
+  document.addEventListener('mousemove', e => {
+    orb.style.left = e.clientX + 'px';
+    orb.style.top  = e.clientY + 'px';
+  });
+
+  // ── Password toggle ──
+  const pwInput  = document.getElementById('pwInput');
+  const togglePw = document.getElementById('togglePw');
+  const eyeIcon  = document.getElementById('eyeIcon');
+  const eyeOff   = `<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+  const eyeOn    = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+  let pwVisible  = false;
+
+  togglePw.addEventListener('click', () => {
+    pwVisible = !pwVisible;
+    pwInput.type = pwVisible ? 'text' : 'password';
+    eyeIcon.innerHTML = pwVisible ? eyeOff : eyeOn;
+  });
+
+  // ── Theme switcher ──
+  function setTheme(t) {
+    document.body.classList.remove('theme-navy', 'theme-angular');
+    document.querySelectorAll('.tech-btn').forEach(b => b.classList.remove('active'));
+    if (t === 'navy') {
+      document.body.classList.add('theme-navy');
+      document.getElementById('btnNavy').classList.add('active');
+    } else if (t === 'angular') {
+      document.body.classList.add('theme-angular');
+      document.getElementById('btnAngular').classList.add('active');
+    } else {
+      document.getElementById('btnPurple').classList.add('active');
+    }
+  }
+
+  // ── Grain toggle ──
+  let grainOff   = false;
+  let grainDebug = false;
+
+  function toggleGrain() {
+    grainDebug = false;
+    document.body.classList.remove('grain-debug');
+    grainOff = !grainOff;
+    document.body.classList.toggle('grain-off', grainOff);
+    const btn = document.getElementById('btnGrainOff');
+    btn.classList.toggle('active', grainOff);
+    btn.textContent = grainOff ? '◎ Grain ON' : '◎ Grain OFF';
+    document.getElementById('btnGrainDbg').classList.remove('active');
+  }
+
+  function toggleGrainDebug() {
+    grainOff = false;
+    document.body.classList.remove('grain-off');
+    grainDebug = !grainDebug;
+    document.body.classList.toggle('grain-debug', grainDebug);
+    document.getElementById('btnGrainDbg').classList.toggle('active', grainDebug);
+    document.getElementById('btnGrainOff').classList.remove('active');
+    document.getElementById('btnGrainOff').textContent = '◎ Grain OFF';
+  }
+</script>
+</body>
+</html>
