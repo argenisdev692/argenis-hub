@@ -60,6 +60,58 @@ final readonly class FfmpegCommandBuilder
     }
 
     /**
+     * First pass of the two-pass loudness normalisation: measure the input and
+     * print the five numbers the linear second pass needs.
+     *
+     * Audio only (`-vn`) and decoded to the null muxer, so this is a read of the
+     * soundtrack, not a second encode. `print_format=json` puts the block on
+     * stderr; {@see FfmpegVideoEditor} parses it there.
+     *
+     * @return list<string>
+     */
+    #[\NoDiscard]
+    public function measureLoudness(string $path, float $targetLufs, float $truePeakDbTp, ?float $loudnessRange): array
+    {
+        return [
+            $this->ffmpegBinary,
+            ...self::COMMON_FLAGS,
+            '-nostats',
+            '-i', $path,
+            '-vn',
+            '-map', '0:a:0',
+            '-af', self::loudnormStats($targetLufs, $truePeakDbTp, $loudnessRange),
+            '-f', 'null',
+            '-',
+        ];
+    }
+
+    /**
+     * Measures an already-built audio graph instead of a raw input.
+     *
+     * The cut graph is the material that will actually be delivered, so its
+     * measurement is the one the second pass must use: measuring the source
+     * would include audio the cuts removed. The stats filter is the graph's own
+     * tail, which is why no `-af` appears here — FFmpeg refuses a second audio
+     * filterchain on an output already fed by `filter_complex`.
+     *
+     * @return list<string>
+     */
+    #[\NoDiscard]
+    public function measureGraphLoudness(string $inputPath, string $filterGraphPath): array
+    {
+        return [
+            $this->ffmpegBinary,
+            ...self::COMMON_FLAGS,
+            '-nostats',
+            '-i', $inputPath,
+            '-/filter_complex', $filterGraphPath,
+            '-map', FilterGraphBuilder::AUDIO_OUTPUT,
+            '-f', 'null',
+            '-',
+        ];
+    }
+
+    /**
      * Speech-optimized audio for a transcription provider (V2).
      *
      * Mono 16 kHz is what speech models resample to anyway, and 32 kbps keeps a
@@ -254,6 +306,20 @@ final readonly class FfmpegCommandBuilder
             ...($intermediate ? [] : ['-movflags', '+faststart']),
             ...$threads,
         ];
+    }
+
+    /**
+     * The measurement filter, kept in one place so both passes agree on the
+     * target and on the JSON format the parser expects.
+     */
+    private static function loudnormStats(float $targetLufs, float $truePeakDbTp, ?float $loudnessRange): string
+    {
+        return sprintf(
+            'loudnorm=I=%s:TP=%s%s:print_format=json',
+            self::number($targetLufs),
+            self::number($truePeakDbTp),
+            $loudnessRange === null ? '' : ':LRA='.self::number($loudnessRange),
+        );
     }
 
     /**

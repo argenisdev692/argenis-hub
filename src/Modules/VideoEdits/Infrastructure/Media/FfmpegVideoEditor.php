@@ -9,7 +9,9 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\Services\FrozenFrameParser;
+use Modules\VideoEdits\Domain\Services\LoudnormStatsParser;
 use Modules\VideoEdits\Domain\Services\SilenceCutParser;
+use Modules\VideoEdits\Domain\ValueObjects\LoudnessMeasurement;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
 use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
@@ -44,6 +46,7 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
         private FilterGraphBuilder $graphs,
         private SilenceCutParser $silenceParser,
         private FrozenFrameParser $frozenParser,
+        private LoudnormStatsParser $loudnessParser,
         private ConfigRepository $config,
         private LoggerInterface $logger,
     ) {}
@@ -87,10 +90,12 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
             $inputProbes,
         ));
 
+        $measurements = $this->mergeLoudnessMeasurements($inputPaths, $inputProbes);
+
         $this->encode(
             $this->commands->merge(
                 $inputPaths,
-                $this->writeFilterGraph($outputPath, $this->graphs->merge($inputProbes, $profile)),
+                $this->writeFilterGraph($outputPath, $this->graphs->merge($inputProbes, $profile, $measurements)),
                 $outputPath,
                 $profile,
                 $intermediate,
@@ -99,6 +104,34 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
             $onProgress,
             'merge',
         );
+    }
+
+    /**
+     * Each input is measured before it is joined, including the intermediate
+     * merge: silence detection and transcription run on that file, and both
+     * assume the programme sits near a known level. The cut pass measures the
+     * merged result again, so the final gain is still exact; this first pass is
+     * what keeps the analysis stages working from a stable signal.
+     *
+     * @param  list<string>  $inputPaths
+     * @param  list<MediaProbe>  $inputProbes
+     * @return array<int, LoudnessMeasurement|null>
+     */
+    private function mergeLoudnessMeasurements(array $inputPaths, array $inputProbes): array
+    {
+        if (! $this->loudnessEnabled()) {
+            return [];
+        }
+
+        $measurements = [];
+
+        foreach ($inputPaths as $index => $path) {
+            $measurements[$index] = $inputProbes[$index]->hasAudio
+                ? $this->measureInputLoudness($path)
+                : null;
+        }
+
+        return $measurements;
     }
 
     public function extractAudio(string $inputPath, string $outputPath, int $maxBytes): void
@@ -224,10 +257,12 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
             $keepRanges,
         )) - ($effects?->savedMs() ?? 0);
 
+        $measurement = $this->renderLoudnessMeasurement($inputPath, $inputProbe, $keepRanges, $outputPath, $profile, $effects);
+
         $this->encode(
             $this->commands->render(
                 $inputPath,
-                $this->writeFilterGraph($outputPath, $this->graphs->keepRanges($keepRanges, $inputProbe, $profile, $effects)),
+                $this->writeFilterGraph($outputPath, $this->graphs->keepRanges($keepRanges, $inputProbe, $profile, $effects, $measurement)),
                 $outputPath,
                 $profile,
             ),
@@ -235,6 +270,81 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
             $onProgress,
             'render',
         );
+    }
+
+    /**
+     * Measures the audio the render is about to produce, not the source file.
+     *
+     * The first pass runs the same cut graph with the video strips removed and a
+     * `loudnorm=print_format=json` tail, so the numbers describe the trims,
+     * speed-ups and breath attenuations that will actually be heard. The result
+     * feeds the constant-gain second pass; when it cannot be measured, the render
+     * proceeds without loudness rather than falling back to dynamic mode.
+     *
+     * @param  list<TimeRange>  $keepRanges
+     */
+    private function renderLoudnessMeasurement(
+        string $inputPath,
+        MediaProbe $inputProbe,
+        array $keepRanges,
+        string $outputPath,
+        OutputProfile $profile,
+        ?RenderEffects $effects,
+    ): ?LoudnessMeasurement {
+        if (! $this->loudnessEnabled() || ! $inputProbe->hasAudio) {
+            return null;
+        }
+
+        $graph = $this->graphs->keepRangesAudio($keepRanges, $inputProbe, $profile, $effects, withLoudnessStats: true);
+        $graphPath = $this->writeFilterGraph($outputPath.'.loudness', $graph);
+
+        try {
+            return $this->measure($this->commands->measureGraphLoudness($inputPath, $graphPath), 'loudness');
+        } finally {
+            @unlink($graphPath);
+        }
+    }
+
+    private function measureInputLoudness(string $path): ?LoudnessMeasurement
+    {
+        return $this->measure(
+            $this->commands->measureLoudness(
+                $path,
+                (float) $this->config->get('video-edit.loudness.target_lufs', -16.0),
+                (float) $this->config->get('video-edit.loudness.true_peak_dbtp', -1.5),
+                is_numeric($lra = $this->config->get('video-edit.loudness.loudness_range')) ? (float) $lra : null,
+            ),
+            'loudness',
+        );
+    }
+
+    /**
+     * @param  list<string>  $command
+     */
+    private function measure(array $command, string $operation): ?LoudnessMeasurement
+    {
+        $process = $this->run($command, $this->measureTimeoutSeconds());
+
+        if (! $process->isSuccessful()) {
+            $this->logFailure($operation, $process);
+
+            return null;
+        }
+
+        $measurement = $this->loudnessParser->parse($process->getErrorOutput());
+
+        if ($measurement === null) {
+            $this->logger->warning('video-edit.loudness_unmeasurable', [
+                'stderr_tail' => mb_substr(trim($process->getErrorOutput()), -1_000),
+            ]);
+        }
+
+        return $measurement;
+    }
+
+    private function loudnessEnabled(): bool
+    {
+        return (bool) $this->config->get('video-edit.loudness.enabled', false);
     }
 
     /**
@@ -324,6 +434,16 @@ final readonly class FfmpegVideoEditor implements VideoEditorPort
     private function timeoutSeconds(): int
     {
         return (int) $this->config->get('laravel-ffmpeg.timeout', 3_600);
+    }
+
+    /**
+     * The measurement pass decodes the soundtrack and writes no file, so it gets
+     * a shorter bound than the hour a full render may use — a crafted input must
+     * not be able to pin a worker for the render budget twice.
+     */
+    private function measureTimeoutSeconds(): int
+    {
+        return (int) $this->config->get('video-edit.limits.measure_timeout_seconds', 600);
     }
 
     /**

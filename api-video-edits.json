@@ -215,6 +215,41 @@
                 }
             }
         },
+        "/instruction-profiles": {
+            "get": {
+                "operationId": "video-edits.admin.instruction-profiles",
+                "summary": "The standing-notes templates the form offers. Config-backed and read-only,\nso it shares the list permission rather than the create one",
+                "tags": [
+                    "VideoEdit"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/InstructionProfileData"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/{uuid}/download-url": {
             "get": {
                 "operationId": "video-edits.admin.download-url",
@@ -698,7 +733,7 @@
                                 "position": {
                                     "type": "integer",
                                     "minimum": 1,
-                                    "maximum": 10
+                                    "maximum": 20
                                 },
                                 "file_name": {
                                     "type": "string",
@@ -728,7 +763,7 @@
                             ]
                         },
                         "minItems": 1,
-                        "maxItems": 10,
+                        "maxItems": 20,
                         "uniqueItems": true
                     },
                     "silence_removal": {
@@ -823,7 +858,8 @@
                                         "filler_word",
                                         "stutter",
                                         "repetition",
-                                        "vocal_sound"
+                                        "vocal_sound",
+                                        "pause_marker"
                                     ]
                                 }
                             },
@@ -915,6 +951,26 @@
                     "expires_at"
                 ],
                 "title": "DownloadUrlData"
+            },
+            "InstructionProfileData": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "instructions": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "key",
+                    "name",
+                    "instructions"
+                ],
+                "title": "InstructionProfileData"
             },
             "RetryVideoEditData": {
                 "type": "object",

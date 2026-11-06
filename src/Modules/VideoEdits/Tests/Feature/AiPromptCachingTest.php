@@ -101,10 +101,14 @@ it('gives OpenAI an identical script prefix across takes and a key that does not
         ->and($first['options']['prompt_cache_key'])->not->toContain('Excel');
 });
 
-it('relies on implicit prefix caching for Gemini', function (): void {
+it('relies on implicit prefix caching for Gemini and pins the thinking level', function (): void {
     ($this->analyze)('gemini');
 
-    expect($this->client->calls[0]['options'])->toBe([])
+    // No cache fields to send — Gemini caches the prefix implicitly — but the
+    // one model judgement in the pipeline runs at high reasoning, explicitly.
+    expect($this->client->calls[0]['options'])->toBe(['thinking_level' => 'high'])
+        ->and($this->client->calls[0]['options'])->not->toHaveKey('system')
+        ->and($this->client->calls[0]['options'])->not->toHaveKey('prompt_cache_key')
         ->and($this->client->calls[0]['prompt'])->toStartWith('SCRIPT')
         ->and($this->client->calls[0]['prompt'])->toContain('[1] PAUSA');
 });

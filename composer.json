@@ -47,6 +47,7 @@
         "spatie/laravel-cookie-consent": "^3.5",
         "spatie/laravel-csp": "^3.27",
         "spatie/laravel-data": "^4.23",
+        "spatie/laravel-google-calendar": "^3.8",
         "spatie/laravel-honeypot": "^4.7",
         "spatie/laravel-medialibrary": "^11.23",
         "spatie/laravel-one-time-passwords": "^1.1",

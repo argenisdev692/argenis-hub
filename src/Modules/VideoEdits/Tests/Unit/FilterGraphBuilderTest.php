@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\VideoEdits\Domain\ValueObjects\CompressedRange;
+use Modules\VideoEdits\Domain\ValueObjects\LoudnessMeasurement;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\OutputProfile;
 use Modules\VideoEdits\Domain\ValueObjects\RenderEffects;
@@ -13,6 +14,11 @@ use Modules\VideoEdits\Infrastructure\Media\FilterGraphBuilder;
 function graphProfile(): OutputProfile
 {
     return new OutputProfile(1920, 1080, 29.97, 48_000, 2);
+}
+
+function loudnessMeasurement(float $lra = 3.70): LoudnessMeasurement
+{
+    return new LoudnessMeasurement(-25.22, -17.99, $lra, -35.69, 6.96);
 }
 
 it('normalizes and joins clips, generating silence for clips without audio', function (): void {
@@ -39,29 +45,31 @@ it('keeps only the requested ranges with millisecond precision', function (): vo
 
     expect(explode(';', $graph))->toBe([
         '[0:v:0]trim=start=0.000:end=10.150,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=0.080[v0]',
-        '[0:a:0]atrim=start=0.000:end=10.150,asetpts=PTS-STARTPTS,afade=t=out:st=10.110:d=0.040,apad=pad_dur=0.080[a0]',
+        '[0:a:0]atrim=start=0.000:end=10.150,asetpts=PTS-STARTPTS,afade=t=out:st=10.145:d=0.005,apad=pad_dur=0.080[a0]',
         '[0:v:0]trim=start=11.850:end=60.000,setpts=PTS-STARTPTS[v1]',
-        '[0:a:0]atrim=start=11.850:end=60.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.040[a1]',
+        '[0:a:0]atrim=start=11.850:end=60.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.005[a1]',
         '[v0][a0][v1][a1]concat=n=2:v=1:a=1[cv][ca]',
         '[cv]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=29.970,format=yuv420p[outv]',
         '[ca]aresample=48000:async=1,aformat=sample_rates=48000:channel_layouts=stereo[outa]',
     ]);
 });
 
-it('fades both sides of an inner range and never the outer edges of the recording', function (): void {
+it('fades both sides of an inner range with a micro-fade and never the outer edges', function (): void {
     $graph = (new FilterGraphBuilder)->keepRanges(
         [new TimeRange(0, 1_000), new TimeRange(2_000, 3_000), new TimeRange(4_000, 5_000)],
         new MediaProbe(5_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
         graphProfile(),
     );
 
-    expect($graph)->toContain('atrim=start=0.000:end=1.000,asetpts=PTS-STARTPTS,afade=t=out:st=0.960:d=0.040,apad=pad_dur=0.080[a0]')
-        ->and($graph)->toContain('asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.040,afade=t=out:st=0.960:d=0.040,apad=pad_dur=0.080[a1]')
-        ->and($graph)->toContain('atrim=start=4.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.040[a2]');
+    // 5 ms is the anti-click floor. A 40 ms ramp here is what used to turn the
+    // first syllable of every fragment down and let it recover.
+    expect($graph)->toContain('atrim=start=0.000:end=1.000,asetpts=PTS-STARTPTS,afade=t=out:st=0.995:d=0.005,apad=pad_dur=0.080[a0]')
+        ->and($graph)->toContain('asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.005,afade=t=out:st=0.995:d=0.005,apad=pad_dur=0.080[a1]')
+        ->and($graph)->toContain('atrim=start=4.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.005[a2]');
 });
 
 it('holds the last frame for exactly as long as the audio holds its air', function (): void {
-    $graph = (new FilterGraphBuilder(joinFadeMs: 40, joinAirMs: 120))->keepRanges(
+    $graph = (new FilterGraphBuilder(joinFadeMs: 5, joinAirMs: 120))->keepRanges(
         [new TimeRange(0, 5_000), new TimeRange(6_000, 10_000)],
         new MediaProbe(10_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
         graphProfile(),
@@ -70,25 +78,25 @@ it('holds the last frame for exactly as long as the audio holds its air', functi
     // The whole point of the air being audio-only-safe: picture and sound must
     // gain the same 120 ms or the lip sync drifts for the rest of the video.
     expect(explode(';', $graph)[0])->toBe('[0:v:0]trim=start=0.000:end=5.000,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=0.120[v0]')
-        ->and(explode(';', $graph)[1])->toBe('[0:a:0]atrim=start=0.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=out:st=4.960:d=0.040,apad=pad_dur=0.120[a0]')
+        ->and(explode(';', $graph)[1])->toBe('[0:a:0]atrim=start=0.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=out:st=4.995:d=0.005,apad=pad_dur=0.120[a0]')
         // The last segment is the recording's own close, not a seam: no air.
-        ->and(explode(';', $graph)[3])->toBe('[0:a:0]atrim=start=6.000:end=10.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.040[a1]');
+        ->and(explode(';', $graph)[3])->toBe('[0:a:0]atrim=start=6.000:end=10.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.005[a1]');
 });
 
-it('ramps the fade out before the air, never onto the next word', function (): void {
+it('ramps the micro-fade out before the air, never onto the next word', function (): void {
     $graph = (new FilterGraphBuilder)->keepRanges(
         [new TimeRange(0, 4_000), new TimeRange(5_000, 9_000)],
         new MediaProbe(9_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
         graphProfile(),
     );
 
-    // `apad` last, so the fade at 3.96 s ends on silence rather than on the
-    // first phoneme after the cut — the abruptness the round-2 review named.
-    expect(explode(';', $graph)[1])->toContain('afade=t=out:st=3.960:d=0.040,apad=pad_dur=0.080');
+    // `apad` last, so the fade at 3.995 s ends on silence rather than on the
+    // first phoneme after the cut.
+    expect(explode(';', $graph)[1])->toContain('afade=t=out:st=3.995:d=0.005,apad=pad_dur=0.080');
 });
 
-it('drops the air but keeps the longer fade when the air is configured to zero', function (): void {
-    $graph = (new FilterGraphBuilder(joinFadeMs: 40, joinAirMs: 0))->keepRanges(
+it('keeps the micro-fade when the air is configured to zero', function (): void {
+    $graph = (new FilterGraphBuilder(joinFadeMs: 5, joinAirMs: 0))->keepRanges(
         [new TimeRange(0, 4_000), new TimeRange(5_000, 9_000)],
         new MediaProbe(9_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
         graphProfile(),
@@ -96,7 +104,7 @@ it('drops the air but keeps the longer fade when the air is configured to zero',
 
     expect($graph)->not->toContain('apad')
         ->and($graph)->not->toContain('tpad')
-        ->and($graph)->toContain('afade=t=out:st=3.960:d=0.040');
+        ->and($graph)->toContain('afade=t=out:st=3.995:d=0.005');
 });
 
 it('does not fade a single kept range, which has no join', function (): void {
@@ -121,11 +129,11 @@ it('plays a tool wait faster, picture and room tone together', function (): void
 
     expect(array_slice(explode(';', $graph), 0, 6))->toBe([
         '[0:v:0]trim=start=0.000:end=5.000,setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=0.080[v0]',
-        '[0:a:0]atrim=start=0.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=out:st=4.960:d=0.040,apad=pad_dur=0.080[a0]',
+        '[0:a:0]atrim=start=0.000:end=5.000,asetpts=PTS-STARTPTS,afade=t=out:st=4.995:d=0.005,apad=pad_dur=0.080[a0]',
         '[0:v:0]trim=start=5.000:end=14.000,setpts=(PTS-STARTPTS)/3.000,tpad=stop_mode=clone:stop_duration=0.080[v1]',
-        '[0:a:0]atrim=start=5.000:end=14.000,asetpts=PTS-STARTPTS,atempo=3.000,afade=t=in:st=0:d=0.040,afade=t=out:st=2.960:d=0.040,apad=pad_dur=0.080[a1]',
+        '[0:a:0]atrim=start=5.000:end=14.000,asetpts=PTS-STARTPTS,atempo=3.000,afade=t=in:st=0:d=0.005,afade=t=out:st=2.995:d=0.005,apad=pad_dur=0.080[a1]',
         '[0:v:0]trim=start=14.000:end=20.000,setpts=PTS-STARTPTS[v2]',
-        '[0:a:0]atrim=start=14.000:end=20.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.040[a2]',
+        '[0:a:0]atrim=start=14.000:end=20.000,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.005[a2]',
     ])->and($graph)->toContain('concat=n=3:v=1:a=1[cv][ca]');
 });
 
@@ -140,7 +148,7 @@ it('turns breaths down with ramps, in segment-local time', function (): void {
     // −20 dB is a gain of 0.1, so the curve dips by 0.9 between 1.0 s and 1.5 s
     // of the second segment, with 60 ms ramps.
     expect(explode(';', $graph)[3])->toBe(
-        "[0:a:0]atrim=start=12.000:end=20.000,asetpts=PTS-STARTPTS,volume=volume='1-0.9000*clip(min((t-1.000)/0.060,(1.500-t)/0.060),0,1)':eval=frame,afade=t=in:st=0:d=0.040[a1]",
+        "[0:a:0]atrim=start=12.000:end=20.000,asetpts=PTS-STARTPTS,volume=volume='1-0.9000*clip(min((t-1.000)/0.060,(1.500-t)/0.060),0,1)':eval=frame,afade=t=in:st=0:d=0.005[a1]",
     )->and(explode(';', $graph)[1])->not->toContain('volume=');
 });
 
@@ -200,14 +208,39 @@ it('omits the highpass when only a frequency of zero is configured', function ()
         ->and($graph)->not->toContain('highpass');
 });
 
-it('normalizes loudness even when room tone is off', function (): void {
-    // The low microphone threshold survives denoising by being turned down, so
-    // the rescue has to be available without the denoiser.
+it('normalizes loudness with a constant gain from the measurement', function (): void {
+    // The measured values make this a linear pass: one gain for the whole
+    // programme, no gain ramp after a pause.
+    $graph = (new FilterGraphBuilder(targetLufs: -16.0, truePeakDbTp: -1.5, loudnessRange: 11.0))
+        ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile(), [loudnessMeasurement()]);
+
+    expect($graph)->toContain(
+        'aresample=48000:async=1,loudnorm=I=-16.00:TP=-1.50:LRA=11.00:measured_I=-25.22:measured_TP=-17.99:measured_LRA=3.70:measured_thresh=-35.69:offset=6.96:linear=true,aformat=',
+    );
+});
+
+it('never falls back to dynamic loudness when a file could not be measured', function (): void {
+    // Dynamic mode is the fault, not the fallback. Unmeasurable audio is left
+    // at its own level rather than pumped back to the target.
     $graph = (new FilterGraphBuilder(targetLufs: -16.0, truePeakDbTp: -1.5, loudnessRange: 11.0))
         ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
 
-    expect($graph)->toContain('aresample=48000:async=1,loudnorm=I=-16.00:TP=-1.50:LRA=11.00,aformat=')
-        ->and($graph)->not->toContain('afftdn');
+    expect($graph)->not->toContain('loudnorm')
+        ->and($graph)->not->toContain('linear=true');
+});
+
+it('raises the LRA target to the measured range so the pass stays linear', function (): void {
+    // `loudnorm` silently reverts to dynamic mode when the target LRA is below
+    // the source's; 20.10 keeps the constant-gain path.
+    $graph = (new FilterGraphBuilder(targetLufs: -16.0, truePeakDbTp: -1.5, loudnessRange: 11.0))
+        ->merge(
+            [new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)],
+            graphProfile(),
+            [loudnessMeasurement(lra: 20.0)],
+        );
+
+    expect($graph)->toContain('LRA=20.10')
+        ->and($graph)->toContain('linear=true');
 });
 
 it('denoises before normalizing, never the other way round', function (): void {
@@ -220,24 +253,20 @@ it('denoises before normalizing, never the other way round', function (): void {
         targetLufs: -16.0,
         truePeakDbTp: -1.5,
         loudnessRange: 11.0,
-    ))->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
+    ))->merge(
+        [new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)],
+        graphProfile(),
+        [loudnessMeasurement()],
+    );
 
     expect($graph)->toContain(
-        'async=1,highpass=f=80,afftdn=nr=12.00:nf=-25.00,loudnorm=I=-16.00:TP=-1.50:LRA=11.00,aformat=',
+        'async=1,highpass=f=80,afftdn=nr=12.00:nf=-25.00,loudnorm=I=-16.00:TP=-1.50:LRA=11.00:measured_I=',
     );
 });
 
-it('leaves the loudness range off when it is not configured', function (): void {
-    $graph = (new FilterGraphBuilder(targetLufs: -16.0, truePeakDbTp: -1.5))
-        ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
-
-    expect($graph)->toContain('loudnorm=I=-16.00:TP=-1.50,aformat=')
-        ->and($graph)->not->toContain('LRA=');
-});
-
-it('normalizes only when both the target and the peak are known', function (): void {
+it('normalizes only when the target, the peak and a measurement are known', function (): void {
     $graph = (new FilterGraphBuilder(targetLufs: -16.0))
-        ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
+        ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile(), [loudnessMeasurement()]);
 
     expect($graph)->not->toContain('loudnorm');
 });
@@ -247,7 +276,11 @@ it('leaves the audio chain alone for an OBS recording, which is already processe
     // expander and limiter from guia_audio_obs.md are already baked into the
     // file, and repeating any of them is what makes audio sound worse.
     $graph = (new FilterGraphBuilder(targetLufs: -16.0, truePeakDbTp: -1.5, loudnessRange: 11.0))
-        ->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
+        ->merge(
+            [new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)],
+            graphProfile(),
+            [loudnessMeasurement()],
+        );
 
     expect($graph)->toContain('aresample=48000:async=1,loudnorm=')
         ->and($graph)->not->toContain('arnndn')
@@ -269,7 +302,11 @@ it('puts the voice chain between the denoiser and the loudness target', function
             compressor: ['threshold_db' => -18.0, 'ratio' => 3.0, 'attack_ms' => 6.0, 'release_ms' => 100.0, 'makeup_db' => 3.0, 'knee' => 2.82843],
             limiter: ['ceiling_db' => -3.0, 'attack_ms' => 5.0, 'release_ms' => 60.0],
         ),
-    ))->merge([new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)], graphProfile());
+    ))->merge(
+        [new MediaProbe(30_000, 'mov,mp4', true, true, 1280, 720, 30.0)],
+        graphProfile(),
+        [loudnessMeasurement()],
+    );
 
     expect($graph)->toContain('async=1,highpass=f=80,afftdn=nr=12.00:nf=-25.00,acompressor=')
         ->and($graph)->toContain('alimiter=limit=0.70795:attack=5.00000:release=60.00000:level=false,loudnorm=I=-16.00')
@@ -288,49 +325,45 @@ function seamGraph(RenderEffects $effects, bool $declick = false): string
     );
 }
 
-it('shortens the join fade to the silence actually measured at the seam', function (): void {
-    // The seam trimmer guarantees 250 ms of breath, so a 40 ms fade fits inside
-    // it and the full length is used — the seam reads as a breath, not a splice.
+it('uses the same inaudible micro-fade whatever silence the seam has', function (): void {
+    // Clearance used to size the fade, so a seam with 5 s of air got a 40 ms
+    // ramp on the first syllable. The fade is now fixed; the air is the breath.
     $graph = seamGraph(new RenderEffects(seamClearances: [[5_000, 1_000], [1_000, 14_000]]));
 
-    expect(explode(';', $graph)[1])->toContain('afade=t=out:st=4.960:d=0.040')
-        ->and(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.040');
+    expect(explode(';', $graph)[1])->toContain('afade=t=out:st=4.995:d=0.005')
+        ->and(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.005');
 });
 
-it('drops the join fade when the seam lands straight on a word', function (): void {
-    // Zero clearance: the next fragment opens on the attack of a word. Fading it
-    // is exactly what made that word quieter than its neighbours, so the fade is
-    // dropped and `adeclick` repairs the discontinuity instead.
+it('keeps the micro-fade even when the seam lands straight on a word', function (): void {
+    // Zero clearance is exactly where a click would land. A 5 ms ramp is
+    // inaudible on the attack and still removes the discontinuity; dropping it
+    // and leaving the repair to `adeclick` is what produced the static.
     $graph = seamGraph(new RenderEffects(seamClearances: [[5_000, 0], [0, 14_000]]), declick: true);
 
-    expect(explode(';', $graph)[3])->not->toContain('afade=t=in')
+    expect(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.005')
         ->and($graph)->toContain('adeclick=');
 });
 
-it('halves the fade when only a little air is available', function (): void {
-    // 15 ms of breath: enough for a click-remover, not for the full 40 ms fade.
-    $graph = seamGraph(new RenderEffects(seamClearances: [[5_000, 15], [15, 14_000]]));
+it('caps the anti-click fade at 10 ms even when an old config asks for more', function (): void {
+    // The regression guard: 40 ms was audible as a level dip, so a stale `.env`
+    // must not be able to restore it.
+    $graph = (new FilterGraphBuilder(joinFadeMs: 40))->keepRanges(
+        [new TimeRange(0, 5_000), new TimeRange(6_000, 20_000)],
+        new MediaProbe(20_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+        graphProfile(),
+    );
 
-    expect(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.015')
-        ->and(explode(';', $graph)[1])->toContain('afade=t=out:st=4.985:d=0.015');
+    expect($graph)->toContain('afade=t=in:st=0:d=0.010')
+        ->and($graph)->not->toContain('d=0.040');
 });
 
-it('falls back to the configured fade when nothing is known about the seam', function (): void {
-    // No transcript, so no measurement. An unfaded seam clicks, so the fade is
-    // kept rather than dropped on a missing value.
-    $graph = seamGraph(new RenderEffects);
-
-    expect(explode(';', $graph)[3])->toContain('afade=t=in:st=0:d=0.040')
-        ->and(explode(';', $graph)[1])->toContain('afade=t=out:st=4.960:d=0.040');
-});
-
-it('de-clicks once on the joined result, before the rest of the chain', function (): void {
+it('de-clicks once on the joined result, with the window in milliseconds', function (): void {
     $graph = seamGraph(new RenderEffects, declick: true);
 
-    // Exactly one, on the concat output — a click is a property of a seam, so a
-    // per-segment pass would also be looking at speech that was never broken.
+    // `w` is FFmpeg milliseconds (10–100). `0.020` is out of range and aborts
+    // the render; `t=2` is so sensitive that it treats word attacks as clicks.
     expect(substr_count($graph, 'adeclick='))->toBe(1)
-        ->and($graph)->toContain('[ca]adeclick=w=0.020:o=75:t=2:m=save,aresample=');
+        ->and($graph)->toContain('[ca]adeclick=w=20:o=75:t=10:m=save,aresample=');
 });
 
 it('de-clicks ahead of denoising so the repair is not read as signal', function (): void {
@@ -348,40 +381,33 @@ it('leaves de-clicking out unless it is configured', function (): void {
     expect(seamGraph(new RenderEffects))->not->toContain('adeclick=');
 });
 
-it('scales a fragment clearance onto the output of a sped-up fragment', function (): void {
-    // The whole first fragment is a tool wait played at 3×, so its 60 ms of
-    // source air arrives as 20 ms of output. A fade sized from the source
-    // measurement would be twice as long as the air it has to sit in.
-    $graph = (new FilterGraphBuilder)->keepRanges(
-        [new TimeRange(0, 3_000), new TimeRange(4_000, 34_000)],
-        new MediaProbe(34_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
-        graphProfile(),
-        new RenderEffects(
-            compressedRanges: [new CompressedRange(new TimeRange(0, 3_000), 3.0)],
-            seamClearances: [[100, 60], [1_000, 30_000]],
-        ),
-    );
+it('builds an audio-only copy of the cut graph for the measurement pass', function (): void {
+    $graph = (new FilterGraphBuilder(targetLufs: -16.0, truePeakDbTp: -1.5, loudnessRange: 11.0))
+        ->keepRangesAudio(
+            [new TimeRange(0, 5_000), new TimeRange(6_000, 20_000)],
+            new MediaProbe(20_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+            graphProfile(),
+            withLoudnessStats: true,
+        );
 
-    // 3 000 ms of wait becomes 1 000 ms of output, and the fade-out is the 20 ms
-    // the 60 ms of source air actually became — not the configured 40 ms.
-    expect(explode(';', $graph)[1])->toContain('atempo=3.000,afade=t=out:st=0.980:d=0.020')
-        ->and(explode(';', $graph)[1])->not->toContain('afade=t=out:st=0.960');
+    expect($graph)->not->toContain('[0:v:0]')
+        ->and($graph)->not->toContain('[v0]')
+        ->and($graph)->toContain('atrim=start=0.000:end=5.000')
+        ->and($graph)->toContain('atrim=start=6.000:end=20.000')
+        ->and($graph)->toContain('concat=n=2:v=0:a=1[ca]')
+        ->and($graph)->toContain('[ca]aresample=48000,loudnorm=I=-16.00:TP=-1.50:LRA=11.00:print_format=json[outa]');
 });
 
-it('keeps the configured fade on the joins inside a sped-up wait', function (): void {
-    // A wait split by another cut has joins between two stretches of tool
-    // silence, and those are not seams against speech — no clearance applies.
-    $graph = (new FilterGraphBuilder)->keepRanges(
-        [new TimeRange(0, 30_000)],
-        new MediaProbe(30_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
-        graphProfile(),
-        new RenderEffects(
-            compressedRanges: [new CompressedRange(new TimeRange(10_000, 13_000), 3.0)],
-            seamClearances: [[300, 17_000]],
-        ),
-    );
+it('uses the measurement in the render graph, not just in the measuring pass', function (): void {
+    $graph = (new FilterGraphBuilder(targetLufs: -16.0, truePeakDbTp: -1.5, loudnessRange: 11.0))
+        ->keepRanges(
+            [new TimeRange(0, 5_000), new TimeRange(6_000, 20_000)],
+            new MediaProbe(20_000, 'mov,mp4', true, true, 1920, 1080, 30.0),
+            graphProfile(),
+            measurement: loudnessMeasurement(),
+        );
 
-    // Only the fragment's own outer edges take a clearance.
-    expect(explode(';', $graph)[1])->toContain('afade=t=out:st=9.960:d=0.040')
-        ->and(explode(';', $graph)[5])->toContain('afade=t=in:st=0:d=0.040');
+    expect($graph)->toContain(
+        'loudnorm=I=-16.00:TP=-1.50:LRA=11.00:measured_I=-25.22:measured_TP=-17.99:measured_LRA=3.70:measured_thresh=-35.69:offset=6.96:linear=true,aformat=',
+    );
 });

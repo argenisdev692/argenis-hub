@@ -228,6 +228,36 @@ it('finds a spoken pause marker as one unit and not as its own words', function 
         ->and($detections[0]->endMs)->toBe(1_800);
 });
 
+it('widens a point-aligned pause marker back over the audio it names', function (): void {
+    // This is Whisper's own shape: "Pausa" at 1 500 ms with no duration and
+    // "acá" carrying the span. Cutting from 1 500 leaves the spoken "pausa"
+    // before it in the file, which is why some markers survived an edit.
+    $transcript = transcriptOf([
+        ['decidir', 0, 1_000],
+        ['Pausa', 1_500, 1_500],
+        ['acá', 1_500, 1_800],
+        ['Clau', 1_900, 2_400],
+    ]);
+
+    $detections = detector()->detect($transcript, [SpeechCategory::PauseMarker]);
+
+    expect($detections)->toHaveCount(1)
+        ->and($detections[0]->startMs)->toBe(1_000)
+        ->and($detections[0]->endMs)->toBe(1_800);
+});
+
+it('never widens a point marker into the word that follows it', function (): void {
+    // No room before the point and no "acá" to carry a span: there is nothing
+    // to remove, and cutting forward would take the next word's attack.
+    $transcript = transcriptOf([
+        ['decidir', 0, 1_500],
+        ['Pausa', 1_500, 1_500],
+        ['Clau', 1_500, 2_000],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::PauseMarker]))->toBe([]);
+});
+
 it('finds every spelling of the marker accent and without', function (): void {
     $transcript = transcriptOf([
         ['Pausa.', 0, 500],

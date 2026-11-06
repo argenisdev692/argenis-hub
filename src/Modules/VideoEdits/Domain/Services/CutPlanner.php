@@ -69,6 +69,7 @@ final readonly class CutPlanner
         private int $midSentencePauseMs = 0,
         private ?CutEdgeTrimmer $edgeTrimmer = null,
         private ?CutSeamTrimmer $seamTrimmer = null,
+        private int $onsetGuardMs = 0,
     ) {}
 
     /**
@@ -262,6 +263,18 @@ final readonly class CutPlanner
                 if ($words !== [] && $this->seamTrimmer !== null) {
                     $ranges = array_map(
                         fn (array $range): array => $this->seamTrimmer->absorbFlankingSilence($range[0], $range[1], $words),
+                        $ranges,
+                    );
+                }
+
+                // A word boundary is where the model heard the word end, not
+                // where the next attack starts. Pulling the cut back by the
+                // guard leaves a few milliseconds of the removed word in
+                // exchange for an intact onset — the difference between a clean
+                // "para" and one whose "p" was clipped by the seam.
+                if ($this->onsetGuardMs > 0) {
+                    $ranges = array_map(
+                        fn (array $range): array => [$range[0], max($range[0], $range[1] - $this->onsetGuardMs)],
                         $ranges,
                     );
                 }

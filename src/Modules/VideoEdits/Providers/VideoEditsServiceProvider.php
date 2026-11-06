@@ -120,6 +120,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
             midSentencePauseMs: (int) config('video-edit.silence.mid_sentence_pause_ms'),
             edgeTrimmer: self::edgeTrimmer(),
             seamTrimmer: self::seamTrimmer(),
+            onsetGuardMs: max(0, (int) config('video-edit.cuts.onset_guard_ms', 40)),
         ));
 
         $this->registerDecisionProducers();

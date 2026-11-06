@@ -38,6 +38,20 @@ use Modules\VideoEdits\Domain\ValueObjects\TranscriptWord;
 final readonly class SpeechDisfluencyDetector
 {
     /**
+     * Whisper sometimes aligns a marker to a point: `Pausa` comes back as
+     * start == end, and the word after it carries the whole duration. Below this
+     * span the marker has no usable audio of its own and has to be widened.
+     */
+    private const int MIN_PAUSE_MARKER_MS = 120;
+
+    /**
+     * How far before a point-aligned marker its audio may begin. A spoken
+     * "pausa" is ~400–700 ms; 600 ms covers it without reaching into an earlier
+     * sentence.
+     */
+    private const int PAUSE_MARKER_LEAD_MS = 600;
+
+    /**
      * @param  list<string>  $fillerSounds  non-lexical hesitations ("eh", "mmm")
      * @param  list<string>  $fillerWords  real words used as padding ("este", "like")
      * @param  list<string>  $fillerPhrases  multi-word padding ("o sea", "you know")
@@ -286,10 +300,18 @@ final readonly class SpeechDisfluencyDetector
                     continue;
                 }
 
+                [$startMs, $endMs] = $this->pauseMarkerSpan($window, $index, $words);
+
+                // A point marker with no room before it has no audio to remove.
+                // Cutting anyway would take the next word's attack instead.
+                if ($endMs <= $startMs) {
+                    continue;
+                }
+
                 $detections[] = new SpeechDetection(
                     category: SpeechCategory::PauseMarker,
-                    startMs: $window[0]->startMs,
-                    endMs: $window[$length - 1]->endMs,
+                    startMs: $startMs,
+                    endMs: $endMs,
                     confidence: $this->averageConfidence($window),
                     evidence: ['text' => $phrase, 'detector' => 'pause_marker'],
                 );
@@ -301,6 +323,42 @@ final readonly class SpeechDisfluencyDetector
         }
 
         return $this->longestSpansOnly($detections);
+    }
+
+    /**
+     * The audio a marker actually occupies, not the point Whisper aligned it to.
+     *
+     * The transcript this module runs on is full of `Pausa` words with
+     * `start_ms == end_ms`, immediately followed by `acá` with the full
+     * duration. The marker's audio is **before** that point, so a cut that
+     * starts there removes the "acá" and leaves the spoken "pausa" — the
+     * asymmetry that made some markers disappear and others survive.
+     *
+     * When the first token has no measurable span, the cut starts at the
+     * previous word's end if that is within {@see self::PAUSE_MARKER_LEAD_MS},
+     * or at the bounded lead before the alignment point otherwise. It never
+     * moves forward, so it cannot reach into the next word.
+     *
+     * @param  list<TranscriptWord>  $window
+     * @param  list<TranscriptWord>  $words
+     * @return array{0: int, 1: int}
+     */
+    private function pauseMarkerSpan(array $window, int $index, array $words): array
+    {
+        $first = $window[0];
+        $last = array_last($window);
+        $startMs = $first->startMs;
+        $endMs = $last->endMs;
+
+        if ($first->durationMs() < self::MIN_PAUSE_MARKER_MS) {
+            $previousEnd = $index > 0
+                ? $words[$index - 1]->endMs
+                : $startMs - self::PAUSE_MARKER_LEAD_MS;
+
+            $startMs = min($startMs, max($previousEnd, $startMs - self::PAUSE_MARKER_LEAD_MS));
+        }
+
+        return [$startMs, $endMs];
     }
 
     /**

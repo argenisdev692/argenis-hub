@@ -38,6 +38,24 @@ function manualCut(int $startMs, int $endMs): ValidatedDecision
     return ValidatedDecision::applied(new CutDecision('manual', CutReason::Manual, DecisionOrigin::User, $startMs, $endMs));
 }
 
+function fillerCut(int $startMs, int $endMs): ValidatedDecision
+{
+    return ValidatedDecision::applied(new CutDecision('speech', CutReason::FillerWord, DecisionOrigin::SystemDetection, $startMs, $endMs));
+}
+
+function guardedPlanner(int $guardMs = 40): CutPlanner
+{
+    return new CutPlanner(
+        silencePaddingAfterSpeechMs: 250,
+        silencePaddingBeforeSpeechMs: 100,
+        wordGuardAfterMs: 150,
+        wordGuardBeforeMs: 60,
+        minKeptFragmentMs: 250,
+        minOutputMs: 1_000,
+        onsetGuardMs: $guardMs,
+    );
+}
+
 /**
  * @param  list<TimeRange>  $ranges
  * @return list<array{0: int, 1: int}>
@@ -80,6 +98,22 @@ it('pulls the end of a silence cut back before an early word attack', function (
     $plan = planner()->plan([silence(10_000, 12_000)], 60_000, [new TranscriptWord('herramienta', 11_850, 12_500)]);
 
     expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_250, 11_790]]);
+});
+
+it('pulls a word cut back so the next word keeps its attack', function (): void {
+    // Whisper's end boundary is not the acoustic onset; 40 ms of the removed
+    // filler is a cheaper trade than clipping the "p" of the next word.
+    $plan = guardedPlanner()->plan([fillerCut(10_000, 11_000)], 60_000);
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_000, 10_960]])
+        ->and(bounds($plan->keepRanges))->toBe([[0, 10_000], [10_960, 60_000]]);
+});
+
+it('never shortens a manual cut with the onset guard', function (): void {
+    // The owner's range is an instruction, not a model suggestion.
+    $plan = guardedPlanner()->plan([manualCut(10_000, 11_000)], 60_000);
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_000, 11_000]]);
 });
 
 it('splits a silence around a quiet word ffmpeg missed', function (): void {

@@ -405,16 +405,12 @@ it('offers the marker as a category with nothing left out of the default set', f
         ->and(count(SpeechCategory::all()))->toBe(count(SpeechCategory::values()));
 });
 
-it('removes the fillers that were surviving every AI edit', function (): void {
-    // "Okay, okey… muy bien, vamos a ver." These were spoken in every take and
-    // survived every edit, while the pause markers in the same recordings were
-    // removed — which is exactly the asymmetry: the marker has a dictionary
-    // entry and these did not.
-    //
-    // The model could not have caught them either. The agent is explicitly
-    // forbidden from proposing filler cuts, because its word indices are guesses
-    // and the timings here are exact — so the dictionary is the only layer that
-    // can remove a filler, and an absent entry means nothing ever will.
+it('removes real padding but keeps a transition like "muy bien"', function (): void {
+    // "Okay, okey" are padding in every register. "Muy bien" is not: in this
+    // speaker's lessons it is the hinge that moves to the next step ("muy bien,
+    // ahora..."), so the dictionary no longer removes it. The same test also
+    // pins "vamos" as content: it is not in any filler list, and a producer that
+    // removes it is cutting a take, not a tic.
     $detectedAs = static fn (array $detections): array => array_map(
         static fn (SpeechDetection $detection): array => [$detection->category->value, $detection->startMs, $detection->endMs],
         $detections,
@@ -432,9 +428,6 @@ it('removes the fillers that were surviving every AI edit', function (): void {
     )))->toBe([
         ['filler_word', 1_000, 1_400],
         ['filler_word', 1_600, 1_900],
-        // "muy bien" goes as a unit: neither half is padding on its own, so
-        // listing only "bien" would delete a real word.
-        ['filler_word', 2_200, 2_800],
     ]);
 });
 

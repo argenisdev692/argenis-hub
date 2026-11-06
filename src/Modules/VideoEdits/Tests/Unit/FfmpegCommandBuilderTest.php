@@ -51,6 +51,26 @@ it('asks ffprobe for machine-readable stream and format data', function (): void
         ->and(valueAfter($command, '-i'))->toBe('/w/source-1.mp4');
 });
 
+it('measures an input with an audio-only null pass that prints JSON', function (): void {
+    $command = commandBuilder()->measureLoudness('/w/source.mp4', -16.0, -1.5, 11.0);
+
+    expect($command)->toContain('-vn')
+        ->and(valueAfter($command, '-map'))->toBe('0:a:0')
+        ->and(valueAfter($command, '-af'))->toBe('loudnorm=I=-16.000:TP=-1.500:LRA=11.000:print_format=json')
+        ->and(valueAfter($command, '-f'))->toBe('null')
+        ->and(array_last($command))->toBe('-')
+        ->and($command)->not->toContain('-progress');
+});
+
+it('measures the cut graph through filter_complex instead of a second audio chain', function (): void {
+    $command = commandBuilder()->measureGraphLoudness('/w/merged.mp4', '/w/out.mp4.loudness.filtergraph');
+
+    expect(valueAfter($command, '-/filter_complex'))->toBe('/w/out.mp4.loudness.filtergraph')
+        ->and(valueAfter($command, '-map'))->toBe('[outa]')
+        ->and($command)->not->toContain('-af')
+        ->and(valueAfter($command, '-f'))->toBe('null');
+});
+
 it('builds a silencedetect filter from the threshold and noise floor', function (): void {
     $threshold = SilenceThreshold::fromSeconds(1.5, 0.3, 10.0);
 

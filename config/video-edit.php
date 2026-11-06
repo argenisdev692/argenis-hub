@@ -28,6 +28,9 @@ return [
         'allowed_containers' => ['mov', 'mp4', 'webm', 'matroska'],
         // Bounds ffprobe on an uploaded file; a crafted one must not stall a worker.
         'probe_timeout_seconds' => (int) env('VIDEO_EDIT_PROBE_TIMEOUT', 120),
+        // The loudness measurement decodes audio only, so it is far cheaper than
+        // a render and gets its own, shorter bound than the hour a render may use.
+        'measure_timeout_seconds' => (int) env('VIDEO_EDIT_MEASURE_TIMEOUT', 600),
     ],
 
     'silence' => [
@@ -81,7 +84,14 @@ return [
     | every breath is what makes an edit sound robotic. Needs a transcript.
     */
     'breaths' => [
-        'enabled' => (bool) env('VIDEO_EDIT_BREATHS', true),
+        // Off by default after the content review: this ramp is applied to every
+        // gap ≥ `min_gap_ms` between TRANSCRIBED words, so when the provider drops
+        // a short transition ("vamos", "observemos") the gap covers that word and
+        // the whole phrase comes out 15 dB down. The fix is either accurate word
+        // timings or no ramp; this module cannot verify the former, so the default
+        // is the latter. Enable it per installation when the transcript is known
+        // to be complete.
+        'enabled' => (bool) env('VIDEO_EDIT_BREATHS', false),
         'min_gap_ms' => 250,
         'attenuation_db' => -15.0,
     ],
@@ -131,10 +141,16 @@ return [
     | It runs AFTER the denoiser, which is the only correct order: normalising
     | first would just hand `afftdn` a louder noise floor to learn.
     |
-    | Single-pass mode, not two-pass. Two-pass needs a measurement pass over the
-    | whole file and a linear filter baked from the result, which a worker that
-    | renders one edit at a time through a filtergraph cannot express; dynamic
-    | mode is the right trade for a talking-head tutorial.
+    | **Two-pass, always.** The first pass runs the same cut graph audio-only
+    | with `loudnorm=print_format=json`; the second pass applies one constant
+    | gain from those measurements. Single-pass dynamic mode was the source of
+    | the review's "la frase entra baja y recupera el nivel": the filter decides
+    | its gain while it plays, and after a pause or a cut it ramps back up. A
+    | measurement pass costs one audio decode, never a second video encode.
+    |
+    | If a file cannot be measured (silence, unreadable audio), the loudness
+    | stage is skipped. Falling back to dynamic mode would silently reintroduce
+    | the pumping, which is worse than leaving the level where it was.
     */
     /*
     |----------------------------------------------------------------------
@@ -360,13 +376,14 @@ return [
             ],
             // Multi-word padding: "sea" alone is ordinary Spanish, "o sea" is not.
             //
-            // "muy bien" belongs here rather than as two single words for the same
-            // reason "o sea" does: "bien" and "muy" are both ordinary words, and
-            // only the pair is padding. Listed as a phrase so it is cut as a unit
-            // and neither half is left dangling.
+            // "muy bien" and "muy claro" were here and were removed after the
+            // content review: in this register they are transitions the speaker
+            // uses to move the lesson forward ("muy bien, ahora..."), not padding.
+            // A dictionary cannot tell a transition from a tic, and this module
+            // prefers a missed filler over a deleted sentence — the same trade the
+            // rest of this list makes.
             'filler_phrases' => [
                 'o sea', 'es decir', 'you know', 'i mean', 'kind of', 'sort of',
-                'muy bien', 'muy claro',
             ],
             /*
             |----------------------------------------------------------------------
@@ -550,6 +567,11 @@ return [
         // case, at a fraction of the cost over a 20-minute recording.
         'model' => env('VIDEO_EDIT_AI_MODEL', 'gemini-3.8-flash'),
         'timeout_seconds' => (int) env('VIDEO_EDIT_AI_TIMEOUT', 300),
+        // Gemini 3 reasons at `high` unless told otherwise. Pinned explicitly so
+        // a package default cannot silently lower the one model judgement this
+        // pipeline makes — where a retake ended. `low` is a cost trade, not a
+        // quality-equivalent one.
+        'thinking_level' => env('VIDEO_EDIT_AI_THINKING_LEVEL', 'high'),
 
         // Every AI cut waits for the owner's review (OWASP LLM06). Proposals at or
         // above this confidence start ticked in the review; the rest start
@@ -753,14 +775,18 @@ return [
         | The picture holds its last frame for exactly as long as the audio holds
         | the air, so the two never drift.
         |
-        | `fade_ms` was 15 ms, which only removed the click; the seam itself was
-        | still audible as a splice. 40 ms is long enough to be heard as a breath
-        | and short enough to cost no intelligibility.
+        | `fade_ms` is an ANTI-CLICK ramp, not the breath. It was 40 ms and sized
+        | from the silence measured at the seam, which is audible on speech: the
+        | rising gain multiplies the first syllable, so the phrase enters under
+        | level and recovers — exactly what the review reported. 5 ms removes the
+        | waveform step and is far below the ~20 ms where a gain ramp is perceived
+        | as a level change. The builder clamps it to 10 ms so a stale `.env`
+        | cannot bring the ducking back.
         |
-        | Set `air_ms` to 0 to get the old 15 ms behaviour back (well: the new
-        | fade length still applies).
+        | The breath is `air_ms`: 80 ms of room tone after the fade-out and before
+        | the next fragment. `air_ms=0` disables it and keeps only the micro-fade.
         */
-        'join_fade_ms' => (int) env('VIDEO_EDIT_JOIN_FADE_MS', 40),
+        'join_fade_ms' => (int) env('VIDEO_EDIT_JOIN_FADE_MS', 5),
         'join_air_ms' => (int) env('VIDEO_EDIT_JOIN_AIR_MS', 80),
 
         /*
@@ -807,34 +833,39 @@ return [
         |
         | "Algunas palabras no sé por qué al acomodarlas se les baja el volumen."
         |
-        | An `afade` is a gain ramp, so one applied where the seam lands on speech
-        | ramps that word's attack down from zero and the word comes out quieter
-        | than its neighbours. No curve fixes it — `tri`, `qsin` and `exp` change
-        | the shape of the dip, never whether it happens. So the join fade is now
-        | shortened to the silence measured at that edge, and where there is none
-        | at all the fade is dropped.
+        | The 5 ms join fade already removes the waveform step, deterministically
+        | and without touching the word. `adeclick` is a different operation: it
+        | classifies samples as impulsive and REPLACES them with an autoregressive
+        | interpolation. At FFmpeg's default threshold of 2 it also classifies
+        | plosives and word attacks, and the reconstruction is heard as a short
+        | static burst at the start of a phrase — the review's "chisporroteo".
         |
-        | What replaces it is `adeclick`, which is built for the job and is a
-        | different kind of operation: it classifies individual samples as
-        | impulsive, reconstructs those from their neighbours, and with
-        | `method=save` leaves every sample it did not classify bit-identical. The
-        | click is repaired and the word is not touched — the outcome a fade was
-        | only ever approximating. It runs once on the joined result, never per
-        | segment.
+        | So it is OFF by default. Enable it only for a recording with genuine
+        | impulse noise (a chair knock, a cable pop), with `threshold` at 10 or
+        | higher and after listening to a word onset. `window_ms` is MILLISECONDS
+        | (FFmpeg range 10–100); passing seconds aborts the render.
         |
-        | Raise `threshold` if speech starts sounding thinned; lower it if clicks
-        | survive. Requires an FFmpeg build with `adeclick` (checked against
-        | FFmpeg 9.0.2).
+        | Requires an FFmpeg build with `adeclick` (checked against FFmpeg 9.0.2).
         */
         'declick' => [
-            'enabled' => (bool) env('VIDEO_EDIT_DECLICK', true),
+            'enabled' => (bool) env('VIDEO_EDIT_DECLICK', false),
             'window_ms' => (int) env('VIDEO_EDIT_DECLICK_WINDOW_MS', 20),
             'overlap_percent' => (int) env('VIDEO_EDIT_DECLICK_OVERLAP', 75),
-            'threshold' => (int) env('VIDEO_EDIT_DECLICK_THRESHOLD', 2),
+            'threshold' => (int) env('VIDEO_EDIT_DECLICK_THRESHOLD', 10),
             // 'save' (overlap-save) leaves unclassified samples untouched; 'add'
             // is faster but also touches what it did not classify.
             'method' => env('VIDEO_EDIT_DECLICK_METHOD', 'save'),
         ],
+
+        /*
+        | Whisper places each word within roughly 20–60 ms, and a cut that ends
+        | exactly on the transcribed word boundary can take the attack of the next
+        | word with it — the "first syllable is hard to understand" half of the
+        | review. This pulls every non-silence cut end back by this much, leaving a
+        | short tail of the removed word in exchange for a clean onset. Manual cuts
+        | are never widened or shortened.
+        */
+        'onset_guard_ms' => (int) env('VIDEO_EDIT_ONSET_GUARD_MS', 40),
 
         /*
         | Cut edges (OBSERVACIONES round 2).

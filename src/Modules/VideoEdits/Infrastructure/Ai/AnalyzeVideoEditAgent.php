@@ -9,6 +9,7 @@ use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
@@ -61,7 +62,28 @@ use Stringable;
 final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
-    use UsesPromptCache;
+    use UsesPromptCache {
+        providerOptions as promptCacheProviderOptions;
+    }
+
+    /**
+     * Gemini 3 reasons at `high` by default, but the SDK is free to set its own
+     * default. The retake boundary is the only judgement this pipeline asks a
+     * model to make, so the level is pinned here and exposed as config rather
+     * than left to a package upgrade.
+     *
+     * @return array<string, mixed>
+     */
+    public function providerOptions(Lab|string $provider): array
+    {
+        $options = $this->promptCacheProviderOptions($provider);
+
+        if (($provider instanceof Lab ? $provider->value : strtolower($provider)) === 'gemini') {
+            $options['thinking_level'] = (string) config('video-edit.ai.thinking_level', 'high');
+        }
+
+        return $options;
+    }
 
     public function instructions(): Stringable|string
     {
