@@ -235,3 +235,16 @@ it('surfaces a provider rejection rather than returning an empty transcript', fu
     expect(fn () => app(GeminiTranscriber::class)->transcribe($this->audioPath, 'es'))
         ->toThrow(TranscriptionFailedException::class);
 });
+
+it('reports an unusable response when the upload start returns no location', function (): void {
+    // A 2xx that carries no upload location never started a transfer, so it is
+    // not the provider refusing anything: it is unusable, and it must not be
+    // reported as a rejection carrying the accepted status.
+    Http::fake([
+        'generativelanguage.googleapis.com/upload/v1beta/files' => Http::response(['name' => 'files/abc'], 200),
+        '*' => Http::response([]),
+    ]);
+
+    expect(fn () => app(GeminiTranscriber::class)->transcribe($this->audioPath, 'es'))
+        ->toThrow(TranscriptionFailedException::class, 'no upload location');
+});

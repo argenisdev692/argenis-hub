@@ -216,8 +216,17 @@ final readonly class GeminiTranscriber implements TranscriptionPort
 
         $location = $start->header('Location');
 
-        if ($start->failed() || $location === '') {
+        if ($start->failed()) {
             throw TranscriptionFailedException::providerRejected($start->status());
+        }
+
+        if ($location === null || $location === '') {
+            // The start never handed back an upload location, so no transfer is
+            // pending: there is nothing to interact with yet. That is not a
+            // provider rejection — the request was accepted — and reporting one
+            // with the accepted status would read like the provider refused a
+            // request it had already answered.
+            throw TranscriptionFailedException::unusableResponse('the upload start returned no upload location');
         }
 
         $finished = $this->http
