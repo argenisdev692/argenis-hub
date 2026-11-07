@@ -106,7 +106,9 @@ it('relies on implicit prefix caching for Gemini and pins the thinking level', f
 
     // No cache fields to send — Gemini caches the prefix implicitly — but the
     // one model judgement in the pipeline runs at high reasoning, explicitly.
-    expect($this->client->calls[0]['options'])->toBe(['thinking_level' => 'high'])
+    // The level must sit inside thinkingConfig: a flat thinking_level reaches
+    // generationConfig, where the API does not define it, and the request 400s.
+    expect($this->client->calls[0]['options'])->toBe(['thinkingConfig' => ['thinkingLevel' => 'high']])
         ->and($this->client->calls[0]['options'])->not->toHaveKey('system')
         ->and($this->client->calls[0]['options'])->not->toHaveKey('prompt_cache_key')
         ->and($this->client->calls[0]['prompt'])->toStartWith('SCRIPT')

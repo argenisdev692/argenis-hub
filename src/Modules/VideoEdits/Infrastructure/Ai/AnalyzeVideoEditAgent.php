@@ -72,6 +72,12 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
      * model to make, so the level is pinned here and exposed as config rather
      * than left to a package upgrade.
      *
+     * The level belongs inside `thinkingConfig`, not at the top of
+     * `generationConfig`: `laravel/ai` merges provider options into
+     * `generationConfig` verbatim, so a flat `thinking_level` reaches the API as
+     * an undefined field and the whole analysis is rejected with
+     * `Invalid JSON payload received. Unknown name "thinking_level"`.
+     *
      * @return array<string, mixed>
      */
     public function providerOptions(Lab|string $provider): array
@@ -79,7 +85,9 @@ final class AnalyzeVideoEditAgent implements Agent, HasProviderOptions, HasStruc
         $options = $this->promptCacheProviderOptions($provider);
 
         if (($provider instanceof Lab ? $provider->value : strtolower($provider)) === 'gemini') {
-            $options['thinking_level'] = (string) config('video-edit.ai.thinking_level', 'high');
+            $options['thinkingConfig'] = [
+                'thinkingLevel' => (string) config('video-edit.ai.thinking_level', 'high'),
+            ];
         }
 
         return $options;
