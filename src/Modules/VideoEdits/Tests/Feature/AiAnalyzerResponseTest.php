@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -209,6 +210,37 @@ it('never leaks the prompt when the provider fails', function (): void {
         ->toThrow(AiAnalysisFailedException::class)
         ->and(fn () => app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null))
         ->not->toThrow(AiAnalysisFailedException::class, 'prompt was');
+});
+
+it('logs the wrapped transport cause of a provider connection failure', function (): void {
+    Log::spy();
+
+    app()->instance(AIClientInterface::class, new class implements AIClientInterface
+    {
+        public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
+        {
+            throw new RuntimeException(
+                'Could not connect to AI provider [gemini].',
+                previous: new RuntimeException('cURL error 6: Could not resolve host: generativelanguage.googleapis.com'),
+            );
+        }
+
+        /**
+         * @return array{base64: string, mime: string}
+         */
+        public function generateImage(string $prompt, ?string $provider = null, string $size = '1:1', string $quality = 'high'): array
+        {
+            return ['base64' => '', 'mime' => 'image/png'];
+        }
+    });
+
+    expect(fn () => app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null))
+        ->toThrow(AiAnalysisFailedException::class);
+
+    Log::shouldHaveReceived('error')->once()->withArgs(
+        fn (string $event, array $context): bool => $event === 'video-edit.ai_analysis_failed'
+            && ($context['cause'] ?? null) === 'cURL error 6: Could not resolve host: generativelanguage.googleapis.com',
+    );
 });
 
 it('treats a response with no cuts and no recommendations as empty, not broken', function (): void {

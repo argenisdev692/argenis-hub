@@ -72,10 +72,21 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
         } catch (Throwable $exception) {
             // A provider error can echo the prompt back, and the prompt carries
             // the user's script — it goes to the log, never to the user (FR-20).
-            $this->logger->error('video-edit.ai_analysis_failed', [
+            $context = [
                 'exception' => $exception::class,
                 'message' => mb_substr($exception->getMessage(), 0, 500),
-            ]);
+            ];
+
+            // Provider exceptions wrap the transport failure (ProviderConnectionException
+            // around the HTTP client ConnectionException), so the real cause — DNS, TLS,
+            // connect — is one hop down and would otherwise be lost.
+            $cause = $exception->getPrevious();
+
+            if ($cause instanceof Throwable) {
+                $context['cause'] = mb_substr($cause->getMessage(), 0, 500);
+            }
+
+            $this->logger->error('video-edit.ai_analysis_failed', $context);
 
             throw AiAnalysisFailedException::providerFailed($exception::class);
         }
