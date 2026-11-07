@@ -609,6 +609,18 @@ return [
         // never prefill a field the validator would then reject.
         'max_instructions_characters' => 20_000,
 
+        // A runaway transcript must not blow the context window or the bill.
+        // Numbered words cost more than plain text; only whole words are kept,
+        // the rest is dropped and the edit proceeds with what the model saw.
+        'max_transcript_characters' => (int) env('VIDEO_EDIT_AI_MAX_TRANSCRIPT_CHARACTERS', 80_000),
+
+        // When the configured provider cannot be reached, retry once with this
+        // provider/model before surrendering to the job's retries. Null (the
+        // default) disables the fallback: every error then goes back to the
+        // same provider on the next job attempt.
+        'fallback_provider' => env('VIDEO_EDIT_AI_FALLBACK_PROVIDER'),
+        'fallback_model' => env('VIDEO_EDIT_AI_FALLBACK_MODEL'),
+
         'script' => [
             'allowed_extensions' => ['md', 'pdf'],
             'allowed_mime_types' => ['text/markdown', 'text/plain', 'application/pdf'],

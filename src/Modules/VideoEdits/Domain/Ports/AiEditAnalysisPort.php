@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\VideoEdits\Domain\Ports;
 
+use Modules\VideoEdits\Domain\Exceptions\AiAnalysisConnectionException;
 use Modules\VideoEdits\Domain\Exceptions\AiAnalysisFailedException;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
 use Modules\VideoEdits\Domain\ValueObjects\ScriptDocument;
@@ -27,7 +28,9 @@ use Modules\VideoEdits\Domain\ValueObjects\Transcript;
 interface AiEditAnalysisPort
 {
     /**
-     * @throws AiAnalysisFailedException
+     * @throws AiAnalysisConnectionException when the provider cannot be reached
+     * @throws AiAnalysisFailedException when the provider answers but the
+     *                                   response is unusable
      */
     public function analyze(
         Transcript $transcript,

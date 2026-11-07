@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Log;
+use Laravel\Ai\Exceptions\ProviderConnectionException;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Modules\VideoEdits\Domain\Enums\AiRecommendationKind;
 use Modules\VideoEdits\Domain\Enums\CutReason;
+use Modules\VideoEdits\Domain\Exceptions\AiAnalysisConnectionException;
 use Modules\VideoEdits\Domain\Exceptions\AiAnalysisFailedException;
 use Modules\VideoEdits\Domain\Ports\AiEditAnalysisPort;
 use Modules\VideoEdits\Domain\ValueObjects\ScriptDocument;
@@ -327,4 +329,244 @@ it('keeps the marker out of the model now that the dictionary owns it', function
     expect($instructions)
         ->toContain('already removes it')
         ->toContain('elongations ("eeee")');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Resilience: connection errors, fallbacks, duration logging and limits
+|--------------------------------------------------------------------------
+|
+| The provider can time out (the cURL error 28 in production) or refuse to
+| connect. Connection failures are transient and must be told apart from
+| generation failures so the job's retries and an optional fallback provider
+| are aimed at the right errors.
+*/
+final class RecordingAiClient implements AIClientInterface
+{
+    /** @var list<array{prompt: string, provider: string|null, model: string|null, timeout: int|null}> */
+    public array $calls = [];
+
+    public function __construct(
+        private readonly ?array $payload = null,
+        private readonly bool $throw = false,
+        private readonly ?int $throwOnCall = null,
+        private readonly bool $connectionError = true,
+    ) {}
+
+    public function generateStructured(string $agentClass, string $prompt, ?string $provider = null, ?string $model = null, ?int $timeoutSeconds = null): StructuredAgentResponse
+    {
+        $this->calls[] = [
+            'prompt' => $prompt,
+            'provider' => $provider,
+            'model' => $model,
+            'timeout' => $timeoutSeconds,
+        ];
+
+        if ($this->throw && ($this->throwOnCall === null || count($this->calls) === $this->throwOnCall)) {
+            $exception = $this->connectionError
+                ? new ProviderConnectionException(
+                    'Could not connect to AI provider [gemini].',
+                    previous: new RuntimeException('cURL error 28: Operation timed out after 300000 milliseconds with 0 bytes received'),
+                )
+                : new RuntimeException('provider exploded');
+
+            throw $exception;
+        }
+
+        return new StructuredAgentResponse(
+            invocationId: 'test',
+            structured: $this->payload ?? ['cuts' => [], 'recommendations' => [], 'conclusion' => 'ok'],
+            text: '',
+            usage: new Usage,
+            meta: new Meta(provider: (string) $provider, model: 'test'),
+        );
+    }
+
+    /**
+     * @return array{base64: string, mime: string}
+     */
+    public function generateImage(string $prompt, ?string $provider = null, string $size = '1:1', string $quality = 'high'): array
+    {
+        return ['base64' => '', 'mime' => 'image/png'];
+    }
+}
+
+it('turns a provider connection failure into a connection exception and logs its duration', function (): void {
+    config()->set([
+        'video-edit.ai.provider' => 'gemini',
+        'video-edit.ai.model' => 'gemini-3.8-flash',
+        'video-edit.ai.timeout_seconds' => 30,
+        'video-edit.ai.fallback_provider' => null,
+        'video-edit.ai.max_transcript_characters' => 80_000,
+    ]);
+
+    $client = new RecordingAiClient(throw: true);
+    app()->instance(AIClientInterface::class, $client);
+
+    Log::spy();
+
+    expect(fn () => app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null))
+        ->toThrow(AiAnalysisConnectionException::class);
+
+    Log::shouldHaveReceived('error')->once()->withArgs(
+        fn (string $event, array $context): bool => $event === 'video-edit.ai_connection_failed'
+            && $context['provider'] === 'gemini'
+            && is_int($context['duration_ms'])
+            && $context['duration_ms'] >= 0,
+    );
+});
+
+it('keeps a non-connection provider failure as a generation exception', function (): void {
+    config()->set([
+        'video-edit.ai.provider' => 'gemini',
+        'video-edit.ai.model' => 'gemini-3.8-flash',
+        'video-edit.ai.timeout_seconds' => 30,
+        'video-edit.ai.fallback_provider' => null,
+        'video-edit.ai.max_transcript_characters' => 80_000,
+    ]);
+
+    $client = new RecordingAiClient(throw: true, connectionError: false);
+    app()->instance(AIClientInterface::class, $client);
+
+    Log::spy();
+
+    expect(fn () => app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null))
+        ->toThrow(AiAnalysisFailedException::class);
+
+    Log::shouldHaveReceived('error')->once()->withArgs(
+        fn (string $event, array $context): bool => $event === 'video-edit.ai_analysis_failed',
+    );
+});
+
+it('retries once on the fallback provider when the connection fails', function (): void {
+    config()->set([
+        'video-edit.ai.provider' => 'gemini',
+        'video-edit.ai.model' => 'gemini-3.8-flash',
+        'video-edit.ai.timeout_seconds' => 30,
+        'video-edit.ai.fallback_provider' => 'anthropic',
+        'video-edit.ai.fallback_model' => 'claude-sonnet-5',
+        'video-edit.ai.max_transcript_characters' => 80_000,
+    ]);
+
+    $client = new RecordingAiClient(
+        payload: ['cuts' => [], 'recommendations' => []],
+        throw: true,
+        throwOnCall: 1,
+    );
+    app()->instance(AIClientInterface::class, $client);
+
+    Log::spy();
+
+    $analysis = app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null);
+
+    expect($analysis->isEmpty())->toBeTrue()
+        ->and($client->calls)->toHaveCount(2)
+        ->and($client->calls[0]['provider'])->toBe('gemini')
+        ->and($client->calls[1]['provider'])->toBe('anthropic')
+        ->and($client->calls[1]['model'])->toBe('claude-sonnet-5');
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        fn (string $event, array $context): bool => $event === 'video-edit.ai_fallback_used',
+    );
+    Log::shouldHaveReceived('info')->withArgs(
+        fn (string $event, array $context): bool => $event === 'video-edit.ai_analysis_done',
+    );
+});
+
+it('surrenders to a connection exception when the fallback cannot be reached either', function (): void {
+    config()->set([
+        'video-edit.ai.provider' => 'gemini',
+        'video-edit.ai.model' => 'gemini-3.8-flash',
+        'video-edit.ai.timeout_seconds' => 30,
+        'video-edit.ai.fallback_provider' => 'anthropic',
+        'video-edit.ai.fallback_model' => 'claude-sonnet-5',
+        'video-edit.ai.max_transcript_characters' => 80_000,
+    ]);
+
+    $client = new RecordingAiClient(throw: true, throwOnCall: null);
+    app()->instance(AIClientInterface::class, $client);
+
+    Log::spy();
+
+    expect(fn () => app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null))
+        ->toThrow(AiAnalysisConnectionException::class);
+
+    expect($client->calls)->toHaveCount(2)
+        ->and($client->calls[0]['provider'])->toBe('gemini')
+        ->and($client->calls[1]['provider'])->toBe('anthropic');
+});
+
+it('logs how long a successful analysis call took', function (): void {
+    config()->set([
+        'video-edit.ai.provider' => 'gemini',
+        'video-edit.ai.model' => 'gemini-3.8-flash',
+        'video-edit.ai.timeout_seconds' => 30,
+        'video-edit.ai.fallback_provider' => null,
+        'video-edit.ai.max_transcript_characters' => 80_000,
+    ]);
+
+    $client = new RecordingAiClient;
+    app()->instance(AIClientInterface::class, $client);
+
+    Log::spy();
+
+    app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null);
+
+    Log::shouldHaveReceived('info')->withArgs(
+        fn (string $event, array $context): bool => $event === 'video-edit.ai_analysis_done'
+            && is_int($context['duration_ms'])
+            && $context['duration_ms'] >= 0
+            && $context['provider'] === 'gemini',
+    );
+});
+
+it('truncates an oversized transcript at a whole word and keeps analysing', function (): void {
+    config()->set([
+        'video-edit.ai.provider' => 'gemini',
+        'video-edit.ai.model' => 'gemini-3.8-flash',
+        'video-edit.ai.timeout_seconds' => 30,
+        'video-edit.ai.fallback_provider' => null,
+        'video-edit.ai.max_transcript_characters' => 40,
+    ]);
+
+    $client = new RecordingAiClient;
+    app()->instance(AIClientInterface::class, $client);
+
+    Log::spy();
+
+    $long = new Transcript(array_map(
+        static fn (int $i): TranscriptWord => new TranscriptWord("word{$i}", $i * 1000, $i * 1000 + 400),
+        range(0, 49),
+    ));
+
+    $analysis = app(AiEditAnalysisPort::class)->analyze($long, null, null, null);
+
+    expect($analysis->isEmpty())->toBeTrue();
+
+    // Only whole words survive the truncation and the model never sees an
+    // index past what was actually sent.
+    $prompt = $client->calls[0]['prompt'];
+    expect($prompt)->toContain(' …')
+        ->and($prompt)->not->toContain('[49]');
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        fn (string $event, array $context): bool => $event === 'video-edit.ai_transcript_truncated',
+    );
+});
+
+it('sends the full transcript when it fits inside the character limit', function (): void {
+    config()->set([
+        'video-edit.ai.provider' => 'gemini',
+        'video-edit.ai.model' => 'gemini-3.8-flash',
+        'video-edit.ai.timeout_seconds' => 30,
+        'video-edit.ai.fallback_provider' => null,
+        'video-edit.ai.max_transcript_characters' => 80_000,
+    ]);
+
+    $client = new RecordingAiClient;
+    app()->instance(AIClientInterface::class, $client);
+
+    app(AiEditAnalysisPort::class)->analyze(threeWordTranscript(), null, null, null);
+
+    expect($client->calls[0]['prompt'])->toContain('[0] Hoy [1] PAUSA [2] vamos');
 });

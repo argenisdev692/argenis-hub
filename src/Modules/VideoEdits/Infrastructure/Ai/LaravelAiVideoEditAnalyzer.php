@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Modules\VideoEdits\Infrastructure\Ai;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Modules\VideoEdits\Domain\Enums\AiRecommendationKind;
 use Modules\VideoEdits\Domain\Enums\CutReason;
+use Modules\VideoEdits\Domain\Exceptions\AiAnalysisConnectionException;
 use Modules\VideoEdits\Domain\Exceptions\AiAnalysisFailedException;
 use Modules\VideoEdits\Domain\Ports\AiEditAnalysisPort;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
@@ -59,22 +61,44 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
         ?string $instructions,
         ?int $targetDurationMinutes,
     ): AiAnalysis {
+        $provider = (string) $this->config->get('video-edit.ai.provider', 'gemini');
+        $model = $this->aiModel();
+        $timeout = (int) $this->config->get('video-edit.ai.timeout_seconds', 300);
+        $maxTranscriptChars = (int) $this->config->get('video-edit.ai.max_transcript_characters', 80_000);
+
+        $numbered = self::numberedTranscript($transcript);
+        if ($maxTranscriptChars > 0 && mb_strlen($numbered) > $maxTranscriptChars) {
+            $numbered = self::truncateTranscript($numbered, $maxTranscriptChars);
+            $this->logger->warning('video-edit.ai_transcript_truncated', [
+                'max_characters' => $maxTranscriptChars,
+                'words' => $transcript->wordCount(),
+            ]);
+        }
+
+        $startedAt = microtime(true);
+
         try {
-            $response = $this->ai->generateStructured(
-                AnalyzeVideoEditAgent::class,
-                $this->prompt($transcript, $script, $instructions, $targetDurationMinutes),
-                (string) $this->config->get('video-edit.ai.provider', 'gemini'),
-                // Pinned model (LLM03) and a timeout sized for a long recording;
-                // the adapter's 60 s default would cut a 20-minute transcript off.
-                is_string($model = $this->config->get('video-edit.ai.model')) && $model !== '' ? $model : null,
-                (int) $this->config->get('video-edit.ai.timeout_seconds', 300),
+            $response = $this->runWithFallback(
+                $transcript,
+                $numbered,
+                $script,
+                $instructions,
+                $targetDurationMinutes,
+                $provider,
+                $model,
+                $timeout,
             );
         } catch (Throwable $exception) {
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+
             // A provider error can echo the prompt back, and the prompt carries
             // the user's script — it goes to the log, never to the user (FR-20).
             $context = [
                 'exception' => $exception::class,
                 'message' => mb_substr($exception->getMessage(), 0, 500),
+                'duration_ms' => $durationMs,
+                'provider' => $provider,
+                'model' => $model,
             ];
 
             // Provider exceptions wrap the transport failure (ProviderConnectionException
@@ -86,16 +110,134 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
                 $context['cause'] = mb_substr($cause->getMessage(), 0, 500);
             }
 
+            if ($this->isConnectionError($exception)) {
+                // DNS, TLS, connect or read timeouts: transient, the job retries,
+                // and an adapter-level fallback may already have been attempted.
+                $this->logger->error('video-edit.ai_connection_failed', $context);
+
+                throw AiAnalysisConnectionException::connectionFailed($exception::class);
+            }
+
             $this->logger->error('video-edit.ai_analysis_failed', $context);
 
             throw AiAnalysisFailedException::providerFailed($exception::class);
         }
+
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $this->logger->info('video-edit.ai_analysis_done', [
+            'duration_ms' => $durationMs,
+            'provider' => $provider,
+            'model' => $model,
+            'words' => $transcript->wordCount(),
+        ]);
 
         return new AiAnalysis(
             cutProposals: self::toCutProposals($response['cuts'] ?? null, $transcript->wordCount()),
             recommendations: self::toRecommendations($response['recommendations'] ?? null),
             conclusion: isset($response['conclusion']) ? mb_substr((string) $response['conclusion'], 0, 2_000) : null,
         );
+    }
+
+    /**
+     * One structured call, with a single fallback to a different provider/model
+     * when the first attempt is a connection error. Anything else bubbles up so
+     * the caller logs it as a generation failure instead.
+     */
+    private function runWithFallback(
+        Transcript $transcript,
+        string $numberedTranscript,
+        ?ScriptDocument $script,
+        ?string $instructions,
+        ?int $targetDurationMinutes,
+        string $provider,
+        ?string $model,
+        int $timeout,
+    ): StructuredAgentResponse {
+        try {
+            return $this->ai->generateStructured(
+                AnalyzeVideoEditAgent::class,
+                $this->prompt($transcript, $numberedTranscript, $script, $instructions, $targetDurationMinutes),
+                $provider,
+                $model,
+                $timeout,
+            );
+        } catch (Throwable $first) {
+            if (! $this->isConnectionError($first)) {
+                throw $first;
+            }
+
+            $fallbackProvider = (string) $this->config->get('video-edit.ai.fallback_provider', '');
+            $fallbackModel = $this->config->get('video-edit.ai.fallback_model');
+
+            if ($fallbackProvider === '' || $fallbackProvider === $provider) {
+                throw $first;
+            }
+
+            $this->logger->warning('video-edit.ai_fallback_used', [
+                'from' => $provider,
+                'to' => $fallbackProvider,
+                'model' => $fallbackModel,
+                'exception' => $first::class,
+            ]);
+
+            return $this->ai->generateStructured(
+                AnalyzeVideoEditAgent::class,
+                $this->prompt($transcript, $numberedTranscript, $script, $instructions, $targetDurationMinutes),
+                $fallbackProvider,
+                is_string($fallbackModel) && $fallbackModel !== '' ? $fallbackModel : null,
+                $timeout,
+            );
+        }
+    }
+
+    /**
+     * DNS, TLS, connect or read timeouts against the provider — transient by
+     * nature, unlike a 400/429/schema error the provider did answer.
+     */
+    private function isConnectionError(Throwable $exception): bool
+    {
+        if (is_a($exception, 'Laravel\Ai\Exceptions\ProviderConnectionException')) {
+            return true;
+        }
+
+        $cause = $exception->getPrevious();
+
+        while ($cause instanceof Throwable) {
+            if (is_a($cause, 'Laravel\Ai\Exceptions\ProviderConnectionException')) {
+                return true;
+            }
+
+            $cause = $cause->getPrevious();
+        }
+
+        return false;
+    }
+
+    private function aiModel(): ?string
+    {
+        $model = $this->config->get('video-edit.ai.model');
+
+        return is_string($model) && $model !== '' ? $model : null;
+    }
+
+    /**
+     * Cuts a numbered transcript at the last whole word that fits inside
+     * $maxCharacters, so word indices stay addressable and the model never sees
+     * half a word.
+     */
+    private static function truncateTranscript(string $numbered, int $maxCharacters): string
+    {
+        if (mb_strlen($numbered) <= $maxCharacters) {
+            return $numbered;
+        }
+
+        $cut = mb_strrpos(mb_substr($numbered, 0, $maxCharacters), ' ');
+
+        if ($cut === false || $cut === 0) {
+            return mb_substr($numbered, 0, $maxCharacters);
+        }
+
+        return rtrim(mb_substr($numbered, 0, $cut)).' …';
     }
 
     /**
@@ -183,6 +325,7 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
      */
     private function prompt(
         Transcript $transcript,
+        string $numberedTranscript,
         ?ScriptDocument $script,
         ?string $instructions,
         ?int $targetDurationMinutes,
@@ -202,7 +345,7 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
         return new CacheablePrompt(
             layers: [
                 PromptLayer::long(self::scriptLayer($script)),
-                PromptLayer::short("NUMBERED TRANSCRIPT:\n".$this->numberedTranscript($transcript)),
+                PromptLayer::short("NUMBERED TRANSCRIPT:\n".$numberedTranscript),
             ],
             tail: implode("\n\n---\n\n", $tail),
             cacheKey: self::cacheKey($script),
