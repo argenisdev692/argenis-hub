@@ -194,9 +194,17 @@ final readonly class GeminiTranscriber implements TranscriptionPort
     }
 
     /**
-     * The Files API is resumable: a `start` call that returns the upload URL, then
-     * a `PUT` of the bytes to it. A single POST with the body would be simpler and
+     * The Files API is resumable: a `start` call that returns the upload URL in
+     * its `x-goog-upload-url` response header, then the bytes POSTed to that URL
+     * with `upload, finalize`. A single POST with the body would be simpler and
      * is not offered for this size class.
+     *
+     * Every protocol header MUST go through `withHeaders()`. `post()` takes the
+     * body and nothing else, so a headers array passed as a third argument is
+     * silently dropped by PHP: the start was sent as an ordinary metadata POST,
+     * the provider answered 200 to a request that had never asked to be
+     * resumable, and no upload URL ever came back. The same mistake on the
+     * finalize call sent the offset/command headers nowhere at all.
      *
      * @param  resource  $stream
      */
@@ -205,41 +213,54 @@ final readonly class GeminiTranscriber implements TranscriptionPort
         $bytes = (int) (fstat($stream)['size'] ?? 0);
 
         $start = $this->http
-            ->withHeaders(['x-goog-api-key' => $apiKey])
-            ->timeout((int) $this->config->get('video-edit.speech.gemini.timeout_seconds', 1_200))
-            ->post(self::FILES_ENDPOINT, ['file' => ['display_name' => $displayName]], [
+            ->withHeaders([
+                'x-goog-api-key' => $apiKey,
                 'X-Goog-Upload-Protocol' => 'resumable',
                 'X-Goog-Upload-Command' => 'start',
                 'X-Goog-Upload-Header-Content-Length' => (string) $bytes,
                 'X-Goog-Upload-Header-Content-Type' => self::AUDIO_MIME_TYPE,
-            ]);
-
-        $location = $start->header('Location');
+            ])
+            ->timeout((int) $this->config->get('video-edit.speech.gemini.timeout_seconds', 1_200))
+            ->post(self::FILES_ENDPOINT, ['file' => ['display_name' => $displayName]]);
 
         if ($start->failed()) {
+            $this->logger->error('video-edit.gemini_upload_failed', [
+                'status' => $start->status(),
+                'body_tail' => mb_substr($start->body(), -1_000),
+            ]);
+
             throw TranscriptionFailedException::providerRejected($start->status());
         }
 
-        if ($location === null || $location === '') {
-            // The start never handed back an upload location, so no transfer is
+        $uploadUrl = $start->header('x-goog-upload-url');
+
+        if ($uploadUrl === '') {
+            // The start never handed back an upload URL, so no transfer is
             // pending: there is nothing to interact with yet. That is not a
             // provider rejection — the request was accepted — and reporting one
             // with the accepted status would read like the provider refused a
             // request it had already answered.
-            throw TranscriptionFailedException::unusableResponse('the upload start returned no upload location');
+            throw TranscriptionFailedException::unusableResponse('the upload start returned no upload url');
         }
 
         $finished = $this->http
-            ->withHeaders(['x-goog-api-key' => $apiKey])
-            ->timeout((int) $this->config->get('video-edit.speech.gemini.timeout_seconds', 1_200))
-            ->withBody($stream, self::AUDIO_MIME_TYPE)
-            ->put($location, [
+            ->withHeaders([
                 'X-Goog-Upload-Offset' => '0',
                 'X-Goog-Upload-Command' => 'upload, finalize',
                 'Content-Length' => (string) $bytes,
-            ]);
+            ])
+            ->timeout((int) $this->config->get('video-edit.speech.gemini.timeout_seconds', 1_200))
+            ->withBody($stream, self::AUDIO_MIME_TYPE)
+            // `post()` and not `put()`: the documented finalize call is a POST
+            // with the raw bytes as the body (`withBody()` is what supplies it).
+            ->post($uploadUrl);
 
         if ($finished->failed()) {
+            $this->logger->error('video-edit.gemini_upload_failed', [
+                'status' => $finished->status(),
+                'body_tail' => mb_substr($finished->body(), -1_000),
+            ]);
+
             throw TranscriptionFailedException::providerRejected($finished->status());
         }
 

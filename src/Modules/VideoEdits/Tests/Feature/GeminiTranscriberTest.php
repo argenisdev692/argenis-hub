@@ -82,10 +82,11 @@ function fakeGeminiApi(array $interactionBodies): void
     }
 
     Http::fake([
+        // The upload URL travels in `x-goog-upload-url`, not `Location`.
         'generativelanguage.googleapis.com/upload/v1beta/files' => Http::response(
             ['name' => 'files/abc'],
             200,
-            ['Location' => 'https://generativelanguage.googleapis.com/upload/v1beta/files/abc?upload_id=1'],
+            ['x-goog-upload-url' => 'https://generativelanguage.googleapis.com/upload/v1beta/files/abc?upload_id=1'],
         ),
         'generativelanguage.googleapis.com/upload/v1beta/files/abc?upload_id=1' => Http::response(
             ['file' => ['uri' => 'https://files/abc']],
@@ -236,9 +237,9 @@ it('surfaces a provider rejection rather than returning an empty transcript', fu
         ->toThrow(TranscriptionFailedException::class);
 });
 
-it('reports an unusable response when the upload start returns no location', function (): void {
-    // A 2xx that carries no upload location never started a transfer, so it is
-    // not the provider refusing anything: it is unusable, and it must not be
+it('reports an unusable response when the upload start returns no upload url', function (): void {
+    // A 2xx that carries no upload URL never started a transfer, so it is not
+    // the provider refusing anything: it is unusable, and it must not be
     // reported as a rejection carrying the accepted status.
     Http::fake([
         'generativelanguage.googleapis.com/upload/v1beta/files' => Http::response(['name' => 'files/abc'], 200),
@@ -246,5 +247,41 @@ it('reports an unusable response when the upload start returns no location', fun
     ]);
 
     expect(fn () => app(GeminiTranscriber::class)->transcribe($this->audioPath, 'es'))
-        ->toThrow(TranscriptionFailedException::class, 'no upload location');
+        ->toThrow(TranscriptionFailedException::class, 'no upload url');
+});
+
+it('sends the resumable protocol headers and finalizes with the audio bytes', function (): void {
+    // Regression: `post()` takes the body and nothing else, so passing the
+    // protocol headers as a third argument dropped them silently. The start went
+    // out as a plain metadata POST and the provider answered 200 without an
+    // upload URL — the run died as "the transcription provider returned HTTP
+    // 200", which named the status of a request that was never understood.
+    fakeGeminiApi([geminiInteractionResponse([['text' => 'hola', 'start' => '0.000s', 'end' => '0.400s']])]);
+
+    app(GeminiTranscriber::class)->transcribe($this->audioPath, 'es');
+
+    Http::assertSent(function (Request $request): bool {
+        if ($request->url() !== 'https://generativelanguage.googleapis.com/upload/v1beta/files') {
+            return false;
+        }
+
+        return $request->method() === 'POST'
+            && $request->hasHeader('x-goog-api-key', 'test-key')
+            && $request->hasHeader('X-Goog-Upload-Protocol', 'resumable')
+            && $request->hasHeader('X-Goog-Upload-Command', 'start')
+            && $request->hasHeader('X-Goog-Upload-Header-Content-Length', '11')
+            && $request->hasHeader('X-Goog-Upload-Header-Content-Type', 'audio/mp3');
+    });
+
+    Http::assertSent(function (Request $request): bool {
+        if ($request->url() !== 'https://generativelanguage.googleapis.com/upload/v1beta/files/abc?upload_id=1') {
+            return false;
+        }
+
+        return $request->method() === 'POST'
+            && $request->hasHeader('X-Goog-Upload-Offset', '0')
+            && $request->hasHeader('X-Goog-Upload-Command', 'upload, finalize')
+            && $request->hasHeader('Content-Length', '11')
+            && $request->body() === 'audio-bytes';
+    });
 });
