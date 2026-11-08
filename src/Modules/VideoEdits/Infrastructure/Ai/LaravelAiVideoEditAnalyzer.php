@@ -63,7 +63,7 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
     ): AiAnalysis {
         $provider = (string) $this->config->get('video-edit.ai.provider', 'gemini');
         $model = $this->aiModel();
-        $timeout = (int) $this->config->get('video-edit.ai.timeout_seconds', 300);
+        $timeout = (int) $this->config->get('video-edit.ai.timeout_seconds', 1800);
         $maxTranscriptChars = (int) $this->config->get('video-edit.ai.max_transcript_characters', 80_000);
 
         $numbered = self::numberedTranscript($transcript);

@@ -566,7 +566,7 @@ return [
         // structured decisions, which is squarely the Flash tier's workhorse
         // case, at a fraction of the cost over a 20-minute recording.
         'model' => env('VIDEO_EDIT_AI_MODEL', 'gemini-3.8-flash'),
-        'timeout_seconds' => (int) env('VIDEO_EDIT_AI_TIMEOUT', 300),
+        'timeout_seconds' => (int) env('VIDEO_EDIT_AI_TIMEOUT', 1800),
         // Gemini 3 reasons at `high` unless told otherwise. Pinned explicitly so
         // a package default cannot silently lower the one model judgement this
         // pipeline makes — where a retake ended. `low` is a cost trade, not a
