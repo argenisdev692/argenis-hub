@@ -1,5 +1,15 @@
 # syntax=docker/dockerfile:1
 
+# FFmpeg 9.0.2 static build, pinned to the version this project is developed
+# against. The distro package is NOT usable: Ubuntu 24.04 ships 6.1.1, which
+# rejects the `-/filter_complex <file>` form FfmpegCommandBuilder emits
+# (`Unrecognized option '/filter_complex'`, exit 8). That form is what keeps a
+# 200-cut filtergraph off the command line (AD-5), so the runtime is upgraded
+# instead of the syntax downgraded. Keep this pin in step with the version on
+# the developers' machines: a syntax this image does not know fails only in
+# production, where the fixture files no longer exist.
+FROM mwader/static-ffmpeg:9.0.2 AS ffmpeg
+
 # Single-stage Railway image. The Vite build MUST run here (not in a
 # node-only stage): @laravel/vite-plugin-wayfinder shells out to
 # `php artisan wayfinder:generate` on every build, so PHP + vendor/ have to
@@ -35,9 +45,14 @@ RUN mkdir -p /etc/apt/keyrings \
         php${PHP_VERSION}-intl \
         nodejs \
         supervisor \
-        ffmpeg \
     && curl -sLS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer \
     && apt-get -y autoremove && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# /usr/bin (not /usr/local/bin) so that both FFMPEG_BINARIES=/usr/bin/ffmpeg and
+# a bare `ffmpeg` resolved through PATH reach the same static binary.
+COPY --from=ffmpeg /ffmpeg /usr/bin/ffmpeg
+COPY --from=ffmpeg /ffprobe /usr/bin/ffprobe
+RUN ffmpeg -version | head -1 && ffprobe -version | head -1
 
 WORKDIR /var/www/html
 

@@ -23,6 +23,9 @@ use Modules\VideoEdits\Domain\ValueObjects\SilenceThreshold;
  * - **The filtergraph is passed as a file** via FFmpeg's `-/option file` form
  *   (AD-5). A 200-cut graph is far past the Windows 32 KiB command limit that
  *   `laravel-ffmpeg` issue #505 reports, and the file form has no limit.
+ *   This form was introduced in FFmpeg 7.0 — 6.x answers `Unrecognized option
+ *   '/filter_complex'` and exits 8, which is why the Dockerfile pins 9.0.2
+ *   instead of using the distro package (Ubuntu 24.04 = 6.1.1).
  */
 final readonly class FfmpegCommandBuilder
 {
