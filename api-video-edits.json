@@ -859,7 +859,8 @@
                                         "stutter",
                                         "repetition",
                                         "vocal_sound",
-                                        "pause_marker"
+                                        "pause_marker",
+                                        "robotic_pause"
                                     ]
                                 }
                             },

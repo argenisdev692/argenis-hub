@@ -326,6 +326,11 @@ final class VideoEditsServiceProvider extends ServiceProvider
             elongationPatterns: (array) config('video-edit.speech.dictionaries.elongation_patterns', []),
             maxStutterFragmentMs: (int) config('video-edit.speech.max_stutter_fragment_ms'),
             minConfidence: (float) config('video-edit.speech.min_confidence'),
+            // The renderer pads every seam with join air, so the detector keeps
+            // only the difference: retained air + join air = configured target.
+            roboticPauseTargetMs: max(0, (int) config('video-edit.speech.robotic_pauses.target_gap_ms', 150)
+                - (int) config('video-edit.cuts.join_air_ms', FilterGraphBuilder::DEFAULT_JOIN_AIR_MS)),
+            roboticPauseMaxMs: (int) config('video-edit.speech.robotic_pauses.max_gap_ms', 1_000),
         ));
 
         $this->app->bind(FailedTakeDetector::class, static fn (): FailedTakeDetector => new FailedTakeDetector(

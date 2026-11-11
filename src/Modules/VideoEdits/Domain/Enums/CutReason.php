@@ -27,6 +27,7 @@ enum CutReason: string
     case Stutter = 'stutter';
     case Repetition = 'repetition';
     case VocalSound = 'vocal_sound';
+    case RoboticPause = 'robotic_pause';
 
     // V3 — AI edit (US-13). Word-bounded errors, never taste.
     case PauseMarker = 'pause_marker';

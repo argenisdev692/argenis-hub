@@ -106,6 +106,7 @@ export const videoEditFormSchema = z
                 'repetition',
                 'vocal_sound',
                 'pause_marker',
+                'robotic_pause',
             ]),
         ),
         manual_ranges: z

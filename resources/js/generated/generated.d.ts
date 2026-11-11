@@ -2525,12 +2525,12 @@ rejected_decision_count: number,
 namespace Domain {
 namespace Enums {
 export type AiRecommendationKind = 'reduce' | 'off_script' | 'script_coverage' | 'pacing' | 'read_prompt_aloud' | 'rushed_step' | 'unclear_word';
-export type CutReason = 'silence' | 'manual' | 'filler' | 'filler_word' | 'stutter' | 'repetition' | 'vocal_sound' | 'pause_marker' | 'retake' | 'misspoken' | 'misplaced_take';
+export type CutReason = 'silence' | 'manual' | 'filler' | 'filler_word' | 'stutter' | 'repetition' | 'vocal_sound' | 'robotic_pause' | 'pause_marker' | 'retake' | 'misspoken' | 'misplaced_take';
 export type DecisionOrigin = 'system_detection' | 'user' | 'transcription' | 'ai';
 export type DecisionOutcome = 'applied' | 'rejected';
 export type DecisionRejectionReason = 'negative_start' | 'start_not_before_end' | 'end_beyond_duration' | 'confidence_out_of_range' | 'shorter_than_padding' | 'overlaps_speech' | 'screen_activity' | 'screen_busy';
 export type ProcessingStage = 'download' | 'merge' | 'analysis' | 'audio_extraction' | 'transcription' | 'speech_detection' | 'script_extraction' | 'ai_analysis' | 'plan_cuts' | 'render' | 'publish';
-export type SpeechCategory = 'filler' | 'filler_word' | 'stutter' | 'repetition' | 'vocal_sound' | 'pause_marker';
+export type SpeechCategory = 'filler' | 'filler_word' | 'stutter' | 'repetition' | 'vocal_sound' | 'pause_marker' | 'robotic_pause';
 export type VideoEditMode = 'merge' | 'auto_edit' | 'ai_edit';
 export type VideoEditStatus = 'draft' | 'queued' | 'processing' | 'awaiting_review' | 'completed' | 'failed';
 }

@@ -123,6 +123,7 @@ const SPEECH_CATEGORIES: Record<SpeechCategory, string> = {
     repetition: 'Repeated words',
     vocal_sound: 'Vocal sounds (laughs, coughs)',
     pause_marker: 'Spoken "PAUSA" markers',
+    robotic_pause: 'Robotic pauses (close to 0.15s)',
 };
 
 export const SPEECH_CATEGORY_OPTIONS = (
@@ -155,6 +156,7 @@ const REASONS: Record<CutReason, string> = {
     stutter: 'False start',
     repetition: 'Repetition',
     vocal_sound: 'Vocal sound',
+    robotic_pause: 'Robotic pause',
     pause_marker: 'Pause marker',
     retake: 'Retake',
     misspoken: 'Misspoken',

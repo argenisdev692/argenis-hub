@@ -68,6 +68,8 @@ final readonly class SpeechDisfluencyDetector
         private float $minConfidence,
         private array $pausePhrases = [],
         private array $elongationPatterns = [],
+        private int $roboticPauseTargetMs = 150,
+        private int $roboticPauseMaxMs = 1_000,
     ) {}
 
     /**
@@ -98,6 +100,7 @@ final readonly class SpeechDisfluencyDetector
             ...($this->wants(SpeechCategory::Repetition, $enabled) ? $this->detectRepetitions($transcript) : []),
             ...($this->wants(SpeechCategory::Stutter, $enabled) ? $this->detectStutters($transcript) : []),
             ...($this->wants(SpeechCategory::PauseMarker, $enabled) ? $this->detectPauseMarkers($transcript) : []),
+            ...($this->wants(SpeechCategory::RoboticPause, $enabled) ? $this->detectRoboticPauses($transcript) : []),
         ];
 
         usort($detections, static fn (SpeechDetection $a, SpeechDetection $b): int => $a->startMs <=> $b->startMs);
@@ -474,6 +477,88 @@ final readonly class SpeechDisfluencyDetector
         }
 
         return $detections;
+    }
+
+    /**
+     * Closes only the excess air between two words in the same phrase. The cut
+     * keeps the configured share on both sides; the renderer's join air makes
+     * up the rest of the total 150 ms budget supplied by the composition root.
+     *
+     * Ellipses do not close a phrase here: "vamos... a... ingresar" is exactly
+     * the robotic delivery this rule repairs. Terminal . ? ! : ; and uncertain
+     * word timings stay untouched, as does the generation wait after a prompt.
+     *
+     * @return list<SpeechDetection>
+     */
+    private function detectRoboticPauses(Transcript $transcript): array
+    {
+        $detections = [];
+        $words = $transcript->words;
+
+        for ($index = 1, $wordCount = count($words); $index < $wordCount; $index++) {
+            $previous = $words[$index - 1];
+            $word = $words[$index];
+            $gapMs = $word->startMs - $previous->endMs;
+
+            if ($gapMs <= $this->roboticPauseTargetMs || $gapMs > $this->roboticPauseMaxMs
+                || $previous->isBracketedSound() || $word->isBracketedSound()
+                || $this->isLowConfidence($previous) || $this->isLowConfidence($word)
+                || $this->endsNarrativeSentence($previous->text)
+                || $this->isGenerationWait($words, $index - 1)) {
+                continue;
+            }
+
+            $keepBeforeMs = intdiv($this->roboticPauseTargetMs, 2);
+            $keepAfterMs = $this->roboticPauseTargetMs - $keepBeforeMs;
+
+            $detections[] = new SpeechDetection(
+                category: SpeechCategory::RoboticPause,
+                startMs: $previous->endMs + $keepBeforeMs,
+                endMs: $word->startMs - $keepAfterMs,
+                confidence: $this->averageConfidence([$previous, $word]),
+                evidence: [
+                    'detector' => 'robotic_pause',
+                    'gap_ms' => $gapMs,
+                    'target_gap_ms' => $this->roboticPauseTargetMs,
+                ],
+            );
+        }
+
+        return $detections;
+    }
+
+    /**
+     * A full stop is a sentence boundary the speaker already made; an ellipsis
+     * is not. "vamos... a... ingresar" is one phrase delivered robotically, and
+     * treating "..." as terminal would skip exactly the case this rule exists
+     * for. Only . ? ! : ; close a phrase here.
+     */
+    private function endsNarrativeSentence(string $text): bool
+    {
+        $trimmed = trim($text);
+
+        if (preg_match('/(?:\.\.\.|…)["»”\')\]]*$/u', $trimmed) === 1) {
+            return false;
+        }
+
+        return preg_match('/[.?!:;]["»”\')\]]*$/u', $trimmed) === 1;
+    }
+
+    /**
+     * @param  list<TranscriptWord>  $words
+     */
+    private function isGenerationWait(array $words, int $previousIndex): bool
+    {
+        $tokens = [];
+
+        for ($index = max(0, $previousIndex - 2); $index <= $previousIndex; $index++) {
+            $tokens[] = $words[$index]->normalized();
+        }
+
+        return in_array(implode(' ', array_slice($tokens, -3)), [
+            'enviar el prompt',
+            'enviemos el prompt',
+        ], true);
     }
 
     private function detection(TranscriptWord $word, SpeechCategory $category, string $evidence): SpeechDetection

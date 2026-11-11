@@ -51,6 +51,9 @@ enum SpeechCategory: string
      */
     case PauseMarker = 'pause_marker';
 
+    /** An intra-phrase gap longer than 150 ms that makes the delivery sound robotic. */
+    case RoboticPause = 'robotic_pause';
+
     public function toCutReason(): CutReason
     {
         return match ($this) {
@@ -60,6 +63,7 @@ enum SpeechCategory: string
             self::Repetition => CutReason::Repetition,
             self::VocalSound => CutReason::VocalSound,
             self::PauseMarker => CutReason::PauseMarker,
+            self::RoboticPause => CutReason::RoboticPause,
         };
     }
 

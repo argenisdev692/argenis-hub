@@ -180,10 +180,13 @@ it('produces only the categories that were asked for', function (): void {
 });
 
 it('returns detections in playback order whatever the category', function (): void {
+    // The words are fed out of order and are spaced closely enough that the
+    // robotic-gap rule has nothing to say — this test is about the sort, not
+    // about how many categories a gap can trigger.
     $transcript = transcriptOf([
         ['[laughs]', 2_000, 2_500],
         ['eh', 0, 300],
-        ['bueno', 800, 1_200],
+        ['bueno', 320, 720],
     ]);
 
     $starts = array_map(
@@ -191,7 +194,7 @@ it('returns detections in playback order whatever the category', function (): vo
         detector()->detect($transcript, SpeechCategory::all()),
     );
 
-    expect($starts)->toBe([0, 800, 2_000]);
+    expect($starts)->toBe([0, 320, 2_000]);
 });
 
 it('detects nothing without a transcript or without categories', function (): void {
@@ -386,4 +389,186 @@ it('reads an elongation as a hesitation, not as a vocal sound', function (): voi
         ->toBe([['filler', 0]])
         ->and(detectedAs(detector()->detect($transcript, [SpeechCategory::VocalSound])))
         ->toBe([['vocal_sound', 800]]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Robotic intra-phrase gaps (P4)
+|--------------------------------------------------------------------------
+|
+| "vamos… a… ingresar" — the speaker is not hesitating, the words are just
+| spaced out enough to sound like a machine reading them. No other category
+| covered this: fillers need a dictionary hit, stutters need a truncated word,
+| and silence removal only ever looked at gaps of a second or more, so a 400 ms
+| gap inside a phrase survived every rule the module had.
+|
+| The detector keeps `target_gap_ms` of real air and lets the renderer's join
+| air make up the rest, which is why the composition root passes 150 - 80.
+|
+*/
+
+it('closes an intra-phrase gap down to the target on both sides', function (): void {
+    // 400 ms of air between two ordinary words of one phrase.
+    $transcript = transcriptOf([
+        ['vamos', 0, 500],
+        ['a', 900, 1_000],
+    ]);
+
+    $detections = detector()->detect($transcript, [SpeechCategory::RoboticPause]);
+
+    expect($detections)->toHaveCount(1)
+        // 75 ms kept after "vamos", 75 ms kept before "a".
+        ->and($detections[0]->startMs)->toBe(575)
+        ->and($detections[0]->endMs)->toBe(825)
+        ->and($detections[0]->evidence)->toMatchArray([
+            'detector' => 'robotic_pause',
+            'gap_ms' => 400,
+            'target_gap_ms' => 150,
+        ]);
+});
+
+it('keeps only what the renderer cannot add by itself', function (): void {
+    // The real wiring: 150 ms total budget, 80 ms of join air, so the detector
+    // may keep 70 ms of the recording's own air and nothing more.
+    $detector = new SpeechDisfluencyDetector(
+        fillerSounds: [],
+        fillerWords: [],
+        fillerPhrases: [],
+        repetitionAllowList: [],
+        maxStutterFragmentMs: 400,
+        minConfidence: 0.5,
+        roboticPauseTargetMs: 70,
+    );
+
+    $detections = $detector->detect(
+        transcriptOf([['vamos', 0, 500], ['a', 900, 1_000]]),
+        [SpeechCategory::RoboticPause],
+    );
+
+    expect($detections)->toHaveCount(1)
+        ->and($detections[0]->startMs)->toBe(535)
+        ->and($detections[0]->endMs)->toBe(865);
+});
+
+it('treats a gap already at the target as speech', function (): void {
+    // Exactly 150 ms is the goal, not a problem: cutting it would remove air the
+    // result is supposed to have.
+    $transcript = transcriptOf([
+        ['hola', 0, 500],
+        ['que', 650, 900],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::RoboticPause]))->toBe([]);
+});
+
+it('closes a phrase the transcriber split with ellipses', function (): void {
+    // The whole point: "vamos..." followed by a pause is still one phrase. A
+    // terminal-punctuation rule that also fired on "..." would leave exactly the
+    // delivery this category exists to repair.
+    $transcript = transcriptOf([
+        ['vamos...', 0, 500],
+        ['a', 900, 1_000],
+        ['ingresar...', 1_100, 1_600],
+        ['ahora', 2_000, 2_400],
+    ]);
+
+    // Two 400 ms gaps; the 100 ms one between "a" and "ingresar" is left alone.
+    expect(detectedAs(detector()->detect($transcript, [SpeechCategory::RoboticPause])))
+        ->toBe([['robotic_pause', 575], ['robotic_pause', 1_675]]);
+});
+
+it('never joins two sentences across the pause between them', function (): void {
+    // A full stop is an editorial decision already made by the speaker. Removing
+    // the breath after it would run two sentences together.
+    $transcript = transcriptOf([
+        ['Decidimos.', 0, 600],
+        ['Vamos', 1_200, 1_600],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::RoboticPause]))->toBe([]);
+});
+
+it('leaves a real pause to silence removal instead', function (): void {
+    // Past a second this is not robotic delivery, it is a pause; a different
+    // rule owns it and a different target applies to it.
+    $transcript = transcriptOf([
+        ['vamos', 0, 500],
+        ['a', 1_700, 2_100],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::RoboticPause]))->toBe([]);
+});
+
+it('does not touch the silence while the AI is generating', function (): void {
+    // "enviar el prompt" is followed by real waiting, not by a robotic gap, and
+    // closing it would cut into the generation.
+    $transcript = transcriptOf([
+        ['vamos', 0, 300],
+        ['a', 300, 400],
+        ['enviar', 400, 800],
+        ['el', 800, 900],
+        ['prompt', 900, 1_200],
+        ['Observemos', 2_000, 2_400],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::RoboticPause]))->toBe([]);
+});
+
+it('recognises the same wait when the speaker says "enviemos"', function (): void {
+    $transcript = transcriptOf([
+        ['enviemos', 0, 400],
+        ['el', 400, 500],
+        ['prompt.', 500, 900],
+        ['Observemos', 1_700, 2_100],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::RoboticPause]))->toBe([]);
+});
+
+it('cuts the same gap once the prompt is no longer the last thing said', function (): void {
+    // The guard is about what precedes the gap, not about the word "prompt":
+    // a gap further into the narration is ordinary robotic spacing again.
+    $transcript = transcriptOf([
+        ['enviemos', 0, 400],
+        ['el', 400, 500],
+        ['prompt', 500, 900],
+        ['y', 900, 1_000],
+        ['esperamos', 1_800, 2_400],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::RoboticPause]))->toHaveCount(1);
+});
+
+it('never cuts on air beside a bracketed sound or an unsure word', function (): void {
+    $bracketed = transcriptOf([
+        ['[laughs]', 0, 500],
+        ['hola', 900, 1_300],
+    ]);
+    $unsure = transcriptOf([
+        ['esto', 0, 500, 0.2],
+        ['funciona', 900, 1_300, 0.9],
+    ]);
+
+    expect(detector()->detect($bracketed, [SpeechCategory::RoboticPause]))->toBe([])
+        ->and(detector()->detect($unsure, [SpeechCategory::RoboticPause]))->toBe([]);
+});
+
+it('stays off unless the category is asked for', function (): void {
+    $transcript = transcriptOf([
+        ['vamos', 0, 500],
+        ['a', 900, 1_000],
+    ]);
+
+    expect(detector()->detect($transcript, [SpeechCategory::Filler]))->toBe([])
+        ->and(detector()->detect($transcript, SpeechCategory::all()))->toHaveCount(1);
+});
+
+it('persists the robotic gap under a cut reason a cut may be proposed for', function (): void {
+    expect(SpeechCategory::RoboticPause->toCutReason())->toBe(CutReason::RoboticPause)
+        ->and(SpeechCategory::RoboticPause->value)->toBe('robotic_pause')
+        ->and(SpeechCategory::values())->toContain('robotic_pause')
+        ->and(CutReason::RoboticPause->value)->toBe('robotic_pause')
+        // It is a detector finding, not a model judgement: the AI may never
+        // invent one, but a cut can still be proposed with it.
+        ->and(CutReason::RoboticPause->isAiProposable())->toBeFalse();
 });

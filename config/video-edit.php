@@ -291,6 +291,13 @@ return [
         // Longer than this and a prefix match is a real word, not a false start.
         'max_stutter_fragment_ms' => 400,
 
+        // Word-timestamp gaps inside a phrase: close them to 150 ms; longer
+        // pauses belong to silence removal, never to the robotic-speech rule.
+        'robotic_pauses' => [
+            'target_gap_ms' => 150,
+            'max_gap_ms' => 1_000,
+        ],
+
         /*
         |----------------------------------------------------------------------
         | Gemini transcription
