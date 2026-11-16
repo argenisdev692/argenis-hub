@@ -63,6 +63,68 @@ const reportPdfUrl = computed(() =>
     report.url(uuid, { query: { format: 'pdf' } }),
 );
 
+/**
+ * The analysis report exists from the moment the analysis pass stored it —
+ * before the render, which is exactly when the owner needs its numbers to
+ * decide. Restricting the link to `completed` would hide the duration plan on
+ * the one screen that is asking the question it answers.
+ */
+const canOpenReport = computed<boolean>(() => {
+    const current = edit.value;
+
+    return (
+        current?.mode === 'ai_edit' &&
+        (current.status === 'awaiting_review' || current.status === 'completed')
+    );
+});
+
+/**
+ * The target the edit was created with, in milliseconds, or null when no
+ * length was asked for. `parameters` is stored JSON, so it is narrowed instead
+ * of trusted.
+ */
+const targetDurationMs = computed<number | null>(() => {
+    const parameters: unknown = edit.value?.parameters;
+
+    if (typeof parameters !== 'object' || parameters === null) {
+        return null;
+    }
+
+    const aiEdit = (parameters as Record<string, unknown>).ai_edit;
+
+    if (typeof aiEdit !== 'object' || aiEdit === null) {
+        return null;
+    }
+
+    const minutes = (aiEdit as Record<string, unknown>).target_duration_minutes;
+
+    return typeof minutes === 'number' ? minutes * 60_000 : null;
+});
+
+/**
+ * The recording's length while the review is open. `original_duration_ms` is
+ * only written when the edit completes — after the review — so the source
+ * probes are the measurement that exists at the moment somebody is deciding.
+ */
+const originalDurationMs = computed<number | null>(() => {
+    const current = edit.value;
+
+    if (!current) {
+        return null;
+    }
+
+    if (current.summary.original_duration_ms !== null) {
+        return current.summary.original_duration_ms;
+    }
+
+    const measured = current.sources.reduce(
+        (total, source) => total + (source.duration_ms ?? 0),
+        0,
+    );
+
+    return measured > 0 ? measured : null;
+});
+
 const summary = computed(() => {
     const current = edit.value?.summary;
 
@@ -207,10 +269,7 @@ async function onRetry(): Promise<void> {
 
                 <PermissionGuard permission="VIEW_VIDEO_EDITS">
                     <Button
-                        v-if="
-                            edit.mode === 'ai_edit' &&
-                            edit.status === 'completed'
-                        "
+                        v-if="canOpenReport"
                         as="a"
                         variant="outline"
                         :href="reportPdfUrl"
@@ -535,6 +594,8 @@ async function onRetry(): Promise<void> {
         :review="pendingReview"
         :expires-at="edit?.review_expires_at ?? null"
         :source="reviewSource"
+        :original-duration-ms="originalDurationMs"
+        :target-duration-ms="targetDurationMs"
     />
 
     <ConfirmModal

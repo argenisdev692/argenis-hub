@@ -293,11 +293,45 @@ final readonly class CutPlanner
 
         usort($candidates, static fn (array $a, array $b): int => [$a['start'], $a['end']] <=> [$b['start'], $b['end']]);
 
+        // The onset guard can pull a short cut's end back onto its start (a
+        // 30 ms cut has no room for a 40 ms guard), and a zero-length range is
+        // not a cut: `TimeRange` refuses it and would fail the whole edit at the
+        // render step. The decision is rejected with its reason here instead, so
+        // the report can say "too short" rather than the job dying.
+        $candidates = $this->withoutEmptyRanges($candidates, $decisions);
+
         // The waits are only known once every decision has been read, so the
         // guard runs as its own pass over the candidates it just produced.
         [$candidates, $decisions] = $this->keepCutsOutOfWaits($candidates, $waits, $decisions);
 
         return [$candidates, $waits, $decisions];
+    }
+
+    /**
+     * @param  list<array{start: int, end: int, reasons: list<CutReason>, origins: list<DecisionOrigin>, decisions: list<int>}>  $candidates
+     * @param  list<ValidatedDecision>  $decisions
+     * @return list<array{start: int, end: int, reasons: list<CutReason>, origins: list<DecisionOrigin>, decisions: list<int>}>
+     */
+    private function withoutEmptyRanges(array $candidates, array &$decisions): array
+    {
+        $kept = [];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate['end'] > $candidate['start']) {
+                $kept[] = $candidate;
+
+                continue;
+            }
+
+            foreach ($candidate['decisions'] as $index) {
+                $decisions[$index] = ValidatedDecision::rejected(
+                    $decisions[$index]->decision,
+                    DecisionRejectionReason::TooShort,
+                );
+            }
+        }
+
+        return $kept;
     }
 
     /**

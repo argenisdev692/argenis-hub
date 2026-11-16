@@ -7,6 +7,7 @@ namespace Modules\VideoEdits\Application\Pipeline\Producers;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Support\Str;
+use Modules\VideoEdits\Application\Support\KeepPhraseResolver;
 use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
@@ -20,6 +21,7 @@ use Modules\VideoEdits\Domain\Ports\CutDecisionProducer;
 use Modules\VideoEdits\Domain\Ports\ScriptProviderPort;
 use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
 use Modules\VideoEdits\Domain\Services\ClippedWordDetector;
+use Modules\VideoEdits\Domain\Services\KeepPhraseGuard;
 use Modules\VideoEdits\Domain\Services\SpeechPaceAnalyzer;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
 use Modules\VideoEdits\Domain\ValueObjects\AiCutProposal;
@@ -77,6 +79,8 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
         private AiCutReviewStorePort $reviews,
         private SpeechPaceAnalyzer $pace,
         private ClippedWordDetector $clarity,
+        private KeepPhraseGuard $keepPhrases,
+        private KeepPhraseResolver $keepPhraseList,
         private TranscriptionIdentity $identity,
         private Config $config,
     ) {}
@@ -165,6 +169,19 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
             $analysis = $analysis->withRecommendation($unclear);
         }
 
+        // The owner's never-cut phrases win over the model, before anything is
+        // stored for review: a proposal that would delete "muy bien" must not
+        // even be offered, or the review teaches the owner to approve blindly.
+        [$proposals, $keptPhrases] = $this->keepPhrases->filter(
+            $analysis->cutProposals,
+            $transcript,
+            $this->keepPhraseList->resolve(self::listParameter($context, 'keep_phrases')),
+        );
+
+        $analysis = $analysis
+            ->withCutProposals($proposals)
+            ->withKeptPhrases($keptPhrases);
+
         $this->reports->store($context->videoEditId, $analysis);
 
         $cuts = $this->reviewableCuts($analysis, $transcript);
@@ -204,6 +221,7 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
                 contextAfter: self::words($transcript, $proposal->endWordIndex + 1, $contextWords),
                 explanation: $proposal->evidence,
                 preselected: $proposal->confidence >= $threshold,
+                keepText: $proposal->keepText,
             ),
             // A zero-length word would make an empty range; the validator would
             // reject it later anyway, so it is not worth a review row.
@@ -292,6 +310,18 @@ final readonly class AiDecisionProducer implements CutDecisionProducer
         $seconds = $silence['threshold_seconds'] ?? $this->config->get('video-edit.silence.default_threshold_seconds');
 
         return (int) round((float) $seconds * 1000);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function listParameter(DecisionContext $context, string $key): array
+    {
+        $value = $context->parameters['ai_edit'][$key] ?? [];
+
+        return is_array($value)
+            ? array_values(array_filter($value, is_string(...)))
+            : [];
     }
 
     private static function stringParameter(DecisionContext $context, string $key): ?string

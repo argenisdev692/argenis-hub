@@ -37,18 +37,36 @@ import type { AiCutReview } from '../types';
  * Every string shown here is either transcript text or a written explanation, so
  * it is rendered as text only (OWASP LLM05).
  */
-const { uuid, review, expiresAt, source } = defineProps<{
+const { uuid, review, expiresAt, source, originalDurationMs = null, targetDurationMs = null } = defineProps<{
     uuid: string;
     review: AiCutReview;
     expiresAt: string | null;
     source: 'ai' | 'transcript';
+    /** The recording's length, when known, so the ticked cuts can be projected. */
+    originalDurationMs?: number | null;
+    /** `ai_edit.target_duration_minutes`, in milliseconds. */
+    targetDurationMs?: number | null;
 }>();
 
-const summary = computed(() =>
-    source === 'ai'
-        ? `The AI found ${review.cuts.length} ${review.cuts.length === 1 ? 'passage' : 'passages'} to remove: spoken "PAUSA" markers, the takes before them and words that don't match your script. Nothing is cut until you choose.`
-        : `The transcript shows ${review.cuts.length} ${review.cuts.length === 1 ? 'passage' : 'passages'} you flagged with a spoken "PAUSA". Nothing leaves this machine and nothing is cut until you choose.`,
+const automaticCount = computed(
+    () => review.cuts.filter((cut) => cut.origin !== 'ai').length,
 );
+
+const aiCount = computed(
+    () => review.cuts.filter((cut) => cut.origin === 'ai').length,
+);
+
+const summary = computed(() => {
+    const total = review.cuts.length;
+
+    if (automaticCount.value > 0) {
+        return `${total} ${total === 1 ? 'cut' : 'cuts'} will be applied: ${automaticCount.value} automatic (silence, hesitations, gaps, markers) and ${aiCount.value} from the AI. Nothing is removed until you choose.`;
+    }
+
+    return source === 'ai'
+        ? `The AI found ${total} ${total === 1 ? 'passage' : 'passages'} to remove: spoken "PAUSA" markers, the takes before them and words that don't match your script. Nothing is cut until you choose.`
+        : `The transcript shows ${total} ${total === 1 ? 'passage' : 'passages'} you flagged with a spoken "PAUSA". Nothing leaves this machine and nothing is cut until you choose.`;
+});
 
 const explanationLabel = computed(() => (source === 'ai' ? 'AI:' : 'Why:'));
 
@@ -78,6 +96,26 @@ const removedMs = computed(() =>
         .filter((cut) => selectedIds.value.includes(cut.id))
         .reduce((total, cut) => total + cut.duration_ms, 0),
 );
+
+/**
+ * Where the video lands if the ticked cuts are the ones applied. Approximate
+ * on purpose: seam trimming and the join air add or remove a few hundred
+ * milliseconds per cut, and the point here is to answer "does this reach 10:00",
+ * not to predict the frame.
+ */
+const projectedMs = computed<number | null>(() =>
+    originalDurationMs === null
+        ? null
+        : Math.max(0, originalDurationMs - removedMs.value),
+);
+
+const targetShortfallMs = computed<number | null>(() => {
+    if (targetDurationMs === null || projectedMs.value === null) {
+        return null;
+    }
+
+    return Math.max(0, projectedMs.value - targetDurationMs);
+});
 
 const selectAllState = computed<boolean | 'indeterminate'>(() => {
     if (selectedCount.value === 0) {
@@ -173,84 +211,130 @@ async function answer(
                     Select all
                 </label>
                 <span class="text-muted-foreground tabular-nums">
+                    {{ automaticCount }} automatic · {{ aiCount }} AI ·
                     {{ selectedCount }} selected ·
                     {{ formatDurationMs(removedMs) }} removed
                 </span>
             </div>
 
-            <ul
-                class="-mx-1 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-1"
+            <p
+                v-if="projectedMs !== null && targetDurationMs !== null"
+                class="text-xs text-muted-foreground tabular-nums"
             >
-                <li v-for="cut in review.cuts" :key="cut.id">
-                    <label
-                        :for="`${uid}-${cut.id}`"
-                        :class="[
-                            'flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors',
-                            isSelected(cut.id)
-                                ? 'border-primary/50 bg-muted/50'
-                                : 'border-border',
-                        ]"
+                Lands at {{ formatDurationMs(projectedMs) }} · target
+                {{ formatDurationMs(targetDurationMs) }} ·
+                {{
+                    targetShortfallMs === 0
+                        ? 'on target'
+                        : `${formatDurationMs(targetShortfallMs)} short`
+                }}
+            </p>
+
+            <!--
+                One table for every cut: the deterministic ones and the model's.
+                "Automatic" is a separate badge because a silence being removed
+                is not a judgement call, and the owner should be able to see at a
+                glance which rows came from a dictionary or a threshold.
+            -->
+            <div class="-mx-1 min-h-0 flex-1 overflow-auto px-1">
+                <table class="w-full min-w-[52rem] text-sm">
+                    <thead
+                        class="sticky top-0 bg-card text-xs text-muted-foreground"
                     >
-                        <Checkbox
-                            :id="`${uid}-${cut.id}`"
-                            class="mt-0.5"
-                            :model-value="isSelected(cut.id)"
-                            :disabled="pendingAnswer !== null"
-                            @update:model-value="toggleCut(cut.id, $event)"
-                        />
-                        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
-                            <div
-                                class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
-                            >
-                                <Badge variant="secondary">
-                                    {{ cutReasonLabel(cut.reason) }}
-                                </Badge>
-                                <span
-                                    class="text-muted-foreground tabular-nums"
+                        <tr>
+                            <th scope="col" class="w-8 py-2">
+                                <span class="sr-only">Include</span>
+                            </th>
+                            <th scope="col" class="py-2 text-left">Start</th>
+                            <th scope="col" class="py-2 text-left">End</th>
+                            <th scope="col" class="py-2 text-left">Reason</th>
+                            <th scope="col" class="py-2 text-left">Removed</th>
+                            <th scope="col" class="py-2 text-left">Kept</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="cut in review.cuts"
+                            :key="cut.id"
+                            :class="[
+                                'border-t border-border align-top',
+                                isSelected(cut.id) && 'bg-muted/50',
+                            ]"
+                        >
+                            <td class="py-2">
+                                <Checkbox
+                                    :id="`${uid}-${cut.id}`"
+                                    :aria-label="`Include ${cut.text || cutReasonLabel(cut.reason)}`"
+                                    :model-value="isSelected(cut.id)"
+                                    :disabled="pendingAnswer !== null"
+                                    @update:model-value="
+                                        toggleCut(cut.id, $event)
+                                    "
+                                />
+                            </td>
+                            <td class="py-2 tabular-nums">
+                                {{ formatTimestampMs(cut.start_ms) }}
+                            </td>
+                            <td class="py-2 tabular-nums">
+                                {{ formatTimestampMs(cut.end_ms) }}
+                            </td>
+                            <td class="py-2">
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <Badge variant="secondary">
+                                        {{ cutReasonLabel(cut.reason) }}
+                                    </Badge>
+                                    <Badge
+                                        v-if="cut.origin !== 'ai'"
+                                        variant="outline"
+                                    >
+                                        Automatic
+                                    </Badge>
+                                    <span
+                                        class="text-xs text-muted-foreground tabular-nums"
+                                    >
+                                        {{ confidenceLabel(cut.confidence) }}
+                                    </span>
+                                </div>
+                                <p
+                                    v-if="cut.explanation"
+                                    class="mt-1 text-xs text-muted-foreground"
                                 >
-                                    {{ formatTimestampMs(cut.start_ms) }} –
-                                    {{ formatTimestampMs(cut.end_ms) }}
-                                </span>
-                                <span class="text-muted-foreground">
-                                    {{ confidenceLabel(cut.confidence) }}
-                                </span>
-                            </div>
-
-                            <p class="text-sm wrap-break-word">
-                                <span
-                                    v-if="cut.context_before"
-                                    class="text-muted-foreground"
-                                    >…{{ cut.context_before }}
-                                </span>
-                                <span
-                                    :class="[
-                                        'rounded px-0.5 font-medium',
-                                        isSelected(cut.id) &&
-                                            'bg-destructive/10 text-destructive line-through',
-                                    ]"
-                                    >{{ cut.text }}</span
-                                >
-                                <span
-                                    v-if="cut.context_after"
-                                    class="text-muted-foreground"
-                                >
-                                    {{ cut.context_after }}…</span
-                                >
-                            </p>
-
-                            <p
-                                v-if="cut.explanation"
-                                class="text-xs text-muted-foreground"
-                            >
-                                <span class="font-medium">{{
-                                    explanationLabel
-                                }}</span>
-                                {{ cut.explanation }}
-                            </p>
-                        </div>
-                    </label>
-                </li>
-            </ul>
+                                    <span class="font-medium">{{
+                                        explanationLabel
+                                    }}</span>
+                                    {{ cut.explanation }}
+                                </p>
+                            </td>
+                            <td class="py-2">
+                                <p class="wrap-break-word">
+                                    <span
+                                        v-if="cut.context_before"
+                                        class="text-muted-foreground"
+                                        >…{{ cut.context_before }}
+                                    </span>
+                                    <span
+                                        :class="[
+                                            'rounded px-0.5 font-medium',
+                                            isSelected(cut.id) &&
+                                                'bg-destructive/10 text-destructive line-through',
+                                        ]"
+                                        >{{ cut.text || '—' }}</span
+                                    >
+                                    <span
+                                        v-if="cut.context_after"
+                                        class="text-muted-foreground"
+                                    >
+                                        {{ cut.context_after }}…</span
+                                    >
+                                </p>
+                            </td>
+                            <td class="py-2 text-muted-foreground">
+                                {{ cut.keep_text ?? '—' }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
             <p v-if="expiryNote" class="text-xs text-muted-foreground">
                 {{ expiryNote }}

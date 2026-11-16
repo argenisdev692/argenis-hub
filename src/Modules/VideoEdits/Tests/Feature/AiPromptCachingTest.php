@@ -51,6 +51,10 @@ final class PromptCacheRecordingAiClient implements AIClientInterface
 
 beforeEach(function (): void {
     config()->set('ai.prompt_cache', ['enabled' => true, 'long_ttl' => '1h', 'log_usage' => false]);
+    // Pinned here rather than inherited from the ambient `.env`: the test is
+    // about the level reaching `thinkingConfig`, and a local override for cost
+    // must not turn a wiring assertion into an environment check.
+    config()->set('video-edit.ai.thinking_level', 'high');
 
     $this->client = new PromptCacheRecordingAiClient;
     app()->instance(AIClientInterface::class, $this->client);

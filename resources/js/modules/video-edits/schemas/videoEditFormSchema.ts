@@ -120,6 +120,19 @@ export const videoEditFormSchema = z
             .min(1, 'At least 1 minute.')
             .max(180, 'At most 180 minutes.')
             .nullable(),
+        /**
+         * Never-cut phrases. Mirrors `ai_edit.keep_phrases` on the backend, where
+         * the guard is literal: a proposal containing one of these is dropped
+         * before it ever reaches the review.
+         */
+        ai_keep_phrases: z
+            .array(
+                z
+                    .string()
+                    .min(1, 'A phrase cannot be empty.')
+                    .max(80, 'A phrase is 80 characters at most.'),
+            )
+            .max(20, '20 phrases at most.'),
         ai_script: z
             .array(z.instanceof(File))
             .max(1, 'Attach a single script.')
@@ -189,6 +202,7 @@ export function emptyVideoEditFormValues(): VideoEditFormValues {
         ai_consented: false,
         ai_instructions: '',
         ai_target_duration_minutes: null,
+        ai_keep_phrases: [],
         ai_script: [],
     };
 }
@@ -238,6 +252,9 @@ export function toCreateVideoEditPayload(
                   consented: values.ai_consented,
                   instructions: values.ai_instructions.trim() || null,
                   target_duration_minutes: values.ai_target_duration_minutes,
+                  keep_phrases: values.ai_keep_phrases
+                      .map((phrase) => phrase.trim())
+                      .filter((phrase) => phrase !== ''),
                   script: script
                       ? {
                             file_name: script.name,
@@ -278,6 +295,7 @@ const SERVER_FIELD_PREFIXES: [
     ['ai_edit.consented', 'ai_consented'],
     ['ai_edit.instructions', 'ai_instructions'],
     ['ai_edit.target_duration_minutes', 'ai_target_duration_minutes'],
+    ['ai_edit.keep_phrases', 'ai_keep_phrases'],
     ['ai_edit.script', 'ai_script'],
     ['ai_edit', 'ai_consented'],
 ];

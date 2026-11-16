@@ -70,6 +70,15 @@ final readonly class SpeechDisfluencyDetector
         private array $elongationPatterns = [],
         private int $roboticPauseTargetMs = 150,
         private int $roboticPauseMaxMs = 1_000,
+        /**
+         * Shortest robotic gap worth cutting.
+         *
+         * A gap 100 ms over the target leaves a 30 ms cut, which the renderer's
+         * onset guard then pulls back to nothing — the cut cannot survive its own
+         * safety margin. Proposing it only fed the review a row that could never
+         * be applied, and the planner a range whose end equalled its start.
+         */
+        private int $roboticPauseMinCutMs = 60,
     ) {}
 
     /**
@@ -500,7 +509,11 @@ final readonly class SpeechDisfluencyDetector
             $word = $words[$index];
             $gapMs = $word->startMs - $previous->endMs;
 
-            if ($gapMs <= $this->roboticPauseTargetMs || $gapMs > $this->roboticPauseMaxMs
+            // Below the floor there is nothing to close that would survive the
+            // renderer's onset guard; above the ceiling this is a pause, and a
+            // different rule's business.
+            if ($gapMs - $this->roboticPauseTargetMs < $this->roboticPauseMinCutMs
+                || $gapMs > $this->roboticPauseMaxMs
                 || $previous->isBracketedSound() || $word->isBracketedSound()
                 || $this->isLowConfidence($previous) || $this->isLowConfidence($word)
                 || $this->endsNarrativeSentence($previous->text)

@@ -9,9 +9,13 @@ use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\DecisionOutcome;
 use Modules\VideoEdits\Domain\Enums\DecisionRejectionReason;
+use Modules\VideoEdits\Domain\Ports\AiCutReviewStorePort;
 use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
+use Modules\VideoEdits\Domain\ValueObjects\AiCutReview;
 use Modules\VideoEdits\Domain\ValueObjects\AiRecommendation;
+use Modules\VideoEdits\Domain\ValueObjects\AiReviewableCut;
+use Modules\VideoEdits\Domain\ValueObjects\DurationPlan;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditCutDecisionEloquentModel;
 use Modules\VideoEdits\Infrastructure\Persistence\Eloquent\Models\VideoEditEloquentModel;
 use Modules\VideoEdits\Tests\Support\VideoEditTestUsers;
@@ -137,4 +141,115 @@ it('reports an edit that has no AI analysis without failing', function (): void 
         ->assertJsonPath('decisions', [])
         ->assertJsonPath('recommendations', [])
         ->assertJsonPath('conclusion', null);
+});
+
+it('reports the duration plan and the phrases the request protected', function (): void {
+    app(AiReportStorePort::class)->store($this->edit->id, new AiAnalysis(
+        conclusion: 'Target reachable.',
+        durationPlan: new DurationPlan(
+            totalMs: 780_000,
+            targetMs: 600_000,
+            gapCount: 12,
+            deadAirMs: 45_000,
+            sentenceGapMs: 30_000,
+            intraPhraseGapMs: 15_000,
+            silenceRecoverableMs: 60_000,
+            aiProposalMs: 140_000,
+            plannedCutMs: 140_000,
+            longestGaps: [[
+                'start_ms' => 12_000,
+                'end_ms' => 14_500,
+                'gap_ms' => 2_500,
+                'after_sentence_end' => true,
+            ]],
+        ),
+        keptPhrases: ['muy bien'],
+    ));
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/data/admin/video-edits/{$this->edit->uuid}/report")
+        ->assertOk();
+
+    expect($response->json('duration_plan.total_ms'))->toBe(780_000)
+        ->and($response->json('duration_plan.target_ms'))->toBe(600_000)
+        ->and($response->json('duration_plan.required_removal_ms'))->toBe(180_000)
+        ->and($response->json('duration_plan.projected_ms'))->toBe(580_000)
+        ->and($response->json('duration_plan.verdict'))->toBe('reachable')
+        ->and($response->json('duration_plan.longest_gaps.0.gap_ms'))->toBe(2_500)
+        ->and($response->json('kept_phrases'))->toBe(['muy bien']);
+});
+
+it('renders the plan into the PDF without failing', function (): void {
+    app(AiReportStorePort::class)->store($this->edit->id, new AiAnalysis(
+        durationPlan: new DurationPlan(
+            totalMs: 780_000,
+            targetMs: 600_000,
+            gapCount: 12,
+            deadAirMs: 45_000,
+            sentenceGapMs: 30_000,
+            intraPhraseGapMs: 15_000,
+            silenceRecoverableMs: 60_000,
+            aiProposalMs: 140_000,
+            plannedCutMs: 140_000,
+            longestGaps: [[
+                'start_ms' => 12_000,
+                'end_ms' => 14_500,
+                'gap_ms' => 2_500,
+                'after_sentence_end' => true,
+            ]],
+        ),
+        keptPhrases: ['muy bien'],
+    ));
+
+    // The plan's table and its gap list are a separate Blade branch; a report
+    // that only rendered when there was no plan would fail the moment there was
+    // one, which is the only case that matters.
+    $this->actingAs($this->user)
+        ->get("/data/admin/video-edits/{$this->edit->uuid}/report?format=pdf")
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+});
+
+it('lists the cuts the review showed, with what remains', function (): void {
+    $cut = new AiReviewableCut(
+        id: '0199a8a0-0000-7000-8000-000000000001',
+        reason: CutReason::Filler,
+        startMs: 0,
+        endMs: 900,
+        confidence: 1.0,
+        text: 'este',
+        contextBefore: 'Hoy',
+        contextAfter: 'vamos',
+        explanation: 'Hesitation removed.',
+        preselected: true,
+        origin: DecisionOrigin::Transcription,
+        producer: 'speech_detector',
+        keepText: 'Hoy vamos',
+    );
+
+    app(AiCutReviewStorePort::class)->store(
+        $this->edit->id,
+        AiCutReview::pendingAll([$cut])->resolve([$cut->id], new DateTimeImmutable),
+    );
+
+    // The PDF is the copy the owner keeps: it has to carry the same rows the
+    // review screen showed, including what survives each cut.
+    $response = $this->actingAs($this->user)
+        ->getJson("/data/admin/video-edits/{$this->edit->uuid}/report")
+        ->assertOk();
+
+    expect($response->json('reviewed_cuts.0.keep_text'))->toBe('Hoy vamos')
+        ->and($response->json('reviewed_cuts.0.origin'))->toBe('transcription')
+        ->and($response->json('reviewed_cuts.0.approved'))->toBeTrue()
+        ->and($response->json('review_includes_automatic'))->toBeTrue();
+});
+
+it('reports an edit without a plan without inventing one', function (): void {
+    $plain = VideoEditEloquentModel::factory()->for($this->user)->completed()->create();
+
+    $this->actingAs($this->user)
+        ->getJson("/data/admin/video-edits/{$plain->uuid}/report")
+        ->assertOk()
+        ->assertJsonPath('duration_plan', null)
+        ->assertJsonPath('kept_phrases', []);
 });

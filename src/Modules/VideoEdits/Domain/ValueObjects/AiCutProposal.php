@@ -16,6 +16,11 @@ use Modules\VideoEdits\Domain\Enums\CutReason;
  * starts at 04:15.320, so the model is asked which WORDS to remove and the
  * exact milliseconds come from the transcript. The model never invents a
  * timestamp.
+ *
+ * `keepText` is the model's answer to "what will the viewer hear instead": the
+ * corrected sentence, written out. It is never used to cut anything — the range
+ * is still the authority — it exists so the review row says what is removed AND
+ * what survives, which is how a person decides whether the edit reads naturally.
  */
 final readonly class AiCutProposal
 {
@@ -25,5 +30,6 @@ final readonly class AiCutProposal
         public int $endWordIndex,
         public float $confidence,
         public ?string $evidence = null,
+        public ?string $keepText = null,
     ) {}
 }

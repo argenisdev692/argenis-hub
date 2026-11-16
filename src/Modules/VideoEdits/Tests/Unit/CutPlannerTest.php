@@ -130,6 +130,18 @@ it('rejects a silence that lies entirely inside speech', function (): void {
         ->and($plan->decisions[0]->rejectionReason)->toBe(DecisionRejectionReason::OverlapsSpeech);
 });
 
+it('rejects a cut the onset guard would shrink to nothing', function (): void {
+    // 30 ms of cut and a 40 ms guard: the end is pulled back before the start,
+    // so the range would be 5035–5035. That is not a cut, and TimeRange refuses
+    // it — the planner must drop it here instead of failing the render.
+    $plan = guardedPlanner(40)->plan([fillerCut(5_035, 5_065)], 60_000);
+
+    expect($plan->hasCuts())->toBeFalse()
+        ->and($plan->decisions[0]->isApplied())->toBeFalse()
+        ->and($plan->decisions[0]->rejectionReason)->toBe(DecisionRejectionReason::TooShort)
+        ->and(bounds($plan->keepRanges))->toBe([[0, 60_000]]);
+});
+
 function busySilence(int $startMs, int $endMs, float $screenActivity): ValidatedDecision
 {
     return ValidatedDecision::applied(new CutDecision(

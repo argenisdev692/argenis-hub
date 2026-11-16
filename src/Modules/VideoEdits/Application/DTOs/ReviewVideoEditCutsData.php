@@ -34,7 +34,10 @@ final class ReviewVideoEditCutsData extends Data
     public static function rules(): array
     {
         return [
-            'approved_cut_ids' => ['present', 'array', 'max:500'],
+            // A unified review can carry every silence of a long recording on
+            // top of the speech and AI cuts; 500 was sized for AI-only reviews
+            // and would reject a legitimate answer to a 40-minute video.
+            'approved_cut_ids' => ['present', 'array', 'max:2000'],
             'approved_cut_ids.*' => ['required', 'string', 'uuid', 'distinct'],
         ];
     }

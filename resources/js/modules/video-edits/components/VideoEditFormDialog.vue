@@ -6,6 +6,7 @@ import {
     FileDropzone,
     FilterSelect,
     FormDialog,
+    TagsField,
     TextField,
 } from '@/common/form';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -342,7 +343,7 @@ function toNullableInteger(value: string | number): number | null {
                     <AppField
                         :field="field"
                         label="Target length (minutes)"
-                        description="Optional. The AI aims for it but never cuts content just to hit it."
+                        description="Optional. Leave it empty for a gap analysis only. The AI aims for the length but never cuts content just to hit it."
                         #default="{ control }"
                     >
                         <Input
@@ -361,6 +362,15 @@ function toNullableInteger(value: string | number): number | null {
                             @blur="field.handleBlur"
                         />
                     </AppField>
+                </form.Field>
+
+                <form.Field name="ai_keep_phrases" #default="{ field }">
+                    <TagsField
+                        :field="field"
+                        label="Never cut these phrases"
+                        placeholder="muy bien, enviemos, observemos…"
+                        description="Optional. Any proposed cut containing one of these is dropped before the review, whatever the AI suggests."
+                    />
                 </form.Field>
 
                 <form.Field name="ai_script" #default="{ field }">

@@ -9,15 +9,18 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Queue;
 use Modules\VideoEdits\Domain\Enums\CutReason;
+use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
 use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
+use Modules\VideoEdits\Domain\Ports\AiCutReviewStorePort;
 use Modules\VideoEdits\Domain\Ports\AiEditAnalysisPort;
 use Modules\VideoEdits\Domain\Ports\TranscriptionPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
 use Modules\VideoEdits\Domain\ValueObjects\AiAnalysis;
 use Modules\VideoEdits\Domain\ValueObjects\AiCutProposal;
 use Modules\VideoEdits\Domain\ValueObjects\AiCutReview;
+use Modules\VideoEdits\Domain\ValueObjects\AiReviewableCut;
 use Modules\VideoEdits\Domain\ValueObjects\MediaProbe;
 use Modules\VideoEdits\Domain\ValueObjects\ScriptDocument;
 use Modules\VideoEdits\Domain\ValueObjects\Transcript;
@@ -481,4 +484,202 @@ it('counts a parked review as the owner\'s one active edit', function (): void {
 
     expect(fn () => VideoEditEloquentModel::factory()->for($owner)->queued()->create())
         ->toThrow(UniqueConstraintViolationException::class);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Unified review: automatic cuts are reviewable too
+|--------------------------------------------------------------------------
+|
+| The deterministic cuts used to be applied silently while only the model's
+| guesses were offered for approval — the only cuts a person could veto were the
+| least predictable ones. These tests pin the new contract: one table, one
+| answer, and the render applies exactly that.
+|
+*/
+
+/**
+ * A recording with one hesitation and no silence above the threshold: the only
+ * automatic cut is the filler, which is what makes the unified review's effect
+ * measurable.
+ */
+function speak(Transcript $transcript): void
+{
+    app()->instance(TranscriptionPort::class, new class($transcript) implements TranscriptionPort
+    {
+        public function __construct(private readonly Transcript $transcript) {}
+
+        public function transcribe(string $audioPath, ?string $language = null): Transcript
+        {
+            return $this->transcript;
+        }
+    });
+}
+
+function unifiedAiEdit(FakeStorage $storage, FakeVideoEditor $editor, User $owner, int $probeMs = 60_000, ?int $targetMinutes = 10): VideoEditEloquentModel
+{
+    $edit = queuedAiEdit($storage, $editor, $owner);
+
+    $edit->update(['parameters' => [
+        'silence_removal' => ['enabled' => false, 'threshold_seconds' => null],
+        'speech_cleanup' => ['enabled' => true, 'categories' => ['filler'], 'language' => 'es'],
+        'manual_ranges' => [],
+        'ai_edit' => ['enabled' => true, 'consented' => true, 'target_duration_minutes' => $targetMinutes],
+    ]]);
+
+    $editor->probes = ['source-1.mp4' => new MediaProbe($probeMs, 'mov,mp4', true, true, 1920, 1080, 30.0)];
+
+    speak(new Transcript([
+        new TranscriptWord('este', 0, 900),
+        new TranscriptWord('Hoy', 900, 1_400),
+        new TranscriptWord('vamos', 1_400, 2_000),
+        new TranscriptWord('Outlook', 2_000, 2_600),
+    ], language: 'es'));
+
+    return $edit;
+}
+
+it('renders past a cut the onset guard would shrink to nothing', function (): void {
+    // The production failure: a 30 ms robotic gap sat in a resolved review, the
+    // 40 ms onset guard pulled its end back onto its start, and TimeRange threw
+    // mid-render. The cut is now rejected as too short and the edit completes.
+    $owner = VideoEditTestUsers::editor();
+    $edit = queuedAiEdit($this->storage, $this->editor, $owner);
+
+    $tooShort = new AiReviewableCut(
+        id: '0199a8a0-0000-7000-8000-000000000001',
+        reason: CutReason::RoboticPause,
+        startMs: 5_035,
+        endMs: 5_065,
+        confidence: 1.0,
+        text: '',
+        origin: DecisionOrigin::Transcription,
+        producer: 'speech_detector',
+    );
+
+    $real = new AiReviewableCut(
+        id: '0199a8a0-0000-7000-8000-000000000002',
+        reason: CutReason::Filler,
+        startMs: 10_000,
+        endMs: 12_000,
+        confidence: 1.0,
+        text: 'este',
+        origin: DecisionOrigin::Transcription,
+        producer: 'speech_detector',
+    );
+
+    app(AiCutReviewStorePort::class)->store(
+        $edit->id,
+        AiCutReview::pendingAll([$tooShort, $real])->resolve([$tooShort->id, $real->id], new DateTimeImmutable),
+    );
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $fresh = $edit->fresh(['cutDecisions', 'appliedCuts']);
+
+    expect($fresh->status)->toBe(VideoEditStatus::Completed)
+        ->and($fresh->cutDecisions->where('rejection_reason', 'too_short'))->toHaveCount(1)
+        ->and($fresh->appliedCuts)->toHaveCount(1);
+});
+
+it('reviews the automatic cuts together with the AI proposals', function (): void {
+    $edit = unifiedAiEdit($this->storage, $this->editor, VideoEditTestUsers::editor());
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $review = $edit->fresh()->ai_review;
+    $cuts = collect($review['cuts']);
+
+    expect($review['includes_automatic'])->toBeTrue()
+        ->and($cuts->where('origin', 'transcription')->pluck('reason')->all())->toContain('filler')
+        ->and($cuts->where('origin', 'ai'))->toHaveCount(2)
+        ->and($this->editor->called('render'))->toBeFalse();
+});
+
+it('renders only what the unified review approved, automatic cuts included', function (): void {
+    $owner = VideoEditTestUsers::editor();
+    $edit = unifiedAiEdit($this->storage, $this->editor, $owner);
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $cuts = collect($edit->fresh()->ai_review['cuts']);
+    $aiCut = $cuts->firstWhere('origin', 'ai');
+
+    $this->actingAs($owner)
+        ->postJson("/data/admin/video-edits/{$edit->uuid}/review", ['approved_cut_ids' => [$aiCut['id']]])
+        ->assertAccepted();
+
+    $fresh = $edit->fresh(['cutDecisions']);
+
+    // The filler was in the table and was not ticked, so it must not be applied:
+    // the review is the decision set now, not advice the worker recomputes past.
+    expect($fresh->cutDecisions->where('reason', CutReason::Filler))->toHaveCount(0)
+        ->and($fresh->cutDecisions->where('reason', CutReason::Retake))->toHaveCount(1);
+});
+
+it('measures the gaps without asking for a target', function (): void {
+    // No length in the request: the plan is the gap inventory, and nothing in
+    // it may claim a shortfall against a target nobody set.
+    $edit = unifiedAiEdit(
+        $this->storage,
+        $this->editor,
+        VideoEditTestUsers::editor(),
+        probeMs: 780_000,
+        targetMinutes: null,
+    );
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $plan = $edit->fresh()->ai_report['duration_plan'];
+
+    expect($plan['target_ms'])->toBeNull()
+        ->and($plan['required_removal_ms'])->toBeNull()
+        ->and($plan['shortfall_ms'])->toBeNull()
+        ->and($plan['verdict'])->toBe('no_target')
+        ->and($plan['total_ms'])->toBe(780_000)
+        ->and($plan['speech_cut_ms'])->toBe(900);
+});
+
+it('never removes a standing keep phrase, even when a dictionary rule matches it', function (): void {
+    $edit = queuedAiEdit($this->storage, $this->editor, VideoEditTestUsers::editor());
+
+    $edit->update(['parameters' => [
+        'silence_removal' => ['enabled' => false, 'threshold_seconds' => null],
+        'speech_cleanup' => ['enabled' => true, 'categories' => ['repetition'], 'language' => 'es'],
+        'manual_ranges' => [],
+        'ai_edit' => ['enabled' => true, 'consented' => true],
+    ]]);
+
+    speak(new Transcript([
+        new TranscriptWord('Y', 0, 300),
+        new TranscriptWord('enviemos', 300, 900),
+        new TranscriptWord('enviemos', 900, 1_500),
+        new TranscriptWord('el', 1_500, 1_700),
+        new TranscriptWord('prompt', 1_700, 2_300),
+    ], language: 'es'));
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $reasons = collect($edit->fresh()->ai_review['cuts'])->pluck('reason');
+
+    // The repetition is real, and it is still not the edit's call to remove a
+    // phrase the lesson depends on. The standing list is policy, not a default.
+    expect($reasons)->not->toContain('repetition');
+});
+
+it('counts the automatic cuts towards the target instead of only the AI ones', function (): void {
+    $edit = unifiedAiEdit($this->storage, $this->editor, VideoEditTestUsers::editor(), probeMs: 780_000);
+
+    ProcessVideoEditJob::dispatchSync($edit->uuid);
+
+    $plan = $edit->fresh()->ai_report['duration_plan'];
+
+    // 13:00 → 10:00: the filler (0.9 s) and the two proposals (1.1 s + 0.6 s)
+    // are all time the edit removes, so all of them count towards the 3:00.
+    expect($plan['target_ms'])->toBe(600_000)
+        ->and($plan['speech_cut_ms'])->toBe(900)
+        ->and($plan['ai_proposal_ms'])->toBe(1_700)
+        ->and($plan['planned_removal_ms'])->toBe(2_600)
+        ->and($plan['shortfall_ms'])->toBeGreaterThan(0)
+        ->and($plan['verdict'])->toBe('short');
 });

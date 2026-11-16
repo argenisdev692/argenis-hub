@@ -811,6 +811,19 @@
                                 "minimum": 1,
                                 "maximum": 180
                             },
+                            "keep_phrases": {
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "description": "The owner's never-cut list. Literal matching, enforced in the\ndomain: a phrase here is a hard constraint the model cannot talk\nits way out of, which is why the length is bounded and the count\ncapped (a keep list nobody can read is a keep list nobody checks).",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 80
+                                },
+                                "maxItems": 20
+                            },
                             "script": {
                                 "type": [
                                     "object",
@@ -1016,11 +1029,12 @@
                 "properties": {
                     "approved_cut_ids": {
                         "type": "array",
+                        "description": "A unified review can carry every silence of a long recording on\ntop of the speech and AI cuts; 500 was sized for AI-only reviews\nand would reject a legitimate answer to a 40-minute video.",
                         "items": {
                             "type": "string",
                             "format": "uuid"
                         },
-                        "maxItems": 500,
+                        "maxItems": 2000,
                         "uniqueItems": true
                     }
                 },
@@ -1195,12 +1209,33 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "duration_plan": {
+                        "$ref": "#/components/schemas/DurationPlanData"
+                    },
+                    "kept_phrases": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "reviewed_cuts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AiReviewableCutData"
+                        }
+                    },
+                    "review_includes_automatic": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
                     "edit",
                     "decisions",
-                    "recommendations"
+                    "recommendations",
+                    "kept_phrases",
+                    "reviewed_cuts",
+                    "review_includes_automatic"
                 ],
                 "title": "VideoEditReportData"
             }

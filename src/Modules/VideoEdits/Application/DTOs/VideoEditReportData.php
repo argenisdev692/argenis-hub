@@ -18,11 +18,25 @@ final class VideoEditReportData extends Data
     /**
      * @param  list<AiReportDecisionData>  $decisions
      * @param  list<AiRecommendationData>  $recommendations
+     * @param  list<AiReviewableCutData>  $reviewedCuts
+     * @param  list<string>  $keptPhrases
      */
     public function __construct(
         public AiReportEditData $edit,
         public array $decisions,
         public array $recommendations,
         public ?string $conclusion,
+        public ?DurationPlanData $durationPlan = null,
+        public array $keptPhrases = [],
+        /**
+         * The same rows the review screen shows, in the same order: Start, End,
+         * reason, what is removed and what remains. The PDF is the copy the
+         * owner keeps, so a cut that was on screen and missing from it — or the
+         * reverse — would make the document useless as a record.
+         *
+         * @var list<AiReviewableCutData>
+         */
+        public array $reviewedCuts = [],
+        public bool $reviewIncludesAutomatic = false,
     ) {}
 }

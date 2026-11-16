@@ -296,6 +296,12 @@ return [
         'robotic_pauses' => [
             'target_gap_ms' => 150,
             'max_gap_ms' => 1_000,
+            // A gap barely over the target leaves a cut shorter than the
+            // renderer's onset guard (40 ms), which then pulls its end back onto
+            // its start. Non-positive ranges are not cuts, so they are never
+            // proposed: 60 ms is the first length that survives the guard with
+            // something left.
+            'min_cut_ms' => (int) env('VIDEO_EDIT_ROBOTIC_MIN_CUT_MS', 60),
         ],
 
         /*
@@ -616,6 +622,30 @@ return [
         // never prefill a field the validator would then reject.
         'max_instructions_characters' => 20_000,
 
+        /*
+        |----------------------------------------------------------------------
+        | Standing never-cut phrases
+        |----------------------------------------------------------------------
+        |
+        | These are the words this installation never wants removed, whatever a
+        | per-video request says: the transitions that hold a lesson together
+        | ("observemos", "muy bien") and the sign-off that hands over to the tool
+        | ("vamos a enviar", "enviemos"). A dictionary entry cannot know them and
+        | a model forgets them, so they are merged into every edit's keep list in
+        | the backend — the form only adds to them, it never replaces them.
+        |
+        | Merging happens again when the guard runs, not only when the edit is
+        | created, so a request recorded before this list existed is protected
+        | too. Matching is literal, accent- and case-insensitive, but whole-word:
+        | see {@see \Modules\VideoEdits\Domain\Services\KeepPhraseGuard}.
+        */
+        'always_keep_phrases' => [
+            'observemos',
+            'muy bien',
+            'vamos a enviar',
+            'enviemos',
+        ],
+
         // A runaway transcript must not blow the context window or the bill.
         // Numbered words cost more than plain text; only whole words are kept,
         // the rest is dropped and the edit proceeds with what the model saw.
@@ -770,6 +800,29 @@ return [
         // is noise, and one is what a single false start produces.
         'min_clipped_words' => 3,
         'max_reported_words' => 20,
+    ],
+
+    /*
+    |----------------------------------------------------------------------
+    | Duration plan ("13:42 → 10:00")
+    |----------------------------------------------------------------------
+    |
+    | The target a user types is a wish until somebody does the subtraction.
+    | This plan measures the dead air the recording already contains and states
+    | the shortfall, so "reduce to 10 minutes" becomes "3:42 must go; silence
+    | removal covers 1:48; 1:54 still has to be found in retakes, fillers or a
+    | re-record".
+    |
+    | `gap_floor_ms` is where a gap stops being rhythm and starts being dead
+    | air. 250 ms is the point a listener hears a break inside a phrase; below
+    | it the number would be dominated by ordinary speech.
+    |
+    | `longest_gaps` caps the list that travels with the report. Ten timecodes
+    | is a list somebody can act on; a hundred is a histogram.
+    */
+    'duration_plan' => [
+        'gap_floor_ms' => (int) env('VIDEO_EDIT_PLAN_GAP_FLOOR_MS', 250),
+        'longest_gaps' => (int) env('VIDEO_EDIT_PLAN_LONGEST_GAPS', 10),
     ],
 
     'cuts' => [

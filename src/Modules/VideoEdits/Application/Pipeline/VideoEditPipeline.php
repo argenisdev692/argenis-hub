@@ -6,7 +6,9 @@ namespace Modules\VideoEdits\Application\Pipeline;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository as Config;
+use Modules\VideoEdits\Application\Support\KeepPhraseResolver;
 use Modules\VideoEdits\Application\Transcription\TranscriptionIdentity;
+use Modules\VideoEdits\Domain\Enums\CutReason;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Enums\ProcessingStage;
 use Modules\VideoEdits\Domain\Enums\VideoEditMode;
@@ -14,6 +16,8 @@ use Modules\VideoEdits\Domain\Enums\VideoEditStatus;
 use Modules\VideoEdits\Domain\Exceptions\CutReviewRequiredException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidCutRangesException;
 use Modules\VideoEdits\Domain\Exceptions\InvalidMediaException;
+use Modules\VideoEdits\Domain\Ports\AiCutReviewStorePort;
+use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\Ports\ScriptTextExtractorPort;
 use Modules\VideoEdits\Domain\Ports\TranscriptStorePort;
 use Modules\VideoEdits\Domain\Ports\VideoEditorPort;
@@ -21,6 +25,9 @@ use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
 use Modules\VideoEdits\Domain\Ports\VideoEditWorkspacePort;
 use Modules\VideoEdits\Domain\Services\CutDecisionValidator;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
+use Modules\VideoEdits\Domain\Services\DurationBudgetPlanner;
+use Modules\VideoEdits\Domain\Services\KeepPhraseGuard;
+use Modules\VideoEdits\Domain\ValueObjects\AiReviewableCut;
 use Modules\VideoEdits\Domain\ValueObjects\ContentFingerprint;
 use Modules\VideoEdits\Domain\ValueObjects\CutDecision;
 use Modules\VideoEdits\Domain\ValueObjects\DecisionContext;
@@ -59,6 +66,12 @@ final readonly class VideoEditPipeline
         private DecisionProducerRegistry $producers,
         private CutDecisionValidator $validator,
         private CutPlanner $planner,
+        private CutReviewBuilder $reviewBuilder,
+        private DurationBudgetPlanner $budget,
+        private KeepPhraseGuard $keepPhrases,
+        private KeepPhraseResolver $keepPhraseList,
+        private AiCutReviewStorePort $reviews,
+        private AiReportStorePort $reports,
         private ScriptTextExtractorPort $scriptExtractor,
         private TranscriptStorePort $transcripts,
         private TranscriptionIdentity $identity,
@@ -128,18 +141,26 @@ final readonly class VideoEditPipeline
         );
 
         try {
-            $decisions = $this->produceDecisions($context, $sourcesDurationMs);
+            $decisions = $this->analyse($edit, $context, $sourcesDurationMs);
         } catch (CutReviewRequiredException) {
             $this->holdForReview($edit);
 
             return;
         }
 
+        // Parked for the owner's decision: the plan was stored beside the
+        // review, so the screen they are looking at already carries the numbers.
+        if ($decisions === null) {
+            return;
+        }
+
+        $transcript = $this->reusableTranscript($context);
+        $this->storeDurationPlan($edit, $context, $transcript, $decisions);
+
         // ── Plan cuts ───────────────────────────────────────────────────────
         $progress->startStage(ProcessingStage::PlanCuts);
         $validated = $this->validator->validate($decisions, $workingProbe->durationMs);
         $this->assertUserDecisionsAccepted($validated);
-        $transcript = $this->reusableTranscript($context);
         $plan = $this->planner->plan(
             $validated,
             $workingProbe->durationMs,
@@ -340,14 +361,140 @@ final readonly class VideoEditPipeline
     }
 
     /**
-     * @return list<CutDecision>
+     * One pass's decision set, or null when the pass was parked for review.
+     *
+     * **A unified review is the decision set.** Once the owner has answered one,
+     * nothing is recomputed: the approved rows become the decisions, so an
+     * automatic cut they unticked stays out and an AI cut they approved does not
+     * depend on the model answering the same way twice.
+     *
+     * **The first pass parks everything together.** The AI producer still ends
+     * its own pass with the proposals in a review, but on the way out the
+     * automatic decisions are added to that review, so the owner answers once for
+     * everything that will be removed. A review already open is never rebuilt —
+     * rotating ids under an owner who is reading the table would lose their
+     * ticks.
+     *
+     * @return list<CutDecision>|null
+     *
+     * @throws CutReviewRequiredException from a producer the mode does not gate here (auto edit)
      */
-    private function produceDecisions(DecisionContext $context, int $sourcesDurationMs): array
+    private function analyse(VideoEditEloquentModel $edit, DecisionContext $context, int $sourcesDurationMs): ?array
+    {
+        $review = $this->reviews->forEdit($edit->id);
+
+        if ($edit->mode === VideoEditMode::AiEdit && $review?->includesAutomatic === true) {
+            if (! $review->isResolved()) {
+                $this->holdForReview($edit);
+
+                return null;
+            }
+
+            return $review->approvedDecisions();
+        }
+
+        $decisions = $this->produceDecisions(
+            $context,
+            $sourcesDurationMs,
+            holdOnReview: $edit->mode === VideoEditMode::AiEdit,
+        );
+
+        if ($edit->mode !== VideoEditMode::AiEdit) {
+            return $decisions;
+        }
+
+        // A review that existed BEFORE this pass is either a legacy AI-only one
+        // (resolved: its approved cuts came back from the producer) or another
+        // job's open question. Both are answered already; only an unresolved one
+        // still needs the owner, and rendering past it would bypass the answer.
+        if ($review !== null) {
+            if (! $review->isResolved()) {
+                $this->holdForReview($edit);
+            }
+
+            return $review->isResolved() ? $decisions : null;
+        }
+
+        $aiReview = $this->reviews->forEdit($edit->id);
+        $transcript = $this->reusableTranscript($context);
+
+        if ($transcript === null) {
+            return $decisions;
+        }
+
+        // The owner's never-cut phrases are a hard constraint over the
+        // deterministic cuts too: "enviemos, enviemos" is a repetition to the
+        // detector and a phrase the lesson needs to the owner.
+        [$decisions] = $this->keepPhrases->filterDecisions(
+            $decisions,
+            $transcript,
+            $this->keepPhraseList->resolve(self::listParameter($context, 'keep_phrases')),
+        );
+
+        $validated = $this->validator->validate($decisions, $context->workingProbe->durationMs);
+        $applied = [];
+
+        foreach ($validated as $decision) {
+            if ($decision->isApplied()) {
+                $applied[] = $decision->decision;
+            }
+        }
+
+        $unified = $this->reviewBuilder->build($aiReview, $applied, $transcript);
+
+        if ($unified->cuts === []) {
+            return $decisions;
+        }
+
+        $this->reviews->store($edit->id, $unified);
+
+        // The plan is measured from the rows the owner is about to see, AI and
+        // automatic alike: the AI producer's proposals never became decisions
+        // in this pass (it parked them in the review), so reading $applied alone
+        // would count the filler and none of the retakes.
+        $planned = array_map(
+            static fn (AiReviewableCut $cut): CutDecision => new CutDecision(
+                producer: $cut->producer,
+                reason: $cut->reason,
+                origin: $cut->origin,
+                startMs: $cut->startMs,
+                endMs: $cut->endMs,
+                confidence: $cut->confidence,
+            ),
+            $unified->cuts,
+        );
+
+        $this->storeDurationPlan($edit, $context, $transcript, $planned);
+        $this->holdForReview($edit);
+
+        return null;
+    }
+
+    /**
+     * Every decision the producers proposed, applied and rejected alike.
+     *
+     * `$holdOnReview` is what lets an AI edit turn a producer's review request
+     * into data: the automatic decisions produced before it are kept and merged
+     * with the review, instead of being discarded by the exception.
+     *
+     * @return list<CutDecision>
+     *
+     * @throws CutReviewRequiredException when the mode does not gate here
+     */
+    private function produceDecisions(DecisionContext $context, int $sourcesDurationMs, bool $holdOnReview): array
     {
         $decisions = [];
 
         foreach ($this->producers->forContext($context) as $producer) {
-            array_push($decisions, ...$producer->produce($context));
+            try {
+                array_push($decisions, ...$producer->produce($context));
+            } catch (CutReviewRequiredException $exception) {
+                if (! $holdOnReview) {
+                    throw $exception;
+                }
+
+                break;
+            }
         }
 
         // User ranges were checked against the summed clip durations before the
@@ -369,6 +516,73 @@ final readonly class VideoEditPipeline
                     : $decision,
             $decisions,
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function listParameter(DecisionContext $context, string $key): array
+    {
+        $value = $context->parameters['ai_edit'][$key] ?? [];
+
+        return is_array($value)
+            ? array_values(array_filter($value, is_string(...)))
+            : [];
+    }
+
+    /**
+     * The target arithmetic, measured from every cut this pass will apply.
+     *
+     * Stored on the report so the review screen and the PDF read the same
+     * numbers — and so the numbers exist *before* the render, which is the only
+     * moment they can change anything.
+     *
+     * @param  list<CutDecision>  $decisions
+     */
+    private function storeDurationPlan(
+        VideoEditEloquentModel $edit,
+        DecisionContext $context,
+        ?Transcript $transcript,
+        array $decisions,
+    ): void {
+        if ($transcript === null || $edit->mode !== VideoEditMode::AiEdit) {
+            return;
+        }
+
+        $speech = [];
+        $ai = [];
+        $manual = [];
+        $silenceMs = 0;
+
+        foreach ($decisions as $decision) {
+            if ($decision->reason === CutReason::Silence) {
+                $silenceMs += max(0, $decision->endMs - $decision->startMs);
+
+                continue;
+            }
+
+            $range = ['startMs' => $decision->startMs, 'endMs' => $decision->endMs];
+
+            if ($decision->origin === DecisionOrigin::Ai) {
+                $ai[] = $range;
+            } elseif ($decision->origin === DecisionOrigin::User) {
+                $manual[] = $range;
+            } else {
+                $speech[] = $range;
+            }
+        }
+
+        $targetMinutes = $context->parameters['ai_edit']['target_duration_minutes'] ?? null;
+
+        $this->reports->storeDurationPlan($edit->id, $this->budget->plan(
+            transcript: $transcript,
+            totalMs: $context->workingProbe->durationMs,
+            targetMs: is_numeric($targetMinutes) ? (int) $targetMinutes * 60_000 : null,
+            speechCuts: $speech,
+            aiCuts: $ai,
+            manualCuts: $manual,
+            silenceMs: $silenceMs,
+        ));
     }
 
     /**

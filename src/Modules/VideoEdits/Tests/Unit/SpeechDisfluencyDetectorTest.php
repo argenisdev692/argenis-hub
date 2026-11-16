@@ -461,6 +461,51 @@ it('treats a gap already at the target as speech', function (): void {
     expect(detector()->detect($transcript, [SpeechCategory::RoboticPause]))->toBe([]);
 });
 
+it('does not propose a robotic cut too short to survive the onset guard', function (): void {
+    // 70 ms target, 60 ms floor: a 100 ms gap leaves 30 ms, which the renderer's
+    // 40 ms onset guard pulls back onto its own start. Proposing it fed the
+    // review a row that could never be applied and the planner a zero-length
+    // range.
+    $detector = new SpeechDisfluencyDetector(
+        fillerSounds: [],
+        fillerWords: [],
+        fillerPhrases: [],
+        repetitionAllowList: [],
+        maxStutterFragmentMs: 400,
+        minConfidence: 0.5,
+        roboticPauseTargetMs: 70,
+        roboticPauseMinCutMs: 60,
+    );
+
+    expect($detector->detect(
+        transcriptOf([['vamos', 0, 500], ['a', 600, 800]]),
+        [SpeechCategory::RoboticPause],
+    ))->toBe([]);
+});
+
+it('still closes a gap that leaves a cut worth making', function (): void {
+    $detector = new SpeechDisfluencyDetector(
+        fillerSounds: [],
+        fillerWords: [],
+        fillerPhrases: [],
+        repetitionAllowList: [],
+        maxStutterFragmentMs: 400,
+        minConfidence: 0.5,
+        roboticPauseTargetMs: 70,
+        roboticPauseMinCutMs: 60,
+    );
+
+    // 200 ms gap − 70 ms kept = a 130 ms cut, above the 60 ms floor.
+    $detections = $detector->detect(
+        transcriptOf([['vamos', 0, 500], ['a', 700, 900]]),
+        [SpeechCategory::RoboticPause],
+    );
+
+    expect($detections)->toHaveCount(1)
+        ->and($detections[0]->startMs)->toBe(535)
+        ->and($detections[0]->endMs)->toBe(665);
+});
+
 it('closes a phrase the transcriber split with ellipses', function (): void {
     // The whole point: "vamos..." followed by a pause is still one phrase. A
     // terminal-punctuation rule that also fired on "..." would leave exactly the

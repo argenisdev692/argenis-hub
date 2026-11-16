@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use Modules\VideoEdits\Application\Pipeline\CutReviewBuilder;
 use Modules\VideoEdits\Application\Pipeline\DecisionProducerRegistry;
 use Modules\VideoEdits\Application\Pipeline\Producers\AiDecisionProducer;
 use Modules\VideoEdits\Application\Pipeline\Producers\FailedTakeReviewProducer;
@@ -42,6 +43,7 @@ use Modules\VideoEdits\Domain\Services\ClippedWordDetector;
 use Modules\VideoEdits\Domain\Services\CutEdgeTrimmer;
 use Modules\VideoEdits\Domain\Services\CutPlanner;
 use Modules\VideoEdits\Domain\Services\CutSeamTrimmer;
+use Modules\VideoEdits\Domain\Services\DurationBudgetPlanner;
 use Modules\VideoEdits\Domain\Services\FailedTakeDetector;
 use Modules\VideoEdits\Domain\Services\RestartDetector;
 use Modules\VideoEdits\Domain\Services\SpeechDisfluencyDetector;
@@ -331,6 +333,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
             roboticPauseTargetMs: max(0, (int) config('video-edit.speech.robotic_pauses.target_gap_ms', 150)
                 - (int) config('video-edit.cuts.join_air_ms', FilterGraphBuilder::DEFAULT_JOIN_AIR_MS)),
             roboticPauseMaxMs: (int) config('video-edit.speech.robotic_pauses.max_gap_ms', 1_000),
+            roboticPauseMinCutMs: (int) config('video-edit.speech.robotic_pauses.min_cut_ms', 60),
         ));
 
         $this->app->bind(FailedTakeDetector::class, static fn (): FailedTakeDetector => new FailedTakeDetector(
@@ -363,6 +366,15 @@ final class VideoEditsServiceProvider extends ServiceProvider
         $this->app->bind(ClippedWordDetector::class, static fn (): ClippedWordDetector => new ClippedWordDetector(
             minClippedWords: (int) config('video-edit.clarity.min_clipped_words', 3),
             maxReportedWords: (int) config('video-edit.clarity.max_reported_words', 20),
+        ));
+
+        $this->app->bind(DurationBudgetPlanner::class, static fn (): DurationBudgetPlanner => new DurationBudgetPlanner(
+            gapFloorMs: (int) config('video-edit.duration_plan.gap_floor_ms', 250),
+            longestGaps: (int) config('video-edit.duration_plan.longest_gaps', 10),
+        ));
+
+        $this->app->bind(CutReviewBuilder::class, static fn (): CutReviewBuilder => new CutReviewBuilder(
+            contextWords: (int) config('video-edit.ai.review_context_words', 8),
         ));
     }
 

@@ -13,6 +13,7 @@ use Modules\VideoEdits\Application\DTOs\ManualRangeData;
 use Modules\VideoEdits\Application\DTOs\SourceUploadData;
 use Modules\VideoEdits\Application\DTOs\UploadTargetData;
 use Modules\VideoEdits\Application\DTOs\VideoEditDetailData;
+use Modules\VideoEdits\Application\Support\KeepPhraseResolver;
 use Modules\VideoEdits\Domain\Enums\SpeechCategory;
 use Modules\VideoEdits\Domain\Exceptions\VideoEditNotFoundException;
 use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
@@ -28,6 +29,7 @@ final readonly class CreateVideoEditHandler
     public function __construct(
         private VideoEditRepositoryPort $edits,
         private StoragePort $storage,
+        private KeepPhraseResolver $keepPhrases,
         private Config $config,
     ) {}
 
@@ -150,6 +152,12 @@ final readonly class CreateVideoEditHandler
                 'consented' => $data->aiEdit?->consented === true,
                 'instructions' => $data->aiEdit?->instructions,
                 'target_duration_minutes' => $data->aiEdit?->targetDurationMinutes,
+                // Stored with the request, not only sent to the model: the
+                // domain guard reads them on every pass, including the render
+                // pass after approval, where no model runs at all. The standing
+                // phrases are merged in here, so what is stored is the whole
+                // promise rather than half of it.
+                'keep_phrases' => $this->keepPhrases->resolve($data->aiEdit?->keepPhrases ?? []),
             ],
             'manual_ranges' => array_map(
                 static fn (ManualRangeData $range): array => $range->toParameter(),

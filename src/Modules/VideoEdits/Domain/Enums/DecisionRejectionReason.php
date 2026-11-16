@@ -27,4 +27,11 @@ enum DecisionRejectionReason: string
      * stretch.
      */
     case ScreenBusy = 'screen_busy';
+    /**
+     * The range survived validation but not the renderer's own trimming: a cut
+     * shorter than the onset guard is pulled back onto its start, and a
+     * non-positive range is not a cut. Rejected so the report says why instead
+     * of the render failing on a zero-length time range.
+     */
+    case TooShort = 'too_short';
 }

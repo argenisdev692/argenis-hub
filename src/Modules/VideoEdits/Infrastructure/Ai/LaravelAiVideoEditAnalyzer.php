@@ -279,6 +279,9 @@ final readonly class LaravelAiVideoEditAnalyzer implements AiEditAnalysisPort
                 // in the schema; the domain speaks 0–1.
                 confidence: max(0.0, min(1.0, ((int) ($row['confidence'] ?? 0)) / 100)),
                 evidence: isset($row['evidence']) ? mb_substr((string) $row['evidence'], 0, 300) : null,
+                keepText: isset($row['keep_text']) && trim((string) $row['keep_text']) !== ''
+                    ? mb_substr(trim((string) $row['keep_text']), 0, 300)
+                    : null,
             );
         }
 

@@ -24,11 +24,15 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 #[MapOutputName(SnakeCaseMapper::class)]
 final class AiEditData extends Data
 {
+    /**
+     * @param  list<string>  $keepPhrases  words the edit must never remove ("muy bien", "enviemos")
+     */
     public function __construct(
         public bool $enabled,
         public bool $consented = false,
         public ?ScriptUploadData $script = null,
         public ?string $instructions = null,
         public ?int $targetDurationMinutes = null,
+        public array $keepPhrases = [],
     ) {}
 }

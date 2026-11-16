@@ -2313,6 +2313,7 @@ consented: boolean,
 script: Modules.VideoEdits.Application.DTOs.ScriptUploadData | null,
 instructions: string | null,
 target_duration_minutes: number | null,
+keep_phrases: string[],
 };
 export type AiRecommendationData = {
 kind: Modules.VideoEdits.Domain.Enums.AiRecommendationKind,
@@ -2346,15 +2347,19 @@ completed_at: string | null,
 export type AiReviewableCutData = {
 id: string,
 reason: Modules.VideoEdits.Domain.Enums.CutReason,
+origin: Modules.VideoEdits.Domain.Enums.DecisionOrigin,
+producer: string,
 start_ms: number,
 end_ms: number,
 duration_ms: number,
 confidence: number,
 text: string,
+keep_text: string | null,
 context_before: string,
 context_after: string,
 explanation: string | null,
 preselected: boolean,
+approved: boolean,
 };
 export type AppliedCutData = {
 sequence: number,
@@ -2398,6 +2403,30 @@ rejection_reason: string | null,
 export type DownloadUrlData = {
 url: string,
 expires_at: string,
+};
+export type DurationPlanData = {
+total_ms: number,
+target_ms: number | null,
+required_removal_ms: number | null,
+planned_removal_ms: number,
+projected_ms: number,
+shortfall_ms: number | null,
+verdict: string,
+gap_count: number,
+dead_air_ms: number,
+sentence_gap_ms: number,
+intra_phrase_gap_ms: number,
+silence_recoverable_ms: number,
+ai_proposal_ms: number,
+speech_cut_ms: number,
+manual_cut_ms: number,
+planned_cut_ms: number,
+longest_gaps: {
+start_ms: number,
+end_ms: number,
+gap_ms: number,
+after_sentence_end: boolean,
+}[],
 };
 export type InstructionProfileData = {
 key: string,
@@ -2502,6 +2531,10 @@ edit: Modules.VideoEdits.Application.DTOs.AiReportEditData,
 decisions: Modules.VideoEdits.Application.DTOs.AiReportDecisionData[],
 recommendations: Modules.VideoEdits.Application.DTOs.AiRecommendationData[],
 conclusion: string | null,
+duration_plan: Modules.VideoEdits.Application.DTOs.DurationPlanData | null,
+kept_phrases: string[],
+reviewed_cuts: Modules.VideoEdits.Application.DTOs.AiReviewableCutData[],
+review_includes_automatic: boolean,
 };
 export type VideoEditSourceData = {
 uuid: string,
@@ -2528,7 +2561,7 @@ export type AiRecommendationKind = 'reduce' | 'off_script' | 'script_coverage' |
 export type CutReason = 'silence' | 'manual' | 'filler' | 'filler_word' | 'stutter' | 'repetition' | 'vocal_sound' | 'robotic_pause' | 'pause_marker' | 'retake' | 'misspoken' | 'misplaced_take';
 export type DecisionOrigin = 'system_detection' | 'user' | 'transcription' | 'ai';
 export type DecisionOutcome = 'applied' | 'rejected';
-export type DecisionRejectionReason = 'negative_start' | 'start_not_before_end' | 'end_beyond_duration' | 'confidence_out_of_range' | 'shorter_than_padding' | 'overlaps_speech' | 'screen_activity' | 'screen_busy';
+export type DecisionRejectionReason = 'negative_start' | 'start_not_before_end' | 'end_beyond_duration' | 'confidence_out_of_range' | 'shorter_than_padding' | 'overlaps_speech' | 'screen_activity' | 'screen_busy' | 'too_short';
 export type ProcessingStage = 'download' | 'merge' | 'analysis' | 'audio_extraction' | 'transcription' | 'speech_detection' | 'script_extraction' | 'ai_analysis' | 'plan_cuts' | 'render' | 'publish';
 export type SpeechCategory = 'filler' | 'filler_word' | 'stutter' | 'repetition' | 'vocal_sound' | 'pause_marker' | 'robotic_pause';
 export type VideoEditMode = 'merge' | 'auto_edit' | 'ai_edit';

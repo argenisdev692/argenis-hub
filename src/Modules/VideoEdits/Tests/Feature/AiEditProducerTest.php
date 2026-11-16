@@ -291,8 +291,10 @@ it('stores the recommendations but never the raw response', function (): void {
     expect($stored?->recommendations)->toHaveCount(1)
         ->and($stored->recommendations[0]->kind)->toBe(AiRecommendationKind::Reduce)
         ->and($stored->conclusion)->toBe('Two retakes removed.')
-        // Only the two validated keys — no raw provider payload (R10).
-        ->and(array_keys($columns))->toEqualCanonicalizing(['recommendations', 'conclusion']);
+        // Only validated, measured data — no raw provider payload (R10).
+        ->and(array_keys($columns))->toEqualCanonicalizing([
+            'recommendations', 'conclusion', 'duration_plan', 'kept_phrases',
+        ]);
 });
 
 it('adds the measured speaking pace to the report recommendations', function (): void {
@@ -454,6 +456,38 @@ it('passes the user instructions through as content', function (): void {
     ]));
 
     expect($this->analyzer->receivedInstructions)->toBe('Actúa como mi editor de video senior.');
+});
+
+it('never offers a proposal that would delete a protected phrase', function (): void {
+    $edit = VideoEditEloquentModel::factory()->for(VideoEditTestUsers::editor())->create();
+
+    storeTranscriptFor($edit, new Transcript([
+        new TranscriptWord('muy', 0, 300),
+        new TranscriptWord('bien', 300, 700),
+        new TranscriptWord('seguimos', 710, 1_200),
+    ]));
+
+    app()->instance(AiEditAnalysisPort::class, new RecordingAnalyzer(new AiAnalysis(
+        cutProposals: [
+            new AiCutProposal(CutReason::Retake, 0, 1, 0.9, 'Retake.'),
+            new AiCutProposal(CutReason::MisplacedTake, 2, 2, 0.8, 'Misplaced.'),
+        ],
+    )));
+
+    runFirstPass($edit, aiContext($edit, [
+        'enabled' => true,
+        'consented' => true,
+        'keep_phrases' => ['muy bien'],
+    ]));
+
+    $review = app(AiCutReviewStorePort::class)->forEdit($edit->id);
+    $report = app(AiReportStorePort::class)->forEdit($edit->id);
+
+    // "muy bien" is a hard constraint, so the cut is not even shown — an
+    // unticked row the owner has to notice is not a guard.
+    expect($review?->cuts)->toHaveCount(1)
+        ->and($review->cuts[0]->text)->toBe('seguimos')
+        ->and($report?->keptPhrases)->toBe(['muy bien']);
 });
 
 it('deletes the report with its edit', function (): void {

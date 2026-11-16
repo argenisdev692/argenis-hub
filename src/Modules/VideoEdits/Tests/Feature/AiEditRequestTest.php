@@ -133,3 +133,71 @@ it('caps the instructions so one paste cannot blow the context window', function
         ->assertStatus(422)
         ->assertJsonValidationErrors('ai_edit.instructions');
 });
+
+it('accepts an AI edit without a target length', function (): void {
+    // The target is a tool for the videos that need one, never a requirement:
+    // without it the plan is still the gap inventory.
+    $this->actingAs(VideoEditTestUsers::editor())
+        ->postJson('/data/admin/video-edits', aiEditPayload())
+        ->assertCreated();
+
+    $edit = VideoEditEloquentModel::query()->latest('id')->firstOrFail();
+
+    expect($edit->parameters['ai_edit']['target_duration_minutes'])->toBeNull();
+});
+
+it('merges the never-cut phrases with the standing list', function (): void {
+    $this->actingAs(VideoEditTestUsers::editor())
+        ->postJson('/data/admin/video-edits', aiEditPayload([
+            'ai_edit' => [
+                'enabled' => true,
+                'consented' => true,
+                'keep_phrases' => ['muy bien', ' keep me '],
+            ],
+        ]))
+        ->assertCreated();
+
+    $edit = VideoEditEloquentModel::query()->latest('id')->firstOrFail();
+
+    // The list travels with the edit, not only with the request that created it:
+    // the render pass after approval never calls the model and still has to
+    // honour it. The four standing phrases lead, the request adds to them, and
+    // "muy bien" is not stored twice.
+    expect($edit->parameters['ai_edit']['keep_phrases'])->toBe([
+        'observemos', 'muy bien', 'vamos a enviar', 'enviemos', 'keep me',
+    ]);
+});
+
+it('protects the standing phrases even when the request names none', function (): void {
+    $this->actingAs(VideoEditTestUsers::editor())
+        ->postJson('/data/admin/video-edits', aiEditPayload())
+        ->assertCreated();
+
+    $edit = VideoEditEloquentModel::query()->latest('id')->firstOrFail();
+
+    expect($edit->parameters['ai_edit']['keep_phrases'])->toBe([
+        'observemos', 'muy bien', 'vamos a enviar', 'enviemos',
+    ]);
+});
+
+it('caps the keep list so it stays a list somebody checks', function (): void {
+    $this->actingAs(VideoEditTestUsers::editor())
+        ->postJson('/data/admin/video-edits', aiEditPayload([
+            'ai_edit' => [
+                'enabled' => true,
+                'consented' => true,
+                'keep_phrases' => array_fill(0, 21, 'muy bien'),
+            ],
+        ]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('ai_edit.keep_phrases');
+});
+
+it('rejects an empty keep phrase instead of guarding nothing', function (): void {
+    $this->actingAs(VideoEditTestUsers::editor())
+        ->postJson('/data/admin/video-edits', aiEditPayload([
+            'ai_edit' => ['enabled' => true, 'consented' => true, 'keep_phrases' => ['']],
+        ]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('ai_edit.keep_phrases.0');
+});

@@ -7,11 +7,15 @@ namespace Modules\VideoEdits\Application\Queries;
 use Modules\VideoEdits\Application\DTOs\AiRecommendationData;
 use Modules\VideoEdits\Application\DTOs\AiReportDecisionData;
 use Modules\VideoEdits\Application\DTOs\AiReportEditData;
+use Modules\VideoEdits\Application\DTOs\AiReviewableCutData;
+use Modules\VideoEdits\Application\DTOs\DurationPlanData;
 use Modules\VideoEdits\Application\DTOs\VideoEditReportData;
 use Modules\VideoEdits\Domain\Enums\DecisionOrigin;
 use Modules\VideoEdits\Domain\Exceptions\VideoEditNotFoundException;
+use Modules\VideoEdits\Domain\Ports\AiCutReviewStorePort;
 use Modules\VideoEdits\Domain\Ports\AiReportStorePort;
 use Modules\VideoEdits\Domain\Ports\VideoEditRepositoryPort;
+use Modules\VideoEdits\Domain\ValueObjects\AiReviewableCut;
 
 /**
  * The AI decision report (US-14).
@@ -25,6 +29,7 @@ final readonly class GetVideoEditReportHandler
     public function __construct(
         private VideoEditRepositoryPort $edits,
         private AiReportStorePort $reports,
+        private AiCutReviewStorePort $reviews,
     ) {}
 
     /**
@@ -37,6 +42,8 @@ final readonly class GetVideoEditReportHandler
             ?? throw VideoEditNotFoundException::forUuid($uuid);
 
         $analysis = $this->reports->forEdit($edit->id);
+        $review = $this->reviews->forEdit($edit->id);
+        $approvedIds = $review?->approvedCutIds ?? [];
 
         return new VideoEditReportData(
             edit: AiReportEditData::fromModel($edit),
@@ -52,6 +59,15 @@ final readonly class GetVideoEditReportHandler
                 $analysis?->recommendations ?? [],
             ),
             conclusion: $analysis?->conclusion,
+            durationPlan: $analysis?->durationPlan === null
+                ? null
+                : DurationPlanData::fromValueObject($analysis->durationPlan),
+            keptPhrases: $analysis?->keptPhrases ?? [],
+            reviewedCuts: array_map(
+                static fn (AiReviewableCut $cut): AiReviewableCutData => AiReviewableCutData::fromCut($cut, in_array($cut->id, $approvedIds, true)),
+                $review?->cuts ?? [],
+            ),
+            reviewIncludesAutomatic: $review?->includesAutomatic === true,
         );
     }
 }

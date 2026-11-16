@@ -77,6 +77,12 @@ final class CreateVideoEditData extends Data
             'ai_edit.consented' => $isAiEdit ? ['required', 'accepted'] : ['nullable', 'boolean'],
             'ai_edit.instructions' => ['nullable', 'string', 'max:20000'],
             'ai_edit.target_duration_minutes' => ['nullable', 'integer', 'min:1', 'max:180'],
+            // The owner's never-cut list. Literal matching, enforced in the
+            // domain: a phrase here is a hard constraint the model cannot talk
+            // its way out of, which is why the length is bounded and the count
+            // capped (a keep list nobody can read is a keep list nobody checks).
+            'ai_edit.keep_phrases' => ['nullable', 'array', 'max:20'],
+            'ai_edit.keep_phrases.*' => ['string', 'min:1', 'max:80'],
             'ai_edit.script' => ['nullable', 'array'],
             'ai_edit.script.file_name' => [
                 'required_with:ai_edit.script', 'string', 'max:255',
