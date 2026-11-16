@@ -936,8 +936,17 @@ return [
         | review. This pulls every non-silence cut end back by this much, leaving a
         | short tail of the removed word in exchange for a clean onset. Manual cuts
         | are never widened or shortened.
+        |
+        | **The tail is only free when the word ends unvoiced.** Leaving 40 ms of
+        | a final "s" or "t" is inaudible; leaving 40 ms of the "a" in "la" is a
+        | clipped syllable the listener hears before the next word — "en [la]
+        | organización" came out as "en …a organización". A word ending on a vowel,
+        | a nasal or a liquid gets `onset_guard_voiced_ms` instead: just enough to
+        | keep the join from stepping, short enough to read as a transition rather
+        | than a syllable. Set it to 0 to remove those words completely.
         */
         'onset_guard_ms' => (int) env('VIDEO_EDIT_ONSET_GUARD_MS', 40),
+        'onset_guard_voiced_ms' => (int) env('VIDEO_EDIT_ONSET_GUARD_VOICED_MS', 10),
 
         /*
         | Cut edges (OBSERVACIONES round 2).

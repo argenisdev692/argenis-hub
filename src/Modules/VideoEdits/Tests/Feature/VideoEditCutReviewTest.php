@@ -155,9 +155,10 @@ it('renders only the cuts the owner approved, without asking the AI or Whisper a
     expect($fresh->status)->toBe(VideoEditStatus::Completed)
         ->and($aiDecisions)->toHaveCount(1)
         ->and($aiDecisions->first()->reason)->toBe(CutReason::PauseMarker)
-        // The end is pulled back by the onset guard, so the next word keeps its
-        // attack; the owner still approved this cut, not a wider one.
-        ->and($fresh->appliedCuts->map(fn ($cut) => [$cut->start_ms, $cut->end_ms])->all())->toBe([[5_000, 6_960]])
+        // The end is pulled back by the voiced-onset guard: "PAUSA" ends on a
+        // vowel, so the short guard leaves enough for the next attack without a
+        // clipped syllable; the owner still approved this cut, not a wider one.
+        ->and($fresh->appliedCuts->map(fn ($cut) => [$cut->start_ms, $cut->end_ms])->all())->toBe([[5_000, 6_990]])
         ->and($this->analyzer->calls)->toBe(1)
         ->and($this->transcriber->calls)->toBe(1);
 });

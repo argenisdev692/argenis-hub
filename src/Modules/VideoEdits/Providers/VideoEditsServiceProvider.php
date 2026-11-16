@@ -123,6 +123,7 @@ final class VideoEditsServiceProvider extends ServiceProvider
             edgeTrimmer: self::edgeTrimmer(),
             seamTrimmer: self::seamTrimmer(),
             onsetGuardMs: max(0, (int) config('video-edit.cuts.onset_guard_ms', 40)),
+            voicedOnsetGuardMs: max(0, (int) config('video-edit.cuts.onset_guard_voiced_ms', 10)),
         ));
 
         $this->registerDecisionProducers();

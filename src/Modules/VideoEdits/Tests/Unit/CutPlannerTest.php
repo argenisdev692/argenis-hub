@@ -116,6 +116,40 @@ it('never shortens a manual cut with the onset guard', function (): void {
     expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_000, 11_000]]);
 });
 
+it('leaves only a transition when the removed word ends on a vowel', function (): void {
+    // "en [la] organización": 40 ms of the "a" is an audible clipped syllable,
+    // so a voiced ending gets the short guard instead of the full one.
+    $plan = guardedPlanner()->plan(
+        [fillerCut(10_000, 11_000)],
+        60_000,
+        [new TranscriptWord('la', 10_000, 11_000), new TranscriptWord('organización', 11_000, 11_800)],
+    );
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_000, 10_990]]);
+});
+
+it('keeps the full guard when the removed word ends on an unvoiced sound', function (): void {
+    // A final "s" leaves a tail too quiet to notice, so the next onset keeps
+    // the whole 40 ms of protection.
+    $plan = guardedPlanner()->plan(
+        [fillerCut(10_000, 11_000)],
+        60_000,
+        [new TranscriptWord('más', 10_000, 11_000), new TranscriptWord('organización', 11_000, 11_800)],
+    );
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_000, 10_960]]);
+});
+
+it('treats an accented vowel as voiced for the guard', function (): void {
+    $plan = guardedPlanner()->plan(
+        [fillerCut(10_000, 11_000)],
+        60_000,
+        [new TranscriptWord('está', 10_000, 11_000), new TranscriptWord('listo', 11_000, 11_600)],
+    );
+
+    expect(bounds(array_map(static fn ($cut) => $cut->range, $plan->appliedCuts)))->toBe([[10_000, 10_990]]);
+});
+
 it('splits a silence around a quiet word ffmpeg missed', function (): void {
     $plan = planner()->plan([silence(10_000, 14_000)], 60_000, [new TranscriptWord('y', 11_900, 12_100)]);
 

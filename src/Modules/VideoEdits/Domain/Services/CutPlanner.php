@@ -70,6 +70,18 @@ final readonly class CutPlanner
         private ?CutEdgeTrimmer $edgeTrimmer = null,
         private ?CutSeamTrimmer $seamTrimmer = null,
         private int $onsetGuardMs = 0,
+        /**
+         * Shorter guard for a cut that ends on a voiced sound.
+         *
+         * The 40 ms guard protects the next word's attack, but it does so by
+         * leaving 40 ms of the removed word behind — and when that word ends in
+         * a vowel ("la", "que", "de"), 40 ms of vowel is an audible clipped
+         * syllable: "en [la] organización" came out as "en ...a organización".
+         * A voiced tail is the one case where the leftover is louder than the
+         * attack it protects, so it gets a guard short enough to be heard as a
+         * transition instead of a syllable.
+         */
+        private int $voicedOnsetGuardMs = 10,
     ) {}
 
     /**
@@ -274,7 +286,10 @@ final readonly class CutPlanner
                 // "para" and one whose "p" was clipped by the seam.
                 if ($this->onsetGuardMs > 0) {
                     $ranges = array_map(
-                        fn (array $range): array => [$range[0], max($range[0], $range[1] - $this->onsetGuardMs)],
+                        fn (array $range): array => [
+                            $range[0],
+                            max($range[0], $range[1] - $this->onsetGuardFor($range[1], $words)),
+                        ],
                         $ranges,
                     );
                 }
@@ -332,6 +347,63 @@ final readonly class CutPlanner
         }
 
         return $kept;
+    }
+
+    /**
+     * How much of the cut to give back so the next word keeps its attack.
+     *
+     * The full guard is sized for a hard boundary. A word ending on a vowel, a
+     * nasal or a liquid leaves a tail louder than the attack it protects — the
+     * "la" of "en [la] organización" was still audible — so that case gets the
+     * short guard and the word is effectively gone.
+     *
+     * @param  list<TranscriptWord>  $words
+     */
+    private function onsetGuardFor(int $endMs, array $words): int
+    {
+        // A negative or equal configured value means "no distinction": keep the
+        // single guard the rest of the pipeline was tuned against.
+        if ($words === [] || $this->voicedOnsetGuardMs >= $this->onsetGuardMs) {
+            return $this->onsetGuardMs;
+        }
+
+        $last = null;
+
+        foreach ($words as $word) {
+            if ($word->endMs > $endMs) {
+                break;
+            }
+
+            $last = $word;
+        }
+
+        if (! $last instanceof TranscriptWord) {
+            return $this->onsetGuardMs;
+        }
+
+        return self::endsOnVoicedSound($last)
+            ? max(0, $this->voicedOnsetGuardMs)
+            : $this->onsetGuardMs;
+    }
+
+    /**
+     * Whether the word's last sound carries enough energy for a tail to be
+     * heard. Vowels, nasals and liquids do; a final "s", "z" or stop does not,
+     * and keeping 40 ms of those is the safer trade for the next onset.
+     */
+    private static function endsOnVoicedSound(TranscriptWord $word): bool
+    {
+        $normalized = $word->normalized();
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        return in_array(
+            mb_substr($normalized, -1),
+            ['a', 'e', 'i', 'o', 'u', 'n', 'm', 'l', 'r', 'y'],
+            true,
+        );
     }
 
     /**
